@@ -569,6 +569,23 @@ integer :: i,j
 call ParseMaCHData
 call SetUpEquations
 
+! WARNING: CARRIAGECONTROL statement is only supported by Intel compilers (https://software.intel.com/en-us/node/511256)
+!          This statement gives a compilation error with different compilers, such as GNU
+!          It is a non-standard extension that can be hacked (http://www.pgroup.com/userforum/viewtopic.php?p=9838&sid=a87a1bb4ec01041a702ee60469b2e254)
+! open (unit=6, form='formatted')
+! do GlobalRoundHmm=1,nRoundsHmm
+!   write(6, 100,advance="no") char(13),"   HMM Round   ", GlobalRoundHmm
+!   100 format(a1,a17,i10)
+!   call flush(6)
+!   call sleep(1)       ! Wait 1 second before doing anything and not messing around. This might be not necessary
+!   do j=1,nIndHmmMaCH
+!       call MaCHForInd(j)
+!   enddo
+! write(6, *) ""        ! Create a new line
+! enddo
+! NOTE: I tried this code in a separate program and it works. 
+!       Thinking in porting into AlphaImpute master development and so it would compile with others compilers
+
 open (unit=6,form='formatted',CARRIAGECONTROL='FORTRAN') 
 do GlobalRoundHmm=1,nRoundsHmm
     write(6, 100) "   HMM Round   ",GlobalRoundHmm
@@ -668,7 +685,8 @@ allocate(ForwardProbs(nHapInSubH*nHapInSubH,nSnpHmm))
 call ForwardAlgorithm(CurrentInd)
 call SampleChromosomes(CurrentInd)
 
-if (GlobalRoundHmm>HmmBurnInRound) ProbImputeGenosHmm(CurrentInd,:)=ProbImputeGenosHmm(CurrentInd,:)+FullH(CurrentInd,:,1)+FullH(CurrentInd,:,2)
+if (GlobalRoundHmm>HmmBurnInRound) &
+    ProbImputeGenosHmm(CurrentInd,:)=ProbImputeGenosHmm(CurrentInd,:)+FullH(CurrentInd,:,1)+FullH(CurrentInd,:,2)
 
 deallocate(ForwardProbs)
 
@@ -4342,7 +4360,7 @@ do e=1,2
                         ImputePhase(i,FillInSt:FillInEnd,2)=PhaseHD(PosHD(i),FillInSt:FillInEnd,2,1)
                         Recmb=0
                     endif
-                    if (Recmb==1) (i,RL)=1
+                    if (Recmb==1) AnimRecomb(i,RL)=1
                 endif
             enddo
             UpToSnp=CoreIndexA(UpToCoreA,RL)
@@ -5694,9 +5712,7 @@ call rmdir("IterateGeneProb")   !here
 call system("mkdir Phasing")
 call system("mkdir Miscellaneous")
 
-call system("mkdir
-
- Results")
+call system("mkdir Results")
 call system("mkdir InputFiles")
 call system("mkdir GeneProb")       !here
 call system("mkdir IterateGeneProb")    !here
@@ -5900,7 +5916,7 @@ nDams=0
 IF(SortedId(1) /= '0') THEN
  nDams=1
  SortedDam(1) = SortedId(1)
-ENDI
+ENDIF
 do i=2,nobs
   IF(SortedId(i) /= SortedId(i-1) .and. SortedId(i) /= '0') then
    nDams=nDams+1
@@ -7262,6 +7278,9 @@ INTEGER n
 DOUBLE PRECISION adev,ave,curt,sdev,skew,var,DATA(n)
 INTEGER j
 DOUBLE PRECISION p,s,ep
+
+! WARNING: The compiler complains about the PAUSE statement.
+!          It is a deleted statement in 95 and an obsolete one in 90
 IF (n.le.1) PAUSE 'n must be at least 2 in moment'
 s=0
 DO j= 1,n
