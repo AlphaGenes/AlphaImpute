@@ -586,11 +586,14 @@ call SetUpEquations
 ! NOTE: I tried this code in a separate program and it works. 
 !       Thinking in porting into AlphaImpute master development and so it would compile with others compilers
 
-open (unit=6,form='formatted',CARRIAGECONTROL='FORTRAN') 
+!open (unit=6,form='formatted',CARRIAGECONTROL='FORTRAN')
+open (unit=6,form='formatted')
 do GlobalRoundHmm=1,nRoundsHmm
-    write(6, 100) "   HMM Round   ",GlobalRoundHmm
-    100 format ('+', a17,i10)    
-    
+    !write(6, 100) "   HMM Round   ",GlobalRoundHmm
+    !100 format ('+', a17,i10)
+    write(6, 100) char(13),"   HMM Round   ",GlobalRoundHmm
+    100 format (a1, a17, i10)
+
     do j=1,nIndHmmMaCH
         call MaCHForInd(j)
     enddo
