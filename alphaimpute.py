@@ -77,8 +77,8 @@ USAGE
     try:
         # Setup argument parser
         parser = ArgumentParser(description=program_license, formatter_class=RawDescriptionHelpFormatter)
-        parser.add_argument("-i", "--pedigree" dest="predigree", help="Pedigree file", metavar="file", required=True)
-        parser.add_argument("-g", "--genotype", dest='genotype', help="Genotype file", metavar="file", required=True)
+        parser.add_argument(dest="predigree", help="Pedigree file", metavar="file", required=True)  # Poisitional argument. This is the first input file: Pedigree
+        parser.add_argument(dest='genotype', help="Genotype file", metavar="file", required=True)   # Poisitional argument. This is the second input file: Genotype
         parser.add_argument("-x", "--sexchrom", help="Sex Chromosome File")   
         parser.add_argument("-f", "--hetero-female", help="Female is the heterogametic sex", choices=['Male', 'Female'])
         parser.add_argument("-s", "--snp", help="Number of SNPs", type=int, metavar="nSNP", required=True)
@@ -87,14 +87,14 @@ USAGE
         parser.add_argument("-t", "--tiles", help="Core and Tail lengths", type=list)
         parser.add_argument("-c", "--cores", help="Core lengths", type=list)
         parser.add_argument("-e", "--generror", help="Genotype Error [Default: %(default)3.1f]", type=float, default=0.0)
-        parser.add_argument("-p", "--processors", help="Number of Processors Available [Default: %(default)d]", default=4, type=int)
+        parser.add_argument("-p", "--processors", help="Number of Processors Available [Default: %(default)d]", default=2, type=int)
         parser.add_argument("-I", "--iterations", help="Internal Iterations [Default: %(default)d]", type=int, default=5)
-        parser.add_argument("-D", "--data-only", help="Process Data Only", action="store_true")
-        parser.add_argument("-P", "--phase-only", help="Phase Only", action="store_true")
+        parser.add_argument("--data-only", help="Process Data Only", action="store_true")
+        parser.add_argument("--phase-only", help="Phase Only", action="store_true")
         parser.add_argument("-l", "--library-use", help="Conservative Haplotype Library Use", action="store_true")
         parser.add_argument("-w", "--well-phase", help="Well phase Threshold [Default: %(default)3.1f]", type=float, default=99.0)
         parser.add_argument("-u", "--user-phase", help="User Defined Alpha Phase Animals File")
-        parser.add_argument("-R", "--prephase", help="Pre-phased file")
+        parser.add_argument("-P", "--prephase", help="Pre-phased file")
         parser.add_argument("-b", "--bypass", help="Bypass GeneProb", action="store_true")
         parser.add_argument("-r", "--restart", help="Restart Option", type=int)
         parser.add_argument("-H", "--HMM", help="Hidden Markov Model parameters", nargs=4)
