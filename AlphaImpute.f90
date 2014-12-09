@@ -183,8 +183,13 @@ else
     endif   
 
     if (NoPhasing==1) then
+        ! Major sub-step 2 as explained in Hickey et al. (2012; Appendix A)
         call BaseAnimalFillIn
+
+        ! Impute phase whenever a pre-phase file exists
         if (PrePhased==1) call ReadInPrePhasedData
+
+        ! Impute phase in the sex chromosome
         if (SexOpt==1) call EnsureHetGametic
 
         ! General imputation procedures
@@ -200,7 +205,7 @@ else
                 print*, " "
                 print*, "Performing imputation loop",loop 
 
-                call PhaseElimination
+                call PhaseElimination                   ! Major Sub-Step 3 (Hickey et al., 2012; Appendix A)
                 if (SexOpt==1) call EnsureHetGametic
                 call GeneralFillIn
                 print*, " "
@@ -3628,6 +3633,21 @@ end subroutine InternalHapLibImputation
 !#############################################################################################################################################################################################################################
 
 subroutine PhaseElimination
+! Candidate haplotype library imputation of alleles.s
+! For each core of each round of the LRPHLI algorithm, all haplotypes that have been found
+! and stored in the haplotype library are initially considered to be candidates for the true
+! haplotype that an individual carries on its gametes. Within the core, all alleles that are
+! known are compared to corresponding alleles in each of the haplotypes in the library.
+! Haplotypes that have a number of disagreements greater than a small error threshold have
+! their candidacy rejected. At the end of this loop, the surviving candidate haplotypes are
+! checked for locations that have unanimous agreement about a particular allele. For alleles
+! with complete agreement, a count of the suggested allele is incremented. Alleles are
+! imputed if, at the end of passing across each core and each round of the LRPHLI algorithm,
+! the count of whether the alleles are 0 or 1 is above a threshold in one direction and
+! below a threshold in the other. This helps to prevent the use of phasing errors that
+! originate from LRPHLI.
+! This subroutine corresponds to Major sub-step 3 from Hickey et al., 2012 (Appendix A)
+
 use Global
 use GlobalPedigree
 implicit none
@@ -3641,6 +3661,7 @@ integer(kind=1),allocatable,dimension (:,:,:,:) :: Temp
 
 character(len=1000) :: FileName,dumC
 
+! Number of animals that have been HD phased
 nAnisHD=(count(Setter(:)==1))
 
 allocate(Temp(nAnisP,nSnp,2,2))
@@ -3650,27 +3671,38 @@ PosHD=0
 Temp=0
 AnimalOn=0
 do h=1,nPhaseInternal
+    ! Set name of file containing core information
+    ! WARNING: Same code as in BaseAnimalFillIn. Consider to make a function
     if (ManagePhaseOn1Off0==0) then 
         write (FileName,'(a,"Phase",i0,"/PhasingResults/CoreIndex.txt")') trim(PhasePath),h
     else
         write (FileName,'("./Phasing/Phase",i0,"/PhasingResults/CoreIndex.txt")')h  
-    endif   
+    endif
+
+    ! Count the number of cores used during phasing step and allocate start and end cores information
     call CountLines(FileName,nCore)
     allocate(CoreIndex(nCore,2))
+
+    ! Get core information from file
     open (unit=2001,file=trim(FileName),status="old")
     do g=1,nCore
         read (2001,*) dum,CoreIndex(g,:)
     enddo
     close(2001)
+
+    ! Get HIGH DENSITY phase information of this phasing step
+    ! WARNING: Same code as in BaseAnimalFillIn. Consider to make a function
     if (ManagePhaseOn1Off0==0) then 
         write (FileName,'(a,"Phase",i0,"/PhasingResults/FinalPhase.txt")') trim(PhasePath),h
     else
         write (FileName,'("./Phasing/Phase",i0,"/PhasingResults/FinalPhase.txt")')h 
-    endif   
+    endif
+    ! Get phase information from file
     open (unit=2001,file=trim(FileName),status="old")
     do i=1,nAnisHD
         read (2001,*) dumC,PhaseHD(i,:,1)
         read (2001,*) dumC,PhaseHD(i,:,2)
+        ! Match HD phase information with individuals
         do j=1,nAnisP
             if (trim(dumC)==trim(Id(j))) then
                 PosHD(j)=i
@@ -3678,14 +3710,21 @@ do h=1,nPhaseInternal
             endif
         enddo
     enddo
-    close(2001) 
+    close(2001)
+
     do g=1,nCore
+        ! Initialize Start and End snps of the cores
         StartSnp=CoreIndex(g,1)
         EndSnp=CoreIndex(g,2)
+
+        !! PARALLELIZATION BEGINS
+
         !# PARALLEL DO SHARED (nAnisP,PosHD,RecPed,ImputePhase,StartSnp,EndSnp,PhaseHD,AnimalOn,Temp) private(i,PosHDInd,Gam1,Gam2,e,GamA,GamB,TempCount,j)
         do i=1,nAnisP
-            PosHDInd=PosHD(RecPed(i,1))
+            PosHDInd=PosHD(RecPed(i,1))         ! Index of the individual's father in the HD phase information
+            ! If phase is missing in at least one allele
             if ((count(ImputePhase(i,StartSnp:EndSnp,:)==9)/=0).and.(PosHDInd>0)) then
+                ! If at least one locus is heterozygous
                 if (count(ImputePhase(i,StartSnp:EndSnp,1)/=ImputePhase(i,StartSnp:EndSnp,2))>0) then
                     Gam1=0
                     Gam2=0
@@ -3695,8 +3734,11 @@ do h=1,nPhaseInternal
                         TempCount=0
                         do j=StartSnp,EndSnp                
                             if (ImputePhase(i,j,e)/=9) then
+                                ! Count the number of times that alleles are not coincident with HD phase of the paternal haplotype
                                 if (ImputePhase(i,j,e)/=PhaseHD(PosHDInd,j,1)) then 
                                     TempCount=TempCount+1
+                                    ! Exit when this number is greater than a threshold. This threshold is equal to 1, so this means
+                                    ! that the loop will finish if haplotypes are strictly different
                                     if (ImputeFromHDPhaseThresh==TempCount) then
                                         GamA=0
                                         exit
@@ -3707,8 +3749,11 @@ do h=1,nPhaseInternal
                         TempCount=0
                         do j=StartSnp,EndSnp
                             if (ImputePhase(i,j,e)/=9) then
+                                ! Count the number of times that alleles are not coincident with HD phase of the maternal haplotype
                                 if (ImputePhase(i,j,e)/=PhaseHD(PosHDInd,j,2)) then
                                     TempCount=TempCount+1
+                                    ! Exit when this number is greater than a threshold. This threshold is equal to 1, so this means
+                                    ! that the loop will finish if haplotypes are strictly different
                                     if (ImputeFromHDPhaseThresh==TempCount) then
                                         GamB=0
                                         exit
@@ -3716,15 +3761,24 @@ do h=1,nPhaseInternal
                                 endif
                             endif
                         enddo
+
+                        ! Paternal haplotype (gamete) is strictly the same as my paternal haplotype from the Hap Library
                         if ((e==1).and.(GamA==1).and.(GamB==0)) Gam1=1
+                        ! Paternal haplotype (gamete) is strictly the same as my maternal haplotype from the Hap Library
                         if ((e==1).and.(GamA==0).and.(GamB==1)) Gam1=2
+                        ! Maternal haplotype (gamete) is strictly the same as my paternal haplotype from the Hap Library
                         if ((e==2).and.(GamA==1).and.(GamB==0)) Gam2=1
+                        ! Maternal haplotype (gamete) is strictly the same as my maternal haplotype from the Hap Library
                         if ((e==2).and.(GamA==0).and.(GamB==1)) Gam2=2
                     enddo
+
+                    ! If the paternal and maternal gametes are different
                     if (Gam1/=Gam2) then
-                        AnimalOn(i,:)=1
+                        AnimalOn(i,:)=1             ! Consider this animal in further steps
+                        ! Paternal gamete is in the Hap Library
                         if (Gam1/=0) then
                             do j=StartSnp,EndSnp
+                                ! Count the number of alleles coded with 0 and 1
                                 if (ImputePhase(i,j,1)==9) then
                                     if(PhaseHD(PosHDInd,j,Gam1)==0)&
                                                  Temp(i,j,1,1)=Temp(i,j,1,1)+1
@@ -3733,8 +3787,10 @@ do h=1,nPhaseInternal
                                 endif
                             enddo
                         endif
+                        ! Maternal gamete is in the Hap Library
                         if (Gam2/=0) then
                             do j=StartSnp,EndSnp
+                                ! Count the number of alleles coded with 0 and 1
                                 if (ImputePhase(i,j,2)==9) then
                                     if(PhaseHD(PosHDInd,j,Gam2)==0)&
                                                  Temp(i,j,2,1)=Temp(i,j,2,1)+1
@@ -3757,6 +3813,8 @@ do i=1,nAnisP
         if (AnimalOn(i,e)==1) then
             do j=1,nSnp
                 if (ImputePhase(i,j,e)==9) then
+                    ! Impute phase allele with the most significant code for that allele across haplotypes
+                    ! only if the other codification never happens
                     if ((Temp(i,j,e,1)>nAgreeInternalHapLibElim).and.(Temp(i,j,e,2)==0)) ImputePhase(i,j,e)=0
                     if ((Temp(i,j,e,1)==0).and.(Temp(i,j,e,2)>nAgreeInternalHapLibElim)) ImputePhase(i,j,e)=1
                 endif
