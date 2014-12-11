@@ -205,7 +205,7 @@ else
                 print*, " "
                 print*, "Performing imputation loop",loop 
 
-                call PhaseElimination                   ! Major Sub-Step 3 (Hickey et al., 2012; Appendix A)
+                call PhaseElimination                   ! Major Sub-Step 5 (Hickey et al., 2012; Appendix A)
                 if (SexOpt==1) call EnsureHetGametic
                 call GeneralFillIn
                 print*, " "
@@ -214,35 +214,35 @@ else
                 call ParentPhaseElimination             ! Major Sub-Step 4 (Hickey et al., 2012; Appendix A)
                 if (SexOpt==1) call EnsureHetGametic
                 call GeneralFillIn
-                call RestrictedWorkLeftRight
+                call RestrictedWorkLeftRight            ! Major Sub-Step 8 (Hickey et al., 2012; Appendix A)
                 if (SexOpt==1) call EnsureHetGametic
                 call GeneralFillIn
                 print*, " "
                 print*, " ","Imputation from high-density parents completed"
 
-                call ImputeFromHDLibrary
+                call ImputeFromHDLibrary                ! Major Sub-Step 3 (Hickey et al., 2012; Appendix A)
                 if (SexOpt==1) call EnsureHetGametic
                 call GeneralFillIn
-                call RestrictedWorkLeftRight
+                call RestrictedWorkLeftRight            ! Major Sub-Step 8 (Hickey et al., 2012; Appendix A)
                 if (SexOpt==1) call EnsureHetGametic
                 call GeneralFillIn
                 print*, " "
                 print*, " ","Haplotype library imputation completed"
 
-                call InternalParentPhaseElim
+                call InternalParentPhaseElim            ! Major Sub-Step 7 (Hickey et al., 2012; Appendix A)
                 if (SexOpt==1) call EnsureHetGametic
                 call GeneralFillIn
-                call RestrictedWorkLeftRight
+                call RestrictedWorkLeftRight            ! Major Sub-Step 8 (Hickey et al., 2012; Appendix A)
                 if (SexOpt==1) call EnsureHetGametic
                 call GeneralFillIn
                 print*, " "
                 print*, " ","Internal imputation from parents haplotype completed"
 
-                call InternalHapLibImputation
+                call InternalHapLibImputation           ! Major Sub-Step 6 (Hickey et al., 2012; Appendix A)
                 if (SexOpt==1) call EnsureHetGametic
                 call GeneralFillIn
                 if (SexOpt==1) call EnsureHetGametic
-                call RestrictedWorkLeftRight
+                call RestrictedWorkLeftRight            ! Major Sub-Step 8 (Hickey et al., 2012; Appendix A)
                 call GeneralFillIn
                 print*, " "
                 print*, " ","Internal haplotype library imputation completed"
@@ -3707,19 +3707,18 @@ end subroutine InternalHapLibImputation
 
 subroutine PhaseElimination
 ! Candidate haplotype library imputation of alleles.
-! For each core of each round of the LRPHLI algorithm, all haplotypes that have been found
-! and stored in the haplotype library are initially considered to be candidates for the true
-! haplotype that an individual carries on its gametes. Within the core, all alleles that are
-! known are compared to corresponding alleles in each of the haplotypes in the library.
-! Haplotypes that have a number of disagreements greater than a small error threshold have
-! their candidacy rejected. At the end of this loop, the surviving candidate haplotypes are
-! checked for locations that have unanimous agreement about a particular allele. For alleles
-! with complete agreement, a count of the suggested allele is incremented. Alleles are
-! imputed if, at the end of passing across each core and each round of the LRPHLI algorithm,
-! the count of whether the alleles are 0 or 1 is above a threshold in one direction and
-! below a threshold in the other. This helps to prevent the use of phasing errors that
-! originate from LRPHLI.
-! This subroutine corresponds to Major sub-step 3 from Hickey et al., 2012 (Appendix A)
+! For each core of each round of the LRPHLI algorithm, all haplotypes that have been found and
+! stored in the haplotype library. Candidate haplotypes are restricted to the two haplotypes that
+! have been identified for the individual by the LRPHLI algorithm for the true haplotype that an
+! individual carries on its gametes. Within the core, all alleles that are known are compared to
+! corresponding alleles in each of the individual haplotypes. The candidate haplotypes are checked
+! for locations that have unanimous agreement about a particular allele. For alleles with complete
+! agreement, a count of the suggested allele is incremented. Alleles are imputed if, at the end of
+! passing across each core and each round of the LRPHLI algorithm, the count of whether the alleles
+! are 0 or 1 is above a threshold in one direction and below a threshold in the other. This helps to
+! prevent the use of phasing errors that originate from LRPHLI.
+! This subroutine corresponds to Major sub-step 5 from Hickey et al., 2012 (Appendix A)
+
 
 use Global
 use GlobalPedigree
@@ -3915,12 +3914,17 @@ end subroutine PhaseElimination
 
 subroutine ParentPhaseElimination
 ! Imputation of single alleles based on parental phase.
-! This is similar to Major sub-step 3, with the exception that the process is restricted
-! to individuals that have parents with high-density genotype information and the candidate
-! haplotypes for each individual’s gametes are restricted to the two haplotypes that have
-! been identified for each of its parents by the LRPHLI algorithm. Errors in phasing are
-! accounted for in the same way as in Major sub-step 3.
-! Major sub-step 3 corresponds to PhaseElimination subroutine
+! For each core of each round of the LRPHLI algorithm, all haplotypes that have been found and
+! stored in the haplotype library. Candidate haplotypes are restricted to the two haplotypes that
+! have been identified for each of the individual parents with high-density genotype information by
+! the LRPHLI algorithm for the true haplotype that an individual carries on its gametes. Within the
+! core, all alleles that are known are compared to corresponding alleles in each of the individual
+! haplotypes. The candidate haplotypes are checked for locations that have unanimous agreement about
+! a particular allele. For alleles with complete agreement, a count of the suggested allele is
+! incremented. Alleles are imputed if, at the end of passing across each core and each round of the
+! LRPHLI algorithm, the count of whether the alleles are 0 or 1 is above a threshold in one
+! direction and below a threshold in the other. This helps to prevent the use of phasing errors that
+! originate from LRPHLI.
 ! This subroutine corresponds to Major sub-step 4 from Hickey et al., 2012 (Appendix A)
 
 use Global
@@ -3990,6 +3994,7 @@ do h=1,nPhaseInternal
         StartSnp=CoreIndex(g,1)
         EndSnp=CoreIndex(g,2)
         
+        ! PARALLELIZATION BEGINS
         !# PARALLEL DO SHARED (RecPed,PosHD,ImputePhase,StartSnp,EndSnp,PhaseHD,AnimalOn,Temp) private(i,e,PedId,PosHDInd,GamA,GamB,TempCount,j)
         do i=1,nAnisP
             do e=1,2
@@ -4118,6 +4123,20 @@ end subroutine ParentPhaseElimination
 !#############################################################################################################################################################################################################################
 
 subroutine ImputeFromHDLibrary
+! Candidate haplotype library imputation of alleles.
+! For each core of each round of the LRPHLI algorithm, all haplotypes that have been found and
+! stored in the haplotype library are initially considered to be candidates for the true haplotype
+! that an individual carries on its gametes. Within the core, all alleles that are known are
+! compared to corresponding alleles in each of the haplotypes in the library. Haplotypes that have a
+! number of disagreements greater than a small error threshold have their candidacy rejected. At the
+! end of this loop, the surviving candidate haplotypes are checked for locations that have unanimous
+! agreement about a particular allele. For alleles with complete agreement, a count of the suggested
+! allele is incremented. Alleles are imputed if, at the end of passing across each core and each
+! round of the LRPHLI algorithm, the count of whether the alleles are 0 or 1 is above a threshold in
+! one direction and below a threshold in the other. This helps to prevent the use of phasing errors
+! that originate from LRPHLI.
+! This subroutine corresponds to Major sub-step 3 from Hickey et al., 2012 (Appendix A)
+
 use Global
 
 implicit none
@@ -4130,18 +4149,28 @@ integer(kind=1),allocatable,dimension (:,:) :: HapLib,HapCand
 
 character(len=1000) :: FileName,dumC
 
+! Temp(nAnisP, nSNPs, PatHap, Phase)
 allocate(Temp(0:nAnisP,nSnp,2,2))
 Temp=0
+
 AnimalOn=0
 do h=1,nPhaseInternal
+    ! Set name of file containing core information
+    ! WARNING: Same code as in many other subroutines. Consider to make a function
     if (ManagePhaseOn1Off0==0) then 
         write (FileName,'(a,"Phase",i0,"/PhasingResults/CoreIndex.txt")') trim(PhasePath),h
     else
         write (FileName,'("./Phasing/Phase",i0,"/PhasingResults/CoreIndex.txt")')h  
     endif   
+
+    ! Count the number of cores used during phasing step and allocate start and end cores information
     call CountLines(FileName,nCore)
     allocate(CoreIndex(nCore,2))
+
+    ! Get core information from file
     open (unit=2001,file=trim(FileName),status="old")
+
+    ! Get HIGH DENSITY HAPLOTYPE LIBRARY information of each phasing step
     do g=1,nCore
         read (2001,*) dum,CoreIndex(g,:)
     enddo
@@ -4156,44 +4185,70 @@ do h=1,nPhaseInternal
             write (FileName,'("./Phasing/Phase",i0,"/PhasingResults/HaplotypeLibrary/HapLib",i0,".bin")')h,g
         endif   
         open (unit=2001,file=trim(FileName),status="old",form="unformatted")
+
+        ! Read the number of Hap in the library and how long they are
         read(2001) nHap,CoreLength
-        if(nHap/=0) then    
+
+        if(nHap/=0) then
+            ! Allocate the Haplotype Library and read it from file
             allocate(HapLib(nHap,CoreLength))
             do l=1,nHap
                     read(2001) HapLib(l,:)
             enddo
             close (2001)
 
+            ! PARALLELIZATION BEGINS
             !$OMP PARALLEL DO SHARED (nAnisP,ImputePhase,StartSnp,EndSnp,CoreLength,nHap,HapLib) private(i,e,f,j,k,TempCount,CountAB,Counter,PatMatDone,Work,BanBoth,Ban,HapCand)
             do i=1,nAnisP
-                allocate(HapCand(nHap,2))   
+                ! The number of candidate haplotypes is the total number of haps in the library times 2 (Paternal and maternal candidates)
+                allocate(HapCand(nHap,2))
+
                 PatMatDone=0
                 if (count(ImputePhase(i,StartSnp:EndSnp,1)==9)/=CoreLength) PatMatDone(1)=1
                 if (count(ImputePhase(i,StartSnp:EndSnp,2)==9)/=CoreLength) PatMatDone(2)=1
                 HapCand=1
                 Work=9
                 BanBoth=0
+
+                ! For each haplotype
                 do e=1,2
-                    if ((ConservativeHapLibImputation==1).and.(MSTermInfo(i,e)==0)) cycle 
+                    ! WARNING: If GeneProbPhase has been executed, that is, if not considering the Sex Chromosome, then MSTermInfo={0,1}.
+                    !          Else, if Sex Chromosome, then MSTermInfo is 0 always
+                    !          So, if a Conservative imputation of haplotypes is selected, this DO statement will do nothing
+                    if ((ConservativeHapLibImputation==1).and.(MSTermInfo(i,e)==0)) cycle
+
+                    ! If haplotype is partially phased
                     if ((PatMatDone(e)==1).and.(count(ImputePhase(i,StartSnp:EndSnp,e)/=9)/=CoreLength)) then
+
+                        ! Identify and reject the candidate haplotypes within the HapLib given a maximum number of disagreements (ImputeFromHDLibraryCountThresh)
                         do f=1,nHap
                             k=0
                             TempCount=0
+
+                            ! Count disagreements
                             do j=StartSnp,EndSnp
-                                k=k+1
+                                k=k+1           ! This is the index for the alleles in the haplotypes within the HapLib
                                 if ((ImputePhase(i,j,e)/=9).and.(ImputePhase(i,j,e)/=HapLib(f,k))) then
                                     TempCount=TempCount+1
                                     if (ImputeFromHDLibraryCountThresh==TempCount) then
                                         HapCand(f,e)=0
                                         exit
-                                    endif   
+                                    endif
                                 endif
                             enddo
                         enddo
+
+                        ! CountAB(nSNPs,0:1) matrix indicating how many haplotypes has been phased as 0 or 1 in a particular allele
                         CountAB=0
+
+                        ! If the number of candidate haplotypes is less than the 25% of the Library,
+                        ! then impute if all alleles have been phased the same way
                         Counter=count(HapCand(:,e)==1)
                         if (float(Counter)<(float(nHap)*0.25)) then
+                            ! Ban this haplotype will be phased here and nowhere else
                             BanBoth(e)=1
+
+                            ! Count the occurrences in phasing of alleles across candidate haplotypes
                             do f=1,nHap
                                 if (HapCand(f,e)==1) then
                                     k=0
@@ -4203,6 +4258,8 @@ do h=1,nPhaseInternal
                                     enddo
                                 endif
                             enddo
+
+                            ! If all alleles across the candidate haplotypes have been phased the same way, impute
                             do j=StartSnp,EndSnp
                                 if (CountAB(j,0)>0) then
                                     if (CountAB(j,1)==0) Work(j,e)=0
@@ -4213,14 +4270,21 @@ do h=1,nPhaseInternal
                         endif
                     endif
                 enddo
+
+                ! If one of the haplotypes is partially phased
                 if (sum(PatMatDone(:))>0) then
-                    Ban=0   
+                    Ban=0
+                    ! Any haplotype has been previously banned/phased?
                     if (BanBoth(1)==1) Ban(1)=1
                     if (BanBoth(2)==1) Ban(2)=1
+
+                    ! If both gametes have been previously banned/phased,
+                    ! check whether the phase given agrees with genotype
                     if (sum(BanBoth(:))==2) then
                         TempCount=0
                         do j=StartSnp,EndSnp
                             if (ImputeGenos(i,j)/=9) then
+                                ! If disagreement is greater than a threshold, unban haplotypes
                                 if (ImputeGenos(i,j)/=(Work(j,1)+Work(j,2))) then
                                     TempCount=TempCount+1
                                     if (ImputeFromHDLibraryCountThresh==TempCount) then
@@ -4230,9 +4294,16 @@ do h=1,nPhaseInternal
                                 endif
                             endif
                         enddo 
-                    endif   
+                    endif
+
+                    ! Count the number of occurrences a phase is impute in a particular
+                    ! alleles across the cores across the internal phasing steps
+                    ! This implies occurrences across all the haplotype libraries of the different internal phasing steps
                     do e=1,2
-                        if ((ConservativeHapLibImputation==1).and.(MSTermInfo(i,e)==0)) cycle 
+                        ! WARNING: If GeneProbPhase has been executed, that is, if not considering the Sex Chromosome, then MSTermInfo={0,1}.
+                        !          Else, if Sex Chromosome, then MSTermInfo is 0 always
+                        !          So, if a Conservative imputation of haplotypes is selected, this DO statement will do nothing
+                        if ((ConservativeHapLibImputation==1).and.(MSTermInfo(i,e)==0)) cycle
                         if (Ban(e)==1) then
                             AnimalOn(i,e)=1
                             do j=StartSnp,EndSnp
@@ -4254,7 +4325,12 @@ enddo
 
 do i=1,nAnisP
     do e=1,2
+        ! WARNING: If GeneProbPhase has been executed, that is, if not considering the Sex Chromosome, then MSTermInfo={0,1}.
+        !          Else, if Sex Chromosome, then MSTermInfo is 0 always
+        !          So, if a Conservative imputation of haplotypes is selected, this DO statement will do nothing
         if ((ConservativeHapLibImputation==1).and.(MSTermInfo(i,e)==0)) cycle 
+
+        ! If all alleles across across the cores across the internal phasing steps have been phased the same way, impute
         if (AnimalOn(i,e)==1) then
             do j=1,nSnp
                 if (ImputePhase(i,j,e)==9) then
