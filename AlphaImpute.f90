@@ -3489,6 +3489,21 @@ end subroutine InternalParentPhaseElim
 !#############################################################################################################################################################################################################################
 
 subroutine InternalHapLibImputation
+! Internal candidate haplotype library imputation of alleles. Haplotype libraries are internally
+! built using the information that has been previously imputed. Several different core lengths are
+! used to define the length of the haplotypes and to ensure to prevent the use of phasing errors
+! that originate from LRPHLI. For each core, all haplotypes that have been found and stored in the
+! haplotype library are initially considered to be candidates for the true haplotype that an
+! individual carries on its gametes. Within the core, all alleles that are known are compared to
+! corresponding alleles in each of the haplotypes in the library. Haplotypes that have a number of
+! disagreements greater than a small error threshold have their candidacy rejected. At the end of
+! this loop, the surviving candidate haplotypes are checked for locations that have unanimous
+! agreement about a particular allele. For alleles with complete agreement, a count of the suggested
+! allele is incremented. Alleles are imputed if, at the end of passing across each core and each
+! round of the LRPHLI algorithm, the count of whether the alleles are 0 or 1 is above a threshold in
+! one direction and below a threshold in the other.
+! This subroutine corresponds to Major sub-step 6 from Hickey et al., 2012 (Appendix A)
+
 use Global
 implicit none
 
