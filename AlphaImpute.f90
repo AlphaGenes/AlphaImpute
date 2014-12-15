@@ -1269,6 +1269,8 @@ end subroutine ReadInPrePhasedData
 !#############################################################################################################################################################################################################################
 
 subroutine ManageWorkLeftRight
+! Major sub-step 8 is iterated a number of times with increasingly relaxed
+! restrictions. After each iteration, the minor sub-steps are also carried out.
 use Global
 
 implicit none
@@ -3104,6 +3106,21 @@ end subroutine RestrictedWorkLeftRight
 !#############################################################################################################################################################################################################################
 
 subroutine WorkLeftRight
+! Imputation based on identifying where recombination occurs during inheritance from parent to offspring.
+! Each gamete of an individual is examined from the beginning to the end and from the end to the
+! beginning of the chromosome. In each direction, at loci where both the individual and its parent
+! are heterozygous and have phase information resolved, this information is used to determine which
+! of the parental gametes the individual received. Loci for which this cannot be determined but
+! which are between two loci that (a) can be determined and (b) come from the same parental gamete,
+! are assumed to come from this gamete (i.e. no double recombination event in between). Alleles are
+! imputed in the individual when analysis in both directions of the chromosome has identified the
+! same inherited gamete and when the parent is phased for this locus in the suggested gamete,
+! subject to the restrictions that he number of recombination events for the individuals is less
+! than a threshold and that the region in which two recombination events occurred exceeds a
+! threshold length. Major sub-step 8 is iterated a number of times with increasingly relaxed
+! restrictions. After each iteration, the minor sub-steps are also carried out.
+! This subroutine corresponds to Major sub-step 8 from Hickey et al., 2012 (Appendix A)
+
 use Global
 
 implicit none
@@ -3124,44 +3141,65 @@ ImputeGenos(0,:)=9
 do i=1,nAnisP
     HetEnd=-1
     HetStart=-1
+
+    ! For each gamete
     do e=1,2
         PatMat=e
         SireDamRL=e+1
         CountLeftSwitch=0
         CountRightSwitch=0
         PedId=RecPed(i,SireDamRL)
+
+        ! Skip if, in the case of sex chromosome, me and my parent are heterogametic
         if ((SexOpt==1).and.(RecGender(i)==HetGameticStatus).and.(RecGender(PedId)==HetGameticStatus)) cycle
+
+        !! SCAN HAPLOTYPE IN TWO DIRECTIONS: L->R AND R->L
+        ! If not a base animal
         if (PedId>0) then
             WorkRight=9
             RSide=9
+
+            ! Go throught haplotype from Left to Right
+            ! finding the first heterozygous allele of this parent, and...
             do j=1,nSnp
                 if ((ImputePhase(PedId,j,1)/=ImputePhase(PedId,j,2)).and.&
                         (ImputePhase(PedId,j,1)/=9).and.(ImputePhase(PedId,j,2)/=9))  then
                     HetStart=j
+                    ! Check if this allele corresponds to my parent paternal haplotype
                     if (ImputePhase(i,HetStart,PatMat)==ImputePhase(PedId,HetStart,1)) then
-                        WorkRight(HetStart)=1 
-                        RSide=1
+                        WorkRight(HetStart)=1   ! HetStart allele corresponds to Pat Haplotype in the LR direction
+                        RSide=1                 ! We are actually in the Paternal haplotype for the LR direction
                         exit
                     endif
+                    ! Check if this allele corresponds to my parent maternal haplotype
                     if (ImputePhase(i,HetStart,PatMat)==ImputePhase(PedId,HetStart,2)) then
-                        WorkRight(HetStart)=2
-                        RSide=2 
+                        WorkRight(HetStart)=2   ! HetStart allele corresponds to Mat Haplotype in the LR direction
+                        RSide=2                 ! We are actually in the Maternal haplotype for the LR direction
                         exit
                     endif
                 endif  
             enddo
-                if (RSide/=9) then
+
+            ! ... Identifying recombinations
+            if (RSide/=9) then
                 do j=HetStart+1,nSnp
+                    ! If this allele has different phased as the current haplotype, then
+                    ! Change haplotype and increase the number of recombinations of this haplotype
                     if ((ImputePhase(i,j,PatMat)/=ImputePhase(PedId,j,RSide)).and.&
                             (ImputePhase(PedId,j,RSide)/=9).and.(ImputePhase(i,j,PatMat)/=9)) then
                         RSide=abs((RSide-1)-1)+1
                         CountRightSwitch=CountRightSwitch+1
                     endif
+                    ! Wich paternal gamete the individual has received
                     WorkRight(j)=RSide
                 enddo
             endif
+
             WorkLeft=9
             LSide=9
+
+            ! Go through haplotype from Right to Left
+            ! finding the first heterozygous allele of this parent, and...
             do j=nSnp,1,-1
                 if ((ImputePhase(PedId,j,1)/=ImputePhase(PedId,j,2)).and.&
                         (ImputePhase(PedId,j,1)/=9).and.(ImputePhase(PedId,j,2)/=9))  then
@@ -3178,6 +3216,8 @@ do i=1,nAnisP
                     endif
                 endif  
             enddo
+
+            ! ... Identifying recombinations
             if (LSide/=9) then
                 do j=HetEnd-1,1,-1
                     if ((ImputePhase(i,j,PatMat)/=ImputePhase(PedId,j,LSide)).and.&
@@ -3185,31 +3225,38 @@ do i=1,nAnisP
                         LSide=abs((LSide-1)-1)+1
                         CountLeftSwitch=CountLeftSwitch+1
                     endif
+                    ! Wich paternal gamete the individual has received
                     WorkLeft(j)=LSide
                 enddo
             endif
             
             !$$$$$$$$$$$$$$$$$$$
 
-
-
+            ! UNPHASE THOSE ALLELES WITH SOME AMBIGUITY DUE TO RECOMBINATION
+            ! Let's be (StartDis:EndDis) the SNPs of the two direction disagree
             StartDis=-9
             EndDis=-9
             TempVec=9
             LengthVec=0.0
             StartJ=1
             do j=StartJ,nSnp
+                ! Initalize variables StartDis and EndDis
+                ! StartDis is the first allele where different directions differ
                 if (StartDis==-9) then
                     if (abs(WorkLeft(j)-WorkRight(j))==1) then
                         StartDis=j
                         TempVec(StartDis)=1
                     endif
                 endif
+                ! EndDis is the last allele where different directions agree.
+                !   (StartDis/=-9) guarantees that EndDis > StartDis
+                !   (EndDis==-9) guarantees that EndDis is not updated
                 if ((WorkLeft(j)==WorkRight(j)).and.(WorkLeft(j)/=9).and.(StartDis/=-9).and.(EndDis==-9)) then
                     EndDis=j-1
                     TempVec(EndDis)=2
                 endif   
 
+                ! Move StartDis to the first phased allele (from left) that comes from a heterozygous case
                 if (StartDis/=-9) then
                     do k=StartDis,1,-1
                         if ((GlobalWorkPhase(PedId,k,1)+GlobalWorkPhase(PedId,k,2))==1) then
@@ -3222,6 +3269,8 @@ do i=1,nAnisP
                     if (StartDis<1) StartDis=1
                     TempVec(StartDis)=1 
                 endif
+
+                ! Move EndDis to the last phased allele (from left) that comes from a heterozygous case
                 if (EndDis/=-9) then
                     do k=EndDis,nSnp
                         if ((GlobalWorkPhase(PedId,k,1)+GlobalWorkPhase(PedId,k,2))==1) then
@@ -3235,7 +3284,15 @@ do i=1,nAnisP
                     TempVec(EndDis)=2
                 endif
 
+                ! If StartDis==9 means that there haplotype is the same from Left to Right than from Right to Left
+                !   * In this case, EndDis==9 too, then DO NOTHING
+                ! If EndDis==9 means that
+                !   * StartDis==9 or
+                !   * WorkLeft(j)==9, which means that
+                !       - The whole haplotype is homozygous
+                !       - parent is not completely phased for that allele
                 if ((StartDis/=-9).and.(EndDis/=-9)) then
+                    ! WARNING: 3 is the only value that is used for TempVec
                     TempVec(StartDis+1:EndDis-1)=3
                     LengthVec(StartDis+1:EndDis-1)=1.0/(((EndDis-1)-(StartDis+1))+1)
                     StartJ=EndDis+1
@@ -3244,6 +3301,7 @@ do i=1,nAnisP
                 endif   
             enddo
             
+            ! Remove phase and genotype for those alleles with no explanation due to heterozygosity and recombination
             do j=1,nSnp
                 if (TempVec(j)==3) then
                     if (ImputePhase(PedId,j,1)/=ImputePhase(PedId,j,2)) then
@@ -3258,21 +3316,35 @@ do i=1,nAnisP
 
 !$$$$$$$$$$$$$$$$$$$            
 
+            !! IMPUTE PHASE WHETHER IT IS POSSIBLE
+            ! WARNING: From Hickey et al. 2012 (Appendix A):
+            !          ["Alleles are imputed ... subject to the restriction that the number of recombinations events for the individuals is less than a threshold, AND
+            !          that the region in which two recombination events occurred exceeds a threshold lenght."]
+            !          What it is coded is ["... than a threshold, OR that the region..."]
+            ! The number of recombinations in total (LR + RL) is less than a threshold
             if ((CountLeftSwitch+CountRightSwitch)<(2*MaxLeftRightSwitch)) then
                 do j=1,nSnp
                     if (ImputePhase(i,j,PatMat)==9) then
+
+                        ! WARNING: This can be coded in a conciser way
+                        ! if ( (WorkLeft(j)/=9) .and. ( (WorkRight(j)==WorkLeft(j)).or.(WorkRight(j)==9) )  ) ImputePhase(i,j,PatMat)=ImputePhase(PedId,j,WorkLeft(j))
+                        ! if ( (WorkRight(j)/=9) .and. ( (WorkRight(j)==WorkLeft(j)).or.(WorkLeft(j)==9) )  ) ImputePhase(i,j,PatMat)=ImputePhase(PedId,j,WorkRight(j))
+                        ! Phase if the allele in one of the two directions is missing
                         if ((WorkLeft(j)==9).and.(WorkRight(j)/=9)) &
                             ImputePhase(i,j,PatMat)=ImputePhase(PedId,j,WorkRight(j))
                         if ((WorkLeft(j)/=9).and.(WorkRight(j)==9)) &
                             ImputePhase(i,j,PatMat)=ImputePhase(PedId,j,WorkLeft(j))
+
+                        ! Phase if alleles is the two directions agree
                         if ((WorkLeft(j)/=9).and.(WorkRight(j)==WorkLeft(j))) &
                             ImputePhase(i,j,PatMat)=ImputePhase(PedId,j,WorkLeft(j))
                     endif
                 enddo
             else
+                ! Let's be (StartPt:EndPt) the SNPs in the two direction agree
                 EndPt=0
                 StartPt=0
-                do while ((StartPt<(nSnp-MinSpan)).and.(EndPt<(nSnp-MinSpan)))
+                do while ((StartPt<(nSnp-MinSpan)).and.(EndPt<(nSnp-MinSpan)))      ! If EndPt >(nSnp-MinSpan), then recombination events does not exceed the threshold MinSpan
                     do j=EndPt+1,nSnp
                         if ((WorkLeft(j)/=9).and.(WorkRight(j)==WorkLeft(j)))  then
                             StartPt=j
@@ -3287,8 +3359,11 @@ do i=1,nAnisP
                         endif
                         if (j==nSnp) EndPt=j
                     enddo
+                    ! The region in which two recombination events occurred exceeds a threshold lenght
                     if (((EndPt-StartPt)+1)>MinSpan) then
                         do j=StartPt,EndPt
+                            ! WARNING: This condition is supposed to be meet always since SNPs in (StartPt:EndPt)
+                            !          meet the condition (WorkLeft(j)/=9).and.(WorkRight(j)==WorkLeft(j))
                             if (ImputePhase(PedId,j,WorkRight(j))/=9)&
                                 ImputePhase(i,j,PatMat)=ImputePhase(PedId,j,WorkRight(j))
                         enddo
@@ -3299,6 +3374,7 @@ do i=1,nAnisP
     enddo
 enddo
 
+! Impute phase for the Heterogametic chromosome from the Homogametic one, which has been already phased
 do i=1,nAnisP
     if ((SexOpt==1).and.(RecGender(i)==HetGameticStatus)) then
         !ImputePhase(i,j,HetGameticStatus)=ImputePhase(i,j,HomGameticStatus)
