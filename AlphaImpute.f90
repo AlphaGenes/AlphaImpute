@@ -2828,10 +2828,12 @@ subroutine RestrictedWorkLeftRight
 ! individual when analysis in both directions of the chromosome has identified the same inherited gamete
 ! and when the parent is phased for this locus in the suggested gamete, subject to the restrictions that
 ! he number of recombination events for the individuals is less than a threshold and that the region in
-! which two recombination events occurred exceeds a threshold length. Major sub-step 8 is iterated a
-! number of times with increasingly relaxed restrictions. After each iteration, the minor sub-steps are
-! also carried out.
-! This subroutine corresponds to Major sub-step 8 from Hickey et al., 2012 (Appendix A)
+! which two recombination events occurred exceeds a threshold length.
+! This subroutine corresponds to WorkLeftRight (Major sub-step 8 from Hickey et al., 2012 (Appendix A))
+! but with two main restrictions:
+!   * The number of recombinations is fixed to MaxLeftRightSwitch=4; and
+!     the threshold lenght for recombination is fixed to MinSpan=200
+!   * The number of unphased alleles has to be lower than a threshold ((2*nSnp)*0.07))
 
 use Global
 
