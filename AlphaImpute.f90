@@ -3315,6 +3315,23 @@ end subroutine WorkLeftRight
 !#############################################################################################################################################################################################################################
 
 subroutine InternalParentPhaseElim
+! Internal imputation of single alleles based on parental phase.
+! Several different core lengths are used to define the length of the haplotypes and to ensure to
+! prevent the use of phasing errors that originate from LRPHLI. For each core of each round of the
+! LRPHLI algorithm, all haplotypes that have been found and stored in the haplotype library.
+! Candidate haplotypes are restricted to the two haplotypes that have been identified for each of
+! the individual parents with high-density genotype information by the LRPHLI algorithm for the true
+! haplotype that an individual carries on its gametes. Within the core, all alleles that are known
+! are compared to corresponding alleles in each of the individual haplotypes. The candidate
+! haplotypes are checked for locations that have unanimous agreement about a particular allele. For
+! alleles with complete agreement, a count of the suggested allele is incremented. Alleles are
+! imputed if, at the end of passing across each core and each round of the LRPHLI algorithm, the
+! count of whether the alleles are 0 or 1 is above a threshold in one direction and below a
+! threshold in the other. This helps to prevent the use of phasing errors that originate from
+! LRPHLI.
+! This subroutine corresponds to Major sub-step 7 from Hickey et al., 2012 (Appendix A)
+
+
 use Global
 implicit none
 
@@ -3325,7 +3342,12 @@ integer :: Count1,Work(nSnp,2),Ban,CompPhasePar,GamA,GamB
 integer,allocatable,dimension (:,:) :: CoreIndex,HapLib,LoopIndex,HapElim
 integer(kind=1),allocatable,dimension (:,:,:,:) :: Temp
 
+! WARNING: This should go in a function since it is the same code as InternalParentPhaseElim subroutine
 nGlobalLoop=25
+
+! LoopeIndex is a matrix with two columns that will serve to define:
+!   * 1.- nCores
+!   * 2.- Core lengths
 allocate(LoopIndex(nGlobalLoop,2))
 
 LoopIndex(1,1)=400
@@ -3354,6 +3376,10 @@ LoopIndex(23,1)=6
 LoopIndex(24,1)=5
 LoopIndex(25,1)=4
 
+! WARNING: This can be better arrange with a ELSEIF statement and should go in a function since it
+!          is the same code as InternalParentPhaseElim subroutine
+! LoopStart indicates which is the first loop the algorithm should treat. The bigger the number of
+! SNPs, the more the loops to be considered
 if(nSnp<=50) return
 if(nSnp>50) LoopStart=24
 if(nSnp>100) LoopStart=21
@@ -3367,6 +3393,7 @@ if(nSnp>3000) LoopStart=6
 if(nSnp>4000) LoopStart=3
 if(nSnp>5000) LoopStart=1
 
+! Assumed that LoopIndex(:,1) are the numbers of cores for each phase step, LoopIndex):,2) are the core lengths
 do i=1,nGlobalLoop
     LoopIndex(i,2)=int(float(nSnp)/LoopIndex(i,1))  
 enddo
@@ -3374,52 +3401,81 @@ enddo
 allocate(Temp(nAnisP,nSnp,2,2))
 Temp=0
 AnimalOn=0
+
+! SIMULATE PHASING
+! f is a variable to simulate shift or no-shift phasing
+do f=1,2
 do m=1,2
-        do l=LoopStart,nGlobalLoop
-            if (m==1) then
+    do l=LoopStart,nGlobalLoop
+
+        ! Simulate phase without shift
+        if (m==1) then
             nCore=nSnp/LoopIndex(l,2) 
-                CoreStart=1
-                    CoreEnd=LoopIndex(l,2)
-            else
-                OffSet=int(float(LoopIndex(l,1))/2)
-                nCore=(nSnp-(2*OffSet))/LoopIndex(l,2)
-                CoreStart=1+Offset
-                CoreEnd=LoopIndex(l,2)+Offset
-            endif    
-            do g=1,nCore
-                if ((m==1).and.(g==nCore)) CoreEnd=nSnp
-                if ((m==2).and.(g==nCore)) CoreEnd=nSnp-OffSet
+            CoreStart=1
+            CoreEnd=LoopIndex(l,2)
+
+        ! Simulate phase with shift
+        else
+            ! WARNING: A POSSIBLE BUG HERE. MOST LIKELY CODE IS:
+            !          OffSet=int(float(LoopIndex(l,2))/2)
+            OffSet=int(float(LoopIndex(l,1))/2)
+            nCore=(nSnp-(2*OffSet))/LoopIndex(l,2)
+            CoreStart=1+Offset
+            CoreEnd=LoopIndex(l,2)+Offset
+        endif
+
+        do g=1,nCore
+            ! Make sure that cores ends correctly
+            if ((m==1).and.(g==nCore)) CoreEnd=nSnp
+            if ((m==2).and.(g==nCore)) CoreEnd=nSnp-OffSet
+
+            ! Exit if the corelength is too small
             CoreLength=(CoreEnd-CoreStart)+1
             if (CoreLength<10) exit
 
+            ! PARALLELIZATION BEGINS
             !# PARALLEL DO SHARED (nAnisP,RecPed,ImputePhase,CoreStart,CoreEnd,AnimalOn,Temp) private(i,e,CompPhase,GamA,j,GamB)
             do i=1,nAnisP
                 do e=1,2
+                    ! Skip if, in the case of sex chromosome, me and my parent are heterogametic
                     if ((SexOpt==1).and.(RecGender(i)==HetGameticStatus).and.(RecGender(RecPed(i,e+1))==HetGameticStatus)) cycle
+
+                    ! If not a Base Animal
                     if (RecPed(i,e+1)>0) then
                         CompPhase=1
+                        ! If the haplotype for this core is not completely phased
                         if (count(ImputePhase(i,CoreStart:CoreEnd,e)==9)>0) CompPhase=0
                         if (CompPhase==0) then
+
+                            ! Check is this haplotype is the very same that the paternal haplotype
+                            ! of the parent of the individual
                             GamA=1
                             do j=CoreStart,CoreEnd
                                 if ((ImputePhase(i,j,e)/=9).and.&
-                                    (ImputePhase(RecPed(i,e+1),j,1)&
-                                        /=ImputePhase(i,j,e)).and.&
+                                    (ImputePhase(RecPed(i,e+1),j,1)/=ImputePhase(i,j,e)).and.&
                                     (ImputePhase(RecPed(i,e+1),j,1)/=9)) then       
-                                    GamA=0
-                                    exit
+                                        GamA=0
+                                        exit
                                 endif
                             enddo
+
+                            ! Check is this haplotype is the very same that the maternal haplotype
+                            ! of the parent of the individual
                             GamB=1
                             do j=CoreStart,CoreEnd
                                 if ((ImputePhase(i,j,e)/=9).and.&
-                                    (ImputePhase(RecPed(i,e+1),j,2)&
-                                        /=ImputePhase(i,j,e)).and.&
+                                    (ImputePhase(RecPed(i,e+1),j,2)/=ImputePhase(i,j,e)).and.&
                                     (ImputePhase(RecPed(i,e+1),j,2)/=9)) then       
-                                    GamB=0
-                                    exit
+                                        GamB=0
+                                        exit
                                 endif
                             enddo
+
+                            ! This haplotype is the paternal haplotype of the individual's parent
+                            ! Then count the number of occurrences a particular phase is impute in a
+                            ! a particular allele across the cores and across the internal phasing steps
+                            ! WARNING: This chunk of code and the next chunk can be colapse in a
+                            !          DO statement. Look in InternalHapLibImputation for an example
                             if ((GamA==1).and.(GamB==0)) then
                                 AnimalOn(i,e)=1
                                 do j=CoreStart,CoreEnd
@@ -3431,6 +3487,12 @@ do m=1,2
                                     endif
                                 enddo
                             endif
+
+                            ! This haplotype is the maternal haplotype of the individual's parent
+                            ! Then count the number of occurrences a particular phase is impute in a
+                            ! a particular allele across the cores and across the internal phasing steps
+                            ! WARNING: This chunk of code and the previous chunk can be colapse in a
+                            !          DO statement. Look in InternalHapLibImputation for an example
                             if ((GamA==0).and.(GamB==1)) then
                                 AnimalOn(i,e)=1
                                 do j=CoreStart,CoreEnd
@@ -3448,6 +3510,7 @@ do m=1,2
             enddo
             !# END PARALLEL DO 
             
+            ! Prepare the core for the next cycle
             CoreStart=CoreStart+LoopIndex(l,2)
             CoreEnd=CoreEnd+LoopIndex(l,2)
             if ((m==2).and.(g==nCore)) exit
@@ -3455,8 +3518,11 @@ do m=1,2
     enddo
 enddo
 
+! If all alleles across the cores and across the internal phasing steps have been phased the same way, impute
 do i=1,nAnisP
+    ! The individual has two haplotypes
     do e=1,2
+
         if (AnimalOn(i,e)==1) then
             if ((SexOpt==0).or.(RecGender(i)==HomGameticStatus)) then
                 do j=1,nSnp
@@ -3468,12 +3534,16 @@ do i=1,nAnisP
             endif
         endif
     enddo
+
+    ! The individual is has one haplotype: In Sex Chromosome, the heterogametic case
     if ((SexOpt==1).and.(RecGender(i)==HetGameticStatus)) then
         if (AnimalOn(i,HomGameticStatus)==1) then
             do j=1,nSnp
                 if (ImputePhase(i,j,HomGameticStatus)==9) then
-                    if ((Temp(i,j,HomGameticStatus,1)>nAgreeInternalHapLibElim).and.(Temp(i,j,HomGameticStatus,2)==0)) ImputePhase(i,j,:)=0
-                    if ((Temp(i,j,HomGameticStatus,1)==0).and.(Temp(i,j,HomGameticStatus,2)>nAgreeInternalHapLibElim)) ImputePhase(i,j,:)=1
+                    if ((Temp(i,j,HomGameticStatus,1)>nAgreeInternalHapLibElim).and.(Temp(i,j,HomGameticStatus,2)==0))&
+                        ImputePhase(i,j,:)=0
+                    if ((Temp(i,j,HomGameticStatus,1)==0).and.(Temp(i,j,HomGameticStatus,2)>nAgreeInternalHapLibElim))&
+                        ImputePhase(i,j,:)=1
                 endif
             enddo
         endif
@@ -3489,19 +3559,19 @@ end subroutine InternalParentPhaseElim
 !#############################################################################################################################################################################################################################
 
 subroutine InternalHapLibImputation
-! Internal candidate haplotype library imputation of alleles. Haplotype libraries are internally
-! built using the information that has been previously imputed. Several different core lengths are
-! used to define the length of the haplotypes and to ensure to prevent the use of phasing errors
-! that originate from LRPHLI. For each core, all haplotypes that have been found and stored in the
-! haplotype library are initially considered to be candidates for the true haplotype that an
-! individual carries on its gametes. Within the core, all alleles that are known are compared to
-! corresponding alleles in each of the haplotypes in the library. Haplotypes that have a number of
-! disagreements greater than a small error threshold have their candidacy rejected. At the end of
-! this loop, the surviving candidate haplotypes are checked for locations that have unanimous
-! agreement about a particular allele. For alleles with complete agreement, a count of the suggested
-! allele is incremented. Alleles are imputed if, at the end of passing across each core and each
-! round of the LRPHLI algorithm, the count of whether the alleles are 0 or 1 is above a threshold in
-! one direction and below a threshold in the other.
+! Internal candidate haplotype library imputation of alleles.q
+! Haplotype libraries are internally built using the information that has been previously imputed.
+! Several different core lengths are used to define the length of the haplotypes and to ensure to
+! prevent the use of phasing errors that originate from LRPHLI. For each core, all haplotypes that
+! have been found and stored in the haplotype library are initially considered to be candidates for
+! the true haplotype that an individual carries on its gametes. Within the core, all alleles that
+! are known are compared to corresponding alleles in each of the haplotypes in the library.
+! Haplotypes that have a number of disagreements greater than a small error threshold have their
+! candidacy rejected. At the end of this loop, the surviving candidate haplotypes are checked for
+! locations that have unanimous agreement about a particular allele. For alleles with complete
+! agreement, a count of the suggested allele is incremented. Alleles are imputed if, at the end of
+! passing across each core and each round of the LRPHLI algorithm, the count of whether the alleles
+! are 0 or 1 is above a threshold in one direction and below a threshold in the other.
 ! This subroutine corresponds to Major sub-step 6 from Hickey et al., 2012 (Appendix A)
 
 use Global
