@@ -77,35 +77,63 @@ USAGE
     try:
         # Setup argument parser
         parser = ArgumentParser(description=program_license, formatter_class=RawDescriptionHelpFormatter)
-        parser.add_argument(dest="predigree", help="Pedigree file", metavar="file", required=True)  # Poisitional argument. This is the first input file: Pedigree
-        parser.add_argument(dest='genotype', help="Genotype file", metavar="file", required=True)   # Poisitional argument. This is the second input file: Genotype
-        parser.add_argument("-x", "--sexchrom", help="Sex Chromosome File")   
-        parser.add_argument("-f", "--hetero-female", help="Female is the heterogametic sex", choices=['Male', 'Female'])
-        parser.add_argument("-s", "--snp", help="Number of SNPs", type=int, metavar="nSNP", required=True)
-        parser.add_argument("-E", "--edit", help="Internal Edition of data")
-        parser.add_argument("-n", "--phasing-run", help="Number of phasing runs")
-        parser.add_argument("-t", "--tiles", help="Core and Tail lengths", type=list)
-        parser.add_argument("-c", "--cores", help="Core lengths", type=list)
-        parser.add_argument("-e", "--generror", help="Genotype Error [Default: %(default)3.1f]", type=float, default=0.0)
-        parser.add_argument("-p", "--processors", help="Number of Processors Available [Default: %(default)d]", default=2, type=int)
-        parser.add_argument("-I", "--iterations", help="Internal Iterations [Default: %(default)d]", type=int, default=5)
-        parser.add_argument("--data-only", help="Process Data Only", action="store_true")
-        parser.add_argument("--phase-only", help="Phase Only", action="store_true")
-        parser.add_argument("-l", "--library-use", help="Conservative Haplotype Library Use", action="store_true")
-        parser.add_argument("-w", "--well-phase", help="Well phase Threshold [Default: %(default)3.1f]", type=float, default=99.0)
-        parser.add_argument("-u", "--user-phase", help="User Defined Alpha Phase Animals File")
-        parser.add_argument("-P", "--prephase", help="Pre-phased file")
+        parser.add_argument("-P", "--pedigree", dest="pedigree", help="File containing the pedigree information", metavar="file", type=file)
+        parser.add_argument("-G", "--genotype", dest='genotype', help="File containing the genotypes", metavar="file", type=file)
+        parser.add_argument("-x", "--sexchrom", help="Sex Chromosome File", action="store_true")
+        parser.add_argument("-f", "--heterogamete", help="The heterogametic sex [Default: %(default)s]", choices=['Female', 'Male'], default='Female')
+        parser.add_argument("-S", "--snp", help="Number of SNP in the genotype file", type=int, metavar="nSNP", required=True)
+        parser.add_argument("-e", "--edit", help="Parameters to edit data internally. First three parameters have to be float representing percentages. The last one can be one option between {AllSnpOut, EditedSnpOut} [Default: %(default)s]", metavar="", nargs=4, default=[95.0,2.0,98.0,'AllSnpOut']) # First three parameters are numerical (need to cast to float). The last one is a boolean
+        parser.add_argument("--phased", help="Specify if phasing rounds have been done previously", choices=['PhaseDone','NoPhase'], metavar="")
+        parser.add_argument("--phasepath", help="Path where the phasing rounds are store", metavar='PATH')
+        parser.add_argument("-r", "--phasing_runs", help="Number of phasing runs", default=20, type=int, metavar='int')
+        parser.add_argument("-t", "--tiles", help="Core and Tail lengths [Default: %(default)s]", nargs='*', default=[600,700,800,900,1000,1100,1200,1300,1600,1800], type=int, metavar='int')
+        parser.add_argument("-c", "--cores", help="Core lengths [Default: %(default)s]", nargs='*', type=int, default=[500,600,700,800,900,1000,1100,1200,1400,1600], metavar='int')
+        parser.add_argument("-E", "--genotype_error", help="Genotype Error [Default: %(default)3.1f]", type=float, default=0.0)
+        parser.add_argument("-n", "--processors", help="Number of Processors Available [Default: %(default)d]", default=2, type=int)
+        parser.add_argument("-i", "--iterations", help="Internal Iterations [Default: %(default)d]", type=int, default=3)
+        parser.add_argument("--data-only", help="Pre process data only", action="store_true", dest="data")
+        parser.add_argument("--phase-only", help="Phase Only", action="store_true", dest="phase")
+        parser.add_argument("-l", "--library", help="Conservative Haplotype Library Use", action="store_true")
+        parser.add_argument("-w", "--well_phased_thres", help="Well phase threshold [Default: %(default)3.1f]", type=float, default=99.0, dest="wellthres")
+        parser.add_argument("-u", "--user_phase", help="User defined AlphaPhase animals file", type=file, metavar="file", dest="userfile")
+        parser.add_argument("-p", "--prephase", help="Pre-phased file", type=file, metavar="file")
         parser.add_argument("-b", "--bypass", help="Bypass GeneProb", action="store_true")
-        parser.add_argument("-r", "--restart", help="Restart Option", type=int)
-        parser.add_argument("-H", "--HMM", help="Hidden Markov Model parameters", nargs=4)
-        parser.add_argument("-T", "--truegenotype", help="True Genotype File", metavar="file")
-        # parser.add_argument("-h", "--help", help="Display this help", action="help")
+        parser.add_argument("-R", "--restart", help="Restart Option [Default: %(default)d; ]", type=int, default=0, required=True)
+        parser.add_argument("-H", "--HMM", help="Hidden Markov Model parameters", nargs=4, default=[2,3,5,-123456788], metavar="")
+        parser.add_argument("-T", "--truegenotype", help="True Genotype File", metavar="file", type=file)
         parser.add_argument("-V", "--version", action="version", version=program_version_message)
 
         # Process arguments
         args = parser.parse_args()
 
         pedigreeFile = args.pedigree
+        genotypeFile = args.genotype
+        sexChromosome = args.sexchrom
+        heterogamete = args.heterogamete
+        nSnps = args.snp
+        editParameters = args.edit
+        phased = args.phased
+        phasePath = args.phasepath
+        phaseRuns = args.phasing_runs
+        tilesLength = args.tiles
+        coresLength = args.cores
+        genotypeError = args.genotype_error
+        nProcessors = args.processors
+        nIterations = args.iterations
+        dataOnly = args.data
+        phaseOnly = args.phase
+        library = args.library
+        wellPhasedThres = args.wellthres
+        userPhaseFile = args.userfile
+        prePhasedFile = args.prephase
+        bypass = args.bypass
+        restartOption = args.restart
+        hmm = args.HMM
+        trueGenotypeFile = args.truegenotype
+
+        with open('AlphaImputeSpec.txt', 'w') as spec:
+            spec.write('PedigreeFile\t\t,{0}\n'.format(pedigreeFile.name))
+            spec.write('GenotypeFile\t\t,{0}\n'.format(genotypeFile.name))
 
 
         print "[DONE]"
