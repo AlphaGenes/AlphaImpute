@@ -3494,9 +3494,7 @@ do m=1,2
 
         ! Simulate phase with shift
         else
-            ! WARNING: A POSSIBLE BUG HERE. MOST LIKELY CODE IS:
-            !          OffSet=int(float(LoopIndex(l,2))/2)
-            OffSet=int(float(LoopIndex(l,1))/2)
+            OffSet=int(float(LoopIndex(l,2))/2)
             nCore=(nSnp-(2*OffSet))/LoopIndex(l,2)
             CoreStart=1+Offset
             CoreEnd=LoopIndex(l,2)+Offset
@@ -3737,9 +3735,7 @@ do f=1,2
 
         ! Simulate phase with shift
         else
-            ! WARNING: A POSSIBLE BUG HERE. MOST LIKELY CODE IS:
-            !          OffSet=int(float(LoopIndex(l,2))/2)
-            OffSet=int(float(LoopIndex(l,1))/2)
+            OffSet=int(float(LoopIndex(l,2))/2)
             nCore=(nSnp-(2*OffSet))/LoopIndex(l,2)
             CoreStart=1+Offset
             CoreEnd=LoopIndex(l,2)+Offset
