@@ -690,34 +690,62 @@ use GlobalVariablesHmmMaCH
 implicit none
 integer :: i,j,k
 
+! Number of SNPs and genotyped animals for the HMM algorith
 nSnpHmm=nSnp
 nIndHmmMaCH=nAnisG
+
+! ALLOCATE MEMORY
+! Allocate a matrix to store the diploids of every Animal
+! Template Diploids Library
 allocate(GenosHmmMaCH(nIndHmmMaCH,nSnp))
+
+! Allocate memory to store Animals contributing to the Template
+! Haplotype Library
 allocate(GlobalHmmID(nIndHmmMaCH))
+
+! Allocate memory to store Animals Highly Dense Gentoyped
 allocate(GlobalHmmHDInd(nIndHmmMaCH))
+
+! Allocate a matrix to store probabilities of the genotype of every
+! Animal and inititalize to 0
 allocate(ProbImputeGenosHmm(nIndHmmMaCH,nSnp))
 ProbImputeGenosHmm=0.0
 
+! Any animal hasn't been HD genotyped YET
+! WARNING: If this variable only stores 1 and 0, then its type should
+!          logical: GlobalHmmHDInd=.false.
 GlobalHmmHDInd=0
+
 k=0
 do i=1,nAnisP
+    ! Check if individual is genotype
     if (IndivIsGenotyped(i)==1) then
         k=k+1
+        ! Add animal's diploid to the Diploids Library
         GenosHmmMaCH(k,:)=ImputeGenos(i,:)
         GlobalHmmID(k)=i
+        ! Check if this animal is Highly Dense genotyped
         if ((float(count(GenosHmmMaCH(k,:)==9))/nSnp)<0.10) then
+            ! WARNING: If this variable only stores 1 and 0, then its
+            !          type should logical: GlobalHmmHDInd=.true.
             GlobalHmmHDInd(k)=1
         endif
+
+        ! WARNING: This should have been previously done for ImputeGenos variable
         do j=1,nSnp
             if ((GenosHmmMaCH(k,j)<0).or.(GenosHmmMaCH(k,j)>2)) GenosHmmMaCH(k,j)=3
         enddo   
     endif   
 enddo
+
+! Check if the number of genotyped animals is correct
 if (k/=nAnisG) then
     print*, "Error in ParseMaCHData"
     stop
 endif
 
+! Check if the number of Haplotypes, H (MaCH paper: Li et al. 2010),
+! is reached.
 if (nHapInSubH>2*sum(GlobalHmmHDInd(:))) then
     print*, "Data set is too small for the number of Haplotypes in Sub H specified"
     stop
