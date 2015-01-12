@@ -2175,13 +2175,17 @@ open (unit=44,file="Results/NumberRecombinations.txt",status="unknown")
 open (unit=45,file="Results/RecombinationInformationR.txt",status="unknown")
 open (unit=46,file="Results/RecombinationInformationNarrowR.txt",status="unknown")
 
-
+! Check whether to consider all the raw snps or only the snps left after the edition procedure
+! If EditedSnpOut in Spec file
 if (OutOpt==0) then
     nSnpFinal=nSnp
+! If AllSnpOut in Spec file
 else
     nSnpFinal=nSnpRaw
 endif
 
+! Divide haplotypes into chunks of the same length.
+! Each chunk will be treated separately in different processors
 Tmp=int(float(nSnp)/nProcessors)
 GpIndex(1,1)=1
 GpIndex(1,2)=Tmp
@@ -3161,7 +3165,7 @@ do i=1,nAnisP
             WorkRight=9
             RSide=9
 
-            ! Go throught haplotype from Left to Right
+            ! Go through haplotype from Left to Right
             ! finding the first heterozygous allele of this parent, and...
             do j=1,nSnp
                 if ((ImputePhase(PedId,j,1)/=ImputePhase(PedId,j,2)).and.&
