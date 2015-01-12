@@ -3485,8 +3485,7 @@ Temp=0
 AnimalOn=0
 
 ! SIMULATE PHASING
-! f is a variable to simulate shift or no-shift phasing
-do f=1,2
+! m is a variable to simulate shift or no-shift phasing
 do m=1,2
     do l=LoopStart,nGlobalLoop
 
