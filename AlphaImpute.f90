@@ -744,8 +744,8 @@ if (k/=nAnisG) then
     stop
 endif
 
-! Check if the number of Haplotypes, H (MaCH paper: Li et al. 2010),
-! is reached.
+! Check if the number of Haplotypes the user has considered in the
+! Spec file, Sub H (MaCH paper: Li et al. 2010), is reached.
 if (nHapInSubH>2*sum(GlobalHmmHDInd(:))) then
     print*, "Data set is too small for the number of Haplotypes in Sub H specified"
     stop
@@ -1252,36 +1252,61 @@ end subroutine SetUpPrior
 !########################################################################################################################################################################
 
 subroutine SetUpEquations
+! Initialize the variables and parameters of the HMM model described in
+! Li et al. 2010, Appendix
+
 use GlobalVariablesHmmMaCH
 implicit none
 
 integer :: i,j
 double precision :: ran1
 
+! ALLOCATE MEMORY
+! The full Template Haplotype Library, H (Li et al. 2010, Appendix)
 allocate(FullH(nIndHmmMaCH,nSnpHmm,2))
+
+! Subset of H, Sub H (setup by the user)
+! This is a way to restrict the size of the template library, as the
+! complexity of the algorith increases cubically with the sample size
+! (the cost of each update increases quadratically and the number of
+!  updates increases linearly with sample size)
 allocate(SubH(nHapInSubH,nSnpHmm))
+
+! HMM PARAMETERS
+! Vector of Combination of genotyping error (Li et al. 2010, Appendix)
 allocate(Epsilon(nSnpHmm))
+! Vector of Combination of population recombination (Li et al. 2010, Appendix)
 allocate(Thetas(nSnpHmm-1))
+
 allocate(ErrorUncertainty(nSnpHmm))
 allocate(ErrorMatches(nSnpHmm))
 allocate(ErrorMismatches(nSnpHmm))
+
+! Crossover parameter in order to maximize the investigation of
+! different mosaic configurations
 allocate(Crossovers(nSnpHmm))
 
+! Initialization of HMM parameters
 Epsilon=0.00000001
 Thetas=0.01
 
 !Initialise FullH
-do i=1,nIndHmmMaCH
-    do j=1,nSnpHmm
+do i=1,nIndHmmMaCH      ! For every Genotyped Individual
+    do j=1,nSnpHmm      ! For each SNP
 
+        ! Phase homozygose locus
         if (GenosHmmMaCH(i,j)==0) then
             FullH(i,j,:)=0
         endif
         
         if (GenosHmmMaCH(i,j)==2) then
             FullH(i,j,:)=1
-        endif   
+        endif
         
+        ! WARNING: ran1 is a function that given a negative integer as
+        !          parameter, returns a random number between [0.0,1.0]
+        !          idum variable is set by the user in the Spec hmm param.
+        ! Phase heterozygose case at random
         if (GenosHmmMaCH(i,j)==1) then
             if (ran1(idum)>=0.5) then           
                 FullH(i,j,1)=0
@@ -1290,7 +1315,9 @@ do i=1,nIndHmmMaCH
                 FullH(i,j,1)=1
                 FullH(i,j,2)=0
             endif
-        endif   
+        endif
+
+        ! If locus is not genotyped, phase each haplotype at random
         if (GenosHmmMaCH(i,j)==3) then
             if (ran1(idum)>=0.5) then           
                 FullH(i,j,1)=0
