@@ -1218,11 +1218,16 @@ end subroutine ConditionOnData
 !########################################################################################################################################################################
  
 subroutine CalcPenetrance
+! Initialize the Penetration matrix of the HMM as the emission 
+! probabilities matrix given in Appendix of Li et al. (2010)
 use GlobalVariablesHmmMaCH
 implicit none
 
 integer :: j
 
+! Penetrance(j,i,k) = P(P_j|S_j)
+! i = G_j = {0,1,2}
+! k = T(S_j) = T(x_j) + T(y_j) = {0,1,2}
 allocate(Penetrance(nSnpHmm,0:2,0:2))
 
 do j=1,nSnpHmm
