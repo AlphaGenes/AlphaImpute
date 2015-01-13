@@ -1140,7 +1140,10 @@ subroutine ForwardAlgorithm(CurrentInd)
 use GlobalVariablesHmmMaCH
 implicit none
 
-integer :: i,j,CurrentInd,PrecedingMarker
+integer, intent(in) :: CurrentInd
+
+! Local variables
+integer :: i,j,PrecedingMarker
 
 call SetUpPrior
 
