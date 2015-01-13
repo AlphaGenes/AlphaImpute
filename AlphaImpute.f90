@@ -759,7 +759,10 @@ subroutine MaCHForInd(CurrentInd)
 use GlobalVariablesHmmMaCH
 implicit none
 
-integer :: HapCount,CurrentInd,ShuffleInd1,ShuffleInd2
+integer, intent(in) :: CurrentInd
+
+! Local variables
+integer :: HapCount,ShuffleInd1,ShuffleInd2
 integer,allocatable,dimension(:) :: Shuffle1,Shuffle2
 
 !Extract SubH
