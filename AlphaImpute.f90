@@ -756,6 +756,9 @@ end subroutine ParseMaCHData
 !########################################################################################################################################################################
  
 subroutine MaCHForInd(CurrentInd)
+! Create a Template Haplotype Library, H, and create HMM for each
+! individual
+
 use GlobalVariablesHmmMaCH
 implicit none
 
@@ -765,7 +768,7 @@ integer, intent(in) :: CurrentInd
 integer :: HapCount,ShuffleInd1,ShuffleInd2
 integer,allocatable,dimension(:) :: Shuffle1,Shuffle2
 
-!Extract SubH
+! Crete vectors of random indexes
 allocate(Shuffle1(nIndHmmMaCH))
 allocate(Shuffle2(nIndHmmMaCH))
 call RandomOrder(Shuffle1,nIndHmmMaCH,idum)
@@ -774,15 +777,26 @@ call RandomOrder(Shuffle2,nIndHmmMaCH,idum)
 HapCount=0
 ShuffleInd1=0
 ShuffleInd2=0
+
+! EXTRACT SUBH
+! While the maximum number of haps in the template haplotypes set, H,
+! is not reached...
 do while (HapCount<nHapInSubH)
+    ! Differentiate between paternal (even) and maternal (odd) haps
     if (mod(HapCount,2)==0) then
         ShuffleInd1=ShuffleInd1+1
+
+        ! Select the paternal haplotype if the individual it belongs
+        ! too is genotyped and it is not the current individual
         if ((Shuffle1(ShuffleInd1)/=CurrentInd).and.(GlobalHmmHDInd(ShuffleInd1)==1)) then
             HapCount=HapCount+1
             SubH(HapCount,:)=FullH(Shuffle1(ShuffleInd1),:,1)
         endif   
     else
         ShuffleInd2=ShuffleInd2+1   
+
+        ! Select the maternal haplotype if the individual it belongs
+        ! too is genotyped and it is not the current individual
         if ((Shuffle2(ShuffleInd2)/=CurrentInd).and.(GlobalHmmHDInd(ShuffleInd2)==1)) then
             HapCount=HapCount+1
             SubH(HapCount,:)=FullH(Shuffle2(ShuffleInd2),:,2)       
@@ -790,6 +804,13 @@ do while (HapCount<nHapInSubH)
     endif
 enddo
 
+! The number of parameters of the HMM, N and M (Rabiner (1989) notation)
+! calculated as in Li et al. (2010) are:
+!   nHapInSubH = Number of haplotypes in the template haplotype set, H
+!   nHapInSubH*nHapInSubH = Number of states, N = H^2
+!   nSnpHmm = Number of Observations, M
+!
+! Allocate all possible state sequencies
 allocate(ForwardProbs(nHapInSubH*nHapInSubH,nSnpHmm))
 
 call ForwardAlgorithm(CurrentInd)
