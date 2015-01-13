@@ -1274,9 +1274,14 @@ end subroutine CalcPenetrance
 !########################################################################################################################################################################
  
 subroutine SetUpPrior
+! Set up de initial state distribution, that is, the probability that
+! the sequence starts with the state Sj:
+!   PIj = P(t1=Sj) = ForwardProb(j,1)
+
 use GlobalVariablesHmmMaCH
 implicit none
 
+! Initially, every state is equally possible
 ForwardProbs(:,1)=1.0/(nHapInSubH*nHapInSubH)
 
 end subroutine SetUpPrior
