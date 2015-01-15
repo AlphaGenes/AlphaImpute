@@ -1224,7 +1224,10 @@ subroutine ConditionOnData(CurrentInd,Marker)
 use GlobalVariablesHmmMaCH
 implicit none
 
-integer :: i,j,CurrentInd,Marker,Index
+integer, intent(in) :: CurrentInd, Marker
+
+! Local variables
+integer :: i,j,Index
 double precision :: Factors(0:1)
 
 if (GenosHmmMaCH(CurrentInd,Marker)==3) then
