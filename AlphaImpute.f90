@@ -1145,6 +1145,7 @@ integer, intent(in) :: CurrentInd
 ! Local variables
 integer :: i,j,PrecedingMarker
 
+! Setup the initial state distributions
 call SetUpPrior
 
 j=1
