@@ -1314,9 +1314,17 @@ allocate(FullH(nIndHmmMaCH,nSnpHmm,2))
 allocate(SubH(nHapInSubH,nSnpHmm))
 
 ! HMM PARAMETERS
+! nSnpHmm is the number of states in the HMM
+
 ! Vector of Combination of genotyping error (Li et al. 2010, Appendix)
+! Epsilon is related with the Penetrance Matrix of the HMM which gives
+! the emision probabilities for each state/marker/snp.
 allocate(Epsilon(nSnpHmm))
+
 ! Vector of Combination of population recombination (Li et al. 2010, Appendix)
+! Thetas is related with the transition Matrix of the HMM. Since there
+! are nSnpHmm states, there are nSnpHmm transitions between states.
+! WARNING: Is this correctly implemented throughout the hmm process??
 allocate(Thetas(nSnpHmm-1))
 
 allocate(ErrorUncertainty(nSnpHmm))
@@ -1325,6 +1333,9 @@ allocate(ErrorMismatches(nSnpHmm))
 
 ! Crossover parameter in order to maximize the investigation of
 ! different mosaic configurations
+! WARNING: crossovers are related with the transition matrix of the HMM.
+!          If there are nSnpHmm states and nSnpHmm-1 transitions
+!          between states, why the number of crossovers is nSnpHmm??
 allocate(Crossovers(nSnpHmm))
 
 ! Initialization of HMM parameters
