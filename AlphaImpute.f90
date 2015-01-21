@@ -809,10 +809,22 @@ enddo
 ! calculated as in Li et al. (2010) are:
 !   nHapInSubH = Number of haplotypes in the template haplotype set, H
 !   nHapInSubH*nHapInSubH = Number of states, N = H^2
-!   nSnpHmm = Number of Observations, M
+!   nSnpHmm = Number of Observations, M.
+!
+! ForwardProbs are the accumulated probabilities(??), and for
+! ForwardPrbos(:,1) this array are the prior probabilities
 !
 ! Allocate all possible state sequencies
 allocate(ForwardProbs(nHapInSubH*nHapInSubH,nSnpHmm))
+
+! WARNING: I think this variable is treated in a wrong way. In MaCH
+!          code, FordwardProbs is the array variable leftMatrices.
+!          In there, every element of the array is another array with
+!          s(s+1)/2 elements, as S(i,j)=S(j,i); where s=nHapInSubH.
+!          The code should then be:
+!
+! states = nHapInSubH*(nHapInSubH+1)/2
+! allocate(ForwardProbs(states,nSnpHmm)
 
 call ForwardAlgorithm(CurrentInd)
 call SampleChromosomes(CurrentInd)
@@ -1307,6 +1319,24 @@ implicit none
 
 ! Initially, every state is equally possible
 ForwardProbs(:,1)=1.0/(nHapInSubH*nHapInSubH)
+
+! WARNING: I think this variable is treated in a wrong way. In MaCH
+!          code, FordwardProbs is the array variable leftMatrices.
+!          In there, every element of the array is another array with
+!          s(s+1)/2 elements, as S(i,j)=S(j,i); where s=nHapInSubH.
+!          So the probability of each state is two times 1 divided by
+!          the total number of possible states.
+!          So the code should be:
+!
+! double precision :: prior = 1.0/(nHapInSubH*nHapInSubH)
+! integer :: state = 1
+! do i=1,nHapInSubH
+!    ForwardProbs(state,1)=prior
+!    do j=1,i
+!       state=state+1
+!       ForwardProbs(state,1)=2.0*prior
+!    enddo
+! enddo
 
 end subroutine SetUpPrior
 
