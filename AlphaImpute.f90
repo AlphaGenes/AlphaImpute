@@ -1150,12 +1150,18 @@ integer :: i,j,PrecedingMarker
 call SetUpPrior
 
 j=1
+! CurrentInd is the individual being studied and it is necessary to
+! obtain the genotype of this individual in ConditionaOnData subroutine
+! For j=1, ConditionaOnData will initialize the variable
+! ForwardProbs(:,1) with the Prior Probabilites
 call ConditionOnData(CurrentInd,j)
 
 Theta=0.0
 PrecedingMarker=1
 do j=2,nSnpHmm
+    ! Cumulative recombination fraction allows us to skip uninformative positions
     Theta=Theta+Thetas(j-1)-Theta*Thetas(j-1)
+    ! Skip over uninformative positions to save time
     if ((GenosHmmMaCH(CurrentInd,j)/=3).or.(j==nSnpHmm)) then
         call Transpose(j,PrecedingMarker)
         call ConditionOnData(CurrentInd,j)
@@ -1231,16 +1237,29 @@ integer, intent(in) :: CurrentInd, Marker
 integer :: i,j,Index
 double precision :: Factors(0:1)
 
+! We treat missing genotypes as uninformative about the mosaic's
+! underlying state. If we were to allow for deletions and the like,
+! that may no longer be true.
 if (GenosHmmMaCH(CurrentInd,Marker)==3) then
     return
 else
+    ! Index keeps track of the states already visited. The total number
+    ! of states in this chunk of code is (nHapInSubH x (nHapInSubH-1)/2)
     Index=0
     do i=1,nHapInSubH
-        Factors(0)=Penetrance(Marker,SubH(i,Marker),GenosHmmMaCH(CurrentInd,Marker))
-        Factors(1)=Penetrance(Marker,SubH(i,Marker)+1,GenosHmmMaCH(CurrentInd,Marker))
+        ! Probability to observe genotype SubH(i) being the true
+        ! genotype GenosHmmMaCH in locus Marker
+        Factors(0)=Penetrance(Marker,SubH(i,Marker),&
+                    GenosHmmMaCH(CurrentInd,Marker))
+
+        ! Probability to observe genotype SubH(i)+1 being the true
+        ! genotype GenosHmmMaCH in locus Marker
+        Factors(1)=Penetrance(Marker,SubH(i,Marker)+1,&
+                    GenosHmmMaCH(CurrentInd,Marker))
         do j=1,i
             Index=Index+1
-            ForwardProbs(Index,Marker)=ForwardProbs(Index,Marker)*Factors(SubH(j,Marker))
+            ForwardProbs(Index,Marker)=&
+                ForwardProbs(Index,Marker)*Factors(SubH(j,Marker))
         enddo       
     enddo
 endif       
