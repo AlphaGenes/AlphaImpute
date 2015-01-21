@@ -781,6 +781,7 @@ ShuffleInd2=0
 ! EXTRACT SUBH
 ! While the maximum number of haps in the template haplotypes set, H,
 ! is not reached...
+! WARNING: This should be an independent subroutine (as in MaCH code)
 do while (HapCount<nHapInSubH)
     ! Differentiate between paternal (even) and maternal (odd) haps
     if (mod(HapCount,2)==0) then
