@@ -1150,6 +1150,8 @@ end subroutine ImputeAllele
 !########################################################################################################################################################################
  
 subroutine ForwardAlgorithm(CurrentInd)
+! Update the forward variable of the HMM model
+
 use GlobalVariablesHmmMaCH
 implicit none
 
@@ -1165,10 +1167,15 @@ j=1
 ! CurrentInd is the individual being studied and it is necessary to
 ! obtain the genotype of this individual in ConditionaOnData subroutine
 ! For j=1, ConditionaOnData will initialize the variable
-! ForwardProbs(:,1) with the Prior Probabilites
+! ForwardProbs(:,1) with the Prior Probabilities
 call ConditionOnData(CurrentInd,j)
 
+! WARNING: This variable, Theta, should be considered as local as is
+!          global through out the HMM code for different purposes.
+!          Look at subroutines Transpose, SampleChromosomes and
+!          SamplePath
 Theta=0.0
+
 PrecedingMarker=1
 do j=2,nSnpHmm
     ! Cumulative recombination fraction allows us to skip uninformative positions
