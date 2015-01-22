@@ -1316,9 +1316,11 @@ subroutine SetUpPrior
 
 use GlobalVariablesHmmMaCH
 implicit none
+integer :: state = 0
+double precision :: prior = 1.0/(nHapInSubH*nHapInSubH)
 
 ! Initially, every state is equally possible
-ForwardProbs(:,1)=1.0/(nHapInSubH*nHapInSubH)
+!ForwardProbs(:,1)=1.0/(nHapInSubH*nHapInSubH)
 
 ! WARNING: I think this variable is treated in a wrong way. In MaCH
 !          code, FordwardProbs is the array variable leftMatrices.
@@ -1327,16 +1329,15 @@ ForwardProbs(:,1)=1.0/(nHapInSubH*nHapInSubH)
 !          So the probability of each state is two times 1 divided by
 !          the total number of possible states.
 !          So the code should be:
-!
-! double precision :: prior = 1.0/(nHapInSubH*nHapInSubH)
-! integer :: state = 1
-! do i=1,nHapInSubH
-!    ForwardProbs(state,1)=prior
-!    do j=1,i
-!       state=state+1
-!       ForwardProbs(state,1)=2.0*prior
-!    enddo
-! enddo
+
+do i=1,nHapInSubH
+   do j=1,i-1
+      state=state+1
+      ForwardProbs(state,1)=2.0*prior
+   enddo
+   state=state+1
+   ForwardProbs(state,1)=prior
+enddo
 
 end subroutine SetUpPrior
 
