@@ -1197,15 +1197,20 @@ subroutine Transpose(CurrentMarker,PrecedingMarker)
 use GlobalVariablesHmmMaCH
 implicit none
 
-integer :: i,j,CurrentMarker,PrecedingMarker,Index
+integer,intent(in) :: CurrentMarker,PrecedingMarker
+
+!Local variables
+integer :: i,j,Index
 double precision :: Summer,Marginals(nHapInSubH),NoChange,OneChange,TwoChange
 
 if (Theta==0.0) then
     ForwardProbs(:,CurrentMarker)=ForwardProbs(:,PrecedingMarker)
+    return
 else
     Summer=0.0
     Index=0
     Marginals(:)=0.0
+
     do i=1,nHapInSubH
         do j=1,i-1      !Karl suggestion
             Index=Index+1
@@ -1234,10 +1239,17 @@ else
     do i=1,nHapInSubH
         do j=1,i-1      !Karl suggestion
             Index=Index+1
-            ForwardProbs(Index,CurrentMarker)=(ForwardProbs(Index,PrecedingMarker)*NoChange)+(Marginals(i)*OneChange)+(Marginals(j)*OneChange)+(2*TwoChange)
+            ForwardProbs(Index,CurrentMarker)&
+                = (ForwardProbs(Index,PrecedingMarker)*NoChange)&
+                + (Marginals(i)*OneChange)&
+                + (Marginals(j)*OneChange)&
+                + (2*TwoChange)
         enddo
         Index=Index+1
-        ForwardProbs(Index,CurrentMarker)=(ForwardProbs(Index,PrecedingMarker)*NoChange)+(Marginals(i)*OneChange)+(2*TwoChange)
+        ForwardProbs(Index,CurrentMarker)&
+            = (ForwardProbs(Index,PrecedingMarker)*NoChange)&
+            + (Marginals(i)*OneChange)&
+            + (2*TwoChange)
     enddo       
 endif
 
