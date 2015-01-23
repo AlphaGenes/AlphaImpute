@@ -843,7 +843,10 @@ subroutine SampleChromosomes(CurrentInd)
 use GlobalVariablesHmmMaCH
 implicit none
 
-integer :: i,j,k,l,SuperJ,CurrentInd,Index,OffOn,State1,State2,TmpJ,TopBot,FirstState,SecondState,Tmp
+integer,intent(in) :: CurrentInd
+
+! Local variables
+integer :: i,j,k,l,SuperJ,Index,OffOn,State1,State2,TmpJ,TopBot,FirstState,SecondState,Tmp
 double precision :: Summer,ran1,Choice,Sum00,Sum01,Sum10,Sum11
 
 Summer=0.0
