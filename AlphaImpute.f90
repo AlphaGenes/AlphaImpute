@@ -1101,13 +1101,18 @@ subroutine ImputeAlleles(CurrentInd,CurrentMarker,State1,State2)
 use GlobalVariablesHmmMaCH
 implicit none
 
-integer :: CurrentInd,CurrentMarker,State1,State2,Imputed1,Imputed2,Genotype,Differences
+integer,intent(in) :: CurrentInd,CurrentMarker,State1,State2
+
+! Local variables
+integer :: Imputed1,Imputed2,Genotype,Differences
 double precision :: ran1
 
-
+! These will be the observed imputed alleles defined by the state:
+! Sj=(State1, State2)
 Imputed1=SubH(State1,CurrentMarker)
 Imputed2=SubH(State2,CurrentMarker)
 
+! This is the individual observed genotype
 Genotype=GenosHmmMaCH(CurrentInd,CurrentMarker)
 
 if ((Genotype/=0).and.(Genotype/=2)) then
@@ -1115,20 +1120,31 @@ if ((Genotype/=0).and.(Genotype/=2)) then
     FullH(CurrentInd,CurrentMarker,2)=Imputed2
 endif
 
+! If genotype is missing, skip
 if (Genotype==3) return
 
+! Difference between the observed genotype and the gentoype implied by
+! the state S=(State1, State2)
 Differences=abs(Genotype - (Imputed1+Imputed2))
 
+! If allele is heterozygous, there is uncertainty
 if ((Genotype==1).and.(Differences==0)) then
     ErrorUncertainty(CurrentMarker)=ErrorUncertainty(CurrentMarker)+1
+
+! If allele is homozygous or the genotype does not agree the observation
 else
+    ! count the number of alleles matching
     ErrorMatches(CurrentMarker)=ErrorMatches(CurrentMarker)+(2-Differences)
+    ! count the number of mismatching alleles
     ErrorMismatches(CurrentMarker)=ErrorMismatches(CurrentMarker)+Differences
 endif 
 
+! If gentoype is homozygous or missing, the skip
 if (Genotype/=1) return
 
+! If the observed allele is homozygouse but the genotype is heterozygous
 if (Imputed1==Imputed2) then
+    ! Impute the allele to the paternal or maternal haplotype at random
     if (ran1(idum)>=0.5) then
         FullH(CurrentInd,CurrentMarker,1)=abs(Imputed1-1)       
     else
