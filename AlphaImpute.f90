@@ -1131,8 +1131,10 @@ if (Genotype/=1) return
 if (Imputed1==Imputed2) then
     if (ran1(idum)>=0.5) then
         FullH(CurrentInd,CurrentMarker,1)=abs(Imputed1-1)       
-    else    
-        FullH(CurrentInd,CurrentMarker,1)=abs(Imputed2-1)                   
+    else
+        ! WARNING: Bug fixed!
+        !          Imputation was done to the paternal haplotype also here
+        FullH(CurrentInd,CurrentMarker,2)=abs(Imputed2-1)
     endif
 endif
 
