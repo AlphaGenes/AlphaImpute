@@ -1215,6 +1215,9 @@ end subroutine ForwardAlgorithm
 !########################################################################################################################################################################
  
 subroutine Transpose(CurrentMarker,PrecedingMarker)
+! Calculates the probability of get a particular state at CurrentMarker
+! from any other state at PrecedingMarker using the transition probabilities.
+! It basically calculates the first term of the forward variable.
 use GlobalVariablesHmmMaCH
 implicit none
 
@@ -1315,6 +1318,9 @@ end subroutine Transpose
 
  
 subroutine ConditionOnData(CurrentInd,Marker)
+! Introduce the emission probabilities (the probability of observe a
+! given genotype) into the forward variable of the HMM.
+! It basically calculate the second term of the forward variables
 use GlobalVariablesHmmMaCH
 implicit none
 
