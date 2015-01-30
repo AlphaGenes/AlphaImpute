@@ -1227,52 +1227,87 @@ double precision :: Summer,Marginals(nHapInSubH),NoChange,OneChange,TwoChange
 if (Theta==0.0) then
     ForwardProbs(:,CurrentMarker)=ForwardProbs(:,PrecedingMarker)
     return
-else
-    Summer=0.0
-    Index=0
-    Marginals(:)=0.0
+endif
 
-    do i=1,nHapInSubH
-        do j=1,i-1      !Karl suggestion
-            Index=Index+1
-            Summer=Summer+ForwardProbs(Index,PrecedingMarker)
-            Marginals(i)=Marginals(i)+ForwardProbs(Index,PrecedingMarker)
-            Marginals(j)=Marginals(j)+ForwardProbs(Index,PrecedingMarker)           
-        enddo
+Summer=0.0
+Index=0
+Marginals(:)=0.0
+
+! Calculate the sum of all forward variables and the marginal of a
+! given state.
+
+do i=1,nHapInSubH
+    do j=1,i-1
         Index=Index+1
         Summer=Summer+ForwardProbs(Index,PrecedingMarker)
-        Marginals(i)=Marginals(i)+(ForwardProbs(Index,PrecedingMarker)*2.0)     
-    enddo       
-    
-    NoChange=(1.0-Theta)*(1.0-Theta)
-    OneChange=(1.0-Theta)*Theta/nHapInSubH
-    TwoChange=Summer*Theta*Theta/(nHapInSubH*nHapInSubH)
-    
-    !Automatically rescale likelihoods when they get too small
-    if (Summer < 1e-15) then
-        NoChange=NoChange*1e30
-        OneChange=OneChange*1e30
-        TwoChange=TwoChange*1e30
-    endif
-    
-    !This final loop actually transposes the probabilities for each state
-    Index=0
-    do i=1,nHapInSubH
-        do j=1,i-1      !Karl suggestion
-            Index=Index+1
-            ForwardProbs(Index,CurrentMarker)&
-                = (ForwardProbs(Index,PrecedingMarker)*NoChange)&
-                + (Marginals(i)*OneChange)&
-                + (Marginals(j)*OneChange)&
-                + (2*TwoChange)
-        enddo
+
+        ! Given two states sharing a haplotype, there is only one way to
+        ! get one state from the other changing only one haplotype. This
+        ! is valid for whatever the shared haplotype. Let's consider the
+        ! the sum of all the forward variables corresponding
+        ! to the states the state (k1,k2) can be reached from changing
+        ! only the first haplotype: Sum{h=1,K}(h,k2). In a similar way,
+        ! let's define this other Sum{h=1,k}(k1,h). Since the states
+        ! are symmetric and we are working in the upper triangular matrix
+        ! both marginal are the same, and each forward variable is summed
+        ! twice. Each sum can be called marginal in the first or second
+        ! haplotype. Again, since we consider the upper triangular
+        ! matrix of the forward variables, we need to define the marginals
+        ! in a different way: Sum{h=1,k1}(h,k2)+Sum{h=k1,K}(k1,k). In
+        ! this way, the sum of the two marginals will give as a result
+        ! that each forward variable is summed twice.
+        Marginals(i)=Marginals(i)+ForwardProbs(Index,PrecedingMarker)
+        Marginals(j)=Marginals(j)+ForwardProbs(Index,PrecedingMarker)
+    enddo
+    Index=Index+1
+    Summer=Summer+ForwardProbs(Index,PrecedingMarker)
+
+    ! The state (k,k) has to be summed twice
+    Marginals(i)=Marginals(i)+(ForwardProbs(Index,PrecedingMarker)*2.0)
+enddo
+
+! NOTE: to the transition probabilities:
+!   (1-Theta) is the probability that a haplotype does not change =>
+!       => Theta is the probability that a haplotype does change =>
+!       => Theta/nHapInSubH is the probability that a haplotype change
+!          to a particular haplotype
+!
+! Given those probabilities, then:
+!   * None hapltoyped have changed
+NoChange=(1.0-Theta)*(1.0-Theta)
+!   * Only one haplotype has changed
+OneChange=(1.0-Theta)*Theta/nHapInSubH
+!   * The two haplotypes have changed
+TwoChange=Summer*Theta*Theta/(nHapInSubH*nHapInSubH)
+
+!Automatically rescale likelihoods when they get too small
+if (Summer < 1e-15) then
+    NoChange=NoChange*1e30
+    OneChange=OneChange*1e30
+    TwoChange=TwoChange*1e30
+endif
+
+! This final loop actually transposes the probabilities for each state,
+! that is, calculates the final probabilities of getting a particular state.
+Index=0
+do i=1,nHapInSubH
+    do j=1,i-1
         Index=Index+1
+        ! The new forward probability will be the probability of no change,
+        ! plus the probability of one change, plus two times the
+        ! probability of two changes (prob of (k1,k2) and prob of (k2,k1))
         ForwardProbs(Index,CurrentMarker)&
             = (ForwardProbs(Index,PrecedingMarker)*NoChange)&
             + (Marginals(i)*OneChange)&
+            + (Marginals(j)*OneChange)&
             + (2*TwoChange)
-    enddo       
-endif
+    enddo
+    Index=Index+1
+    ForwardProbs(Index,CurrentMarker)&
+        = (ForwardProbs(Index,PrecedingMarker)*NoChange)&
+        + (Marginals(i)*OneChange)&
+        + (2*TwoChange)
+enddo
 
 end subroutine Transpose
 
