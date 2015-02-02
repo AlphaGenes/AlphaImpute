@@ -1098,6 +1098,10 @@ end subroutine SamplePath
 !########################################################################################################################################################################
  
 subroutine ImputeAlleles(CurrentInd,CurrentMarker,State1,State2)
+! Impute alleles to haplotypes based on the HMM information. Count the
+! number of uncertainties, matches and mismatches of the imputed
+! alleles according to the genotype information that the individual
+! carries.
 use GlobalVariablesHmmMaCH
 implicit none
 
@@ -1142,7 +1146,7 @@ endif
 ! If gentoype is homozygous or missing, the skip
 if (Genotype/=1) return
 
-! If the observed allele is homozygouse but the genotype is heterozygous
+! If the observed allele is homozygous but the genotype is heterozygous
 if (Imputed1==Imputed2) then
     ! Impute the allele to the paternal or maternal haplotype at random
     if (ran1(idum)>=0.5) then
