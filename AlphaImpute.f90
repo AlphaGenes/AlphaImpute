@@ -1024,10 +1024,16 @@ end subroutine SampleChromosomes
 !########################################################################################################################################################################
  
 subroutine FillPath(CurrentInd,FromMarker,ToMarker,State,TopBot)
+! Impute alleles to a haplotype region. The region is from FromMarker
+! to ToMarker, none of them included.
+
 use GlobalVariablesHmmMaCH
 implicit none
 
-integer :: j,CurrentInd,FromMarker,ToMarker,State,TopBot
+integer,intent(in) :: CurrentInd,FromMarker,ToMarker,State,TopBot
+
+! Local variable
+integer :: j
 
 do j=FromMarker+1,ToMarker-1
     call ImputeAllele(CurrentInd,j,State,TopBot)
