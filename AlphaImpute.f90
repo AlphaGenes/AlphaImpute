@@ -1089,7 +1089,10 @@ do while (FromMarker<ToMarker-1)
         ! No recombinant in the first interval =>
         !    => Recombinant in second interval
         FromMarker=FromMarker+1
-        call ImputeAllele(CurrentInd,FromMarker,ToState,TopBot)                 
+        ! WARNING: Here was a bug. It there isn't recombination,
+        !          imputation has to be done in the FromState haplotype
+        !call ImputeAllele(CurrentInd,FromMarker,ToState,TopBot)
+        call ImputeAllele(CurrentInd,FromMarker,FromState,TopBot)
         cycle
     endif
 
@@ -1105,8 +1108,12 @@ do while (FromMarker<ToMarker-1)
         ! Recombinants in both intervals, so we must sample
         ! an intervening state
         FromMarker=FromMarker+1
-        ToState=int(ran1(idum)*nHapInSubH)+1
-        call ImputeAllele(CurrentInd,FromMarker,ToState,TopBot)                 
+
+        ! WARNING: Not really a bug, but not used a coherent notation
+        !ToState=int(ran1(idum)*nHapInSubH)+1
+        !call ImputeAllele(CurrentInd,FromMarker,ToState,TopBot)
+        FromState=int(ran1(idum)*nHapInSubH)+1
+        call ImputeAllele(CurrentInd,FromMarker,FromState,TopBot)
     endif
 
 enddo
