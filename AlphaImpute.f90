@@ -1044,25 +1044,36 @@ end subroutine FillPath
 !########################################################################################################################################################################
  
 subroutine SamplePath(CurrentInd,FromMarker,ToMarker,FromState,ToState,TopBot)
+! Impute a path between the two end markers, assuming no genotypes
+! are observed -- the only constraint is that we must start at
+! fromState and end at toState with at least one intervening recombinant
+
 use GlobalVariablesHmmMaCH
 implicit none
 
-integer :: i,j,CurrentInd,TopBot,FromMarker,ToMarker,FromState,ToState
-double precision :: R,Theta1,ran1
+integer,intent(in) :: CurrentInd,TopBot,FromMarker,ToMarker,FromState,ToState
+
+! Local variables
+integer :: i
+double precision :: Recomb,Theta1,ran1
 
 Theta=0.0
-do j=FromMarker,ToMarker-1
-    !Calculate overall recombination fraction for the interval
-    Theta=Thetas(j)+Theta-Theta*Thetas(j)
+! Calculate overall recombination fraction for the interval,
+! FromMarker excluded
+do i=FromMarker,ToMarker-1
+    Theta=Thetas(i)+Theta-Theta*Thetas(i)
 enddo
 
-!Impute a path between the two end markers, assuming no genotypes
-!are observed -- the only constraint is that we must start at
-!fromState and end at toState with at least one intervening recombinant
-
+! Impute a path between the two end markers
 do while (FromMarker<ToMarker-1)
-    R=ran1(idum)*Theta
+    ! Random recombination
+    Recomb=ran1(idum)*Theta
+
+    ! Recombination fraction of the FromMarker
     Theta1=Thetas(FromMarker)
+
+    ! Calculate overall recombination fraction for the interval,
+    ! FromMarker included
     if (Theta < 0.9) then
         !Fast closed formula
         Theta=(Theta-Theta1)/(1.0-Theta1)
@@ -1074,20 +1085,25 @@ do while (FromMarker<ToMarker-1)
         enddo
     endif
 
-    if (R>theta1) then
-        !No recombinant in the in first interval
+    if (Recomb>Theta1) then
+        ! No recombinant in the first interval =>
+        !    => Recombinant in second interval
         FromMarker=FromMarker+1
         call ImputeAllele(CurrentInd,FromMarker,ToState,TopBot)                 
         cycle
     endif
+
+    ! If there is no recombinant in the second interval, then
+    ! there is recombinant in the first...
     Crossovers(FromMarker)=Crossovers(FromMarker)+1
 
-    if (R<Theta1*(1.0-Theta)) then
-        !No recombinant in the second interval
+    if (Recomb<Theta1*(1.0-Theta)) then
+        ! No recombinant in the second interval
         call FillPath(CurrentInd,FromMarker,ToMarker,ToState,TopBot);
         return
     else
-    
+        ! Recombinants in both intervals, so we must sample
+        ! an intervening state
         FromMarker=FromMarker+1
         ToState=int(ran1(idum)*nHapInSubH)+1
         call ImputeAllele(CurrentInd,FromMarker,ToState,TopBot)                 
