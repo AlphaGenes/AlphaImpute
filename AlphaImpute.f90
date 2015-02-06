@@ -931,13 +931,17 @@ do while (SuperJ>1)
     !But perhaps the first or second haplotype recombined
     Choice=Choice-(Sum10*Theta*(1.0-Theta)/nHapInSubH)
 
+    ! Did the first hap recombine?
     if (Choice<=0.0) then
         !The first haplotype changed ...
         Choice=Choice*nHapInSubH/(Theta*(1.0-Theta))
         !Record the original state
-        FirstState=State1                       
-        do while (State1<nHapInSubH)
-            State1=State1+1                                                         !Check with Carl
+        FirstState=State1
+
+        ! Sample number at random and decide haplotype
+!        do while (State1<nHapInSubH)
+!            State1=State1+1
+        do State1=1,nHapInSubH
             if (State1>=State2) then
                 Choice=Choice+ForwardProbs(State1*(State1-1)/2+State2,SuperJ)
             else
@@ -956,28 +960,32 @@ do while (SuperJ>1)
 
     Choice=Choice-(Sum01*Theta*(1.0-Theta)/nHapInSubH)
 
+    ! Did the second hap recombine?
     if (Choice<=0.0) then
         !The second haplotype changed ...
         Choice=Choice*nHapInSubH/(Theta*(1.0-Theta))
         !Save the original state
         SecondState=State2
-        do while (State2<nHapInSubH)
-            State2=State2+1                                                         !Check with Carl
+
+        ! Sample number at random and decide haplotype
+        ! WARNING: State2 variable should be set to 0 before the loop!?!?
+!        do while (State2<nHapInSubH)
+!            State2=State2+1
+        do State2=1,nHapInSubH
             if (State1>=State2) then
                 Choice=Choice+ForwardProbs(State1*(State1-1)/2+State2,SuperJ)       
             else
                Choice=Choice+ForwardProbs(State2*(State2-1)/2+State1,SuperJ)
             endif    
             if (Choice>=0.0) exit
-        enddo                                                                       !Check with Carl                            
+        enddo
 
         !Record outcomes for intermediate, uninformative, positions
         TopBot=1    
-        call FillPath(CurrentInd,SuperJ,TmpJ+1,State1,TopBot)                   !Check with Carl
+        call FillPath(CurrentInd,SuperJ,TmpJ+1,State1,TopBot)
         TopBot=2            
-        call SamplePath(CurrentInd,SuperJ,TmpJ+1,State2,SecondState,TopBot)     !Check with Carl    
+        call SamplePath(CurrentInd,SuperJ,TmpJ+1,State2,SecondState,TopBot)
         cycle
-
     endif
 
     !Try to select any other state
