@@ -1107,33 +1107,35 @@ implicit none
 integer,intent(in) :: CurrentInd,TopBot,FromMarker,ToMarker,FromState,ToState
 
 ! Local variables
-integer :: i
+integer :: i,State,FromMarkerLocal
 double precision :: Recomb,Theta1,ran1
 
+FromMarkerLocal=FromMarker
 Theta=0.0
 ! Calculate overall recombination fraction for the interval,
 ! FromMarker excluded
-do i=FromMarker,ToMarker-1
+do i=FromMarkerLocal,ToMarker-1
     Theta=Thetas(i)+Theta-Theta*Thetas(i)
 enddo
 
+
 ! Impute a path between the two end markers
-do while (FromMarker<ToMarker-1)
+do while (FromMarkerLocal<ToMarker-1)
     ! Random recombination
     Recomb=ran1(idum)*Theta
 
-    ! Recombination fraction of the FromMarker
-    Theta1=Thetas(FromMarker)
+    ! Recombination fraction of the FromMarkerLocal
+    Theta1=Thetas(FromMarkerLocal)
 
     ! Calculate overall recombination fraction for the interval,
-    ! FromMarker included
+    ! FromMarkerLocal included
     if (Theta < 0.9) then
         !Fast closed formula
         Theta=(Theta-Theta1)/(1.0-Theta1)
     else
         Theta = 0.0
         !More accurate, iterative formula
-        do i=FromMarker+1,ToMarker-1
+        do i=FromMarkerLocal+1,ToMarker-1
             Theta=Thetas(i)+Theta-Theta*Thetas(i)
         enddo
     endif
@@ -1141,38 +1143,38 @@ do while (FromMarker<ToMarker-1)
     if (Recomb>Theta1) then
         ! No recombinant in the first interval =>
         !    => Recombinant in second interval
-        FromMarker=FromMarker+1
+        FromMarkerLocal=FromMarkerLocal+1
         ! WARNING: Here was a bug. It there isn't recombination,
         !          imputation has to be done in the FromState haplotype
-        !call ImputeAllele(CurrentInd,FromMarker,ToState,TopBot)
-        call ImputeAllele(CurrentInd,FromMarker,FromState,TopBot)
+        !call ImputeAllele(CurrentInd,FromMarkerLocal,ToState,TopBot)
+        call ImputeAllele(CurrentInd,FromMarkerLocal,FromState,TopBot)
         cycle
     endif
 
     ! If there is no recombinant in the second interval, then
     ! there is recombinant in the first...
-    Crossovers(FromMarker)=Crossovers(FromMarker)+1
+    Crossovers(FromMarkerLocal)=Crossovers(FromMarkerLocal)+1
 
     if (Recomb<Theta1*(1.0-Theta)) then
         ! No recombinant in the second interval
-        call FillPath(CurrentInd,FromMarker,ToMarker,ToState,TopBot);
+        call FillPath(CurrentInd,FromMarkerLocal,ToMarker,ToState,TopBot);
         return
     else
         ! Recombinants in both intervals, so we must sample
         ! an intervening state
-        FromMarker=FromMarker+1
+        FromMarkerLocal=FromMarkerLocal+1
 
         ! WARNING: Not really a bug, but not used a coherent notation
         !ToState=int(ran1(idum)*nHapInSubH)+1
-        !call ImputeAllele(CurrentInd,FromMarker,ToState,TopBot)
-        FromState=int(ran1(idum)*nHapInSubH)+1
-        call ImputeAllele(CurrentInd,FromMarker,FromState,TopBot)
+        !call ImputeAllele(CurrentInd,FromMarkerLocal,ToState,TopBot)
+        State=int(ran1(idum)*nHapInSubH)+1
+        call ImputeAllele(CurrentInd,FromMarkerLocal,State,TopBot)
     endif
 
 enddo
 
 !If we get here, record obligate recombinant between two consecutive markers
-Crossovers(FromMarker)=Crossovers(FromMarker)+1
+Crossovers(FromMarkerLocal)=Crossovers(FromMarkerLocal)+1
 
 
 end subroutine SamplePath
