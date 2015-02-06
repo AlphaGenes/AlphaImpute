@@ -1485,8 +1485,10 @@ subroutine SetUpPrior
 
 use GlobalVariablesHmmMaCH
 implicit none
-integer :: state = 0
-double precision :: prior = 1.0/(nHapInSubH*nHapInSubH)
+integer :: i,j,state=0
+double precision :: prior
+
+ prior=1.0/(nHapInSubH*nHapInSubH)
 
 ! Initially, every state is equally possible
 !ForwardProbs(:,1)=1.0/(nHapInSubH*nHapInSubH)
