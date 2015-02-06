@@ -848,25 +848,32 @@ integer,intent(in) :: CurrentInd
 ! Local variables
 integer :: i,j,k,l,SuperJ,Index,OffOn,State1,State2,TmpJ,TopBot,FirstState,SecondState,Tmp
 double precision :: Summer,ran1,Choice,Sum00,Sum01,Sum10,Sum11
+double precision :: Probs(nHapInSubH*(nHapInSubH+1)/2)
 
 Summer=0.0
 Index=0
+Probs = ForwardProbs(:,nSnpHmm)
+
+! Calculate sum over all states. The sum corresponds to all the
+! forward probabilities, that is, the probability of the sequence of
+! observed genotypes of animal CurrentInd.
 do i=1,nHapInSubH
     do j=1,i
         Index=Index+1
-        Summer=Summer+ForwardProbs(Index,nSnpHmm)
+        Summer=Summer+Probs(Index)
     enddo
 enddo   
 
-Choice=ran1(idum)*Summer    
-
+! Sample number at random and select state: (State1,State2)
+Choice=ran1(idum)*Summer
 Summer=0.0
 Index=0
 OffOn=0
+Probs = ForwardProbs(:,nSnpHmm)
 do i=1,nHapInSubH
     do j=1,i
         Index=Index+1
-        Summer=Summer+ForwardProbs(Index,nSnpHmm)
+        Summer=Summer+Probs(Index)
         if (Summer>Choice) then
             State1=i
             State2=j
@@ -882,33 +889,49 @@ do while (SuperJ>1)
     SuperJ=SuperJ-1
     call ImputeAlleles(CurrentInd,SuperJ+1,State1,State2)
     TmpJ=SuperJ
+
+    ! Cumulative recombination fraction allows us to skip over
+    ! uninformative positions: Alleles with missing genotype are skipped
+    ! but the recombination information (Thetas(SuperJ) is accumulated
+    ! and used in the next location.
     Theta=Thetas(SuperJ)
     do while ((GenosHmmMaCH(CurrentInd,SuperJ)==3).and.SuperJ>1)
         SuperJ=SuperJ-1
         Theta=Theta+Thetas(SuperJ)-Theta*Thetas(SuperJ)
     enddo
         
-    !When examining the previous location we consider three alternatives:
-    !states that could be reached when both haplotypes recombine (11),
-    !states that can be reached when the first (10) or second (01) haplotype recombines,
-    !and the states that can be reached without recombination.
+    ! When examining the previous location we consider three alternatives:
+    !   * states that could be reached when both haplotypes recombine (11),
+    !   * states that can be reached when the first (10) or second (01)
+    !       haplotype recombines, and
+    !   * the states that can be reached without recombination (00).
     Sum00=0.0
     Sum01=0.0
     Sum10=0.0
     Sum11=0.0   
 
     Index=0
+    Probs = ForwardProbs(:,SuperJ)
     do k=1,nHapInSubH
         do l=1,k
             Index=Index+1
-            Sum11=Sum11+ForwardProbs(Index,SuperJ)
-            if ((State1==k).or.(State1==l)) Sum01=Sum01+ForwardProbs(Index,SuperJ)  
-            if ((State2==k).or.(State2==l)) Sum10=Sum10+ForwardProbs(Index,SuperJ)  
-            if (((State1==k).and.(State2==l)).or.((State1==l).and.(State2==k))) Sum00=Sum00+ForwardProbs(Index,SuperJ)  
+            Sum11=Sum11+Probs(Index)
+            if ((State1==k).or.(State1==l))&
+                Sum01=Sum01+Probs(Index)
+            if ((State2==k).or.(State2==l))&
+                Sum10=Sum10+Probs(Index)
+            if (((State1==k).and.(State2==l))&
+                .or.((State1==l).and.(State2==k)))
+                    Sum00=Sum00+Probs(Index)
         enddo
     enddo   
 
-    Summer=Sum11*Theta*Theta/(nHapInSubH*nHapInSubH)+(Sum10+Sum01)*Theta*(1.0-Theta)/nHapInSubH+Sum00*(1.0-Theta)*(1.0-Theta)
+    Summer=Sum11*Theta*Theta/(nHapInSubH*nHapInSubH)&
+          +(Sum10+Sum01)*Theta*(1.0-Theta)/nHapInSubH&
+          +Sum00*(1.0-Theta)*(1.0-Theta)
+
+    ! WARNING: Why is this assignment here?!?! In case it has to exit,
+    !          shouldn't it exit before?
     if (SuperJ==1) exit
     
 
@@ -998,10 +1021,11 @@ do while (SuperJ>1)
     Summer=0.0
     Index=0
     OffOn=0
+    Probs=ForwardProbs(:,nSnpHmm)
     do i=1,nHapInSubH
         do j=1,i
             Index=Index+1
-            Summer=Summer+ForwardProbs(Index,nSnpHmm)
+            Summer=Summer+Probs(Index)
             if (Summer>Choice) then
                 State1=i
                 State2=j
@@ -1012,11 +1036,13 @@ do while (SuperJ>1)
         if (OffOn==1) exit
     enddo   
     
+    ! Shuffle haplotypes at random
     if (ran1(idum)>0.5) then
         Tmp=State1
         State2=State1
         State2=Tmp
     endif
+
     !Record outcomes for intermediate, uninformative, positions
     TopBot=1    
     call SamplePath(CurrentInd,SuperJ,TmpJ+1,State1,FirstState,TopBot) 
