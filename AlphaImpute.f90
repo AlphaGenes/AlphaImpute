@@ -829,8 +829,27 @@ allocate(ForwardProbs(nHapInSubH*nHapInSubH,nSnpHmm))
 call ForwardAlgorithm(CurrentInd)
 call SampleChromosomes(CurrentInd)
 
-if (GlobalRoundHmm>HmmBurnInRound) &
-    ProbImputeGenosHmm(CurrentInd,:)=ProbImputeGenosHmm(CurrentInd,:)+FullH(CurrentInd,:,1)+FullH(CurrentInd,:,2)
+! WARNING: The idea of not to use the first HmmBurnInRound rounds suggests
+!          the imputation in those rounds aren't accurate enough, which
+!          also suggests that each round a better solution is found.
+!          Better solutions are obtained by improving previous solutions
+!          by means of update HMM parameters (recombinations  rates,
+!          Thetas, and the genotyping errors) as implemented in MaCH
+!          code with functions UpdateThetas, UpdateErrorRate and
+!          TotalCrossovers.
+!
+!          However, each time the MaCHForInd subroutine is called is
+!          independent from the previous call and so, HMM solutions
+!          given by ForwardAlgorithm and SampleChromosomes are also
+!          independent.
+!
+! TODO: Check where to implement UpdateThetas, UpdateErrorRate and
+!       TotalCrossovers subroutines. According to MaCH code, they
+!       should go outside this subroutine and inside MaCHController.
+
+if (GlobalRoundHmm>HmmBurnInRound)&
+    ProbImputeGenosHmm(CurrentInd,:)=ProbImputeGenosHmm(CurrentInd,:)&
+        +FullH(CurrentInd,:,1)+FullH(CurrentInd,:,2)
 
 deallocate(ForwardProbs)
 
