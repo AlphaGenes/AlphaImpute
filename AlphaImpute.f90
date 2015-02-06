@@ -940,7 +940,7 @@ do while (SuperJ>1)
             if ((State2==k).or.(State2==l))&
                 Sum10=Sum10+Probs(Index)
             if (((State1==k).and.(State2==l))&
-                .or.((State1==l).and.(State2==k)))
+                .or.((State1==l).and.(State2==k)))&
                     Sum00=Sum00+Probs(Index)
         enddo
     enddo   
