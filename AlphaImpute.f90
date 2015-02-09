@@ -126,6 +126,7 @@ if ((RestartOption/=0).and.(RestartOption<3)) then
     stop
 endif
 
+! If we only want to phase data, then skip all the imputation steps 
 if (PhaseTheDataOnly==0) then
     call ImputationManagement
     call WriteOutResults
@@ -275,6 +276,7 @@ character (len=300) :: UseGeneProb,ConservHapLibImp,CharBypassGeneProb,TmpHmmOpt
 
 open (unit=1,file="AlphaImputeSpec.txt",status="old")
 
+! Check if the Spec file is correct
 nLines=0
 do
     read (1,*,iostat=k) dumC
@@ -292,8 +294,14 @@ if (nLines/=24) then
     stop
 endif
 
+! Get Input files: Pedigree and genotype information
+! PedigreeFile
 read (1,*) dumC,PedigreeFile
+! GentoypeFile
 read (1,*) dumC,GenotypeFile
+
+! SEX Chromosome
+! SexChrom
 read (1,*) dumC,TempOpt
 SexOpt=9
 HetGameticStatus=9
@@ -317,7 +325,7 @@ if (trim(TempOpt)=="Yes") then
     SexOpt=1
 endif   
 
-!Not sex chrom
+! Not sex chrom
 if (trim(TempOpt)=="No") then
     SexOpt=0
 endif
@@ -326,13 +334,16 @@ if (SexOpt==9) then
     stop
 endif
 
-
+! Get the number of SNPs in the chromosome
+! nSnp
 read (1,*) dumC,nSnp
 if (nSnp>240000) then
     print*, "Contact John Hickey if you want to do more than 240,000 SNP"
     stop
 endif
 
+! Get Editing parameters
+! InternalEdit
 read (1,*) dumC,IntEdit
 if (trim(IntEdit)=='Yes') IntEditStat=1
 if (trim(IntEdit)=='No') IntEditStat=0
@@ -340,6 +351,7 @@ if ((trim(IntEdit)/='Yes').and.(trim(IntEdit)/='No')) then
     write (*,*) "Specify editing status properly"               ! write (*,*) "You fucking bastard! X-)
 endif
 
+! EditingParameters
 OutOpt=9
 if (IntEditStat==1) then
     read (1,*) dumC,PercGenoForHD,PercSnpMiss,SecondPercGenoForHD,OutputOptions
@@ -359,16 +371,23 @@ PercGenoForHD=PercGenoForHD/100
 PercSnpMiss=PercSnpMiss/100
 SecondPercGenoForHD=SecondPercGenoForHD/100
 
+! Get Phasing parameters
+! NumberPhasingRuns
 read (1,*) dumC,PhaseDone
 NoPhasing=1
+! PhaseDone: We already have phase information (AlphaPhase) and so,
+!            phasing is not necessary
 if (trim(PhaseDone)=="PhaseDone") then
     ManagePhaseOn1Off0=0
     rewind (1)
     do i=1,6
         read (1,*) dumC
-    enddo    
+    enddo
+    ! Get Path to the phased data and the number of cores used
     read (1,*) dumC,PhaseDone,PhasePath,nPhaseInternal
     NoPhasing=1
+
+! NoPhase: No phase information available and not to phase data
 elseif (trim(PhaseDone)=="NoPhase") then
     NoPhasing=0
     ManagePhaseOn1Off0=0
@@ -377,6 +396,8 @@ elseif (trim(PhaseDone)=="NoPhase") then
         read (1,*) dumC
     enddo    
     read (1,*) dumC
+! NumberPhasingRuns: No phase information available, then phase data
+!                    in nPhaseExternal rounds
 else
     ManagePhaseOn1Off0=1
     rewind (1)
@@ -399,8 +420,13 @@ if (trim(PhaseDone)/="PhaseDone" .and. trim(PhaseDone)/="NoPhase") then
     nPhaseInternal=2*nPhaseExternal
     allocate(CoreAndTailLengths(nPhaseExternal))
     allocate(CoreLengths(nPhaseExternal))
+
+    ! Get Core and tail lengths for the phasing runs
+    ! CoreAndTailLengths
     read (1,*) dumC,CoreAndTailLengths(:)
+    ! CoreLengths
     read (1,*) dumC,CoreLengths(:)
+    ! PedFreePhasing: AlphaPhase argument
     read (1,*) dumC,PedigreeFreePhasing
     if (trim(PedigreeFreePhasing)=="No") then
         PedFreePhasing=0
@@ -412,8 +438,11 @@ if (trim(PhaseDone)/="PhaseDone" .and. trim(PhaseDone)/="NoPhase") then
             stop
         endif
     endif
+    ! Get error thresholds for the phasing runs
+    ! GenotypeError
     read (1,*) dumC,GenotypeErrorPhase
 else
+    ! Skip Phasing related parameters
     read (1,*) dumC
     read (1,*) dumC
     read (1,*) dumC
@@ -427,9 +456,16 @@ endif
 !   write (*,*) "Specify editing status properly" 
 !endif
 
-    
+! Get the number of processors to be used
+! NumberOfProcessorsAvailable
 read (1,*) dumC,nProcessors
+
+! Iteration of the internal haplotype matching
+! InternalIterations
 read (1,*) dumC,InternalIterations
+
+! Whether to create the folder and files structure and exit
+! PreprocessDataOnly
 read (1,*) dumC,PreProcessOptions
 if (PreProcessOptions=="No") then
     PreProcess=0
@@ -442,6 +478,8 @@ else
     endif
 endif
 
+! Whether to only phase data
+! PhasingOnly
 read (1,*) dumC,PhasingOnlyOptions
 if (PhasingOnlyOptions=="No") then
     PhaseTheDataOnly=0
@@ -454,6 +492,8 @@ else
     endif
 endif
 
+! Whether to use the Haplotype Library in a conservative way
+! ConservativeHaplotypeLibraryUse
 ConservativeHapLibImputation=-1
 read (1,*) dumC,ConservHapLibImp
 if (trim(ConservHapLibImp)=="No") then
@@ -467,8 +507,12 @@ if (ConservativeHapLibImputation==-1) then
     stop
 endif
 
+! Get threshold for haplotype phasing errors
+! WellPhasedThreshold
 read (1,*) dumC,WellPhasedThresh
 
+! Get file of animals Highly Dense genotyped
+! UserDefinedAlphaPhaseAnimalsFile
 read (1,*) dumC,UserDefinedHDAnimalsFile
 if (UserDefinedHDAnimalsFile=="None") then
     UserDefinedHD=0
@@ -477,6 +521,8 @@ else
     open (unit=46,file=trim(UserDefinedHDAnimalsFile),status="old")
 endif
 
+! Get the file of pre-phased animals
+! PrePhasedFile
 read (1,*) dumC,PrePhasedAnimalFile
 if (PrePhasedAnimalFile=="None") then
     PrePhased=0
@@ -485,6 +531,8 @@ else
     open (unit=47,file=trim(PrePhasedAnimalFile),status="old")
 endif
 
+! Whether to skip the use of GeneProb software
+! BypassGeneProb
 BypassGeneProb=-1
 read (1,*) dumC,CharBypassGeneProb
 if (trim(CharBypassGeneProb)=="No") then
@@ -498,8 +546,21 @@ if (BypassGeneProb==-1) then
     stop
 endif
 
+! Options managing the software workflow
+! RestartOptions handle this situation, so:
+!   * RestartOption=0 => Passes through the whole process: GenoProb,
+!                        Phasing and Imputing
+!   * RestartOption=1 => Makes only GenoProb
+!   * RestartOption=2 => Makes GenoProb and Phasing
+!   * RestartOption=3 => Makes only Imputation. This implies AlphaImpute
+!                        has to be run already in order to get GenoProb
+!                        done or Genotype Probabilities Genotype
+!                        Probabilities have to be edited by hand
+!   * RestartOption=4 =>
 read (1,*) dumC,RestartOption
 
+! Whether to use a hidden Markov model (HMM) for genotype imputation
+! HMMOption
 read (1,*) dumC,TmpHmmOption
 HMMOption=0
 if (trim(TmpHmmOption)=='No') HMMOption=1
@@ -509,8 +570,17 @@ if (HMMOption==0) then
     print*, "HMMOption not correctly specified"
     stop
 endif
+
+! HMMParameters
+! HMM parameters:
+!   * nHapInSubH: Number of Haplotypes used as templates
+!   * HmmBurnInRound: Number of HMM rounds avoided during imputation
+!   * nRoundsHMM: Number of HMM rounds
+!   * idum: Seed for generating random numbers (Negative integer)
 read (1,*) dumC,nHapInSubH,HmmBurnInRound,nRoundsHMM,idum
 
+! Get the file containing the true genotypes
+! TrueGenotypeFile
 read (1,*) dumC,TrueGenosFile
 if (TrueGenosFile=="None") then
     TrueGenos1None0=0
@@ -525,6 +595,7 @@ if (SexOpt==1) open (unit=4,file=trim(GenderFile),status="old")
 
 nProcessAlphaPhase=nProcessors-nProcessGeneProb ! Never used!
 
+! Set parameters for parallelisation
 if (nPhaseInternal==2) then
     nAgreeImputeHDLib=1
     nAgreeParentPhaseElim=1
