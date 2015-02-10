@@ -8,13 +8,18 @@ PROGRAM:=${NAME}${VERSION}.${SUBVERSION}
 FC:=ifort
 
 # Options
-FFLAGS:=-O3 -m64 -ffree-line-length-0
+FFLAGS:=-O3 -m64
+
+all:executable
+
+debug: FFLAGS += -DDEBUG -g -O0
+debug: executable
 
 SRCS=$(wildcard *.f90)
 
 OBJS:=$(SRCS:.o=.f90)
 
-all: ${OBJS}
+executable: ${OBJS}
 	${FC} AlphaImpute.f90 ${FFLAGS} -o ${PROGRAM}
 
 clean:
