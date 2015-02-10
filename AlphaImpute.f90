@@ -5532,7 +5532,7 @@ do i=1,nPhaseInternal           ! Phasing is done in parallel
         endif
         if (SexOpt==1) write (106,*) 'PedigreeFile                      ,"NoPedigree"'
 
-        write (106,'(a97)') &
+        write (106,'(a100)') &
                 'GenotypeFile                       ,"../../InputFiles/AlphaPhaseInputGenotypes.txt",GenotypeFormat'
         write (106,*) 'NumberOfSnp                      ,',nSnp
         write (106,*) 'GeneralCoreAndTailLength     ,',TempCplusT(i)
