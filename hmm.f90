@@ -998,7 +998,7 @@ double precision :: BaseRates, BaseCrossovers=1, BaseLength=0
 
 double precision :: Scale
 
-Scale=1.0/(individuals*2)
+Scale=1.0/(nIndHmmMaCH*2)
 
 ! First we estimate a base line rate to be applied to intervals with
 ! 0 or 1 observed "crossovers"
@@ -1113,8 +1113,6 @@ implicit none
 Crossovers(:)=0
 call ResetErrors
 
-enddo
-
 end subroutine ResetCrossovers
 
 !######################################################################
@@ -1127,25 +1125,24 @@ integer,intent(in) :: matches,mismatches,uncertain
 double precision, intent(out) :: rate
 
 ! Local variables
-integer :: matches, mismatches, uncertain
 double precision :: previous=0.0, ratio
 
 rate=0.0    ! Just in case...
 if (matches+mismatches>0) then
     rate=mismatches/dble(matches+mismatches)
     if (uncertain>0) then
-        do while((rate>1e-10)).and.(abs(rate-previous) > rate*1e-4))
+        do while((rate>1e-10).and.(abs(rate-previous) > rate*1e-4))
             ratio=rate*rate/(rate*rate+(1.0-rate)*(1.0-rate))
             previous=rate
             rate=(mismatches+ratio*uncertain*2.0)&
                  /(matches+mismatches+uncertain*2)
         enddo
     endif
-else if (uncertain>0)
+else if (uncertain>0) then
     rate=0.0
 endif
 
-end subroutine UpdateErrors
+end subroutine UpdateError
 
 !######################################################################
 subroutine ResetErrors
