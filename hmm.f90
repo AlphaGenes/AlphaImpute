@@ -60,6 +60,7 @@ do GlobalRoundHmm=1,nRoundsHmm
 enddo
 close (6)
 
+! Average genotype probability of the different hmm processes
 ProbImputeGenosHmm=ProbImputeGenosHmm/(nRoundsHmm-HmmBurnInRound)
 
 end subroutine MaCHController
@@ -72,7 +73,7 @@ use GlobalVariablesHmmMaCH
 implicit none
 integer :: i,j,k
 
-! Number of SNPs and genotyped animals for the HMM algorith
+! Number of SNPs and genotyped animals for the HMM algorithm
 nSnpHmm=nSnp
 nIndHmmMaCH=nAnisG
 
@@ -85,7 +86,7 @@ allocate(GenosHmmMaCH(nIndHmmMaCH,nSnp))
 ! Haplotype Library
 allocate(GlobalHmmID(nIndHmmMaCH))
 
-! Allocate memory to store Animals Highly Dense Gentoyped
+! Allocate memory to store Animals Highly Dense Genotyped
 allocate(GlobalHmmHDInd(nIndHmmMaCH))
 
 ! Allocate a matrix to store probabilities of the genotype of every
@@ -228,6 +229,7 @@ call SampleChromosomes(CurrentInd)
 !       TotalCrossovers subroutines. According to MaCH code, they
 !       should go outside this subroutine and inside MaCHController.
 
+! Cumulative genotype probability of through hmm processes
 if (GlobalRoundHmm>HmmBurnInRound)&
     ProbImputeGenosHmm(CurrentInd,:)=ProbImputeGenosHmm(CurrentInd,:)&
         +FullH(CurrentInd,:,1)+FullH(CurrentInd,:,2)
