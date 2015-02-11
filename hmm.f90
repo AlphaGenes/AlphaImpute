@@ -19,8 +19,6 @@ end module GlobalVariablesHmmMaCH
 
 !######################################################################
 subroutine MaCHController
-use Global
-use GlobalPedigree
 use GlobalVariablesHmmMaCH
 
 implicit none
@@ -69,7 +67,6 @@ end subroutine MaCHController
 !######################################################################
 subroutine ParseMaCHData
 use Global
-use GlobalPedigree
 use GlobalVariablesHmmMaCH
 
 implicit none

@@ -10,17 +10,18 @@ FC:=ifort
 # Options
 FFLAGS:=-O3 -m64
 
-all:executable
+all: executable
 
 debug: FFLAGS += -DDEBUG -g -O0
 debug: executable
 
-SRCS=$(wildcard *.f90)
+OBJS:=global.o hmm.o
 
-OBJS:=$(SRCS:.o=.f90)
+%.o:%.f90
+	${FC} ${FFLAGS} -c $<
 
 executable: ${OBJS}
-	${FC} AlphaImpute.f90 ${FFLAGS} -o ${PROGRAM}
+	${FC} AlphaImpute.f90 ${OBJS} ${FFLAGS} -o ${PROGRAM}
 
 clean:
 	rm -f *.o *.mod *~ 
