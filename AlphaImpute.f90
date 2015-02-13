@@ -951,7 +951,7 @@ if (RestartOption/=4) then
         enddo
         close (109) 
         print*, "Restart option 3 stops program after Iterate Geneprob jobs have been submitted"
-        stop
+        !stop
     endif
 endif
 
@@ -1414,6 +1414,10 @@ else
 !REMOVE THIS
 
     if (HMMOption==3) then
+        !if (OutOpt==0) nSnpIterate=nSnp
+        !if (OutOpt==1) nSnpIterate=nSnpRaw
+        !allocate(ProbImputeGenos(0:nAnisP,nSnpIterate))
+        !ProbImputeGenos(1:nAnisP,:)=-9.0
         l=0 
         do j=1,nSnpRaw
             if (SnpIncluded(j)==1) then
