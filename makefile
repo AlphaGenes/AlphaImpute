@@ -12,7 +12,8 @@ FFLAGS:=-O3 -m64
 
 all: executable
 
-debug: FFLAGS += -DDEBUG -g -O0
+#debug: FFLAGS += -DDEBUG -g -O0
+debug: FFLAGS =  -DDEBUG -g -ffree-line-length-0 -O0
 debug: executable
 
 OBJS:=global.o hmm.o
