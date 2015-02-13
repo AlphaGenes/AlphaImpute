@@ -148,11 +148,10 @@ integer, intent(in) :: CurrentInd
 
 ! Local variables
 integer :: HapCount,ShuffleInd1,ShuffleInd2
-integer,allocatable,dimension(:) :: Shuffle1,Shuffle2
+integer :: Shuffle1(nIndHmmMaCH),Shuffle2(nIndHmmMaCH)
 
-! Crete vectors of random indexes
-allocate(Shuffle1(nIndHmmMaCH))
-allocate(Shuffle2(nIndHmmMaCH))
+
+! Create vectors of random indexes
 call RandomOrder(Shuffle1,nIndHmmMaCH,idum)
 call RandomOrder(Shuffle2,nIndHmmMaCH,idum)
 
