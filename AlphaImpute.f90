@@ -1758,7 +1758,9 @@ do i=1,nAnisP
                             if ((ImputePhase(PedId,j,1)/=9).and.(ImputePhase(PedId,j,2)/=9)) then
                                 ImputePhase(i,j,e)=9
                                 ImputeGenos(i,j)=9
-                                ProbImputePhase(i,j,e)=((1.0-(LengthVec(j)*Counter))*ImputePhase(PedId,j,GamA))+(LengthVec(j)*Counter*ImputePhase(PedId,j,GamB))
+                                ProbImputePhase(i,j,e)&
+                                    =((1.0-(LengthVec(j)*Counter))*ImputePhase(PedId,j,GamA))&
+                                    +(LengthVec(j)*Counter*ImputePhase(PedId,j,GamB))
                                 ProbImputeGenos(i,j)=ProbImputePhase(i,j,1)+ProbImputePhase(i,j,2)      
 
                             endif
