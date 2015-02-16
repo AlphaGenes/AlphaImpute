@@ -1414,10 +1414,11 @@ else
 !REMOVE THIS
 
     if (HMMOption==3) then
-        !if (OutOpt==0) nSnpIterate=nSnp
-        !if (OutOpt==1) nSnpIterate=nSnpRaw
-        !allocate(ProbImputeGenos(0:nAnisP,nSnpIterate))
-        !ProbImputeGenos(1:nAnisP,:)=-9.0
+        nSnpIterate=nSnp
+        allocate(ProbImputeGenos(0:nAnisP,nSnpIterate))
+        allocate(ProbImputePhase(0:nAnisP,nSnpIterate,2))
+        allocate(Maf(nSnpIterate))
+        ProbImputeGenos(1:nAnisP,:)=-9.0
         l=0 
         do j=1,nSnpRaw
             if (SnpIncluded(j)==1) then
