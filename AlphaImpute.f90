@@ -54,9 +54,9 @@ endif
 if (PhaseTheDataOnly==0) then
     call ImputationManagement
     call WriteOutResults
-    call ModelRecomb
+    if (HMMOption/=3) call ModelRecomb
     if (TrueGenos1None0==1) call FinalChecker
-    call Cleaner
+    !call Cleaner
 endif
 
 call PrintTimerTitles
