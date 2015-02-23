@@ -1419,15 +1419,29 @@ else
         allocate(ProbImputePhase(0:nAnisP,nSnpIterate,2))
         allocate(Maf(nSnpIterate))
         ProbImputeGenos(1:nAnisP,:)=-9.0
+        ProbImputePhase(1:nAnisP,:,:)=-9.0
         l=0 
         do j=1,nSnpRaw
             if (SnpIncluded(j)==1) then
                 l=l+1
                 do i=1,nAnisG
                     ProbImputeGenos(GlobalHmmID(i),l)=ProbImputeGenosHmm(i,l)
+                    ProbImputePhase(GlobalHmmID(i),l,1)=FullH(i,l,1)
+                    ProbImputePhase(GlobalHmmID(i),l,2)=FullH(i,l,2)
                 enddo
             endif
         enddo
+
+        ! Assign Genotypes based on genotype probabilities
+        do i=1,nAnisP
+            do j=1,nSnpIterate
+                if (ProbImputeGenos(i,j)==-9.0) ImputeGenos(i,j)=9
+                if (ProbImputeGenos(i,j)>1.999) ImputeGenos(i,j)=2
+                if (ProbImputeGenos(i,j)<0.0001) ImputeGenos(i,j)=0
+                if ((ProbImputeGenos(i,j)>0.999).and.(ProbImputeGenos(i,j)<1.00001)) ImputeGenos(i,j)=1
+            enddo
+        enddo
+
     endif
 
     do i=GlobalExtraAnimals+1,nAnisP
