@@ -26,6 +26,7 @@ implicit none
 integer :: i,j
 
 
+
 call ParseMaCHData
 call SetUpEquations
 
@@ -47,6 +48,7 @@ call SetUpEquations
 !       Thinking in porting into AlphaImpute master development and so it would compile with others compilers
 
 !open (unit=6,form='formatted',CARRIAGECONTROL='FORTRAN')
+
 open (unit=6,form='formatted')
 do GlobalRoundHmm=1,nRoundsHmm
     !write(6, 100) "   HMM Round   ",GlobalRoundHmm
@@ -54,9 +56,14 @@ do GlobalRoundHmm=1,nRoundsHmm
     write(6, 100) char(13),"   HMM Round   ",GlobalRoundHmm
     100 format (a1, a17, i10)
 
+    call ResetCrossovers
+
     do j=1,nIndHmmMaCH
         call MaCHForInd(j)
     enddo
+    Theta = 0.01
+    call UpdateThetas
+    call UpdateErrorRate(Theta)
 enddo
 close (6)
 
@@ -229,9 +236,10 @@ call SampleChromosomes(CurrentInd)
 !       should go outside this subroutine and inside MaCHController.
 
 ! Cumulative genotype probability of through hmm processes
-if (GlobalRoundHmm>HmmBurnInRound)&
+if (GlobalRoundHmm>HmmBurnInRound) then
     ProbImputeGenosHmm(CurrentInd,:)=ProbImputeGenosHmm(CurrentInd,:)&
         +FullH(CurrentInd,:,1)+FullH(CurrentInd,:,2)
+endif
 
 deallocate(ForwardProbs)
 
@@ -870,6 +878,7 @@ double precision :: prior
 !          the total number of possible states.
 !          So the code should be:
 
+state=0
 do i=1,nHapInSubH
    do j=1,i-1
       state=state+1
@@ -926,7 +935,7 @@ allocate(ErrorMismatches(nSnpHmm))
 ! WARNING: crossovers are related with the transition matrix of the HMM.
 !          If there are nSnpHmm states and nSnpHmm-1 transitions
 !          between states, why the number of crossovers is nSnpHmm??
-allocate(Crossovers(nSnpHmm))
+allocate(Crossovers(nSnpHmm-1))
 
 ! Initialization of HMM parameters
 Epsilon=0.00000001
@@ -982,6 +991,7 @@ ErrorUncertainty(:)=0
 ErrorMatches(:)=0
 ErrorMismatches(:)=0
 Crossovers(:)=0
+!print*, Crossovers(:)
 
 end subroutine SetUpEquations
 
@@ -992,11 +1002,15 @@ use GlobalVariablesHmmMaCH
 implicit none
 
 integer :: i, BaseCount=1, BaseIntervals=0
-double precision :: BaseRates, BaseCrossovers=1, BaseLength=0
+double precision :: BaseRates, BaseCrossovers=1
 
 double precision :: Scale
 
 Scale=1.0/(nIndHmmMaCH*2)
+BaseCount=1
+BaseIntervals=0
+
+BaseCrossovers=1.0
 
 ! First we estimate a base line rate to be applied to intervals with
 ! 0 or 1 observed "crossovers"
@@ -1015,13 +1029,14 @@ endif
 
 ! Then we update the rate for each interval using either the number
 ! of observed crossovers (if > 1) or the baseline rate
-do i=1,nSnpHmm
+do i=1,nSnpHmm-1
     if (Crossovers(i)>1) then
         Thetas(i)=Crossovers(i)*Scale
     else
         Thetas(i)=BaseRates
     endif
 enddo
+print*,Thetas(nSnpHmm-1)
 
 end subroutine UpdateThetas
 
@@ -1053,7 +1068,7 @@ enddo
 call UpdateError(matches, mismatches, uncertain, rate)
 
 do i=1,nSnpHmm
-    if (ErrorMismatches(i)<=2) call SetPenetrance(rate)
+    if (ErrorMismatches(i)<=2) call SetPenetrance(i)
 enddo
 
 end subroutine UpdateErrorRate
