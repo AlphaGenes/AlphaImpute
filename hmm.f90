@@ -20,12 +20,10 @@ end module GlobalVariablesHmmMaCH
 !######################################################################
 subroutine MaCHController
 use GlobalVariablesHmmMaCH
+use omp_lib
 
 implicit none
-
-integer :: i,j
-
-
+integer :: i,j, nprocs, nthreads
 
 call ParseMaCHData
 call SetUpEquations
@@ -50,6 +48,15 @@ call SetUpEquations
 !open (unit=6,form='formatted',CARRIAGECONTROL='FORTRAN')
 
 open (unit=6,form='formatted')
+
+
+nprocs = OMP_get_num_procs()
+call OMP_set_num_threads(nprocs)
+nthreads = OMP_get_num_threads()
+
+write(*,*) "Number of procesors = ", nprocs
+write(*,*) "Number of threads set = ", nthreads
+
 do GlobalRoundHmm=1,nRoundsHmm
     !write(6, 100) "   HMM Round   ",GlobalRoundHmm
     !100 format ('+', a17,i10)
@@ -58,13 +65,21 @@ do GlobalRoundHmm=1,nRoundsHmm
 
     call ResetCrossovers
 
+    !! PARALLELISATION OF HMM
+    !$OMP PARALLEL DO DEFAULT(SHARED) PRIVATE(ForwardProbs, SubH, j)
     do j=1,nIndHmmMaCH
+        !write(*,*) "#. Thread = ", OMP_get_thread_num()
         call MaCHForInd(j)
     enddo
+    !$OMP END PARALLEL DO
+    !! END PARALLELISATION OF HMM
+
     Theta = 0.01
     call UpdateThetas
     call UpdateErrorRate(Theta)
 enddo
+
+deallocate(ForwardProbs)
 close (6)
 
 ! Average genotype probability of the different hmm processes
@@ -85,6 +100,10 @@ nSnpHmm=nSnp
 nIndHmmMaCH=nAnisG
 
 ! ALLOCATE MEMORY
+
+! Test allocation ForwardProb variable for HMM parallelisation
+allocate(ForwardProbs(nHapInSubH*nHapInSubH,nSnpHmm))
+
 ! Allocate a matrix to store the diploids of every Animal
 ! Template Diploids Library
 allocate(GenosHmmMaCH(nIndHmmMaCH,nSnp))
@@ -203,7 +222,9 @@ enddo
 ! ForwardPrbos(:,1) this array are the prior probabilities
 !
 ! Allocate all possible state sequencies
-allocate(ForwardProbs(nHapInSubH*nHapInSubH,nSnpHmm))
+!write(*,*) "Antes allocate"
+!allocate(ForwardProbs(nHapInSubH*nHapInSubH,nSnpHmm))
+!write(*,*) "Despues allocate"
 
 ! WARNING: I think this variable is treated in a wrong way. In MaCH
 !          code, FordwardProbs is the array variable leftMatrices.
@@ -241,7 +262,7 @@ if (GlobalRoundHmm>HmmBurnInRound) then
         +FullH(CurrentInd,:,1)+FullH(CurrentInd,:,2)
 endif
 
-deallocate(ForwardProbs)
+!deallocate(ForwardProbs)
 
 end subroutine MaCHForInd
 

@@ -8,12 +8,12 @@ PROGRAM:=${NAME}${VERSION}.${SUBVERSION}
 FC:=ifort
 
 # Options
-FFLAGS:=-O3 -m64
+FFLAGS:=-O3 -m64 -openmp
 
 all: executable
 
 #debug: FFLAGS += -DDEBUG -g -O0
-debug: FFLAGS =  -DDEBUG -g -ffree-line-length-0 -O0
+debug: FFLAGS =  -DDEBUG -g -ffree-line-length-0 -O0 -openmp
 debug: executable
 
 OBJS:=global.o hmm.o
