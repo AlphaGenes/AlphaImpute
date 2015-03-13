@@ -1221,6 +1221,10 @@ open (unit=50,file="./Results/ImputationQualityIndividual.txt",status="unknown")
 open (unit=51,file="./Results/ImputationQualitySnp.txt",status="unknown")
 open (unit=52,file="./Results/WellPhasedIndividuals.txt",status="unknown")
 
+open (unit=53,file="./Results/ImputePhaseHMM.txt",status="unknown")
+open (unit=54,file="./Results/ImputeGenotypesHMM.txt",status="unknown")
+
+
 if (OutOpt==0) then
 
     if (SexOpt==0) then
@@ -1400,7 +1404,7 @@ else
     allocate(ImputePhase(0:nAnisP,nSnpRaw,2))
     ImputeGenos=TmpGenos
     ImputePhase=TmpPhase
-!REMOVE THIS WHEN HMM IS FINALISED
+    !REMOVE THIS WHEN HMM IS FINALISED
     if (HMMOption/=3) then
         if (SexOpt==0) then
             if (BypassGeneProb==0) then 
@@ -1411,7 +1415,7 @@ else
         endif
         if (SexOpt==1) call IterateInsteadOfGeneProbs
     endif
-!REMOVE THIS
+    !REMOVE THIS
 
     if (HMMOption==3) then
         nSnpIterate=nSnp
@@ -1445,6 +1449,10 @@ else
     endif
 
     do i=GlobalExtraAnimals+1,nAnisP
+         write (53,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') Id(i),ImputePhase(i,:,1)
+         write (53,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') Id(i),ImputePhase(i,:,2)
+         write (54,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') Id(i),ImputeGenos(i,:)
+
          write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') Id(i),ProbImputePhase(i,:,1)
          write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') Id(i),ProbImputePhase(i,:,2)
          write (41,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') Id(i),ProbImputeGenos(i,:)
@@ -1501,6 +1509,9 @@ close (41)
 close (50)
 close (51)
 close (52)
+
+close (53)
+close (54)
 
 end subroutine WriteOutResults
 
