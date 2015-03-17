@@ -14,7 +14,7 @@ double precision,allocatable,dimension(:) :: Thetas,Epsilon
 double precision,allocatable,dimension(:,:) :: ForwardProbs
 double precision,allocatable,dimension(:,:,:) :: Penetrance
 real,allocatable,dimension (:,:) :: ProbImputeGenosHmm
-
+!$omp threadprivate(ForwardProbs, SubH)
 end module GlobalVariablesHmmMaCH
 
 !######################################################################
@@ -23,39 +23,20 @@ use GlobalVariablesHmmMaCH
 use omp_lib
 
 implicit none
-integer :: i,j, nprocs, nthreads
+integer :: i, nprocs, nthreads, useProcs=1
 
 call ParseMaCHData
 call SetUpEquations
 
-! WARNING: CARRIAGECONTROL statement is only supported by Intel compilers (https://software.intel.com/en-us/node/511256)
-!          This statement gives a compilation error with different compilers, such as GNU
-!          It is a non-standard extension that can be hacked (http://www.pgroup.com/userforum/viewtopic.php?p=9838&sid=a87a1bb4ec01041a702ee60469b2e254)
-! open (unit=6, form='formatted')
-! do GlobalRoundHmm=1,nRoundsHmm
-!   write(6, 100,advance="no") char(13),"   HMM Round   ", GlobalRoundHmm
-!   100 format(a1,a17,i10)
-!   call flush(6)
-!   call sleep(1)       ! Wait 1 second before doing anything and not messing around. This might be not necessary
-!   do j=1,nIndHmmMaCH
-!       call MaCHForInd(j)
-!   enddo
-! write(6, *) ""        ! Create a new line
-! enddo
-! NOTE: I tried this code in a separate program and it works.
-!       Thinking in porting into AlphaImpute master development and so it would compile with others compilers
-
-!open (unit=6,form='formatted',CARRIAGECONTROL='FORTRAN')
-
 open (unit=6,form='formatted')
 
-
 nprocs = OMP_get_num_procs()
-call OMP_set_num_threads(nprocs)
+call OMP_set_num_threads(useProcs)
 nthreads = OMP_get_num_threads()
 
-write(*,*) "Number of procesors = ", nprocs
-write(*,*) "Number of threads set = ", nthreads
+print*, ""
+print*, " Impute genotypes by HMM"
+print*, "    Using", useProcs, "processors of", nprocs
 
 do GlobalRoundHmm=1,nRoundsHmm
     !write(6, 100) "   HMM Round   ",GlobalRoundHmm
@@ -65,22 +46,36 @@ do GlobalRoundHmm=1,nRoundsHmm
 
     call ResetCrossovers
 
-    !! PARALLELISATION OF HMM
-    !$OMP PARALLEL DO DEFAULT(SHARED) PRIVATE(ForwardProbs, SubH, j)
-    do j=1,nIndHmmMaCH
-        !write(*,*) "#. Thread = ", OMP_get_thread_num()
-        call MaCHForInd(j)
+!    print*, "Allocate SubH"
+!    allocate(SubH(nHapInSubH,nSnpHmm))
+!    print*, "Allocate ForwardProbs"
+!    allocate(ForwardProbs(nHapInSubH*(nHapInSubH+1)/2,nSnpHmm))
+
+    !$OMP PARALLEL DO DEFAULT(shared)
+    !$!OMP DO 
+    do i=1,nIndHmmMaCH
+        !print*, "Animal:", i, "Number of thread:", OMP_get_thread_num()
+        !print*, "#. Thread = ", OMP_get_thread_num()
+        !allocate(ForwardProbs(nHapInSubH*(nHapInSubH+1)/2,nSnpHmm))
+        !allocate(SubH(nHapInSubH,nSnpHmm))
+        !print*, 'Number of thread:', OMP_get_thread_num(), allocated(SubH), allocated(ForwardProbs)
+        !print*, 'call MaCHForInd'
+        call MaCHForInd(i)
+        !deallocate(ForwardProbs)
+        !deallocate(SubH)
     enddo
+    !$!OMP END DO
     !$OMP END PARALLEL DO
-    !! END PARALLELISATION OF HMM
+    !deallocate(SubH)
+    !deallocate(ForwardProbs)
 
     Theta = 0.01
     call UpdateThetas
     call UpdateErrorRate(Theta)
 enddo
 
-deallocate(ForwardProbs)
-close (6)
+
+!close (6)
 
 ! Average genotype probability of the different hmm processes
 ProbImputeGenosHmm=ProbImputeGenosHmm/(nRoundsHmm-HmmBurnInRound)
@@ -102,7 +97,7 @@ nIndHmmMaCH=nAnisG
 ! ALLOCATE MEMORY
 
 ! Test allocation ForwardProb variable for HMM parallelisation
-allocate(ForwardProbs(nHapInSubH*nHapInSubH,nSnpHmm))
+!allocate(ForwardProbs(nHapInSubH*nHapInSubH,nSnpHmm))
 
 ! Allocate a matrix to store the diploids of every Animal
 ! Template Diploids Library
@@ -168,18 +163,26 @@ subroutine MaCHForInd(CurrentInd)
 ! individual
 
 use GlobalVariablesHmmMaCH
+use omp_lib
+
 implicit none
 
 integer, intent(in) :: CurrentInd
 
 ! Local variables
-integer :: HapCount,ShuffleInd1,ShuffleInd2
+integer :: HapCount,ShuffleInd1,ShuffleInd2, states
 integer :: Shuffle1(nIndHmmMaCH),Shuffle2(nIndHmmMaCH)
 
+!print*, "Allocate SubH"
+!print*, "Allocate ForwardProbs"
+allocate(ForwardProbs(nHapInSubH*(nHapInSubH+1)/2,nSnpHmm))
+allocate(SubH(nHapInSubH,nSnpHmm))
+!print*, 'Animal: ', CurrentInd, 'Number of thread:', OMP_get_thread_num(), allocated(SubH), allocated(ForwardProbs)
 
 ! Create vectors of random indexes
 call RandomOrder(Shuffle1,nIndHmmMaCH,idum)
 call RandomOrder(Shuffle2,nIndHmmMaCH,idum)
+!print*, 'Inside MaCHForInd'
 
 HapCount=0
 ShuffleInd1=0
@@ -224,6 +227,7 @@ enddo
 ! Allocate all possible state sequencies
 !write(*,*) "Antes allocate"
 !allocate(ForwardProbs(nHapInSubH*nHapInSubH,nSnpHmm))
+
 !write(*,*) "Despues allocate"
 
 ! WARNING: I think this variable is treated in a wrong way. In MaCH
@@ -233,7 +237,8 @@ enddo
 !          The code should then be:
 !
 ! states = nHapInSubH*(nHapInSubH+1)/2
-! allocate(ForwardProbs(states,nSnpHmm)
+! allocate(ForwardProbs(states,nSnpHmm))
+!allocate(SubH(nHapInSubH,nSnpHmm))
 
 call ForwardAlgorithm(CurrentInd)
 call SampleChromosomes(CurrentInd)
@@ -262,7 +267,10 @@ if (GlobalRoundHmm>HmmBurnInRound) then
         +FullH(CurrentInd,:,1)+FullH(CurrentInd,:,2)
 endif
 
-!deallocate(ForwardProbs)
+deallocate(ForwardProbs)
+deallocate(SubH)
+!print*, 'Number of thread:', OMP_get_thread_num(), allocated(SubH), allocated(ForwardProbs)
+
 
 end subroutine MaCHForInd
 
@@ -852,15 +860,21 @@ subroutine CalcPenetrance
 ! Initialize the Penetration matrix of the HMM as the emission
 ! probabilities matrix given in Appendix of Li et al. (2010)
 use GlobalVariablesHmmMaCH
+use omp_lib
+
 implicit none
 
-integer :: j
+integer :: j, nprocs
 
 ! Penetrance(j,i,k) = P(P_j|S_j)
 ! i = G_j = {0,1,2}
 ! k = T(S_j) = T(x_j) + T(y_j) = {0,1,2}
 allocate(Penetrance(nSnpHmm,0:2,0:2))
 
+nprocs = OMP_get_num_procs()
+call OMP_set_num_threads(nprocs)
+
+!$OMP PARALLEL DO DEFAULT(SHARED)
 do j=1,nSnpHmm
     Penetrance(j,0,0)=(1.0-Epsilon(j))**2
     Penetrance(j,0,1)=2.0*(1.0-Epsilon(j))*Epsilon(j)
@@ -872,6 +886,7 @@ do j=1,nSnpHmm
     Penetrance(j,2,1)=2.0*(1.0-Epsilon(j))*Epsilon(j)
     Penetrance(j,2,2)=(1.0-Epsilon(j))**2
 enddo
+!$OMP END PARALLEL DO
 
 end subroutine CalcPenetrance
 
@@ -931,7 +946,7 @@ allocate(FullH(nIndHmmMaCH,nSnpHmm,2))
 ! complexity of the algorith increases cubically with the sample size
 ! (the cost of each update increases quadratically and the number of
 !  updates increases linearly with sample size)
-allocate(SubH(nHapInSubH,nSnpHmm))
+!allocate(SubH(nHapInSubH,nSnpHmm))
 
 ! HMM PARAMETERS
 ! nSnpHmm is the number of states in the HMM
