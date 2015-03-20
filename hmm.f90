@@ -19,10 +19,15 @@ end module GlobalVariablesHmmMaCH
 !######################################################################
 subroutine MaCHController
 use GlobalVariablesHmmMaCH
+use Par_Zig_mod
 use omp_lib
 
 implicit none
-integer :: i, nprocs, nthreads, useProcs=1
+integer :: i, nprocs, nthreads, useProcs=2
+real(4) :: r
+double precision :: Theta
+integer, allocatable :: seed(:)
+integer :: grainsize = 32
 
 call ParseMaCHData
 call SetUpEquations
@@ -33,48 +38,40 @@ nprocs = OMP_get_num_procs()
 call OMP_set_num_threads(useProcs)
 nthreads = OMP_get_num_threads()
 
+allocate(seed(useProcs))
+    ! Set up random process for threads
+    do i = 1,useProcs
+        call random_number(r)
+        seed(i) = 123456789*r
+    enddo
+    call par_zigset(useProcs, seed, grainsize)
+
 print*, ""
 print*, " Impute genotypes by HMM"
 print*, "    Using", useProcs, "processors of", nprocs
 
+
 do GlobalRoundHmm=1,nRoundsHmm
-    !write(6, 100) "   HMM Round   ",GlobalRoundHmm
-    !100 format ('+', a17,i10)
+    !write(6, 100, advance="no") char(13),"   HMM Round   ",GlobalRoundHmm
     write(6, 100) char(13),"   HMM Round   ",GlobalRoundHmm
     100 format (a1, a17, i10)
+    !call flush(6)
 
     call ResetCrossovers
 
-!    print*, "Allocate SubH"
-!    allocate(SubH(nHapInSubH,nSnpHmm))
-!    print*, "Allocate ForwardProbs"
-!    allocate(ForwardProbs(nHapInSubH*(nHapInSubH+1)/2,nSnpHmm))
 
     !$OMP PARALLEL DO DEFAULT(shared)
     !$!OMP DO 
     do i=1,nIndHmmMaCH
-        !print*, "Animal:", i, "Number of thread:", OMP_get_thread_num()
-        !print*, "#. Thread = ", OMP_get_thread_num()
-        !allocate(ForwardProbs(nHapInSubH*(nHapInSubH+1)/2,nSnpHmm))
-        !allocate(SubH(nHapInSubH,nSnpHmm))
-        !print*, 'Number of thread:', OMP_get_thread_num(), allocated(SubH), allocated(ForwardProbs)
-        !print*, 'call MaCHForInd'
         call MaCHForInd(i)
-        !deallocate(ForwardProbs)
-        !deallocate(SubH)
     enddo
     !$!OMP END DO
     !$OMP END PARALLEL DO
-    !deallocate(SubH)
-    !deallocate(ForwardProbs)
 
     Theta = 0.01
     call UpdateThetas
     call UpdateErrorRate(Theta)
 enddo
-
-
-!close (6)
 
 ! Average genotype probability of the different hmm processes
 ProbImputeGenosHmm=ProbImputeGenosHmm/(nRoundsHmm-HmmBurnInRound)
@@ -162,6 +159,8 @@ subroutine MaCHForInd(CurrentInd)
 ! individual
 
 use GlobalVariablesHmmMaCH
+use random
+use Par_Zig_mod
 use omp_lib
 
 implicit none
@@ -169,19 +168,19 @@ implicit none
 integer, intent(in) :: CurrentInd
 
 ! Local variables
-integer :: HapCount,ShuffleInd1,ShuffleInd2, states
-integer :: Shuffle1(nIndHmmMaCH),Shuffle2(nIndHmmMaCH)
+integer :: HapCount, ShuffleInd1, ShuffleInd2, states, thread
+integer :: Shuffle1(nIndHmmMaCH), Shuffle2(nIndHmmMaCH)
 
-!print*, "Allocate SubH"
-!print*, "Allocate ForwardProbs"
 allocate(ForwardProbs(nHapInSubH*(nHapInSubH+1)/2,nSnpHmm))
 allocate(SubH(nHapInSubH,nSnpHmm))
-!print*, 'Animal: ', CurrentInd, 'Number of thread:', OMP_get_thread_num(), allocated(SubH), allocated(ForwardProbs)
+
+thread=omp_get_thread_num()
 
 ! Create vectors of random indexes
-call RandomOrder(Shuffle1,nIndHmmMaCH,idum)
-call RandomOrder(Shuffle2,nIndHmmMaCH,idum)
-!print*, 'Inside MaCHForInd'
+!call RandomOrder(Shuffle1,nIndHmmMaCH,idum)
+!call RandomOrder(Shuffle2,nIndHmmMaCH,idum)
+call RandomOrderPar(Shuffle1,nIndHmmMaCH,thread)
+call RandomOrderPar(Shuffle2,nIndHmmMaCH,thread)
 
 HapCount=0
 ShuffleInd1=0
@@ -222,12 +221,8 @@ enddo
 !
 ! ForwardProbs are the accumulated probabilities(??), and for
 ! ForwardPrbos(:,1) this array are the prior probabilities
-!
 ! Allocate all possible state sequencies
-!write(*,*) "Antes allocate"
 !allocate(ForwardProbs(nHapInSubH*nHapInSubH,nSnpHmm))
-
-!write(*,*) "Despues allocate"
 
 ! WARNING: I think this variable is treated in a wrong way. In MaCH
 !          code, FordwardProbs is the array variable leftMatrices.
@@ -261,15 +256,15 @@ call SampleChromosomes(CurrentInd)
 !       should go outside this subroutine and inside MaCHController.
 
 ! Cumulative genotype probability of through hmm processes
+!$!OMP CRITICAL (ProbImpute)
 if (GlobalRoundHmm>HmmBurnInRound) then
     ProbImputeGenosHmm(CurrentInd,:)=ProbImputeGenosHmm(CurrentInd,:)&
         +FullH(CurrentInd,:,1)+FullH(CurrentInd,:,2)
 endif
+!$!OMP END CRITICAL (ProbImpute)
 
 deallocate(ForwardProbs)
 deallocate(SubH)
-!print*, 'Number of thread:', OMP_get_thread_num(), allocated(SubH), allocated(ForwardProbs)
-
 
 end subroutine MaCHForInd
 
@@ -908,6 +903,8 @@ subroutine SetUpPrior
 !   PIj = P(t1=Sj) = ForwardProb(j,1)
 
 use GlobalVariablesHmmMaCH
+use omp_lib
+
 implicit none
 integer :: i,j,state=0
 double precision :: prior
@@ -1083,7 +1080,7 @@ do i=1,nSnpHmm-1
         Thetas(i)=BaseRates
     endif
 enddo
-print*,Thetas(nSnpHmm-1)
+!print*,Thetas(nSnpHmm-1)
 
 end subroutine UpdateThetas
 
@@ -1215,46 +1212,3 @@ ErrorMatches(:)=0
 ErrorMismatches(:)=0
 
 end subroutine ResetErrors
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
