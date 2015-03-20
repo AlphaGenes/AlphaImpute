@@ -6,7 +6,6 @@ implicit none
 character(len=300) :: GenotypeFileName,CheckPhaseFileName,CheckGenoFileName
 integer :: nIndHmmMaCH,GlobalRoundHmm,nSnpHmm
 integer :: nHapInSubH,idum,nRoundsHmm,HmmBurnInRound
-double precision :: Theta
 integer(kind=1),allocatable,dimension(:,:) :: GenosHmmMaCH,SubH
 integer(kind=1),allocatable,dimension(:,:,:) :: FullH
 integer,allocatable,dimension(:) :: ErrorUncertainty,ErrorMatches,ErrorMismatches,Crossovers,GlobalHmmHDInd
@@ -285,6 +284,7 @@ integer,intent(in) :: CurrentInd
 integer :: i,j,k,l,SuperJ,Index,OffOn,State1,State2,TmpJ,TopBot,FirstState,SecondState,Tmp
 double precision :: Summer,ran1,Choice,Sum00,Sum01,Sum10,Sum11
 double precision :: Probs(nHapInSubH*(nHapInSubH+1)/2)
+double precision :: Theta
 
 Summer=0.0
 Index=0
@@ -524,6 +524,7 @@ integer,intent(in) :: CurrentInd,TopBot,FromMarker,ToMarker,FromState,ToState
 ! Local variables
 integer :: i,State,FromMarkerLocal
 double precision :: Recomb,Theta1,ran1
+double precision :: Theta
 
 FromMarkerLocal=FromMarker
 Theta=0.0
@@ -678,14 +679,18 @@ subroutine ForwardAlgorithm(CurrentInd)
 ! Update the forward variable of the HMM model
 
 use GlobalVariablesHmmMaCH
+use omp_lib
+
 implicit none
 
 integer, intent(in) :: CurrentInd
+double precision :: Theta
 
 ! Local variables
 integer :: i,j,PrecedingMarker
 
 ! Setup the initial state distributions
+
 call SetUpPrior
 
 j=1
@@ -717,7 +722,7 @@ enddo
 end subroutine ForwardAlgorithm
 
 !######################################################################
-subroutine Transpose(CurrentMarker,PrecedingMarker)
+subroutine Transpose(CurrentMarker,PrecedingMarker,Theta)
 ! Calculates the probability of get a particular state at CurrentMarker
 ! from any other state at PrecedingMarker using the transition probabilities.
 ! It basically calculates the first term of the forward variable.
@@ -725,6 +730,7 @@ use GlobalVariablesHmmMaCH
 implicit none
 
 integer,intent(in) :: CurrentMarker,PrecedingMarker
+double precision,intent(in) :: Theta
 
 !Local variables
 integer :: i,j,Index
