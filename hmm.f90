@@ -568,6 +568,7 @@ do while (FromMarkerLocal<ToMarker-1)
 
     ! If there is no recombinant in the second interval, then
     ! there is recombinant in the first...
+    !$OMP ATOMIC
     Crossovers(FromMarkerLocal)=Crossovers(FromMarkerLocal)+1
 
     if (Recomb<Theta1*(1.0-Theta)) then
@@ -589,6 +590,7 @@ do while (FromMarkerLocal<ToMarker-1)
 enddo
 
 !If we get here, record obligate recombinant between two consecutive markers
+!$OMP ATOMIC
 Crossovers(FromMarkerLocal)=Crossovers(FromMarkerLocal)+1
 
 end subroutine SamplePath
@@ -630,13 +632,16 @@ Differences=abs(Genotype - (Imputed1+Imputed2))
 
 ! If allele is heterozygous, there is uncertainty
 if ((Genotype==1).and.(Differences==0)) then
+    !$OMP ATOMIC
     ErrorUncertainty(CurrentMarker)=ErrorUncertainty(CurrentMarker)+1
 
 ! If allele is homozygous or the genotype does not agree the observation
 else
     ! count the number of alleles matching
+    !$OMP ATOMIC
     ErrorMatches(CurrentMarker)=ErrorMatches(CurrentMarker)+(2-Differences)
     ! count the number of mismatching alleles
+    !$OMP ATOMIC
     ErrorMismatches(CurrentMarker)=ErrorMismatches(CurrentMarker)+Differences
 endif
 
