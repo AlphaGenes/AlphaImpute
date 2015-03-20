@@ -23,8 +23,9 @@ use Par_Zig_mod
 use omp_lib
 
 implicit none
-integer :: i, nprocs, nthreads, useProcs=2
+integer :: i, nprocs, nthreads, useProcs=1
 real(4) :: r
+real(8) :: t1, t2, tT
 double precision :: Theta
 integer, allocatable :: seed(:)
 integer :: grainsize = 32
@@ -50,7 +51,7 @@ print*, ""
 print*, " Impute genotypes by HMM"
 print*, "    Using", useProcs, "processors of", nprocs
 
-
+tT=0.0
 do GlobalRoundHmm=1,nRoundsHmm
     !write(6, 100, advance="no") char(13),"   HMM Round   ",GlobalRoundHmm
     write(6, 100) char(13),"   HMM Round   ",GlobalRoundHmm
@@ -59,7 +60,7 @@ do GlobalRoundHmm=1,nRoundsHmm
 
     call ResetCrossovers
 
-
+    t1 = omp_get_wtime()
     !$OMP PARALLEL DO DEFAULT(shared)
     !$!OMP DO 
     do i=1,nIndHmmMaCH
@@ -67,11 +68,15 @@ do GlobalRoundHmm=1,nRoundsHmm
     enddo
     !$!OMP END DO
     !$OMP END PARALLEL DO
+    t2 = omp_get_wtime()
+    tT = tT + (t2-t1)
 
     Theta = 0.01
     call UpdateThetas
     call UpdateErrorRate(Theta)
 enddo
+
+write(*,*) 'Time: ', tT
 
 ! Average genotype probability of the different hmm processes
 ProbImputeGenosHmm=ProbImputeGenosHmm/(nRoundsHmm-HmmBurnInRound)
@@ -271,12 +276,14 @@ end subroutine MaCHForInd
 !######################################################################
 subroutine SampleChromosomes(CurrentInd)
 use GlobalVariablesHmmMaCH
+use omp_lib
+use Par_Zig_mod
 implicit none
 
 integer,intent(in) :: CurrentInd
 
 ! Local variables
-integer :: i,j,k,l,SuperJ,Index,OffOn,State1,State2,TmpJ,TopBot,FirstState,SecondState,Tmp
+integer :: i,j,k,l,SuperJ,Index,OffOn,State1,State2,TmpJ,TopBot,FirstState,SecondState,Tmp,Thread
 double precision :: Summer,ran1,Choice,Sum00,Sum01,Sum10,Sum11
 double precision :: Probs(nHapInSubH*(nHapInSubH+1)/2)
 double precision :: Theta
@@ -284,6 +291,7 @@ double precision :: Theta
 Summer=0.0
 Index=0
 Probs = ForwardProbs(:,nSnpHmm)
+Thread = omp_get_thread_num()
 
 ! Calculate sum over all states. The sum corresponds to all the
 ! forward probabilities, that is, the probability of the sequence of
@@ -296,7 +304,8 @@ do i=1,nHapInSubH
 enddo
 
 ! Sample number at random and select state: (State1,State2)
-Choice=ran1(idum)*Summer
+!Choice=ran1(idum)*Summer
+Choice = par_uni(Thread)*Summer
 Summer=0.0
 Index=0
 OffOn=0
@@ -368,7 +377,8 @@ do while (SuperJ>1)
 
     !Sample number and decide how many state changes occurred between the
     !two positions
-    Choice=ran1(idum)*Summer
+    !Choice=ran1(idum)*Summer
+    Choice = par_uni(Thread)*Summer
 
     !The most likely outcome is that no changes occur ...
     Choice=Choice-(Sum00*(1.0-Theta)*(1.0-Theta))
@@ -468,7 +478,8 @@ do while (SuperJ>1)
     enddo
 
     ! Shuffle haplotypes at random
-    if (ran1(idum)>0.5) then
+    !if (ran1(idum)>0.5) then
+    if (par_uni(Thread)>0.5) then
         Tmp=State1
         State2=State1
         State2=Tmp
@@ -512,14 +523,18 @@ subroutine SamplePath(CurrentInd,FromMarker,ToMarker,FromState,ToState,TopBot)
 ! fromState and end at toState with at least one intervening recombinant
 
 use GlobalVariablesHmmMaCH
+use omp_lib
+use Par_Zig_mod
 implicit none
 
 integer,intent(in) :: CurrentInd,TopBot,FromMarker,ToMarker,FromState,ToState
 
 ! Local variables
-integer :: i,State,FromMarkerLocal
+integer :: i,State,FromMarkerLocal, Thread
 double precision :: Recomb,Theta1,ran1
 double precision :: Theta
+
+Thread = omp_get_thread_num()
 
 FromMarkerLocal=FromMarker
 Theta=0.0
@@ -533,7 +548,8 @@ enddo
 ! Impute a path between the two end markers
 do while (FromMarkerLocal<ToMarker-1)
     ! Random recombination
-    Recomb=ran1(idum)*Theta
+    !Recomb=ran1(idum)*Theta
+    Recomb = par_uni(Thread)*Theta
 
     ! Recombination fraction of the FromMarkerLocal
     Theta1=Thetas(FromMarkerLocal)
@@ -579,7 +595,9 @@ do while (FromMarkerLocal<ToMarker-1)
         ! WARNING: Not really a bug, but not used a coherent notation
         !ToState=int(ran1(idum)*nHapInSubH)+1
         !call ImputeAllele(CurrentInd,FromMarkerLocal,ToState,TopBot)
-        State=int(ran1(idum)*nHapInSubH)+1
+        !State=int(ran1(idum)*nHapInSubH)+1
+        State=int(par_uni(Thread)*nHapInSubH)+1
+
         call ImputeAllele(CurrentInd,FromMarkerLocal,State,TopBot)
     endif
 
@@ -598,14 +616,17 @@ subroutine ImputeAlleles(CurrentInd,CurrentMarker,State1,State2)
 ! alleles according to the genotype information that the individual
 ! carries.
 use GlobalVariablesHmmMaCH
+use omp_lib
+use Par_Zig_mod
 implicit none
 
 integer,intent(in) :: CurrentInd,CurrentMarker,State1,State2
 
 ! Local variables
-integer :: Imputed1,Imputed2,Genotype,Differences
+integer :: Imputed1,Imputed2,Genotype,Differences, Thread
 double precision :: ran1
 
+Thread = omp_get_thread_num()
 ! These will be the observed imputed alleles defined by the state:
 ! Sj=(State1, State2)
 Imputed1=SubH(State1,CurrentMarker)
@@ -647,7 +668,8 @@ if (Genotype/=1) return
 ! If the observed allele is homozygous but the genotype is heterozygous
 if (Imputed1==Imputed2) then
     ! Impute the allele to the paternal or maternal haplotype at random
-    if (ran1(idum)>=0.5) then
+    !if (ran1(idum)>=0.5) then
+    if (par_uni(Thread)>=0.5) then
         FullH(CurrentInd,CurrentMarker,1)=abs(Imputed1-1)
     else
         ! WARNING: Bug fixed!
@@ -906,7 +928,7 @@ use GlobalVariablesHmmMaCH
 use omp_lib
 
 implicit none
-integer :: i,j,state=0
+integer :: i,j,state
 double precision :: prior
 
  prior=1.0/(nHapInSubH*nHapInSubH)
