@@ -90,7 +90,7 @@ USAGE
         parser.add_argument("-b", "--bypass", help="Bypass GeneProb", action="store_true")
         parser.add_argument("-R", "--restart", help="Restart Option [Default: %(default)d]", type=int, default=0, required=True, metavar="int")
         parser.add_argument("-M", "--hmm", help="Use Hidden Markov Model [Default: %(default)s]", dest="hmm", choices=["No","Only", "Yes"], metavar="str")
-        parser.add_argument("-m", "--hmm_param", help="Hidden Markov Model parameters[Default: %(default)s]", nargs=4, default=[300,19,20,-123456788], metavar="int", dest="hmmParam")
+        parser.add_argument("-m", "--hmm_param", help="Hidden Markov Model parameters[Default: %(default)s]", nargs=5, default=[300,19,20,4,-123456788], metavar="int", dest="hmmParam")
 
         parser.add_argument("-T", "--truegenotype", help="True Genotype File", metavar="file", type=file)
         parser.add_argument("-V", "--version", action="version", version=program_version_message)
