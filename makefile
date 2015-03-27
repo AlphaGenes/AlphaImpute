@@ -9,7 +9,7 @@ FC:=ifort
 #FC:=gfortran
 
 # Options
-FFLAGS:=-O3 -m64 -openmp -traceback -check bounds
+FFLAGS:=-O3 -m64 -openmp
 #FFLAGS:=-O3 -m64 -fopenmp -ffree-line-length-0
 
 all: executable
@@ -24,6 +24,8 @@ OBJS:=global.o par_zig_mod.o random.o hmm.o
 	${FC} ${FFLAGS} -c $<
 
 executable: ${OBJS}
+	export OMP_STACKSIZE=" 128 M"
+	export OMP_NUM_THREADS=4
 	${FC} AlphaImpute.f90 ${OBJS} ${FFLAGS} -o ${PROGRAM}
 
 clean:
