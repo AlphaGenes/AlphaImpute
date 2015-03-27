@@ -735,12 +735,13 @@ call ConditionOnData(CurrentInd,j)
 Theta=0.0
 
 PrecedingMarker=1
+!print*, 'DEBUG:: Calculate Forward variables [ForwardAlgorithm]'
 do j=2,nSnpHmm
     ! Cumulative recombination fraction allows us to skip uninformative positions
     Theta=Theta+Thetas(j-1)-Theta*Thetas(j-1)
     ! Skip over uninformative positions to save time
     if ((GenosHmmMaCH(CurrentInd,j)/=3).or.(j==nSnpHmm)) then
-        call Transpose(j,PrecedingMarker)
+        call Transpose(j,PrecedingMarker,Theta)
         call ConditionOnData(CurrentInd,j)
         PrecedingMarker=j
         Theta=0.0
