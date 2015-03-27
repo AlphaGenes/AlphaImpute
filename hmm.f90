@@ -61,6 +61,8 @@ do GlobalRoundHmm=1,nRoundsHmm
     call ResetCrossovers
 
     t1 = omp_get_wtime()
+
+    !print*, 'DEBUG:: Begin paralellisation'
     !$OMP PARALLEL DO DEFAULT(shared)
     !$!OMP DO 
     do i=1,nIndHmmMaCH
@@ -70,6 +72,7 @@ do GlobalRoundHmm=1,nRoundsHmm
     !$OMP END PARALLEL DO
     t2 = omp_get_wtime()
     tT = tT + (t2-t1)
+    !print*, 'DEBUG:: End paralellisation. Partial time:', t2-t1
 
     Theta = 0.01
     call UpdateThetas
@@ -182,6 +185,7 @@ allocate(SubH(nHapInSubH,nSnpHmm))
 thread=omp_get_thread_num()
 
 ! Create vectors of random indexes
+!print*, 'DEBUG:: Shuffle Individuals [MaCHForInd]'
 !call RandomOrder(Shuffle1,nIndHmmMaCH,idum)
 !call RandomOrder(Shuffle2,nIndHmmMaCH,idum)
 call RandomOrderPar(Shuffle1,nIndHmmMaCH,thread)
@@ -192,6 +196,7 @@ ShuffleInd1=0
 ShuffleInd2=0
 
 ! EXTRACT SUBH
+!print*, 'DEBUG:: Create Haplotypes Template [MaCHForInd]'
 ! While the maximum number of haps in the template haplotypes set, H,
 ! is not reached...
 ! WARNING: This should be an independent subroutine (as in MaCH code)
@@ -239,7 +244,10 @@ enddo
 ! allocate(ForwardProbs(states,nSnpHmm))
 !allocate(SubH(nHapInSubH,nSnpHmm))
 
+!print*, 'DEBUG:: HMM Forward Algorithm [MaCHForInd]'
 call ForwardAlgorithm(CurrentInd)
+
+!print*, 'DEBUG:: Sample Chromosomes from the HMM model [MaCHForInd]'
 call SampleChromosomes(CurrentInd)
 
 ! WARNING: The idea of not to use the first HmmBurnInRound rounds suggests
@@ -261,6 +269,7 @@ call SampleChromosomes(CurrentInd)
 !       should go outside this subroutine and inside MaCHController.
 
 ! Cumulative genotype probability of through hmm processes
+!print*, 'DEBUG:: Calculate genotype probabilities [MaCHForInd]'
 !$!OMP CRITICAL (ProbImpute)
 if (GlobalRoundHmm>HmmBurnInRound) then
     ProbImputeGenosHmm(CurrentInd,:)=ProbImputeGenosHmm(CurrentInd,:)&
@@ -268,6 +277,7 @@ if (GlobalRoundHmm>HmmBurnInRound) then
 endif
 !$!OMP END CRITICAL (ProbImpute)
 
+!print*, 'DEBUG:: Deallocate Forward variable and Haplotype Template [MaCHForInd]'
 deallocate(ForwardProbs)
 deallocate(SubH)
 
@@ -715,6 +725,7 @@ j=1
 ! obtain the genotype of this individual in ConditionaOnData subroutine
 ! For j=1, ConditionaOnData will initialize the variable
 ! ForwardProbs(:,1) with the Prior Probabilities
+!print*, 'DEBUG:: Update forward variable with emission probabilities [ForwardAlgorithm]'
 call ConditionOnData(CurrentInd,j)
 
 ! WARNING: This variable, Theta, should be considered as local as is
@@ -753,6 +764,7 @@ double precision,intent(in) :: Theta
 integer :: i,j,Index
 double precision :: Summer,Marginals(nHapInSubH),NoChange,OneChange,TwoChange
 
+!print*, 'DEBUG::  [Transpose]'
 if (Theta==0.0) then
     ForwardProbs(:,CurrentMarker)=ForwardProbs(:,PrecedingMarker)
     return
@@ -764,7 +776,7 @@ Marginals(:)=0.0
 
 ! Calculate the sum of all forward variables and the marginal of a
 ! given state.
-
+!print*, 'DEBUG:: Calculate the acumulate sum of forward variables and the marginals [Transpose]'
 do i=1,nHapInSubH
     do j=1,i-1
         Index=Index+1
@@ -802,6 +814,7 @@ enddo
 !          to a particular haplotype
 !
 ! Given those probabilities, then:
+!print*, 'DEBUG:: Calculate Probabilities of number of changes [Transpose]'
 !   * None hapltoyped have changed
 NoChange=(1.0-Theta)*(1.0-Theta)
 !   * Only one haplotype has changed
@@ -810,6 +823,7 @@ OneChange=(1.0-Theta)*Theta/nHapInSubH
 TwoChange=Summer*Theta*Theta/(nHapInSubH*nHapInSubH)
 
 !Automatically rescale likelihoods when they get too small
+!print*, 'DEBUG:: Rescale [Transpose]'
 if (Summer < 1e-15) then
     NoChange=NoChange*1e30
     OneChange=OneChange*1e30
@@ -819,6 +833,7 @@ endif
 ! This final loop actually transposes the probabilities for each state,
 ! that is, calculates the final probabilities of getting a particular state.
 Index=0
+!print*, 'DEBUG:: Calculate the final probabilities [Transpose]'
 do i=1,nHapInSubH
     do j=1,i-1
         Index=Index+1
