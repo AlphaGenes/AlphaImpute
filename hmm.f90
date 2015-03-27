@@ -5,7 +5,7 @@ implicit none
 
 character(len=300) :: GenotypeFileName,CheckPhaseFileName,CheckGenoFileName
 integer :: nIndHmmMaCH,GlobalRoundHmm,nSnpHmm
-integer :: nHapInSubH,idum,nRoundsHmm,HmmBurnInRound
+integer :: nHapInSubH,idum,useProcs,nRoundsHmm,HmmBurnInRound
 integer(kind=1),allocatable,dimension(:,:) :: GenosHmmMaCH,SubH
 integer(kind=1),allocatable,dimension(:,:,:) :: FullH
 integer,allocatable,dimension(:) :: ErrorUncertainty,ErrorMatches,ErrorMismatches,Crossovers,GlobalHmmHDInd
@@ -23,7 +23,7 @@ use Par_Zig_mod
 use omp_lib
 
 implicit none
-integer :: i, nprocs, nthreads, useProcs=1
+integer :: i, nprocs, nthreads
 real(4) :: r
 real(8) :: t1, t2, tT
 double precision :: Theta

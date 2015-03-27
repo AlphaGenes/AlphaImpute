@@ -500,8 +500,9 @@ endif
 !   * nHapInSubH: Number of Haplotypes used as templates
 !   * HmmBurnInRound: Number of HMM rounds avoided during imputation
 !   * nRoundsHMM: Number of HMM rounds
+!   * useProcs: Number of processors used for parallelisation
 !   * idum: Seed for generating random numbers (Negative integer)
-read (1,*) dumC,nHapInSubH,HmmBurnInRound,nRoundsHMM,idum
+read (1,*) dumC,nHapInSubH,HmmBurnInRound,nRoundsHMM,useProcs,idum
 
 ! Get the file containing the true genotypes
 ! TrueGenotypeFile
