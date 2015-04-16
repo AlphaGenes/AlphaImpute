@@ -27,34 +27,44 @@ call FillInBasedOnOffspring
 call InternalEdit
 call MakeFiles
 
+if (HMMOption==3) then
+    print*, ""
+    print*, "Bypass calculation of probabilities and phasing"
 
-print*, " "
-print*, " ","Data editing completed"
-if (SexOpt==0) then
-    if (BypassGeneProb==0) then
-        if (RestartOption<2) call GeneProbManagement
-        print*, " "
-        print*, " ","Genotype probabilities calculated"
-    endif   
-endif
+else
+    print*, " "
+    print*, " ","Data editing completed"
 
-if (ManagePhaseOn1Off0==1) then
-    if (RestartOption<3) call PhasingManagement
-endif   
-print*, " "
-print*, " ","Phasing completed"
+    if (SexOpt==0) then
+        if (BypassGeneProb==0) then
+            if (RestartOption<2) call GeneProbManagement
+            print*, " "
+            print*, " ","Genotype probabilities calculated"
+        endif
+    endif
 
-! This is not necessary, already output in subroutine PhasingManagement
-if ((RestartOption/=0).and.(RestartOption<3)) then
-    print*, "Restart option 2 stops program after Phasing has been managed"
-    stop
+    if (ManagePhaseOn1Off0==1) then
+        if (RestartOption<3) call PhasingManagement
+    endif
+
+    print*, " "
+    print*, " ","Phasing completed"
+
+    ! This is not necessary, already output in subroutine PhasingManagement
+    if ((RestartOption/=0).and.(RestartOption<3)) then
+        print*, "Restart option 2 stops program after Phasing has been managed"
+        stop
+    endif
 endif
 
 ! If we only want to phase data, then skip all the imputation steps 
 if (PhaseTheDataOnly==0) then
     call ImputationManagement
+
+    print *,'DEBUG: Write results'
     call WriteOutResults
     if (HMMOption/=3) call ModelRecomb
+    print *,'DEBUG: Final Checker'
     if (TrueGenos1None0==1) call FinalChecker
     !call Cleaner
 endif
@@ -82,104 +92,135 @@ enddo
 
 ! WARNING: Need to discuss this part of code with John. Nonsense going on here!
 
-if (RestartOption==4) then
+if (HMMOption==3) then ! Avoid any adulteration of genotypes with imputation subroutines
+    !print*, 'DEBUG: Only HMM'
+    !print*, 'DEBUG: Allocate memory for genotypes and haplotypes'
     allocate(ImputeGenos(0:nAnisP,nSnp))
     allocate(ImputePhase(0:nAnisP,nSnp,2))
+    ImputeGenos=9
+    ImputePhase=9
+
+    allocate(GlobalTmpCountInf(nAnisP,8))
+    allocate(MSTermInfo(nAnisP,2))
+
+    !print*, 'DEBUG: Read Genotypes'
+    call ReadGenos(GenotypeFile)
+
+    ! Impute observed genotypes to animals in the pedigree
+    do i=1,nAnisG
+        do j=1,nAnisP
+            if (Id(j)==GenotypeId(i)) ImputeGenos(j,:)=Genos(i,:)
+        enddo
+    enddo
+
+    deallocate(Genos)
+    !print*, 'DEBUG: Call Mach'
+    call MaCHController
+    !print*, 'DEBUG: Mach Finished'
 else
-    if (SexOpt==0) then
-        ! Impute initial genotypes from calculated genotype probabilities
-        if (BypassGeneProb==0) then
-            allocate(ImputeGenos(0:nAnisP,nSnp))
-            allocate(ImputePhase(0:nAnisP,nSnp,2))
-            allocate(GlobalWorkPhase(0:nAnisP,nSnp,2))
-            call ReReadGeneProbs
-        else
-            ! Phase in the homozygous case for the SEX CHROMOSOME
-            ! WARNING: NOTHING IS DONE!!
-            call InsteadOfReReadGeneProb
-        endif   
 
-        ! Get Genotype information
-        call InitialiseArrays       ! This is similar to InsteadOfReReadGeneProb subroutine but allocating ImputePhase
-        call GeneProbPhase          ! Recover and store information about which and how many alleles/SNPs have been genotyped/phased 
+    if (RestartOption==4) then
+        allocate(ImputeGenos(0:nAnisP,nSnp))
+        allocate(ImputePhase(0:nAnisP,nSnp,2))
     else
-        allocate(MSTermInfo(nAnisP,2))
-        MSTermInfo=0
-    endif   
+        if (SexOpt==0) then
+            ! Impute initial genotypes from calculated genotype probabilities
+            if (BypassGeneProb==0) then
+                allocate(ImputeGenos(0:nAnisP,nSnp))
+                allocate(ImputePhase(0:nAnisP,nSnp,2))
+                allocate(GlobalWorkPhase(0:nAnisP,nSnp,2))
+                call ReReadGeneProbs
+            else
+                ! Phase in the homozygous case for the SEX CHROMOSOME
+                ! WARNING: NOTHING IS DONE!!
+                call InsteadOfReReadGeneProb
+            endif
 
-    if (NoPhasing==1) then
-        ! Major sub-step 2 as explained in Hickey et al. (2012; Appendix A)
-        call BaseAnimalFillIn
+            ! Get Genotype information
+            call InitialiseArrays       ! This is similar to InsteadOfReReadGeneProb subroutine but allocating ImputePhase
+            call GeneProbPhase          ! Recover and store information about which and how many alleles/SNPs have been genotyped/phased 
+        else
+            allocate(MSTermInfo(nAnisP,2))
+            MSTermInfo=0
+        endif
 
-        ! Impute phase whenever a pre-phase file exists
-        if (PrePhased==1) call ReadInPrePhasedData
+        if (NoPhasing==1) then
+            ! Major sub-step 2 as explained in Hickey et al. (2012; Appendix A)
+            call BaseAnimalFillIn
 
-        ! Impute phase in the sex chromosome
+            ! Impute phase whenever a pre-phase file exists
+            if (PrePhased==1) call ReadInPrePhasedData
+
+            ! Impute phase in the sex chromosome
+            if (SexOpt==1) call EnsureHetGametic
+
+            ! General imputation procedures
+            call GeneralFillIn
+
+            if (HMMOption==2) call MaCHController
+
+            !if (HMMOption==3) then
+            !    ImputeGenos(:,:)=Genos(:,:)     ! Avoid any intoxication of genotypes with imputation subroutines
+            !    call MaCHController
+            !
+            !else
+                print*, " "
+                print*, " ","Imputation of base animals completed"
+                do loop=1,InternalIterations
+                    print*, " "
+                    print*, "Performing imputation loop",loop
+
+                    call PhaseElimination                   ! Major Sub-Step 5 (Hickey et al., 2012; Appendix A)
+                    if (SexOpt==1) call EnsureHetGametic
+                    call GeneralFillIn
+                    print*, " "
+                    print*, " ","Parent of origin assigmnent of high density haplotypes completed"
+
+                    call ParentPhaseElimination             ! Major Sub-Step 4 (Hickey et al., 2012; Appendix A)
+                    if (SexOpt==1) call EnsureHetGametic
+                    call GeneralFillIn
+                    call RestrictedWorkLeftRight            ! Major Sub-Step 8 (Hickey et al., 2012; Appendix A)
+                    if (SexOpt==1) call EnsureHetGametic
+                    call GeneralFillIn
+                    print*, " "
+                    print*, " ","Imputation from high-density parents completed"
+
+                    call ImputeFromHDLibrary                ! Major Sub-Step 3 (Hickey et al., 2012; Appendix A)
+                    if (SexOpt==1) call EnsureHetGametic
+                    call GeneralFillIn
+                    call RestrictedWorkLeftRight            ! Major Sub-Step 8 (Hickey et al., 2012; Appendix A)
+                    if (SexOpt==1) call EnsureHetGametic
+                    call GeneralFillIn
+                    print*, " "
+                    print*, " ","Haplotype library imputation completed"
+
+                    call InternalParentPhaseElim            ! Major Sub-Step 7 (Hickey et al., 2012; Appendix A)
+                    if (SexOpt==1) call EnsureHetGametic
+                    call GeneralFillIn
+                    call RestrictedWorkLeftRight            ! Major Sub-Step 8 (Hickey et al., 2012; Appendix A)
+                    if (SexOpt==1) call EnsureHetGametic
+                    call GeneralFillIn
+                    print*, " "
+                    print*, " ","Internal imputation from parents haplotype completed"
+
+                    call InternalHapLibImputation           ! Major Sub-Step 6 (Hickey et al., 2012; Appendix A)
+                    if (SexOpt==1) call EnsureHetGametic
+                    call GeneralFillIn
+                    if (SexOpt==1) call EnsureHetGametic
+                    call RestrictedWorkLeftRight            ! Major Sub-Step 8 (Hickey et al., 2012; Appendix A)
+                    call GeneralFillIn
+                    print*, " "
+                    print*, " ","Internal haplotype library imputation completed"
+                enddo
+                call ManageWorkLeftRight
+            !endif
+        endif
+
         if (SexOpt==1) call EnsureHetGametic
-
-        ! General imputation procedures
         call GeneralFillIn
 
-        if (HMMOption==3) then
-            call MaCHController
-
-        else
-            print*, " "
-            print*, " ","Imputation of base animals completed"
-            do loop=1,InternalIterations
-                print*, " "
-                print*, "Performing imputation loop",loop 
-
-                call PhaseElimination                   ! Major Sub-Step 5 (Hickey et al., 2012; Appendix A)
-                if (SexOpt==1) call EnsureHetGametic
-                call GeneralFillIn
-                print*, " "
-                print*, " ","Parent of origin assigmnent of high density haplotypes completed"  
-
-                call ParentPhaseElimination             ! Major Sub-Step 4 (Hickey et al., 2012; Appendix A)
-                if (SexOpt==1) call EnsureHetGametic
-                call GeneralFillIn
-                call RestrictedWorkLeftRight            ! Major Sub-Step 8 (Hickey et al., 2012; Appendix A)
-                if (SexOpt==1) call EnsureHetGametic
-                call GeneralFillIn
-                print*, " "
-                print*, " ","Imputation from high-density parents completed"
-
-                call ImputeFromHDLibrary                ! Major Sub-Step 3 (Hickey et al., 2012; Appendix A)
-                if (SexOpt==1) call EnsureHetGametic
-                call GeneralFillIn
-                call RestrictedWorkLeftRight            ! Major Sub-Step 8 (Hickey et al., 2012; Appendix A)
-                if (SexOpt==1) call EnsureHetGametic
-                call GeneralFillIn
-                print*, " "
-                print*, " ","Haplotype library imputation completed"
-
-                call InternalParentPhaseElim            ! Major Sub-Step 7 (Hickey et al., 2012; Appendix A)
-                if (SexOpt==1) call EnsureHetGametic
-                call GeneralFillIn
-                call RestrictedWorkLeftRight            ! Major Sub-Step 8 (Hickey et al., 2012; Appendix A)
-                if (SexOpt==1) call EnsureHetGametic
-                call GeneralFillIn
-                print*, " "
-                print*, " ","Internal imputation from parents haplotype completed"
-
-                call InternalHapLibImputation           ! Major Sub-Step 6 (Hickey et al., 2012; Appendix A)
-                if (SexOpt==1) call EnsureHetGametic
-                call GeneralFillIn
-                if (SexOpt==1) call EnsureHetGametic
-                call RestrictedWorkLeftRight            ! Major Sub-Step 8 (Hickey et al., 2012; Appendix A)
-                call GeneralFillIn
-                print*, " "
-                print*, " ","Internal haplotype library imputation completed"
-            enddo
-            call ManageWorkLeftRight
-        endif
+        deallocate(GlobalWorkPhase)
     endif
-
-    if (SexOpt==1) call EnsureHetGametic
-    call GeneralFillIn
-
-    deallocate(GlobalWorkPhase)
 endif
 
 
