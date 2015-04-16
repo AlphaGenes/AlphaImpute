@@ -30,15 +30,15 @@ do i = 1, n
   order(i) = i
 end do
 
+
 !     Starting at the end, swap the current last indicator with one
 !     randomly chosen from those preceeding it.
 
 do i = n, 2, -1
-  if (i<0) print*, i
   wk=par_uni(thread)
   j = 1 + i * wk
   if (j < i) then
-    k = order(i)
+	k = order(i)
     order(i) = order(j)
     order(j) = k
   end if

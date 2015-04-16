@@ -13,7 +13,9 @@ double precision,allocatable,dimension(:) :: Thetas,Epsilon
 double precision,allocatable,dimension(:,:) :: ForwardProbs
 double precision,allocatable,dimension(:,:,:) :: Penetrance
 real,allocatable,dimension (:,:) :: ProbImputeGenosHmm
+integer, allocatable :: frequence(:,:,:)
 !$omp threadprivate(ForwardProbs, SubH)
+
 end module GlobalVariablesHmmMaCH
 
 !######################################################################
@@ -23,45 +25,55 @@ use Par_Zig_mod
 use omp_lib
 
 implicit none
-integer :: i, nprocs, nthreads
+integer :: i, nprocs, nthreads, j
 real(4) :: r
 real(8) :: t1, t2, tT
 double precision :: Theta
 integer, allocatable :: seed(:)
-integer :: grainsize = 32
+integer :: grainsize
+
+integer :: n0, n1, n2
 
 call ParseMaCHData
 call SetUpEquations
 
 open (unit=6,form='formatted')
 
+! Set up number of process to be used
 nprocs = OMP_get_num_procs()
 call OMP_set_num_threads(useProcs)
 nthreads = OMP_get_num_threads()
 
 allocate(seed(useProcs))
-    ! Set up random process for threads
-    do i = 1,useProcs
-        call random_number(r)
-        seed(i) = 123456789*r
-    enddo
-    call par_zigset(useProcs, seed, grainsize)
+
+! Set up random process seeds for threads
+do i = 1,useProcs
+    call random_number(r)
+    seed(i) = 192837465*r
+enddo
+grainsize = 32
+call par_zigset(useProcs, seed, grainsize)
 
 print*, ""
 print*, " Impute genotypes by HMM"
 print*, "    Using", useProcs, "processors of", nprocs
 
+! Allocate and set up variables storing allele frequencies
+allocate(frequence(nIndHmmMaCH,nSnpHmm,2))
+frequence=0
+
 tT=0.0
 do GlobalRoundHmm=1,nRoundsHmm
-    !write(6, 100, advance="no") char(13),"   HMM Round   ",GlobalRoundHmm
-    write(6, 100) char(13),"   HMM Round   ",GlobalRoundHmm
+    write(6, 100, advance="no") char(13),"   HMM Round   ",GlobalRoundHmm
+    !write(6, 100) char(13),"   HMM Round   ",GlobalRoundHmm
     100 format (a1, a17, i10)
-    !call flush(6)
+    call flush(6)
 
     call ResetCrossovers
 
     t1 = omp_get_wtime()
 
+    ! Parallelise the HMM process in animals
     !print*, 'DEBUG:: Begin paralellisation'
     !$OMP PARALLEL DO DEFAULT(shared)
     !$!OMP DO 
@@ -75,14 +87,35 @@ do GlobalRoundHmm=1,nRoundsHmm
     !print*, 'DEBUG:: End paralellisation. Partial time:', t2-t1
 
     Theta = 0.01
+
+    ! Update emission probabilities of the HMM process
     call UpdateThetas
+    ! Update transition probabilities of the HMM process
     call UpdateErrorRate(Theta)
 enddo
-
+write(*,*) ''
 write(*,*) 'Time: ', tT
 
 ! Average genotype probability of the different hmm processes
-ProbImputeGenosHmm=ProbImputeGenosHmm/(nRoundsHmm-HmmBurnInRound)
+!ProbImputeGenosHmm=ProbImputeGenosHmm/(nRoundsHmm-HmmBurnInRound)
+
+! Most likely genotype is the genotype that has been sampled most frequently
+do i=1,nIndHmmMaCH
+    do j=1,nSnpHmm
+        n2 = frequence(i,j,2)                           ! Homozygous: 2 case
+        n1 = frequence(i,j,1)                           ! Heterozygous
+        n0 = (nRoundsHmm-HmmBurnInRound) - n1 - n2      ! Homozygous: 0 case
+        if ((n0>n1).and.(n0>n2)) then
+            ProbImputeGenosHmm(i,j)=0
+        elseif (n1>n2) then
+            ProbImputeGenosHmm(i,j)=1
+        else
+            ProbImputeGenosHmm(i,j)=2
+        endif
+    enddo
+enddo
+
+deallocate(frequence)
 
 end subroutine MaCHController
 
@@ -119,7 +152,7 @@ allocate(GlobalHmmHDInd(nIndHmmMaCH))
 allocate(ProbImputeGenosHmm(nIndHmmMaCH,nSnp))
 ProbImputeGenosHmm=0.0
 
-! Any animal hasn't been HD genotyped YET
+! No animal has been HD genotyped YET
 ! WARNING: If this variable only stores 1 and 0, then its type should
 !          logical: GlobalHmmHDInd=.false.
 GlobalHmmHDInd=0
@@ -176,73 +209,40 @@ implicit none
 integer, intent(in) :: CurrentInd
 
 ! Local variables
-integer :: HapCount, ShuffleInd1, ShuffleInd2, states, thread
+!integer :: HapCount, ShuffleInd1, ShuffleInd2, states, thread
+integer :: genotype, i, states, thread
 integer :: Shuffle1(nIndHmmMaCH), Shuffle2(nIndHmmMaCH)
 
-allocate(ForwardProbs(nHapInSubH*(nHapInSubH+1)/2,nSnpHmm))
+call ResetCrossovers
+
+! The number of parameters of the HMM are:
+!   nHapInSubH = Number of haplotypes in the template haplotype set, H
+!   nHapInSubH*(nHapInSubH+1)/2 = Number of states, N = H^2 (Li et al, 2010)
+! ForwardProbs are the accumulated probabilities, and
+! ForwardPrbos(:,1) are the prior probabilities
+! Allocate all possible state sequencies
+states = nHapInSubH*(nHapInSubH+1)/2
+allocate(ForwardProbs(states,nSnpHmm))
 allocate(SubH(nHapInSubH,nSnpHmm))
 
-thread=omp_get_thread_num()
 
 ! Create vectors of random indexes
+! Serial
 !print*, 'DEBUG:: Shuffle Individuals [MaCHForInd]'
 !call RandomOrder(Shuffle1,nIndHmmMaCH,idum)
 !call RandomOrder(Shuffle2,nIndHmmMaCH,idum)
+
+! Parallel
+thread=omp_get_thread_num()
 call RandomOrderPar(Shuffle1,nIndHmmMaCH,thread)
 call RandomOrderPar(Shuffle2,nIndHmmMaCH,thread)
 
-HapCount=0
-ShuffleInd1=0
-ShuffleInd2=0
+! Extract haps template...
+! ... selecting haplotypes purely at random
+call ExtractTemplateHaps(CurrentInd,Shuffle1,Shuffle2)
 
-! EXTRACT SUBH
-!print*, 'DEBUG:: Create Haplotypes Template [MaCHForInd]'
-! While the maximum number of haps in the template haplotypes set, H,
-! is not reached...
-! WARNING: This should be an independent subroutine (as in MaCH code)
-do while (HapCount<nHapInSubH)
-    ! Differentiate between paternal (even) and maternal (odd) haps
-    if (mod(HapCount,2)==0) then
-        ShuffleInd1=ShuffleInd1+1
-
-        ! Select the paternal haplotype if the individual it belongs
-        ! too is genotyped and it is not the current individual
-        if ((Shuffle1(ShuffleInd1)/=CurrentInd).and.(GlobalHmmHDInd(ShuffleInd1)==1)) then
-            HapCount=HapCount+1
-            SubH(HapCount,:)=FullH(Shuffle1(ShuffleInd1),:,1)
-        endif
-    else
-        ShuffleInd2=ShuffleInd2+1
-
-        ! Select the maternal haplotype if the individual it belongs
-        ! too is genotyped and it is not the current individual
-        if ((Shuffle2(ShuffleInd2)/=CurrentInd).and.(GlobalHmmHDInd(ShuffleInd2)==1)) then
-            HapCount=HapCount+1
-            SubH(HapCount,:)=FullH(Shuffle2(ShuffleInd2),:,2)
-        endif
-    endif
-enddo
-
-! The number of parameters of the HMM, N and M (Rabiner (1989) notation)
-! calculated as in Li et al. (2010) are:
-!   nHapInSubH = Number of haplotypes in the template haplotype set, H
-!   nHapInSubH*nHapInSubH = Number of states, N = H^2
-!   nSnpHmm = Number of Observations, M.
-!
-! ForwardProbs are the accumulated probabilities(??), and for
-! ForwardPrbos(:,1) this array are the prior probabilities
-! Allocate all possible state sequencies
-!allocate(ForwardProbs(nHapInSubH*nHapInSubH,nSnpHmm))
-
-! WARNING: I think this variable is treated in a wrong way. In MaCH
-!          code, FordwardProbs is the array variable leftMatrices.
-!          In there, every element of the array is another array with
-!          s(s+1)/2 elements, as S(i,j)=S(j,i); where s=nHapInSubH.
-!          The code should then be:
-!
-! states = nHapInSubH*(nHapInSubH+1)/2
-! allocate(ForwardProbs(states,nSnpHmm))
-!allocate(SubH(nHapInSubH,nSnpHmm))
+! ... selecting pairs of haplotypes at random
+!call ExtractTemplateHapsByAnimals(CurrentInd,Shuffle1)
 
 !print*, 'DEBUG:: HMM Forward Algorithm [MaCHForInd]'
 call ForwardAlgorithm(CurrentInd)
@@ -268,14 +268,24 @@ call SampleChromosomes(CurrentInd)
 !       TotalCrossovers subroutines. According to MaCH code, they
 !       should go outside this subroutine and inside MaCHController.
 
-! Cumulative genotype probability of through hmm processes
-!print*, 'DEBUG:: Calculate genotype probabilities [MaCHForInd]'
-!$!OMP CRITICAL (ProbImpute)
+!print*, 'DEBUG:: Calculate genotype frequences [MaCHForInd]'
 if (GlobalRoundHmm>HmmBurnInRound) then
-    ProbImputeGenosHmm(CurrentInd,:)=ProbImputeGenosHmm(CurrentInd,:)&
-        +FullH(CurrentInd,:,1)+FullH(CurrentInd,:,2)
+    do i=1,nSnpHmm
+        genotype = FullH(CurrentInd,i,1)+FullH(CurrentInd,i,2)
+        if (genotype==2) then
+            frequence(CurrentInd,i,2)=frequence(CurrentInd,i,2)+1
+        elseif (genotype==1) then
+            frequence(CurrentInd,i,1)=frequence(CurrentInd,i,1)+1
+        endif
+    enddo
 endif
-!$!OMP END CRITICAL (ProbImpute)
+
+! Cumulative genotype probabilities through hmm processes
+!print*, 'DEBUG:: Calculate genotype probabilities [MaCHForInd]'
+!if (GlobalRoundHmm>HmmBurnInRound) then
+!    ProbImputeGenosHmm(CurrentInd,:)=ProbImputeGenosHmm(CurrentInd,:)&
+!        +FullH(CurrentInd,:,1)+FullH(CurrentInd,:,2)
+!endif
 
 !print*, 'DEBUG:: Deallocate Forward variable and Haplotype Template [MaCHForInd]'
 deallocate(ForwardProbs)
@@ -1250,3 +1260,83 @@ ErrorMatches(:)=0
 ErrorMismatches(:)=0
 
 end subroutine ResetErrors
+
+!######################################################################
+subroutine ExtractTemplateHaps(forWhom,Shuffle1,Shuffle2)
+! Set the Template of Haplotypes used in the HMM model.
+! It differentiates between paternal (even) and maternal (odd) haps
+
+use GlobalVariablesHmmMaCH
+
+integer, intent(in) :: Shuffle1(nIndHmmMaCH), Shuffle2(nIndHmmMaCH)
+
+! Local variables
+integer :: HapCount, ShuffleInd1, ShuffleInd2
+
+HapCount=0
+ShuffleInd1=0
+ShuffleInd2=0
+
+!print*, 'DEBUG:: Create Haplotypes Template [ExtractTemplateHaps]'
+! While the maximum number of haps in the template haplotypes set,
+! H, is not reached...
+do while (HapCount<nHapInSubH)
+    if (mod(HapCount,2)==0) then
+        ShuffleInd1=ShuffleInd1+1
+
+        ! Select the paternal haplotype if the individual it belongs
+        ! to is genotyped and it is not the current individual
+        if ((Shuffle1(ShuffleInd1)/=CurrentInd)&
+                .and.(GlobalHmmHDInd(ShuffleInd1)==1)) then
+            HapCount=HapCount+1
+            SubH(HapCount,:)=FullH(Shuffle1(ShuffleInd1),:,1)
+        endif
+    else
+        ShuffleInd2=ShuffleInd2+1
+
+        ! Select the maternal haplotype if the individual it belongs
+        ! too is genotyped and it is not the current individual
+        if ((Shuffle2(ShuffleInd2)/=CurrentInd)&
+                .and.(GlobalHmmHDInd(ShuffleInd2)==1)) then
+            HapCount=HapCount+1
+            SubH(HapCount,:)=FullH(Shuffle2(ShuffleInd2),:,2)
+        endif
+    endif
+enddo
+
+end subroutine ExtractTemplateHaps
+
+!######################################################################
+subroutine ExtractTemplateHapsByAnimals(forWhom,Shuffle)
+! Extract the Template of Haplotypes used in the HMM model.
+! It consideres the two haps of a given individual.
+
+use GlobalVariablesHmmMaCH
+
+integer, intent(in) :: Shuffle(nIndHmmMaCH)
+
+! Local variables
+integer :: HapCount, ShuffleInd
+
+HapCount=1
+ShuffleInd=0
+
+!print*, 'DEBUG:: Create Haplotypes Template [ExtractTemplateHaps]'
+! While the maximum number of haps in the template haplotypes set,
+! H, is not reached...
+do while (HapCount<nHapInSubH)
+    ShuffleInd=ShuffleInd+1
+
+    ! Select the paternal and maternal haplotypes from one individual
+    ! if this individual is not being phased/imputed
+    if ((Shuffle(ShuffleInd)/=CurrentInd)&
+            .and.(GlobalHmmHDInd(ShuffleInd)==1)) then
+        SubH(HapCount,:)=FullH(Shuffle(ShuffleInd),:,1)
+        SubH(HapCount+1,:)=FullH(Shuffle(ShuffleInd),:,2)
+        HapCount=HapCount+2
+    endif
+enddo
+
+end subroutine ExtractTemplateHapsByAnimals
+
+!######################################################################
