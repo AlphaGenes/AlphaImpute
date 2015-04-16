@@ -152,7 +152,7 @@ allocate(GlobalHmmHDInd(nIndHmmMaCH))
 allocate(ProbImputeGenosHmm(nIndHmmMaCH,nSnp))
 ProbImputeGenosHmm=0.0
 
-! Any animal hasn't been HD genotyped YET
+! No animal has been HD genotyped YET
 ! WARNING: If this variable only stores 1 and 0, then its type should
 !          logical: GlobalHmmHDInd=.false.
 GlobalHmmHDInd=0
@@ -209,73 +209,40 @@ implicit none
 integer, intent(in) :: CurrentInd
 
 ! Local variables
-integer :: HapCount, ShuffleInd1, ShuffleInd2, states, thread
+!integer :: HapCount, ShuffleInd1, ShuffleInd2, states, thread
+integer :: genotype, i, states, thread
 integer :: Shuffle1(nIndHmmMaCH), Shuffle2(nIndHmmMaCH)
 
-allocate(ForwardProbs(nHapInSubH*(nHapInSubH+1)/2,nSnpHmm))
+call ResetCrossovers
+
+! The number of parameters of the HMM are:
+!   nHapInSubH = Number of haplotypes in the template haplotype set, H
+!   nHapInSubH*(nHapInSubH+1)/2 = Number of states, N = H^2 (Li et al, 2010)
+! ForwardProbs are the accumulated probabilities, and
+! ForwardPrbos(:,1) are the prior probabilities
+! Allocate all possible state sequencies
+states = nHapInSubH*(nHapInSubH+1)/2
+allocate(ForwardProbs(states,nSnpHmm))
 allocate(SubH(nHapInSubH,nSnpHmm))
 
-thread=omp_get_thread_num()
 
 ! Create vectors of random indexes
+! Serial
 !print*, 'DEBUG:: Shuffle Individuals [MaCHForInd]'
 !call RandomOrder(Shuffle1,nIndHmmMaCH,idum)
 !call RandomOrder(Shuffle2,nIndHmmMaCH,idum)
+
+! Parallel
+thread=omp_get_thread_num()
 call RandomOrderPar(Shuffle1,nIndHmmMaCH,thread)
 call RandomOrderPar(Shuffle2,nIndHmmMaCH,thread)
 
-HapCount=0
-ShuffleInd1=0
-ShuffleInd2=0
+! Extract haps template...
+! ... selecting haplotypes purely at random
+call ExtractTemplateHaps(CurrentInd,Shuffle1,Shuffle2)
 
-! EXTRACT SUBH
-!print*, 'DEBUG:: Create Haplotypes Template [MaCHForInd]'
-! While the maximum number of haps in the template haplotypes set, H,
-! is not reached...
-! WARNING: This should be an independent subroutine (as in MaCH code)
-do while (HapCount<nHapInSubH)
-    ! Differentiate between paternal (even) and maternal (odd) haps
-    if (mod(HapCount,2)==0) then
-        ShuffleInd1=ShuffleInd1+1
-
-        ! Select the paternal haplotype if the individual it belongs
-        ! too is genotyped and it is not the current individual
-        if ((Shuffle1(ShuffleInd1)/=CurrentInd).and.(GlobalHmmHDInd(ShuffleInd1)==1)) then
-            HapCount=HapCount+1
-            SubH(HapCount,:)=FullH(Shuffle1(ShuffleInd1),:,1)
-        endif
-    else
-        ShuffleInd2=ShuffleInd2+1
-
-        ! Select the maternal haplotype if the individual it belongs
-        ! too is genotyped and it is not the current individual
-        if ((Shuffle2(ShuffleInd2)/=CurrentInd).and.(GlobalHmmHDInd(ShuffleInd2)==1)) then
-            HapCount=HapCount+1
-            SubH(HapCount,:)=FullH(Shuffle2(ShuffleInd2),:,2)
-        endif
-    endif
-enddo
-
-! The number of parameters of the HMM, N and M (Rabiner (1989) notation)
-! calculated as in Li et al. (2010) are:
-!   nHapInSubH = Number of haplotypes in the template haplotype set, H
-!   nHapInSubH*nHapInSubH = Number of states, N = H^2
-!   nSnpHmm = Number of Observations, M.
-!
-! ForwardProbs are the accumulated probabilities(??), and for
-! ForwardPrbos(:,1) this array are the prior probabilities
-! Allocate all possible state sequencies
-!allocate(ForwardProbs(nHapInSubH*nHapInSubH,nSnpHmm))
-
-! WARNING: I think this variable is treated in a wrong way. In MaCH
-!          code, FordwardProbs is the array variable leftMatrices.
-!          In there, every element of the array is another array with
-!          s(s+1)/2 elements, as S(i,j)=S(j,i); where s=nHapInSubH.
-!          The code should then be:
-!
-! states = nHapInSubH*(nHapInSubH+1)/2
-! allocate(ForwardProbs(states,nSnpHmm))
-!allocate(SubH(nHapInSubH,nSnpHmm))
+! ... selecting pairs of haplotypes at random
+!call ExtractTemplateHapsByAnimals(CurrentInd,Shuffle1)
 
 !print*, 'DEBUG:: HMM Forward Algorithm [MaCHForInd]'
 call ForwardAlgorithm(CurrentInd)
@@ -1293,3 +1260,83 @@ ErrorMatches(:)=0
 ErrorMismatches(:)=0
 
 end subroutine ResetErrors
+
+!######################################################################
+subroutine ExtractTemplateHaps(forWhom,Shuffle1,Shuffle2)
+! Set the Template of Haplotypes used in the HMM model.
+! It differentiates between paternal (even) and maternal (odd) haps
+
+use GlobalVariablesHmmMaCH
+
+integer, intent(in) :: Shuffle1(nIndHmmMaCH), Shuffle2(nIndHmmMaCH)
+
+! Local variables
+integer :: HapCount, ShuffleInd1, ShuffleInd2
+
+HapCount=0
+ShuffleInd1=0
+ShuffleInd2=0
+
+!print*, 'DEBUG:: Create Haplotypes Template [ExtractTemplateHaps]'
+! While the maximum number of haps in the template haplotypes set,
+! H, is not reached...
+do while (HapCount<nHapInSubH)
+    if (mod(HapCount,2)==0) then
+        ShuffleInd1=ShuffleInd1+1
+
+        ! Select the paternal haplotype if the individual it belongs
+        ! to is genotyped and it is not the current individual
+        if ((Shuffle1(ShuffleInd1)/=CurrentInd)&
+                .and.(GlobalHmmHDInd(ShuffleInd1)==1)) then
+            HapCount=HapCount+1
+            SubH(HapCount,:)=FullH(Shuffle1(ShuffleInd1),:,1)
+        endif
+    else
+        ShuffleInd2=ShuffleInd2+1
+
+        ! Select the maternal haplotype if the individual it belongs
+        ! too is genotyped and it is not the current individual
+        if ((Shuffle2(ShuffleInd2)/=CurrentInd)&
+                .and.(GlobalHmmHDInd(ShuffleInd2)==1)) then
+            HapCount=HapCount+1
+            SubH(HapCount,:)=FullH(Shuffle2(ShuffleInd2),:,2)
+        endif
+    endif
+enddo
+
+end subroutine ExtractTemplateHaps
+
+!######################################################################
+subroutine ExtractTemplateHapsByAnimals(forWhom,Shuffle)
+! Extract the Template of Haplotypes used in the HMM model.
+! It consideres the two haps of a given individual.
+
+use GlobalVariablesHmmMaCH
+
+integer, intent(in) :: Shuffle(nIndHmmMaCH)
+
+! Local variables
+integer :: HapCount, ShuffleInd
+
+HapCount=1
+ShuffleInd=0
+
+!print*, 'DEBUG:: Create Haplotypes Template [ExtractTemplateHaps]'
+! While the maximum number of haps in the template haplotypes set,
+! H, is not reached...
+do while (HapCount<nHapInSubH)
+    ShuffleInd=ShuffleInd+1
+
+    ! Select the paternal and maternal haplotypes from one individual
+    ! if this individual is not being phased/imputed
+    if ((Shuffle(ShuffleInd)/=CurrentInd)&
+            .and.(GlobalHmmHDInd(ShuffleInd)==1)) then
+        SubH(HapCount,:)=FullH(Shuffle(ShuffleInd),:,1)
+        SubH(HapCount+1,:)=FullH(Shuffle(ShuffleInd),:,2)
+        HapCount=HapCount+2
+    endif
+enddo
+
+end subroutine ExtractTemplateHapsByAnimals
+
+!######################################################################
