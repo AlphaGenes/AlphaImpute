@@ -13,7 +13,9 @@ double precision,allocatable,dimension(:) :: Thetas,Epsilon
 double precision,allocatable,dimension(:,:) :: ForwardProbs
 double precision,allocatable,dimension(:,:,:) :: Penetrance
 real,allocatable,dimension (:,:) :: ProbImputeGenosHmm
+integer, allocatable :: frequence(:,:,:)
 !$omp threadprivate(ForwardProbs, SubH)
+
 end module GlobalVariablesHmmMaCH
 
 !######################################################################
@@ -23,45 +25,55 @@ use Par_Zig_mod
 use omp_lib
 
 implicit none
-integer :: i, nprocs, nthreads
+integer :: i, nprocs, nthreads, j
 real(4) :: r
 real(8) :: t1, t2, tT
 double precision :: Theta
 integer, allocatable :: seed(:)
-integer :: grainsize = 32
+integer :: grainsize
+
+integer :: n0, n1, n2
 
 call ParseMaCHData
 call SetUpEquations
 
 open (unit=6,form='formatted')
 
+! Set up number of process to be used
 nprocs = OMP_get_num_procs()
 call OMP_set_num_threads(useProcs)
 nthreads = OMP_get_num_threads()
 
 allocate(seed(useProcs))
-    ! Set up random process for threads
-    do i = 1,useProcs
-        call random_number(r)
-        seed(i) = 123456789*r
-    enddo
-    call par_zigset(useProcs, seed, grainsize)
+
+! Set up random process seeds for threads
+do i = 1,useProcs
+    call random_number(r)
+    seed(i) = 192837465*r
+enddo
+grainsize = 32
+call par_zigset(useProcs, seed, grainsize)
 
 print*, ""
 print*, " Impute genotypes by HMM"
 print*, "    Using", useProcs, "processors of", nprocs
 
+! Allocate and set up variables storing allele frequencies
+allocate(frequence(nIndHmmMaCH,nSnpHmm,2))
+frequence=0
+
 tT=0.0
 do GlobalRoundHmm=1,nRoundsHmm
-    !write(6, 100, advance="no") char(13),"   HMM Round   ",GlobalRoundHmm
-    write(6, 100) char(13),"   HMM Round   ",GlobalRoundHmm
+    write(6, 100, advance="no") char(13),"   HMM Round   ",GlobalRoundHmm
+    !write(6, 100) char(13),"   HMM Round   ",GlobalRoundHmm
     100 format (a1, a17, i10)
-    !call flush(6)
+    call flush(6)
 
     call ResetCrossovers
 
     t1 = omp_get_wtime()
 
+    ! Parallelise the HMM process in animals
     !print*, 'DEBUG:: Begin paralellisation'
     !$OMP PARALLEL DO DEFAULT(shared)
     !$!OMP DO 
@@ -75,14 +87,35 @@ do GlobalRoundHmm=1,nRoundsHmm
     !print*, 'DEBUG:: End paralellisation. Partial time:', t2-t1
 
     Theta = 0.01
+
+    ! Update emission probabilities of the HMM process
     call UpdateThetas
+    ! Update transition probabilities of the HMM process
     call UpdateErrorRate(Theta)
 enddo
-
+write(*,*) ''
 write(*,*) 'Time: ', tT
 
 ! Average genotype probability of the different hmm processes
-ProbImputeGenosHmm=ProbImputeGenosHmm/(nRoundsHmm-HmmBurnInRound)
+!ProbImputeGenosHmm=ProbImputeGenosHmm/(nRoundsHmm-HmmBurnInRound)
+
+! Most likely genotype is the genotype that has been sampled most frequently
+do i=1,nIndHmmMaCH
+    do j=1,nSnpHmm
+        n2 = frequence(i,j,2)                           ! Homozygous: 2 case
+        n1 = frequence(i,j,1)                           ! Heterozygous
+        n0 = (nRoundsHmm-HmmBurnInRound) - n1 - n2      ! Homozygous: 0 case
+        if ((n0>n1).and.(n0>n2)) then
+            ProbImputeGenosHmm(i,j)=0
+        elseif (n1>n2) then
+            ProbImputeGenosHmm(i,j)=1
+        else
+            ProbImputeGenosHmm(i,j)=2
+        endif
+    enddo
+enddo
+
+deallocate(frequence)
 
 end subroutine MaCHController
 
@@ -268,14 +301,24 @@ call SampleChromosomes(CurrentInd)
 !       TotalCrossovers subroutines. According to MaCH code, they
 !       should go outside this subroutine and inside MaCHController.
 
-! Cumulative genotype probability of through hmm processes
-!print*, 'DEBUG:: Calculate genotype probabilities [MaCHForInd]'
-!$!OMP CRITICAL (ProbImpute)
+!print*, 'DEBUG:: Calculate genotype frequences [MaCHForInd]'
 if (GlobalRoundHmm>HmmBurnInRound) then
-    ProbImputeGenosHmm(CurrentInd,:)=ProbImputeGenosHmm(CurrentInd,:)&
-        +FullH(CurrentInd,:,1)+FullH(CurrentInd,:,2)
+    do i=1,nSnpHmm
+        genotype = FullH(CurrentInd,i,1)+FullH(CurrentInd,i,2)
+        if (genotype==2) then
+            frequence(CurrentInd,i,2)=frequence(CurrentInd,i,2)+1
+        elseif (genotype==1) then
+            frequence(CurrentInd,i,1)=frequence(CurrentInd,i,1)+1
+        endif
+    enddo
 endif
-!$!OMP END CRITICAL (ProbImpute)
+
+! Cumulative genotype probabilities through hmm processes
+!print*, 'DEBUG:: Calculate genotype probabilities [MaCHForInd]'
+!if (GlobalRoundHmm>HmmBurnInRound) then
+!    ProbImputeGenosHmm(CurrentInd,:)=ProbImputeGenosHmm(CurrentInd,:)&
+!        +FullH(CurrentInd,:,1)+FullH(CurrentInd,:,2)
+!endif
 
 !print*, 'DEBUG:: Deallocate Forward variable and Haplotype Template [MaCHForInd]'
 deallocate(ForwardProbs)
