@@ -135,21 +135,16 @@ FUNCTION par_shr3(kpar) RESULT( ival )
 END FUNCTION par_shr3
 
 
-
 !  Generate uniformly distributed random numbers, sequence kpar
 FUNCTION par_uni(kpar) RESULT( fn_val )
 	integer :: kpar
-   REAL(DP)  ::  fn_val, aaa
-
-   !print*, kpar, par_step
+   REAL(DP)  ::  fn_val
 
 	if (kpar >= par_n) then
 		write(*,*) 'thread number exceeds initialized max: ',kpar,par_n-1
 		stop
 	endif
-   aaa = par_shr3(kpar)
    fn_val = half + 0.2328306e-9_DP * par_shr3(kpar)
-   !print*, aaa
    RETURN
 END FUNCTION par_uni
 

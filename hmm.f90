@@ -30,9 +30,9 @@ real(4) :: r
 real(8) :: t1, t2, tT
 double precision :: Theta
 integer, allocatable :: seed(:)
-integer :: grainsize
-
+integer :: grainsize, count, secs, seed0
 integer :: n0, n1, n2
+
 
 call ParseMaCHData
 call SetUpEquations
@@ -46,11 +46,23 @@ nthreads = OMP_get_num_threads()
 
 allocate(seed(useProcs))
 
+! Warm up the random seed generator
+call system_clock(count)
+secs = mod(count,int(1e4))
+do i = 1,secs
+    call random_number(r)
+enddo
+
 ! Set up random process seeds for threads
+! Feed seed as a function of the milliseconds of the system clock
+call system_clock(count)
+secs = mod(count,int(1e6))
+seed0 = secs*1e5
 do i = 1,useProcs
     call random_number(r)
-    seed(i) = 192837465*r
+    seed(i) = seed0*r
 enddo
+
 grainsize = 32
 call par_zigset(useProcs, seed, grainsize)
 
