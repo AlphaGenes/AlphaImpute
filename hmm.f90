@@ -110,8 +110,6 @@ do GlobalRoundHmm=1,nRoundsHmm
     ! Update transition probabilities of the HMM process
     call UpdateErrorRate(Theta)
 enddo
-write(*,*) ''
-write(*,*) 'Time: ', tT
 
 ! Average genotype probability of the different hmm processes
 !ProbImputeGenosHmm=ProbImputeGenosHmm/(nRoundsHmm-HmmBurnInRound)
