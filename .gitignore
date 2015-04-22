@@ -1,3 +1,6 @@
 *.txt
 *.mod
+*.o
+*.dwarf
 AlphaImpute1.0
+GeneProbForAlphaImpute
