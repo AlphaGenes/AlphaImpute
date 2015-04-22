@@ -160,28 +160,27 @@ else
             ! General imputation procedures
             call GeneralFillIn
 
-            if (HMMOption==RUN_HMM_YES) Then
+            if (HMMOption==RUN_HMM_PREPHASE) Then
                 call MaCHController
-                ! Copy phase from FulLHD in MaCH into ImputePhase
+            else
+                if (HMMOption==RUN_HMM_YES) Then
+                    call MaCHController
+                    ! Copy phase from FulLHD in MaCH into ImputePhase
 
-                do i=1,nAnisP
-                    do j=1,nSnp
-                        do k=1,2
-                            if (FullH(i,j,k)<0.001.and.FullH(i,j,k)>=0.0) Then
-                                ImputePhase(i,j,k)=0
-                            elseif (FullH(i,j,k)>0.999.and.FullH(i,j,k)<=1.0) then
-                                ImputePhase(i,j,k)=1
-                            else
-                                ImputePhase(i,j,k)=9
-                            endif
+                    do i=1,nAnisP
+                        do j=1,nSnp
+                            do k=1,2
+                                if (FullH(i,j,k)<0.001.and.FullH(i,j,k)>=0.0) Then
+                                    ImputePhase(i,j,k)=0
+                                elseif (FullH(i,j,k)>0.999.and.FullH(i,j,k)<=1.0) then
+                                    ImputePhase(i,j,k)=1
+                                else
+                                    ImputePhase(i,j,k)=9
+                                endif
+                            enddo
                         enddo
                     enddo
-                enddo
-
-
-
-            endif
-
+                endif
                 print*, " "
                 print*, " ","Imputation of base animals completed"
                 do loop=1,InternalIterations
@@ -231,7 +230,7 @@ else
                     print*, " ","Internal haplotype library imputation completed"
                 enddo
                 call ManageWorkLeftRight
-            !endif
+            endif
         endif
 
         if (SexOpt==1) call EnsureHetGametic
@@ -549,6 +548,7 @@ HMMOption=RUN_HMM_NULL
 if (trim(TmpHmmOption)=='No') HMMOption=RUN_HMM_NO
 if (trim(TmpHmmOption)=='Yes') HMMOption=RUN_HMM_YES
 if (trim(TmpHmmOption)=='Only') HMMOption=RUN_HMM_ONLY
+if (trim(TmpHmmOption)=='Prephase') HMMOption=RUN_HMM_PREPHASE
 if (HMMOption==RUN_HMM_NULL) then
     print*, "HMMOption not correctly specified"
     stop
@@ -1467,7 +1467,7 @@ else
     ImputeGenos=TmpGenos
     ImputePhase=TmpPhase
     !REMOVE THIS WHEN HMM IS FINALISED
-    if (HMMOption/=RUN_HMM_ONLY) then
+    if (HMMOption/=RUN_HMM_ONLY.and.HMMOption/=RUN_HMM_PREPHASE) then
         if (SexOpt==0) then
             if (BypassGeneProb==0) then 
                 call IterateGeneProbs
@@ -1479,7 +1479,7 @@ else
     endif
     !REMOVE THIS
 
-    if (HMMOption==RUN_HMM_ONLY) then
+    if (HMMOption==RUN_HMM_ONLY.or.HMMOption==RUN_HMM_PREPHASE) then
         !print*, 'DEBUG: Impute genotypes based on HMM genotypes probabilites [WriteOutResults]'
 
         nSnpIterate=nSnp
