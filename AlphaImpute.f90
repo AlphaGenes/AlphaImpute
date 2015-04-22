@@ -38,21 +38,29 @@ else
 
     if (SexOpt==0) then
         if (BypassGeneProb==0) then
-            if (RestartOption<2) call GeneProbManagement
+            if (RestartOption<OPT_RESTART_PHASING) call GeneProbManagement
+            if (RestartOption==OPT_RESTART_GENEPROB) then
+                print*, "Restart option 1 stops program after Geneprobs jobs have finished"
+                stop
+            endif
             print*, " "
             print*, " ","Genotype probabilities calculated"
         endif
     endif
 
     if (ManagePhaseOn1Off0==1) then
-        if (RestartOption<3) call PhasingManagement
+        if (RestartOption<OPT_RESTART_IMPUTATION) call PhasingManagement
+        if (RestartOption==OPT_RESTART_PHASING) then
+            print*, "Restart option 2 stops program after after Phasing has been managed"
+            stop
+        endif
     endif
 
     print*, " "
     print*, " ","Phasing completed"
 
     ! This is not necessary, already output in subroutine PhasingManagement
-    if ((RestartOption/=0).and.(RestartOption<3)) then
+    if ((RestartOption/=OPT_RESTART_ALL).and.(RestartOption<OPT_RESTART_IMPUTATION)) then
         print*, "Restart option 2 stops program after Phasing has been managed"
         stop
     endif
@@ -745,21 +753,19 @@ if (PicVersion==0) then         ! GeneProbForAlphaImpute algorithm to calculate 
     call system("./TempGeneProb.sh")
     JobsDone(:)=0
     JDone(:)=0
-    if (RestartOption/=1) then
-        do  ! This should be a while do loop
-            do i=1,nProcessors
-                write (filout,'("./GeneProb/GeneProb"i0,"/GpDone.txt")')i
-                inquire(file=trim(filout),exist=FileExists)
-                if (FileExists .eqv. .true.) then
-                    if (JDone(i)==0) print*, " ","      GeneProb job ",i," done"
-                    JobsDone(i)=1
-                    JDone(i)=1
-                endif
-            enddo
-            call sleep(SleepParameter)
-            if (sum(JobsDone(:))==nProcessors) exit
+    do  ! This should be a while do loop
+        do i=1,nProcessors
+            write (filout,'("./GeneProb/GeneProb"i0,"/GpDone.txt")')i
+            inquire(file=trim(filout),exist=FileExists)
+            if (FileExists .eqv. .true.) then
+                if (JDone(i)==0) print*, " ","      GeneProb job ",i," done"
+                JobsDone(i)=1
+                JDone(i)=1
+            endif
         enddo
-    endif
+        call sleep(SleepParameter)
+        if (sum(JobsDone(:))==nProcessors) exit
+    enddo
 else            ! PIC company algorithm to calculate probabilities of genotype
     write (filout,'("cd GeneProb/")')
     write(f,'(i0)') nProcessors
@@ -775,25 +781,18 @@ else            ! PIC company algorithm to calculate probabilities of genotype
     call system("rm TempGeneProb.sh")
 
     JobsDone(:)=0
-    if (RestartOption/=1) then
-        do
-            do i=1,nProcessors
-                write (filout,'("./GeneProb/GeneProb"i0,"/GpDone.txt")')i
-                inquire(file=trim(filout),exist=FileExists)
-                if (FileExists .eqv. .true.) then
-                    if (JDone(i)==0) print*, " ","      GeneProb job ",i," done"
-                    JobsDone(i)=1
-                endif
-            enddo
-            call sleep(SleepParameter)
-            if (sum(JobsDone(:))==nProcessors) exit
+    do
+        do i=1,nProcessors
+            write (filout,'("./GeneProb/GeneProb"i0,"/GpDone.txt")')i
+            inquire(file=trim(filout),exist=FileExists)
+            if (FileExists .eqv. .true.) then
+                if (JDone(i)==0) print*, " ","      GeneProb job ",i," done"
+                JobsDone(i)=1
+            endif
         enddo
-    endif   
-endif
-
-if (RestartOption==1) then
-    print*, "Restart option 1 stops program after Geneprobs jobs have been submitted"
-    stop
+        call sleep(SleepParameter)
+        if (sum(JobsDone(:))==nProcessors) exit
+    enddo
 endif
 
 end subroutine GeneProbManagement
@@ -830,39 +829,38 @@ if (PicVersion==0) then
     call system("./TempPhase1.sh")
     Tmp=nProcessors
     JobsDone(:)=0
-    if (RestartOption==2) then
-        if (nProcessors<nPhaseInternal) then
-            print*, "ERROR - To use this Restart option you need as many processors as phasing internal jobs"
-            stop
-        endif
-    else    
-        do ! This should be a while do loop
-            do i=1,nPhaseInternal
-                write (filout,'("./Phasing/Phase"i0,"/PhasingResults/Timer.txt")')i
-        
-                inquire(file=trim(filout),exist=FileExists)     
-                if ((FileExists .eqv. .true.).and.(JobsDone(i)==0)) then
-                    print*, " ","AlphaPhase job ",i," done"
-                    JobsDone(i)=1
-                    if ((sum(JobsStarted(:))<nPhaseInternal).and.(sum(JobsDone(:))<nPhaseInternal)) then
-                        Tmp=Tmp+1
-                        JobsStarted(Tmp)=1
-                        write (filout,'("TempPhase"i0,".sh")')Tmp
-                        open (unit=107,file=trim(filout),status="unknown")
-                        write (infile,'("cd Phasing/Phase"i0)')Tmp
-                        write (107,*) trim(infile) 
-                        if (AlphaPhasePresent==0) write (107,*) "nohup sh -c ""AlphaPhase1.1 > out 2>&1"" >/dev/null &"
-                        if (AlphaPhasePresent==1) write (107,*) "nohup sh -c ""./AlphaPhase1.1 > out 2>&1"" >/dev/null &"
-                        close(107)
-                        call system("chmod +x TempPhase*.sh")
-                        call system("./" // filout)
-                    endif   
+
+    if (nProcessors<nPhaseInternal) then
+        print*, "ERROR - To use this Restart option you need as many processors as phasing internal jobs"
+        stop
+    endif
+
+    do ! This should be a while do loop
+        do i=1,nPhaseInternal
+            write (filout,'("./Phasing/Phase"i0,"/PhasingResults/Timer.txt")')i
+
+            inquire(file=trim(filout),exist=FileExists)
+            if ((FileExists .eqv. .true.).and.(JobsDone(i)==0)) then
+                print*, " ","AlphaPhase job ",i," done"
+                JobsDone(i)=1
+                if ((sum(JobsStarted(:))<nPhaseInternal).and.(sum(JobsDone(:))<nPhaseInternal)) then
+                    Tmp=Tmp+1
+                    JobsStarted(Tmp)=1
+                    write (filout,'("TempPhase"i0,".sh")')Tmp
+                    open (unit=107,file=trim(filout),status="unknown")
+                    write (infile,'("cd Phasing/Phase"i0)')Tmp
+                    write (107,*) trim(infile)
+                    if (AlphaPhasePresent==0) write (107,*) "nohup sh -c ""AlphaPhase1.1 > out 2>&1"" >/dev/null &"
+                    if (AlphaPhasePresent==1) write (107,*) "nohup sh -c ""./AlphaPhase1.1 > out 2>&1"" >/dev/null &"
+                    close(107)
+                    call system("chmod +x TempPhase*.sh")
+                    call system("./" // filout)
                 endif
-            enddo
-            call sleep(SleepParameter)
-            if (sum(JobsDone(:))==nPhaseInternal) exit 
+            endif
         enddo
-    endif       
+        call sleep(SleepParameter)
+        if (sum(JobsDone(:))==nPhaseInternal) exit
+    enddo
     call system("rm TempPhase*.sh")
 else
     open (unit=107,file="TempPhase1.sh",status="unknown")
@@ -878,26 +876,19 @@ else
     call system("./TempPhase1.sh")
     call system("rm TempPhase1.sh")
 
-    if (RestartOption/=2) then
-        JobsDone(:)=0
-        do
-            do i=1,nPhaseInternal
-                write (filout,'("./Phasing/Phase"i0,"/PhasingResults/Timer.txt")')i
-                inquire(file=trim(filout),exist=FileExists)
-                if ((FileExists .eqv. .true.).and.(JobsDone(i)==0)) then
-                    print*, " ","AlphaPhase job ",i," done"
-                    JobsDone(i)=1
-                endif
-            enddo
-            call sleep(SleepParameter)
-            if (sum(JobsDone(:))==nPhaseInternal) exit
+    JobsDone(:)=0
+    do
+        do i=1,nPhaseInternal
+            write (filout,'("./Phasing/Phase"i0,"/PhasingResults/Timer.txt")')i
+            inquire(file=trim(filout),exist=FileExists)
+            if ((FileExists .eqv. .true.).and.(JobsDone(i)==0)) then
+                print*, " ","AlphaPhase job ",i," done"
+                JobsDone(i)=1
+            endif
         enddo
-    endif   
-endif
-
-if (RestartOption==2) then
-    print*, "Restart option 2 stops program after AlphaPhase jobs have been submitted"
-    stop
+        call sleep(SleepParameter)
+        if (sum(JobsDone(:))==nPhaseInternal) exit
+    enddo
 endif
 
 end subroutine PhasingManagement 
