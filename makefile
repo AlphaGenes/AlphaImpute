@@ -6,21 +6,27 @@ PROGRAM:=${NAME}${VERSION}.${SUBVERSION}
 
 # Compiler
 FC:=ifort
+#FC:=gfortran
 
 # Options
-FFLAGS:=-O3 -m64
+FFLAGS:=-O3 -m64 -openmp
+#FFLAGS:=-O3 -m64 -fopenmp -ffree-line-length-0
 
-all:executable
+all: executable
 
-debug: FFLAGS += -DDEBUG -g -O0
+debug: FFLAGS = -DDEBUG -g -O0 -openmp -check bounds
+#debug: FFLAGS =  -DDEBUG -g -ffree-line-length-0 -O0 -fopenmp
 debug: executable
 
-SRCS=$(wildcard *.f90)
+OBJS:=global.o par_zig_mod.o random.o hmm.o
 
-OBJS:=$(SRCS:.o=.f90)
+%.o:%.f90
+	${FC} ${FFLAGS} -c $<
 
 executable: ${OBJS}
-	${FC} AlphaImpute.f90 ${FFLAGS} -o ${PROGRAM}
+	export OMP_STACKSIZE=" 128 M"
+	export OMP_NUM_THREADS=4
+	${FC} AlphaImpute.f90 ${OBJS} ${FFLAGS} -o ${PROGRAM}
 
 clean:
 	rm -f *.o *.mod *~ 

@@ -1,80 +1,4 @@
-!#############################################################################################################################################################################################################################
-
-module Global
-implicit none
-
-
-integer,parameter :: WindowsLinux=0     !If 1 then compile for Windows / If 0 then compile for Linux
-
-integer,parameter :: TestVersion=0  !If 1 then this is a development version with intermediate checking, if 0 it is not
-
-integer,parameter :: PicVersion=0   !If 1 then this is a PIC version with suitability for their system, if 0 it is not
-
-integer,parameter :: SleepParameter=1!00
-
-integer,parameter :: lengan=20,MissingGenotypeCode=9,OffspringFillMin=10
-integer,parameter :: ImputeFromHDLibraryCountThresh=1,ImputeFromHDPhaseThresh=1
-integer,parameter :: ImputeFromParentCountThresh=1,ImputeFromGrandParentCountThresh=1
-real,parameter :: DisagreeThreshold=0.05,GeneProbThresh=0.99
-
-character (len=300) :: PedigreeFile,PhasePath,TrueGenosFile,GenotypeFile,GenderFile
-
-integer :: nAnisG,nAnisRawPedigree,nSnp,nAnisP,IntEditStat,nPhaseInternal,nPhaseExternal,OutOpt,SexOpt,HetGameticStatus,HomGameticStatus
-integer :: nProcessors,nProcessGeneProb,nProcessAlphaPhase,ManagePhaseOn1Off0,CountRawGenos,InternalIterations,nAnisInGenderFile
-integer :: nAgreeImputeHDLib,nAgreeParentPhaseElim,nAgreeInternalHapLibElim,MaxLeftRightSwitch,MinSpan,ConservativeHapLibImputation
-integer :: TrueGenos1None0,nSnpRaw,nObsDataRaw,nAgreePhaseElim,nAgreeGrandParentPhaseElim,PreProcess,UseGP,BypassGeneProb,HMMOption
-integer :: nSnpIterate,NoPhasing,AlphaPhasePresent,GeneProbPresent,PrePhased,UserDefinedHD,PedFreePhasing,PhaseTheDataOnly,RestartOption
-
-real :: PercGenoForHD,PercSnpMiss,SecondPercGenoForHD,GenotypeErrorPhase,WellPhasedThresh
-
-integer(kind=1),allocatable,dimension (:) :: SnpIncluded,RecIdHDIndex,GenderRaw,RecGender,IndivIsGenotyped
-integer(kind=1),allocatable,dimension (:,:) :: Genos,TempGenos,TmpGenos,MSTermInfo
-integer(kind=1),allocatable,dimension (:,:) :: ImputeGenos,SireDam
-integer(kind=1),allocatable,dimension (:,:,:) :: ImputePhase,TmpPhase,GlobalWorkPhase
-integer,allocatable :: RecPed(:,:),Setter(:),CoreAndTailLengths(:),CoreLengths(:),GpIndex(:,:),BaseAnimals(:),GlobalTmpCountInf(:,:)
-integer,allocatable :: GlobalHmmID(:)
-real,allocatable,dimension (:) :: Maf
-real,allocatable,dimension (:,:) :: ProbImputeGenos
-real,allocatable,dimension (:,:,:) :: ProbImputePhase
-character*(lengan),allocatable :: GenotypeId(:),GenderId(:)
-
-end module Global
-
-!#############################################################################################################################################################################################################################
-
-
-module GlobalPedigree
-use Global
-implicit none
-
-real(kind=4),allocatable :: xnumrelmatHold(:)
-integer :: NRMmem, shell, shellmax, shellWarning
-integer,allocatable:: seqid(:),seqsire(:),seqdam(:),RecodeGenotypeId(:),passedorder(:)
-character*(lengan),allocatable :: ped(:,:),Id(:),sire(:),dam(:)
-integer :: GlobalExtraAnimals       !Change John Hickey
-
-end module GlobalPedigree
-
-!########################################################################################################################################################################
-
-module GlobalVariablesHmmMaCH
-implicit none
-
-character(len=300) :: GenotypeFileName,CheckPhaseFileName,CheckGenoFileName
-integer :: nIndHmmMaCH,GlobalRoundHmm,nSnpHmm
-integer :: nHapInSubH,idum,nRoundsHmm,HmmBurnInRound
-double precision :: Theta
-integer(kind=1),allocatable,dimension(:,:) :: GenosHmmMaCH,SubH
-integer(kind=1),allocatable,dimension(:,:,:) :: FullH
-integer,allocatable,dimension(:) :: ErrorUncertainty,ErrorMatches,ErrorMismatches,Crossovers,GlobalHmmHDInd
-double precision,allocatable,dimension(:) :: Thetas,Epsilon
-double precision,allocatable,dimension(:,:) :: ForwardProbs
-double precision,allocatable,dimension(:,:,:) :: Penetrance
-real,allocatable,dimension (:,:) :: ProbImputeGenosHmm
-
-end module GlobalVariablesHmmMaCH
-
-!########################################################################################################################################################################
+!######################################################################
  
 program AlphaImpute
 ! The program is intended to be run numerous times
@@ -90,6 +14,7 @@ program AlphaImpute
 !                           Genotype Probabilities have to be edited by hand
 !   * RestartOption=4 =>
 use Global
+use GlobalVariablesHmmMaCH
 implicit none
 
 call Titles
@@ -103,36 +28,47 @@ call FillInBasedOnOffspring
 call InternalEdit
 call MakeFiles
 
+if (HMMOption==RUN_HMM_ONLY) then
+    print*, ""
+    print*, "Bypass calculation of probabilities and phasing"
 
-print*, " "
-print*, " ","Data editing completed"
-if (SexOpt==0) then
-    if (BypassGeneProb==0) then
-        if (RestartOption<2) call GeneProbManagement
-        print*, " "
-        print*, " ","Genotype probabilities calculated"
-    endif   
-endif
+else
+    print*, " "
+    print*, " ","Data editing completed"
 
-if (ManagePhaseOn1Off0==1) then
-    if (RestartOption<3) call PhasingManagement
-endif   
-print*, " "
-print*, " ","Phasing completed"
+    if (SexOpt==0) then
+        if (BypassGeneProb==0) then
+            if (RestartOption<2) call GeneProbManagement
+            print*, " "
+            print*, " ","Genotype probabilities calculated"
+        endif
+    endif
 
-! This is not necessary, already output in subroutine PhasingManagement
-if ((RestartOption/=0).and.(RestartOption<3)) then
-    print*, "Restart option 2 stops program after Phasing has been managed"
-    stop
+    if (ManagePhaseOn1Off0==1) then
+        if (RestartOption<3) call PhasingManagement
+    endif
+
+    print*, " "
+    print*, " ","Phasing completed"
+
+    ! This is not necessary, already output in subroutine PhasingManagement
+    if ((RestartOption/=0).and.(RestartOption<3)) then
+        print*, "Restart option 2 stops program after Phasing has been managed"
+        stop
+    endif
 endif
 
 ! If we only want to phase data, then skip all the imputation steps 
 if (PhaseTheDataOnly==0) then
     call ImputationManagement
+
+    !print *,'DEBUG: Write results'
     call WriteOutResults
-    call ModelRecomb
+    !print*, 'DEBUG: Model Recombination'
+    if (HMMOption/=RUN_HMM_ONLY) call ModelRecomb
+    !print *,'DEBUG: Final Checker'
     if (TrueGenos1None0==1) call FinalChecker
-    call Cleaner
+    !call Cleaner
 endif
 
 call PrintTimerTitles
@@ -144,9 +80,10 @@ end program AlphaImpute
 subroutine ImputationManagement
 use Global
 use GlobalPedigree
+use GlobalVariablesHmmMaCH
 implicit none
 
-integer :: i,j,loop,dum
+integer :: i,j,k,loop,dum
 
 allocate(SireDam(0:nAnisP,2))
 SireDam=0
@@ -158,104 +95,149 @@ enddo
 
 ! WARNING: Need to discuss this part of code with John. Nonsense going on here!
 
-if (RestartOption==4) then
+if (HMMOption==RUN_HMM_ONLY) then ! Avoid any adulteration of genotypes with imputation subroutines
+    !print*, 'DEBUG: Only HMM'
+    !print*, 'DEBUG: Allocate memory for genotypes and haplotypes'
     allocate(ImputeGenos(0:nAnisP,nSnp))
     allocate(ImputePhase(0:nAnisP,nSnp,2))
+    ImputeGenos=9
+    ImputePhase=9
+
+    allocate(GlobalTmpCountInf(nAnisP,8))
+    allocate(MSTermInfo(nAnisP,2))
+
+    !print*, 'DEBUG: Read Genotypes'
+    call ReadGenos(GenotypeFile)
+
+    ! Impute observed genotypes to animals in the pedigree
+    do i=1,nAnisG
+        do j=1,nAnisP
+            if (Id(j)==GenotypeId(i)) ImputeGenos(j,:)=Genos(i,:)
+        enddo
+    enddo
+
+    deallocate(Genos)
+    !print*, 'DEBUG: Call Mach'
+    call MaCHController
+    !print*, 'DEBUG: Mach Finished'
 else
-    if (SexOpt==0) then
-        ! Impute initial genotypes from calculated genotype probabilities
-        if (BypassGeneProb==0) then
-            allocate(ImputeGenos(0:nAnisP,nSnp))
-            allocate(ImputePhase(0:nAnisP,nSnp,2))
-            allocate(GlobalWorkPhase(0:nAnisP,nSnp,2))
-            call ReReadGeneProbs
-        else
-            ! Phase in the homozygous case for the SEX CHROMOSOME
-            ! WARNING: NOTHING IS DONE!!
-            call InsteadOfReReadGeneProb
-        endif   
 
-        ! Get Genotype information
-        call InitialiseArrays       ! This is similar to InsteadOfReReadGeneProb subroutine but allocating ImputePhase
-        call GeneProbPhase          ! Recover and store information about which and how many alleles/SNPs have been genotyped/phased 
+    if (RestartOption==4) then
+        allocate(ImputeGenos(0:nAnisP,nSnp))
+        allocate(ImputePhase(0:nAnisP,nSnp,2))
     else
-        allocate(MSTermInfo(nAnisP,2))
-        MSTermInfo=0
-    endif   
+        if (SexOpt==0) then
+            ! Impute initial genotypes from calculated genotype probabilities
+            if (BypassGeneProb==0) then
+                allocate(ImputeGenos(0:nAnisP,nSnp))
+                allocate(ImputePhase(0:nAnisP,nSnp,2))
+                allocate(GlobalWorkPhase(0:nAnisP,nSnp,2))
+                call ReReadGeneProbs
+            else
+                ! Phase in the homozygous case for the SEX CHROMOSOME
+                ! WARNING: NOTHING IS DONE!!
+                call InsteadOfReReadGeneProb
+            endif
 
-    if (NoPhasing==1) then
-        ! Major sub-step 2 as explained in Hickey et al. (2012; Appendix A)
-        call BaseAnimalFillIn
+            ! Get Genotype information
+            call InitialiseArrays       ! This is similar to InsteadOfReReadGeneProb subroutine but allocating ImputePhase
+            call GeneProbPhase          ! Recover and store information about which and how many alleles/SNPs have been genotyped/phased 
+        else
+            allocate(MSTermInfo(nAnisP,2))
+            MSTermInfo=0
+        endif
 
-        ! Impute phase whenever a pre-phase file exists
-        if (PrePhased==1) call ReadInPrePhasedData
+        if (NoPhasing==1) then
+            ! Major sub-step 2 as explained in Hickey et al. (2012; Appendix A)
+            call BaseAnimalFillIn
 
-        ! Impute phase in the sex chromosome
+            ! Impute phase whenever a pre-phase file exists
+            if (PrePhased==1) call ReadInPrePhasedData
+
+            ! Impute phase in the sex chromosome
+            if (SexOpt==1) call EnsureHetGametic
+
+            ! General imputation procedures
+            call GeneralFillIn
+
+            if (HMMOption==RUN_HMM_PREPHASE) Then
+                call MaCHController
+            else
+                if (HMMOption==RUN_HMM_YES) Then
+                    call MaCHController
+                    ! Copy phase from FulLHD in MaCH into ImputePhase
+
+                    do i=1,nAnisP
+                        do j=1,nSnp
+                            do k=1,2
+                                if (FullH(i,j,k)<0.001.and.FullH(i,j,k)>=0.0) Then
+                                    ImputePhase(i,j,k)=0
+                                elseif (FullH(i,j,k)>0.999.and.FullH(i,j,k)<=1.0) then
+                                    ImputePhase(i,j,k)=1
+                                else
+                                    ImputePhase(i,j,k)=9
+                                endif
+                            enddo
+                        enddo
+                    enddo
+                endif
+                print*, " "
+                print*, " ","Imputation of base animals completed"
+                do loop=1,InternalIterations
+                    print*, " "
+                    print*, "Performing imputation loop",loop
+
+                    call PhaseElimination                   ! Major Sub-Step 5 (Hickey et al., 2012; Appendix A)
+                    if (SexOpt==1) call EnsureHetGametic
+                    call GeneralFillIn
+                    print*, " "
+                    print*, " ","Parent of origin assigmnent of high density haplotypes completed"
+
+                    call ParentPhaseElimination             ! Major Sub-Step 4 (Hickey et al., 2012; Appendix A)
+                    if (SexOpt==1) call EnsureHetGametic
+                    call GeneralFillIn
+                    call RestrictedWorkLeftRight            ! Major Sub-Step 8 (Hickey et al., 2012; Appendix A)
+                    if (SexOpt==1) call EnsureHetGametic
+                    call GeneralFillIn
+                    print*, " "
+                    print*, " ","Imputation from high-density parents completed"
+
+                    call ImputeFromHDLibrary                ! Major Sub-Step 3 (Hickey et al., 2012; Appendix A)
+                    if (SexOpt==1) call EnsureHetGametic
+                    call GeneralFillIn
+                    call RestrictedWorkLeftRight            ! Major Sub-Step 8 (Hickey et al., 2012; Appendix A)
+                    if (SexOpt==1) call EnsureHetGametic
+                    call GeneralFillIn
+                    print*, " "
+                    print*, " ","Haplotype library imputation completed"
+
+                    call InternalParentPhaseElim            ! Major Sub-Step 7 (Hickey et al., 2012; Appendix A)
+                    if (SexOpt==1) call EnsureHetGametic
+                    call GeneralFillIn
+                    call RestrictedWorkLeftRight            ! Major Sub-Step 8 (Hickey et al., 2012; Appendix A)
+                    if (SexOpt==1) call EnsureHetGametic
+                    call GeneralFillIn
+                    print*, " "
+                    print*, " ","Internal imputation from parents haplotype completed"
+
+                    call InternalHapLibImputation           ! Major Sub-Step 6 (Hickey et al., 2012; Appendix A)
+                    if (SexOpt==1) call EnsureHetGametic
+                    call GeneralFillIn
+                    if (SexOpt==1) call EnsureHetGametic
+                    call RestrictedWorkLeftRight            ! Major Sub-Step 8 (Hickey et al., 2012; Appendix A)
+                    call GeneralFillIn
+                    print*, " "
+                    print*, " ","Internal haplotype library imputation completed"
+                enddo
+                call ManageWorkLeftRight
+            endif
+        endif
+
         if (SexOpt==1) call EnsureHetGametic
-
-        ! General imputation procedures
         call GeneralFillIn
 
-        if (HMMOption==3) then
-            call MaCHController
-
-        else
-            print*, " "
-            print*, " ","Imputation of base animals completed"
-            do loop=1,InternalIterations
-                print*, " "
-                print*, "Performing imputation loop",loop 
-
-                call PhaseElimination                   ! Major Sub-Step 5 (Hickey et al., 2012; Appendix A)
-                if (SexOpt==1) call EnsureHetGametic
-                call GeneralFillIn
-                print*, " "
-                print*, " ","Parent of origin assigmnent of high density haplotypes completed"  
-
-                call ParentPhaseElimination             ! Major Sub-Step 4 (Hickey et al., 2012; Appendix A)
-                if (SexOpt==1) call EnsureHetGametic
-                call GeneralFillIn
-                call RestrictedWorkLeftRight            ! Major Sub-Step 8 (Hickey et al., 2012; Appendix A)
-                if (SexOpt==1) call EnsureHetGametic
-                call GeneralFillIn
-                print*, " "
-                print*, " ","Imputation from high-density parents completed"
-
-                call ImputeFromHDLibrary                ! Major Sub-Step 3 (Hickey et al., 2012; Appendix A)
-                if (SexOpt==1) call EnsureHetGametic
-                call GeneralFillIn
-                call RestrictedWorkLeftRight            ! Major Sub-Step 8 (Hickey et al., 2012; Appendix A)
-                if (SexOpt==1) call EnsureHetGametic
-                call GeneralFillIn
-                print*, " "
-                print*, " ","Haplotype library imputation completed"
-
-                call InternalParentPhaseElim            ! Major Sub-Step 7 (Hickey et al., 2012; Appendix A)
-                if (SexOpt==1) call EnsureHetGametic
-                call GeneralFillIn
-                call RestrictedWorkLeftRight            ! Major Sub-Step 8 (Hickey et al., 2012; Appendix A)
-                if (SexOpt==1) call EnsureHetGametic
-                call GeneralFillIn
-                print*, " "
-                print*, " ","Internal imputation from parents haplotype completed"
-
-                call InternalHapLibImputation           ! Major Sub-Step 6 (Hickey et al., 2012; Appendix A)
-                if (SexOpt==1) call EnsureHetGametic
-                call GeneralFillIn
-                if (SexOpt==1) call EnsureHetGametic
-                call RestrictedWorkLeftRight            ! Major Sub-Step 8 (Hickey et al., 2012; Appendix A)
-                call GeneralFillIn
-                print*, " "
-                print*, " ","Internal haplotype library imputation completed"
-            enddo
-            call ManageWorkLeftRight
-        endif
+        deallocate(GlobalWorkPhase)
     endif
-
-    if (SexOpt==1) call EnsureHetGametic
-    call GeneralFillIn
-
-    deallocate(GlobalWorkPhase)
 endif
 
 
@@ -562,11 +544,12 @@ read (1,*) dumC,RestartOption
 ! Whether to use a hidden Markov model (HMM) for genotype imputation
 ! HMMOption
 read (1,*) dumC,TmpHmmOption
-HMMOption=0
-if (trim(TmpHmmOption)=='No') HMMOption=1
-if (trim(TmpHmmOption)=='Yes') HMMOption=2
-if (trim(TmpHmmOption)=='Only') HMMOption=3
-if (HMMOption==0) then
+HMMOption=RUN_HMM_NULL
+if (trim(TmpHmmOption)=='No') HMMOption=RUN_HMM_NO
+if (trim(TmpHmmOption)=='Yes') HMMOption=RUN_HMM_YES
+if (trim(TmpHmmOption)=='Only') HMMOption=RUN_HMM_ONLY
+if (trim(TmpHmmOption)=='Prephase') HMMOption=RUN_HMM_PREPHASE
+if (HMMOption==RUN_HMM_NULL) then
     print*, "HMMOption not correctly specified"
     stop
 endif
@@ -576,8 +559,9 @@ endif
 !   * nHapInSubH: Number of Haplotypes used as templates
 !   * HmmBurnInRound: Number of HMM rounds avoided during imputation
 !   * nRoundsHMM: Number of HMM rounds
+!   * useProcs: Number of processors used for parallelisation
 !   * idum: Seed for generating random numbers (Negative integer)
-read (1,*) dumC,nHapInSubH,HmmBurnInRound,nRoundsHMM,idum
+read (1,*) dumC,nHapInSubH,HmmBurnInRound,nRoundsHMM,useProcs,idum
 
 ! Get the file containing the true genotypes
 ! TrueGenotypeFile
@@ -629,664 +613,6 @@ nSnpRaw=nSnp
 !$  CALL OMP_SET_NUM_THREADS(nProcessors)
 
 end subroutine ReadInParameterFile
-
-!#############################################################################################################################################################################################################################
-
-subroutine MaCHController
-use Global
-use GlobalPedigree
-use GlobalVariablesHmmMaCH
-
-implicit none
-
-integer :: i,j
-
-
-call ParseMaCHData
-call SetUpEquations
-
-! WARNING: CARRIAGECONTROL statement is only supported by Intel compilers (https://software.intel.com/en-us/node/511256)
-!          This statement gives a compilation error with different compilers, such as GNU
-!          It is a non-standard extension that can be hacked (http://www.pgroup.com/userforum/viewtopic.php?p=9838&sid=a87a1bb4ec01041a702ee60469b2e254)
-! open (unit=6, form='formatted')
-! do GlobalRoundHmm=1,nRoundsHmm
-!   write(6, 100,advance="no") char(13),"   HMM Round   ", GlobalRoundHmm
-!   100 format(a1,a17,i10)
-!   call flush(6)
-!   call sleep(1)       ! Wait 1 second before doing anything and not messing around. This might be not necessary
-!   do j=1,nIndHmmMaCH
-!       call MaCHForInd(j)
-!   enddo
-! write(6, *) ""        ! Create a new line
-! enddo
-! NOTE: I tried this code in a separate program and it works. 
-!       Thinking in porting into AlphaImpute master development and so it would compile with others compilers
-
-!open (unit=6,form='formatted',CARRIAGECONTROL='FORTRAN')
-open (unit=6,form='formatted')
-do GlobalRoundHmm=1,nRoundsHmm
-    !write(6, 100) "   HMM Round   ",GlobalRoundHmm
-    !100 format ('+', a17,i10)
-    write(6, 100) char(13),"   HMM Round   ",GlobalRoundHmm
-    100 format (a1, a17, i10)
-
-    do j=1,nIndHmmMaCH
-        call MaCHForInd(j)
-    enddo
-enddo
-close (6)
-
-ProbImputeGenosHmm=ProbImputeGenosHmm/(nRoundsHmm-HmmBurnInRound)
-
-end subroutine MaCHController
-
-!#############################################################################################################################################################################################################################
-
-subroutine ParseMaCHData
-use Global
-use GlobalPedigree
-use GlobalVariablesHmmMaCH
-
-implicit none
-integer :: i,j,k
-
-nSnpHmm=nSnp
-nIndHmmMaCH=nAnisG
-allocate(GenosHmmMaCH(nIndHmmMaCH,nSnp))
-allocate(GlobalHmmID(nIndHmmMaCH))
-allocate(GlobalHmmHDInd(nIndHmmMaCH))
-allocate(ProbImputeGenosHmm(nIndHmmMaCH,nSnp))
-ProbImputeGenosHmm=0.0
-
-GlobalHmmHDInd=0
-k=0
-do i=1,nAnisP
-    if (IndivIsGenotyped(i)==1) then
-        k=k+1
-        GenosHmmMaCH(k,:)=ImputeGenos(i,:)
-        GlobalHmmID(k)=i
-        if ((float(count(GenosHmmMaCH(k,:)==9))/nSnp)<0.10) then
-            GlobalHmmHDInd(k)=1
-        endif
-        do j=1,nSnp
-            if ((GenosHmmMaCH(k,j)<0).or.(GenosHmmMaCH(k,j)>2)) GenosHmmMaCH(k,j)=3
-        enddo   
-    endif   
-enddo
-if (k/=nAnisG) then
-    print*, "Error in ParseMaCHData"
-    stop
-endif
-
-if (nHapInSubH>2*sum(GlobalHmmHDInd(:))) then
-    print*, "Data set is too small for the number of Haplotypes in Sub H specified"
-    stop
-endif
-
-end subroutine ParseMaCHData
-
-!########################################################################################################################################################################
- 
-subroutine MaCHForInd(CurrentInd)
-use GlobalVariablesHmmMaCH
-implicit none
-
-integer :: HapCount,CurrentInd,ShuffleInd1,ShuffleInd2
-integer,allocatable,dimension(:) :: Shuffle1,Shuffle2
-
-!Extract SubH
-allocate(Shuffle1(nIndHmmMaCH))
-allocate(Shuffle2(nIndHmmMaCH))
-call RandomOrder(Shuffle1,nIndHmmMaCH,idum)
-call RandomOrder(Shuffle2,nIndHmmMaCH,idum)
-
-HapCount=0
-ShuffleInd1=0
-ShuffleInd2=0
-do while (HapCount<nHapInSubH)
-    if (mod(HapCount,2)==0) then
-        ShuffleInd1=ShuffleInd1+1
-        if ((Shuffle1(ShuffleInd1)/=CurrentInd).and.(GlobalHmmHDInd(ShuffleInd1)==1)) then
-            HapCount=HapCount+1
-            SubH(HapCount,:)=FullH(Shuffle1(ShuffleInd1),:,1)
-        endif   
-    else
-        ShuffleInd2=ShuffleInd2+1   
-        if ((Shuffle2(ShuffleInd2)/=CurrentInd).and.(GlobalHmmHDInd(ShuffleInd2)==1)) then
-            HapCount=HapCount+1
-            SubH(HapCount,:)=FullH(Shuffle2(ShuffleInd2),:,2)       
-        endif
-    endif
-enddo
-
-allocate(ForwardProbs(nHapInSubH*nHapInSubH,nSnpHmm))
-
-call ForwardAlgorithm(CurrentInd)
-call SampleChromosomes(CurrentInd)
-
-if (GlobalRoundHmm>HmmBurnInRound) &
-    ProbImputeGenosHmm(CurrentInd,:)=ProbImputeGenosHmm(CurrentInd,:)+FullH(CurrentInd,:,1)+FullH(CurrentInd,:,2)
-
-deallocate(ForwardProbs)
-
-
-end subroutine MaCHForInd
-
-!########################################################################################################################################################################
-
-subroutine SampleChromosomes(CurrentInd)
-use GlobalVariablesHmmMaCH
-implicit none
-
-integer :: i,j,k,l,SuperJ,CurrentInd,Index,OffOn,State1,State2,TmpJ,TopBot,FirstState,SecondState,Tmp
-double precision :: Summer,ran1,Choice,Sum00,Sum01,Sum10,Sum11
-
-Summer=0.0
-Index=0
-do i=1,nHapInSubH
-    do j=1,i
-        Index=Index+1
-        Summer=Summer+ForwardProbs(Index,nSnpHmm)
-    enddo
-enddo   
-
-Choice=ran1(idum)*Summer    
-
-Summer=0.0
-Index=0
-OffOn=0
-do i=1,nHapInSubH
-    do j=1,i
-        Index=Index+1
-        Summer=Summer+ForwardProbs(Index,nSnpHmm)
-        if (Summer>Choice) then
-            State1=i
-            State2=j
-            OffOn=1
-            exit
-        endif
-    enddo
-    if (OffOn==1) exit
-enddo   
-
-SuperJ=nSnpHmm
-do while (SuperJ>1)
-    SuperJ=SuperJ-1
-    call ImputeAlleles(CurrentInd,SuperJ+1,State1,State2)
-    TmpJ=SuperJ
-    Theta=Thetas(SuperJ)
-    do while ((GenosHmmMaCH(CurrentInd,SuperJ)==3).and.SuperJ>1)
-        SuperJ=SuperJ-1
-        Theta=Theta+Thetas(SuperJ)-Theta*Thetas(SuperJ)
-    enddo
-        
-    !When examining the previous location we consider three alternatives:
-    !states that could be reached when both haplotypes recombine (11),
-    !states that can be reached when the first (10) or second (01) haplotype recombines,
-    !and the states that can be reached without recombination.
-    Sum00=0.0
-    Sum01=0.0
-    Sum10=0.0
-    Sum11=0.0   
-
-    Index=0
-    do k=1,nHapInSubH
-        do l=1,k
-            Index=Index+1
-            Sum11=Sum11+ForwardProbs(Index,SuperJ)
-            if ((State1==k).or.(State1==l)) Sum01=Sum01+ForwardProbs(Index,SuperJ)  
-            if ((State2==k).or.(State2==l)) Sum10=Sum10+ForwardProbs(Index,SuperJ)  
-            if (((State1==k).and.(State2==l)).or.((State1==l).and.(State2==k))) Sum00=Sum00+ForwardProbs(Index,SuperJ)  
-        enddo
-    enddo   
-
-    Summer=Sum11*Theta*Theta/(nHapInSubH*nHapInSubH)+(Sum10+Sum01)*Theta*(1.0-Theta)/nHapInSubH+Sum00*(1.0-Theta)*(1.0-Theta)
-    if (SuperJ==1) exit
-    
-
-    !Sample number and decide how many state changes occurred between the
-    !two positions
-    Choice=ran1(idum)*Summer
-
-    !The most likely outcome is that no changes occur ...
-    Choice=Choice-(Sum00*(1.0-Theta)*(1.0-Theta))
-
-    if (Choice<=0.0) then
-        !Record outcomes for intermediate, uninformative, positions
-        TopBot=1
-        call FillPath(CurrentInd,SuperJ,TmpJ+1,State1,TopBot)
-        TopBot=2
-        call FillPath(CurrentInd,SuperJ,TmpJ+1,State2,TopBot)
-        cycle
-    endif
-
-    !But perhaps the first or second haplotype recombined
-    Choice=Choice-(Sum10*Theta*(1.0-Theta)/nHapInSubH)
-
-    if (Choice<=0.0) then
-        !The first haplotype changed ...
-        Choice=Choice*nHapInSubH/(Theta*(1.0-Theta))
-        !Record the original state
-        FirstState=State1                       
-        do while (State1<nHapInSubH)
-            State1=State1+1                                                         !Check with Carl
-            if (State1>=State2) then
-                Choice=Choice+ForwardProbs(State1*(State1-1)/2+State2,SuperJ)
-            else
-                Choice=Choice+ForwardProbs(State2*(State2-1)/2+State1,SuperJ)           
-            endif
-            if (Choice>=0.0) exit
-        enddo
-
-        !Record outcomes for intermediate, uninformative, positions
-        TopBot=1  
-        call SamplePath(CurrentInd,SuperJ,TmpJ+1,State1,FirstState,TopBot) 
-        TopBot=2
-        call FillPath(CurrentInd,SuperJ,TmpJ+1,State2,TopBot)      
-        cycle
-    endif
-
-    Choice=Choice-(Sum01*Theta*(1.0-Theta)/nHapInSubH)
-
-    if (Choice<=0.0) then
-        !The second haplotype changed ...
-        Choice=Choice*nHapInSubH/(Theta*(1.0-Theta))
-        !Save the original state
-        SecondState=State2
-        do while (State2<nHapInSubH)
-            State2=State2+1                                                         !Check with Carl
-            if (State1>=State2) then
-                Choice=Choice+ForwardProbs(State1*(State1-1)/2+State2,SuperJ)       
-            else
-               Choice=Choice+ForwardProbs(State2*(State2-1)/2+State1,SuperJ)
-            endif    
-            if (Choice>=0.0) exit
-        enddo                                                                       !Check with Carl                            
-
-        !Record outcomes for intermediate, uninformative, positions
-        TopBot=1    
-        call FillPath(CurrentInd,SuperJ,TmpJ+1,State1,TopBot)                   !Check with Carl
-        TopBot=2            
-        call SamplePath(CurrentInd,SuperJ,TmpJ+1,State2,SecondState,TopBot)     !Check with Carl    
-        cycle
-
-    endif
-
-    !Try to select any other state
-    Choice=Choice*nHapInSubH*nHapInSubH/(Theta*Theta)
-
-    !Save the original states
-    FirstState=State1
-    SecondState=State2
-
-    Summer=0.0
-    Index=0
-    OffOn=0
-    do i=1,nHapInSubH
-        do j=1,i
-            Index=Index+1
-            Summer=Summer+ForwardProbs(Index,nSnpHmm)
-            if (Summer>Choice) then
-                State1=i
-                State2=j
-                OffOn=1
-                exit
-            endif
-        enddo
-        if (OffOn==1) exit
-    enddo   
-    
-    if (ran1(idum)>0.5) then
-        Tmp=State1
-        State2=State1
-        State2=Tmp
-    endif
-    !Record outcomes for intermediate, uninformative, positions
-    TopBot=1    
-    call SamplePath(CurrentInd,SuperJ,TmpJ+1,State1,FirstState,TopBot) 
-    TopBot=2
-    call SamplePath(CurrentInd,SuperJ,TmpJ+1,State2,SecondState,TopBot)     
-
-enddo
-
-call ImputeAlleles(CurrentInd,1,State1,State2)
-
-end subroutine SampleChromosomes
-
-!########################################################################################################################################################################
- 
-subroutine FillPath(CurrentInd,FromMarker,ToMarker,State,TopBot)
-use GlobalVariablesHmmMaCH
-implicit none
-
-integer :: j,CurrentInd,FromMarker,ToMarker,State,TopBot
-
-do j=FromMarker+1,ToMarker-1
-    call ImputeAllele(CurrentInd,j,State,TopBot)
-enddo
-
-end subroutine FillPath
-
-!########################################################################################################################################################################
- 
-subroutine SamplePath(CurrentInd,FromMarker,ToMarker,FromState,ToState,TopBot)
-use GlobalVariablesHmmMaCH
-implicit none
-
-integer :: i,j,CurrentInd,TopBot,FromMarker,ToMarker,FromState,ToState
-double precision :: R,Theta1,ran1
-
-Theta=0.0
-do j=FromMarker,ToMarker-1
-    !Calculate overall recombination fraction for the interval
-    Theta=Thetas(j)+Theta-Theta*Thetas(j)
-enddo
-
-!Impute a path between the two end markers, assuming no genotypes
-!are observed -- the only constraint is that we must start at
-!fromState and end at toState with at least one intervening recombinant
-
-do while (FromMarker<ToMarker-1)
-    R=ran1(idum)*Theta
-    Theta1=Thetas(FromMarker)
-    if (Theta < 0.9) then
-        !Fast closed formula
-        Theta=(Theta-Theta1)/(1.0-Theta1)
-    else
-        Theta = 0.0
-        !More accurate, iterative formula
-        do i=FromMarker+1,ToMarker-1
-            Theta=Thetas(i)+Theta-Theta*Thetas(i)
-        enddo
-    endif
-
-    if (R>theta1) then
-        !No recombinant in the in first interval
-        FromMarker=FromMarker+1
-        call ImputeAllele(CurrentInd,FromMarker,ToState,TopBot)                 
-        cycle
-    endif
-    Crossovers(FromMarker)=Crossovers(FromMarker)+1
-
-    if (R<Theta1*(1.0-Theta)) then
-        !No recombinant in the second interval
-        call FillPath(CurrentInd,FromMarker,ToMarker,ToState,TopBot);
-        return
-    else
-    
-        FromMarker=FromMarker+1
-        ToState=int(ran1(idum)*nHapInSubH)+1
-        call ImputeAllele(CurrentInd,FromMarker,ToState,TopBot)                 
-    endif
-
-enddo
-
-!If we get here, record obligate recombinant between two consecutive markers
-Crossovers(FromMarker)=Crossovers(FromMarker)+1
-
-
-end subroutine SamplePath
-
-!########################################################################################################################################################################
- 
-subroutine ImputeAlleles(CurrentInd,CurrentMarker,State1,State2)
-use GlobalVariablesHmmMaCH
-implicit none
-
-integer :: CurrentInd,CurrentMarker,State1,State2,Imputed1,Imputed2,Genotype,Differences
-double precision :: ran1
-
-
-Imputed1=SubH(State1,CurrentMarker)
-Imputed2=SubH(State2,CurrentMarker)
-
-Genotype=GenosHmmMaCH(CurrentInd,CurrentMarker)
-
-if ((Genotype/=0).and.(Genotype/=2)) then
-    FullH(CurrentInd,CurrentMarker,1)=Imputed1
-    FullH(CurrentInd,CurrentMarker,2)=Imputed2
-endif
-
-if (Genotype==3) return
-
-Differences=abs(Genotype - (Imputed1+Imputed2))
-
-if ((Genotype==1).and.(Differences==0)) then
-    ErrorUncertainty(CurrentMarker)=ErrorUncertainty(CurrentMarker)+1
-else
-    ErrorMatches(CurrentMarker)=ErrorMatches(CurrentMarker)+(2-Differences)
-    ErrorMismatches(CurrentMarker)=ErrorMismatches(CurrentMarker)+Differences
-endif 
-
-if (Genotype/=1) return
-
-if (Imputed1==Imputed2) then
-    if (ran1(idum)>=0.5) then
-        FullH(CurrentInd,CurrentMarker,1)=abs(Imputed1-1)       
-    else    
-        FullH(CurrentInd,CurrentMarker,1)=abs(Imputed2-1)                   
-    endif
-endif
-
-end subroutine ImputeAlleles
-
-!########################################################################################################################################################################
- 
-subroutine ImputeAllele(CurrentInd,CurrentMarker,State,TopBot)
-use GlobalVariablesHmmMaCH
-implicit none
-
-integer :: CurrentInd,CurrentMarker,State,TopBot
-
-FullH(CurrentInd,CurrentMarker,TopBot)=SubH(State,CurrentMarker)
-
-end subroutine ImputeAllele
-
-!########################################################################################################################################################################
- 
-subroutine ForwardAlgorithm(CurrentInd)
-use GlobalVariablesHmmMaCH
-implicit none
-
-integer :: i,j,CurrentInd,PrecedingMarker
-
-call SetUpPrior
-
-j=1
-call ConditionOnData(CurrentInd,j)
-
-Theta=0.0
-PrecedingMarker=1
-do j=2,nSnpHmm
-    Theta=Theta+Thetas(j-1)-Theta*Thetas(j-1)
-    if ((GenosHmmMaCH(CurrentInd,j)/=3).or.(j==nSnpHmm)) then
-        call Transpose(j,PrecedingMarker)
-        call ConditionOnData(CurrentInd,j)
-        PrecedingMarker=j
-        Theta=0.0
-    endif
-enddo
-
-end subroutine ForwardAlgorithm
-
-!########################################################################################################################################################################
- 
-subroutine Transpose(CurrentMarker,PrecedingMarker)
-use GlobalVariablesHmmMaCH
-implicit none
-
-integer :: i,j,CurrentMarker,PrecedingMarker,Index
-double precision :: Summer,Marginals(nHapInSubH),NoChange,OneChange,TwoChange
-
-if (Theta==0.0) then
-    ForwardProbs(:,CurrentMarker)=ForwardProbs(:,PrecedingMarker)
-else
-    Summer=0.0
-    Index=0
-    Marginals(:)=0.0
-    do i=1,nHapInSubH
-        do j=1,i-1      !Karl suggestion
-            Index=Index+1
-            Summer=Summer+ForwardProbs(Index,PrecedingMarker)
-            Marginals(i)=Marginals(i)+ForwardProbs(Index,PrecedingMarker)
-            Marginals(j)=Marginals(j)+ForwardProbs(Index,PrecedingMarker)           
-        enddo
-        Index=Index+1
-        Summer=Summer+ForwardProbs(Index,PrecedingMarker)
-        Marginals(i)=Marginals(i)+(ForwardProbs(Index,PrecedingMarker)*2.0)     
-    enddo       
-    
-    NoChange=(1.0-Theta)*(1.0-Theta)
-    OneChange=(1.0-Theta)*Theta/nHapInSubH
-    TwoChange=Summer*Theta*Theta/(nHapInSubH*nHapInSubH)
-    
-    !Automatically rescale likelihoods when they get too small
-    if (Summer < 1e-15) then
-        NoChange=NoChange*1e30
-        OneChange=OneChange*1e30
-        TwoChange=TwoChange*1e30
-    endif
-    
-    !This final loop actually transposes the probabilities for each state
-    Index=0
-    do i=1,nHapInSubH
-        do j=1,i-1      !Karl suggestion
-            Index=Index+1
-            ForwardProbs(Index,CurrentMarker)=(ForwardProbs(Index,PrecedingMarker)*NoChange)+(Marginals(i)*OneChange)+(Marginals(j)*OneChange)+(2*TwoChange)
-        enddo
-        Index=Index+1
-        ForwardProbs(Index,CurrentMarker)=(ForwardProbs(Index,PrecedingMarker)*NoChange)+(Marginals(i)*OneChange)+(2*TwoChange)
-    enddo       
-endif
-
-end subroutine Transpose
-
-!########################################################################################################################################################################
-
- 
-subroutine ConditionOnData(CurrentInd,Marker)
-use GlobalVariablesHmmMaCH
-implicit none
-
-integer :: i,j,CurrentInd,Marker,Index
-double precision :: Factors(0:1)
-
-if (GenosHmmMaCH(CurrentInd,Marker)==3) then
-    return
-else
-    Index=0
-    do i=1,nHapInSubH
-        Factors(0)=Penetrance(Marker,SubH(i,Marker),GenosHmmMaCH(CurrentInd,Marker))
-        Factors(1)=Penetrance(Marker,SubH(i,Marker)+1,GenosHmmMaCH(CurrentInd,Marker))
-        do j=1,i
-            Index=Index+1
-            ForwardProbs(Index,Marker)=ForwardProbs(Index,Marker)*Factors(SubH(j,Marker))
-        enddo       
-    enddo
-endif       
-
-end subroutine ConditionOnData
-
-!########################################################################################################################################################################
- 
-subroutine CalcPenetrance
-use GlobalVariablesHmmMaCH
-implicit none
-
-integer :: j
-
-allocate(Penetrance(nSnpHmm,0:2,0:2))
-
-do j=1,nSnpHmm
-    Penetrance(j,0,0)=(1.0-Epsilon(j))**2
-    Penetrance(j,0,1)=2.0*(1.0-Epsilon(j))*Epsilon(j)   
-    Penetrance(j,0,2)=(Epsilon(j)**2)       
-    Penetrance(j,1,0)=(1.0-Epsilon(j))*Epsilon(j)   
-    Penetrance(j,1,1)=((1.0-Epsilon(j))**2)+(Epsilon(j)**2)
-    Penetrance(j,1,2)=(1.0-Epsilon(j))*Epsilon(j)   
-    Penetrance(j,2,0)=(Epsilon(j)**2)   
-    Penetrance(j,2,1)=2.0*(1.0-Epsilon(j))*Epsilon(j)   
-    Penetrance(j,2,2)=(1.0-Epsilon(j))**2   
-enddo
-
-end subroutine CalcPenetrance
-
-!########################################################################################################################################################################
- 
-subroutine SetUpPrior
-use GlobalVariablesHmmMaCH
-implicit none
-
-ForwardProbs(:,1)=1.0/(nHapInSubH*nHapInSubH)
-
-end subroutine SetUpPrior
-
-!########################################################################################################################################################################
-
-subroutine SetUpEquations
-use GlobalVariablesHmmMaCH
-implicit none
-
-integer :: i,j
-double precision :: ran1
-
-allocate(FullH(nIndHmmMaCH,nSnpHmm,2))
-allocate(SubH(nHapInSubH,nSnpHmm))
-allocate(Epsilon(nSnpHmm))
-allocate(Thetas(nSnpHmm-1))
-allocate(ErrorUncertainty(nSnpHmm))
-allocate(ErrorMatches(nSnpHmm))
-allocate(ErrorMismatches(nSnpHmm))
-allocate(Crossovers(nSnpHmm))
-
-Epsilon=0.00000001
-Thetas=0.01
-
-!Initialise FullH
-do i=1,nIndHmmMaCH
-    do j=1,nSnpHmm
-
-        if (GenosHmmMaCH(i,j)==0) then
-            FullH(i,j,:)=0
-        endif
-        
-        if (GenosHmmMaCH(i,j)==2) then
-            FullH(i,j,:)=1
-        endif   
-        
-        if (GenosHmmMaCH(i,j)==1) then
-            if (ran1(idum)>=0.5) then           
-                FullH(i,j,1)=0
-                FullH(i,j,2)=1
-            else
-                FullH(i,j,1)=1
-                FullH(i,j,2)=0
-            endif
-        endif   
-        if (GenosHmmMaCH(i,j)==3) then
-            if (ran1(idum)>=0.5) then           
-                FullH(i,j,1)=0
-            else    
-                FullH(i,j,1)=1
-            endif   
-            if (ran1(idum)>=0.5) then           
-                FullH(i,j,2)=0
-            else    
-                FullH(i,j,2)=1
-            endif   
-        endif   
-
-    enddo        
-enddo
-
-call CalcPenetrance
-
-ErrorUncertainty(:)=0
-ErrorMatches(:)=0
-ErrorMismatches(:)=0
-Crossovers(:)=0
-
-end subroutine SetUpEquations
 
 !########################################################################################################################################################################
 
@@ -1685,7 +1011,7 @@ if (RestartOption/=4) then
         enddo
         close (109) 
         print*, "Restart option 3 stops program after Iterate Geneprob jobs have been submitted"
-        stop
+        !stop
     endif
 endif
 
@@ -1955,6 +1281,11 @@ open (unit=50,file="./Results/ImputationQualityIndividual.txt",status="unknown")
 open (unit=51,file="./Results/ImputationQualitySnp.txt",status="unknown")
 open (unit=52,file="./Results/WellPhasedIndividuals.txt",status="unknown")
 
+open (unit=53,file="./Results/ImputePhaseHMM.txt",status="unknown")
+open (unit=54,file="./Results/ImputeGenotypesHMM.txt",status="unknown")
+
+
+!print*, 'DEBUG: output=0 [WriteOutResults]'
 if (OutOpt==0) then
 
     if (SexOpt==0) then
@@ -2064,6 +1395,7 @@ if (OutOpt==0) then
 
 else
 
+!print*, 'DEBUG: Unphase wrong alleles [WriteOutResults]'
     do i=1,nAnisP
         do j=1,nSnp
             if (ImputePhase(i,j,1)<0) ImputePhase(i,j,1)=9 
@@ -2134,8 +1466,8 @@ else
     allocate(ImputePhase(0:nAnisP,nSnpRaw,2))
     ImputeGenos=TmpGenos
     ImputePhase=TmpPhase
-!REMOVE THIS WHEN HMM IS FINALISED
-    if (HMMOption/=3) then
+    !REMOVE THIS WHEN HMM IS FINALISED
+    if (HMMOption/=RUN_HMM_ONLY.and.HMMOption/=RUN_HMM_PREPHASE) then
         if (SexOpt==0) then
             if (BypassGeneProb==0) then 
                 call IterateGeneProbs
@@ -2145,26 +1477,55 @@ else
         endif
         if (SexOpt==1) call IterateInsteadOfGeneProbs
     endif
-!REMOVE THIS
+    !REMOVE THIS
 
-    if (HMMOption==3) then
+    if (HMMOption==RUN_HMM_ONLY.or.HMMOption==RUN_HMM_PREPHASE) then
+        !print*, 'DEBUG: Impute genotypes based on HMM genotypes probabilites [WriteOutResults]'
+
+        nSnpIterate=nSnp
+        allocate(ProbImputeGenos(0:nAnisP,nSnpIterate))
+        allocate(ProbImputePhase(0:nAnisP,nSnpIterate,2))
+        allocate(Maf(nSnpIterate))
+        ProbImputeGenos(1:nAnisP,:)=-9.0
+        ProbImputePhase(1:nAnisP,:,:)=-9.0
         l=0 
         do j=1,nSnpRaw
             if (SnpIncluded(j)==1) then
                 l=l+1
                 do i=1,nAnisG
                     ProbImputeGenos(GlobalHmmID(i),l)=ProbImputeGenosHmm(i,l)
+                    ProbImputePhase(GlobalHmmID(i),l,1)=FullH(i,l,1)
+                    ProbImputePhase(GlobalHmmID(i),l,2)=FullH(i,l,2)
                 enddo
             endif
         enddo
+
+        ! Assign Genotypes based on genotype probabilities
+        do i=1,nAnisP
+            do j=1,nSnpIterate
+                if (ProbImputeGenos(i,j)==-9.0) ImputeGenos(i,j)=9
+                if (ProbImputeGenos(i,j)>1.999) ImputeGenos(i,j)=2
+                if (ProbImputeGenos(i,j)<0.0001) ImputeGenos(i,j)=0
+                if ((ProbImputeGenos(i,j)>0.999).and.(ProbImputeGenos(i,j)<1.00001)) ImputeGenos(i,j)=1
+            enddo
+        enddo
     endif
 
+    !print*, 'DEBUG: Write phase, genotypes and probabilities into files [WriteOutResults]'
+
     do i=GlobalExtraAnimals+1,nAnisP
+         write (53,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') Id(i),ImputePhase(i,:,1)
+         write (53,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') Id(i),ImputePhase(i,:,2)
+         write (54,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') Id(i),ImputeGenos(i,:)
+
          write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') Id(i),ProbImputePhase(i,:,1)
          write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') Id(i),ProbImputePhase(i,:,2)
          write (41,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') Id(i),ProbImputeGenos(i,:)
     enddo
+
     if ((SexOpt==1).or.(BypassGeneProb==1)) then
+        !print*, 'DEBUG: Bypass genotype probabilities [WriteOutResults]'
+
         allocate(Maf(nSnpRaw))
         do j=1,nSnpRaw
             Maf(j)=sum(ProbImputeGenos(:,j))/(2*nAnisP)
@@ -2181,6 +1542,8 @@ else
         close(111)
     endif
 
+    !print*, 'DEBUG: Imputation Quality [WriteOutResults]'
+
     ImputationQuality(:,1)=sum(2*Maf(:))/nSnpRaw
     ImputationQuality(:,2)=0.0
     do i=GlobalExtraAnimals+1,nAnisP
@@ -2195,6 +1558,8 @@ else
         ImputationQuality(i,6)=float(nSnpRaw-count(ImputeGenos(i,:)==9))/nSnpRaw                    
         write (50,'(a20,20000f7.2)') Id(i),ImputationQuality(i,:)
     enddo
+
+    !print*, 'DEBUG: Write [WriteOutResults]'
 
     do j=1,nSnpRaw
         write (51,'(i10,20000f7.2)') j,float(((nAnisP-(GlobalExtraAnimals+1))+1)-count(ImputeGenos(GlobalExtraAnimals+1:nAnisP,j)==9))/((nAnisP-(GlobalExtraAnimals+1))+1)
@@ -2216,6 +1581,9 @@ close (41)
 close (50)
 close (51)
 close (52)
+
+close (53)
+close (54)
 
 end subroutine WriteOutResults
 
@@ -2487,7 +1855,9 @@ do i=1,nAnisP
                             if ((ImputePhase(PedId,j,1)/=9).and.(ImputePhase(PedId,j,2)/=9)) then
                                 ImputePhase(i,j,e)=9
                                 ImputeGenos(i,j)=9
-                                ProbImputePhase(i,j,e)=((1.0-(LengthVec(j)*Counter))*ImputePhase(PedId,j,GamA))+(LengthVec(j)*Counter*ImputePhase(PedId,j,GamB))
+                                ProbImputePhase(i,j,e)&
+                                    =((1.0-(LengthVec(j)*Counter))*ImputePhase(PedId,j,GamA))&
+                                    +(LengthVec(j)*Counter*ImputePhase(PedId,j,GamB))
                                 ProbImputeGenos(i,j)=ProbImputePhase(i,j,1)+ProbImputePhase(i,j,2)      
 
                             endif
@@ -6273,6 +5643,31 @@ if (SexOpt==1) then
 endif
 
 end subroutine ReadInData
+
+!#############################################################################################################################################################################################################################
+
+subroutine ReadGenos(genosFileName)
+use GlobalPedigree
+use Global
+implicit none
+
+character(len=300), intent(in) :: genosFileName
+integer :: i,j,Temp(nSnp)
+
+allocate(Genos(0:nAnisG,nSnp))
+Genos(0,:)=9
+
+open (unit=3,file=trim(genosFileName),status="old")
+do i=1,nAnisG
+    read (3,*) GenotypeId(i),Temp(:)
+    do j=1,nSnp
+        if ((Temp(j)<0).or.(Temp(j)>2)) Temp(j)=9
+    enddo
+    Genos(i,:)=Temp(:)
+enddo
+close(3)
+
+end subroutine ReadGenos
 
 !#############################################################################################################################################################################################################################
 

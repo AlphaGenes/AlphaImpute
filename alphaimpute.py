@@ -1,10 +1,10 @@
 #!/usr/bin/python2.7
 # encoding: utf-8
 '''
-alphaimpute -- 
+alphaimpute -- Generate the Spec file for AlphaImpute
 Different
 @author:     Roberto Antolín
-@copyright:  2014 Roberto Antolín. All rights reserved.
+@copyright:  2015 Roberto Antolín. All rights reserved.
 @license:    license
 @contact:    roberto dot antolin at roslin dot ed dot ac dot uk
 @deffield    updated: Updated
@@ -17,9 +17,9 @@ from argparse import ArgumentParser
 from argparse import RawDescriptionHelpFormatter
 
 __all__ = []
-__version__ = 0.1
+__version__ = 0.2
 __date__ = '2014-12-07'
-__updated__ = '2014-12-07'
+__updated__ = '2015-03-10'
 
 DEBUG = 0
 TESTRUN = 0
@@ -38,20 +38,6 @@ class CLIError(Exception):
         return self.msg
 
 
-# def runCommand(verb, cmd):
-#     proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=False)
-#     if verb == 2:
-#         for line in iter(proc.stdout.readline, ''):
-#             line = line.replace('\r', '').replace('\n', '')
-#             print line
-#             sys.stdout.flush()
-#     elif verb == 1:
-#         print cmd
-#         proc.wait()
-#     else:
-#         proc.wait()
-
-
 def main(argv=None):    # IGNORE:C0111
     '''Command line options.'''
 
@@ -67,7 +53,7 @@ def main(argv=None):    # IGNORE:C0111
     program_shortdesc = __import__('__main__').__doc__.split("\n")[1]
     program_license = '''%s
   Created by rantolin on %s.
-  Copyright 2014 Roslin Institute. All rights reserved.
+  Copyright 2015 Roslin Institute. All rights reserved.
   Licensed under the GPL 3.0v
   Distributed on an "AS IS" basis without warranties
   or conditions of any kind, either express or implied.
@@ -77,15 +63,15 @@ USAGE
     try:
         # Setup argument parser
         parser = ArgumentParser(description=program_license, formatter_class=RawDescriptionHelpFormatter)
-        parser.add_argument(dest="output", help="Output file", metavar="file")
+        parser.add_argument(dest="output", help="Output file", metavar="file", type=str)
         parser.add_argument("-P", "--pedigree", dest="pedigree", help="File containing the pedigree information", metavar="file", type=file)
         parser.add_argument("-G", "--genotype", dest="genotype", help="File containing the genotypes", metavar="file", type=file)
         parser.add_argument("-X", "--sexchrom", help="Sex Chromosome File", metavar="file")
-        parser.add_argument("-f", "--heterogamete", help="The heterogametic sex [Default: %(default)s]", choices=["Female", "Male"], default="Female", metavar="str")
+        parser.add_argument("-f", "--female", help="Set Female as the heterogametic sex. [Default: Male]", action="store_true")
         parser.add_argument("-S", "--snp", help="Number of SNP in the genotype file", type=int, metavar="nSNP", required=True)
-        parser.add_argument("-k", "--noedit", help="Keep data, do not edit data internally", action="store_true", dest="noedit")
-        parser.add_argument("-e", "--edit", help="Parameters to edit data internally [Default: %(default)s]", metavar="int", nargs=3, default=[95.0,2.0,98.0])
-        parser.add_argument("-o", "--edit_output", help="Output of the editing phase [Default: %(default)s]", choices=["AllSnpOut", "EditedSnpOut"], default="AllSnpOut", metavar="str")
+        parser.add_argument("-E", "--edit", help="Edit data internally", action="store_true", dest="edit")
+        parser.add_argument("-e", "--edit_param", help="Parameters to edit data internally [Default: %(default)s]", metavar="int", nargs=3, default=[95.0,2.0,98.0], dest='editParam')
+        parser.add_argument("-o", "--edit-output", help="Output of the editing phase [Default: %(default)s]", choices=["AllSnpOut", "EditedSnpOut"], default="AllSnpOut", metavar="str")
         parser.add_argument("--phased", help="Specify if phasing rounds have been done previously", choices=["PhaseDone","NoPhase"], metavar="str")
         parser.add_argument("--phasepath", help="Path where the phasing rounds are store", metavar="path")
         parser.add_argument("-r", "--phasing_runs", help="Number of phasing runs", default=20, type=int, metavar="int")
@@ -98,13 +84,13 @@ USAGE
         parser.add_argument("--data-only", help="Pre process data only", action="store_true", dest="data")
         parser.add_argument("--phase-only", help="Phase Only", action="store_true", dest="phase")
         parser.add_argument("-l", "--library", help="Conservative Haplotype Library use", action="store_true")
-        parser.add_argument("-w", "--well-phased-thres", help="Well phase threshold [Default: %(default)3.1f]", type=float, default=99.0, dest="wellthres", metavar="float")
-        parser.add_argument("-U", "--user-phase", help="User defined AlphaPhase animals file", type=file, metavar="file", dest="userfile")
+        parser.add_argument("-w", "--well_phased_thres", help="Well phase threshold [Default: %(default)3.1f]", type=float, default=99.0, dest="wellthres", metavar="float")
+        parser.add_argument("-U", "--user_phase", help="User defined AlphaPhase animals file", type=file, metavar="file", dest="userfile")
         parser.add_argument("-p", "--prephase", help="Pre-phased file", type=file, metavar="file")
         parser.add_argument("-b", "--bypass", help="Bypass GeneProb", action="store_true")
         parser.add_argument("-R", "--restart", help="Restart Option [Default: %(default)d]", type=int, default=0, required=True, metavar="int")
-        parser.add_argument("-H", "--hmm", help="Use Hidden Markov Model", action="store_true", dest="hmm")
-        parser.add_argument("-m", "--hmm-param", help="Hidden Markov Model parameters[Default: %(default)d]", nargs=4, default=[2,3,5,-123456788], metavar="int", dest="hmmParam")
+        parser.add_argument("-M", "--hmm", help="Use Hidden Markov Model [Default: %(default)s]", dest="hmm", choices=["No","Only", "Yes"], metavar="str")
+        parser.add_argument("-m", "--hmm_param", help="Hidden Markov Model parameters[Default: %(default)s]", nargs=5, default=[300,19,20,4,-123456788], metavar="int", dest="hmmParam")
 
         parser.add_argument("-T", "--truegenotype", help="True Genotype File", metavar="file", type=file)
         parser.add_argument("-V", "--version", action="version", version=program_version_message)
@@ -116,10 +102,10 @@ USAGE
         pedigreeFile = args.pedigree
         genotypeFile = args.genotype
         sexChromosome = args.sexchrom
-        heterogamete = args.heterogamete
+        female = args.female
         nSnps = args.snp
-        noEdit = args.noedit
-        editParameters = args.edit
+        edit = args.edit
+        editParameters = args.editParam
         editOutput = args.edit_output
         phased = args.phased
         phasePath = args.phasepath
@@ -142,25 +128,28 @@ USAGE
         hmmParameters = args.hmmParam
         trueGenotypeFile = args.truegenotype
 
+
         # Construct file
         spec= 'PedigreeFile\t\t\t\t,{0}\n'.format(pedigreeFile.name)
         spec+= 'GenotypeFile\t\t\t\t,{0}\n'.format(genotypeFile.name)
         if sexChromosome is None:
             spec+= 'SexChrom\t\t\t\t,No\n'
         elif os.path.isfile(sexChromosome):
+            heterogamete='Male'
+            if female: heterogamete='Female'
             spec+= 'SexChrom\t\t\t\t,Yes,{0},{1}\n'.format(sexChromosome,heterogamete)
         else:
             parser.error(program_name + ": " + '<{0}> is not a valid sex chromosome file'.format(sexChromosome))
         spec+= 'NumberSnp\t\t\t\t,{0}\n'.format(nSnps)
-        if noEdit:
-            spec+= 'InternalEdit\t\t\t\t,No\n'
-            spec+= 'EditingParameters\t\t\t,0.0,0.0,0.0,AllSnpOut'
-        else:
+        if edit:
             spec+= 'InternalEdit\t\t\t\t,Yes\n'
             spec+= 'EditingParameters\t\t\t,'
             for param in editParameters:
                 spec+= str(param) + ','
             spec+= '{0}\n'.format(editOutput)
+        else:
+            spec+= 'InternalEdit\t\t\t\t,No\n'
+            spec+= 'EditingParameters\t\t\t,0.0,0.0,0.0,AllSnpOut\n'
         if phased=='PhaseDone':
             if phasePath is not None and os.path.isfile(phasePath):
                 spec+= 'NumberPhasingRuns\t\t\t,{0},{1},{2}\n'.format(phased,phasePath,phaseRuns)
@@ -226,8 +215,10 @@ USAGE
 
         spec+= 'RestartOption\t\t\t\t,{0}\n'.format(restartOption)
 
-        if hmm:
+        if hmm=="Yes":
             spec+= 'HMMOption\t\t\t\t,Yes\n'
+        elif hmm=="Only":
+            spec+= 'HMMOption\t\t\t\t,Only\n'
         else:
             spec+= 'HMMOption\t\t\t\t,No\n'
 
@@ -236,15 +227,17 @@ USAGE
             spec+= ',' + str(param)
         spec+= '\n'
 
-        if trueGenotypeFile is not None and os.path.isfile(trueGenotypeFile):
-            spec+= 'TrueGenotypeFile\t\t\t,{0}\n'.format(trueGenotypeFile)
+        if trueGenotypeFile is not None and os.path.isfile(trueGenotypeFile.name):
+            spec+= 'TrueGenotypeFile\t\t\t,{0}\n'.format(trueGenotypeFile.name)
         else:
             spec+= 'TrueGenotypeFile\t\t\t,None\n'
 
 
         # Write and close file
-        specFile = open(outputFile, 'w')
-        specFile.write(spec)
+        # specFile = open(outputFile, 'w')
+        with open(outputFile, 'w') as specFile:
+            specFile.write(spec)
+
         specFile.close()
 
         # Bye bye
