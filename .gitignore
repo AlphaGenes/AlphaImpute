@@ -1,6 +1,7 @@
 *.txt
 *.mod
 *.o
+*.i90
 *.dwarf
 AlphaImpute1.0
 GeneProbForAlphaImpute
