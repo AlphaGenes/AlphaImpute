@@ -9,12 +9,12 @@ FC:=ifort
 #FC:=gfortran
 
 # Options
-FFLAGS:=-O3 -m64 -openmp
+FFLAGS:=-O3 -m64 -openmp -fpp
 #FFLAGS:=-O3 -m64 -fopenmp -ffree-line-length-0
 
 all: executable
 
-debug: FFLAGS = -DDEBUG -g -O0 -openmp -check bounds
+debug: FFLAGS = -DDEBUG -g -O0 -openmp -check bounds -fpp
 #debug: FFLAGS =  -DDEBUG -g -ffree-line-length-0 -O0 -fopenmp
 debug: executable
 
