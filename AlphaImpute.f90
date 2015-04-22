@@ -14,6 +14,7 @@ program AlphaImpute
 !                           Genotype Probabilities have to be edited by hand
 !   * RestartOption=4 =>
 use Global
+use GlobalVariablesHmmMaCH
 implicit none
 
 call Titles
@@ -27,7 +28,7 @@ call FillInBasedOnOffspring
 call InternalEdit
 call MakeFiles
 
-if (HMMOption==3) then
+if (HMMOption==RUN_HMM_ONLY) then
     print*, ""
     print*, "Bypass calculation of probabilities and phasing"
 
@@ -61,10 +62,11 @@ endif
 if (PhaseTheDataOnly==0) then
     call ImputationManagement
 
-    print *,'DEBUG: Write results'
+    !print *,'DEBUG: Write results'
     call WriteOutResults
-    if (HMMOption/=3) call ModelRecomb
-    print *,'DEBUG: Final Checker'
+    !print*, 'DEBUG: Model Recombination'
+    if (HMMOption/=RUN_HMM_ONLY) call ModelRecomb
+    !print *,'DEBUG: Final Checker'
     if (TrueGenos1None0==1) call FinalChecker
     !call Cleaner
 endif
@@ -78,9 +80,10 @@ end program AlphaImpute
 subroutine ImputationManagement
 use Global
 use GlobalPedigree
+use GlobalVariablesHmmMaCH
 implicit none
 
-integer :: i,j,loop,dum
+integer :: i,j,k,loop,dum
 
 allocate(SireDam(0:nAnisP,2))
 SireDam=0
@@ -92,7 +95,7 @@ enddo
 
 ! WARNING: Need to discuss this part of code with John. Nonsense going on here!
 
-if (HMMOption==3) then ! Avoid any adulteration of genotypes with imputation subroutines
+if (HMMOption==RUN_HMM_ONLY) then ! Avoid any adulteration of genotypes with imputation subroutines
     !print*, 'DEBUG: Only HMM'
     !print*, 'DEBUG: Allocate memory for genotypes and haplotypes'
     allocate(ImputeGenos(0:nAnisP,nSnp))
@@ -157,13 +160,27 @@ else
             ! General imputation procedures
             call GeneralFillIn
 
-            if (HMMOption==2) call MaCHController
+            if (HMMOption==RUN_HMM_PREPHASE) Then
+                call MaCHController
+            else
+                if (HMMOption==RUN_HMM_YES) Then
+                    call MaCHController
+                    ! Copy phase from FulLHD in MaCH into ImputePhase
 
-            !if (HMMOption==3) then
-            !    ImputeGenos(:,:)=Genos(:,:)     ! Avoid any intoxication of genotypes with imputation subroutines
-            !    call MaCHController
-            !
-            !else
+                    do i=1,nAnisP
+                        do j=1,nSnp
+                            do k=1,2
+                                if (FullH(i,j,k)<0.001.and.FullH(i,j,k)>=0.0) Then
+                                    ImputePhase(i,j,k)=0
+                                elseif (FullH(i,j,k)>0.999.and.FullH(i,j,k)<=1.0) then
+                                    ImputePhase(i,j,k)=1
+                                else
+                                    ImputePhase(i,j,k)=9
+                                endif
+                            enddo
+                        enddo
+                    enddo
+                endif
                 print*, " "
                 print*, " ","Imputation of base animals completed"
                 do loop=1,InternalIterations
@@ -213,7 +230,7 @@ else
                     print*, " ","Internal haplotype library imputation completed"
                 enddo
                 call ManageWorkLeftRight
-            !endif
+            endif
         endif
 
         if (SexOpt==1) call EnsureHetGametic
@@ -527,11 +544,12 @@ read (1,*) dumC,RestartOption
 ! Whether to use a hidden Markov model (HMM) for genotype imputation
 ! HMMOption
 read (1,*) dumC,TmpHmmOption
-HMMOption=0
-if (trim(TmpHmmOption)=='No') HMMOption=1
-if (trim(TmpHmmOption)=='Yes') HMMOption=2
-if (trim(TmpHmmOption)=='Only') HMMOption=3
-if (HMMOption==0) then
+HMMOption=RUN_HMM_NULL
+if (trim(TmpHmmOption)=='No') HMMOption=RUN_HMM_NO
+if (trim(TmpHmmOption)=='Yes') HMMOption=RUN_HMM_YES
+if (trim(TmpHmmOption)=='Only') HMMOption=RUN_HMM_ONLY
+if (trim(TmpHmmOption)=='Prephase') HMMOption=RUN_HMM_PREPHASE
+if (HMMOption==RUN_HMM_NULL) then
     print*, "HMMOption not correctly specified"
     stop
 endif
@@ -1267,6 +1285,7 @@ open (unit=53,file="./Results/ImputePhaseHMM.txt",status="unknown")
 open (unit=54,file="./Results/ImputeGenotypesHMM.txt",status="unknown")
 
 
+!print*, 'DEBUG: output=0 [WriteOutResults]'
 if (OutOpt==0) then
 
     if (SexOpt==0) then
@@ -1376,6 +1395,7 @@ if (OutOpt==0) then
 
 else
 
+!print*, 'DEBUG: Unphase wrong alleles [WriteOutResults]'
     do i=1,nAnisP
         do j=1,nSnp
             if (ImputePhase(i,j,1)<0) ImputePhase(i,j,1)=9 
@@ -1447,7 +1467,7 @@ else
     ImputeGenos=TmpGenos
     ImputePhase=TmpPhase
     !REMOVE THIS WHEN HMM IS FINALISED
-    if (HMMOption/=3) then
+    if (HMMOption/=RUN_HMM_ONLY.and.HMMOption/=RUN_HMM_PREPHASE) then
         if (SexOpt==0) then
             if (BypassGeneProb==0) then 
                 call IterateGeneProbs
@@ -1459,7 +1479,9 @@ else
     endif
     !REMOVE THIS
 
-    if (HMMOption==3) then
+    if (HMMOption==RUN_HMM_ONLY.or.HMMOption==RUN_HMM_PREPHASE) then
+        !print*, 'DEBUG: Impute genotypes based on HMM genotypes probabilites [WriteOutResults]'
+
         nSnpIterate=nSnp
         allocate(ProbImputeGenos(0:nAnisP,nSnpIterate))
         allocate(ProbImputePhase(0:nAnisP,nSnpIterate,2))
@@ -1487,8 +1509,9 @@ else
                 if ((ProbImputeGenos(i,j)>0.999).and.(ProbImputeGenos(i,j)<1.00001)) ImputeGenos(i,j)=1
             enddo
         enddo
-
     endif
+
+    !print*, 'DEBUG: Write phase, genotypes and probabilities into files [WriteOutResults]'
 
     do i=GlobalExtraAnimals+1,nAnisP
          write (53,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') Id(i),ImputePhase(i,:,1)
@@ -1499,7 +1522,10 @@ else
          write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') Id(i),ProbImputePhase(i,:,2)
          write (41,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') Id(i),ProbImputeGenos(i,:)
     enddo
+
     if ((SexOpt==1).or.(BypassGeneProb==1)) then
+        !print*, 'DEBUG: Bypass genotype probabilities [WriteOutResults]'
+
         allocate(Maf(nSnpRaw))
         do j=1,nSnpRaw
             Maf(j)=sum(ProbImputeGenos(:,j))/(2*nAnisP)
@@ -1516,6 +1542,8 @@ else
         close(111)
     endif
 
+    !print*, 'DEBUG: Imputation Quality [WriteOutResults]'
+
     ImputationQuality(:,1)=sum(2*Maf(:))/nSnpRaw
     ImputationQuality(:,2)=0.0
     do i=GlobalExtraAnimals+1,nAnisP
@@ -1530,6 +1558,8 @@ else
         ImputationQuality(i,6)=float(nSnpRaw-count(ImputeGenos(i,:)==9))/nSnpRaw                    
         write (50,'(a20,20000f7.2)') Id(i),ImputationQuality(i,:)
     enddo
+
+    !print*, 'DEBUG: Write [WriteOutResults]'
 
     do j=1,nSnpRaw
         write (51,'(i10,20000f7.2)') j,float(((nAnisP-(GlobalExtraAnimals+1))+1)-count(ImputeGenos(GlobalExtraAnimals+1:nAnisP,j)==9))/((nAnisP-(GlobalExtraAnimals+1))+1)

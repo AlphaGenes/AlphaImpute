@@ -3,6 +3,12 @@
 module GlobalVariablesHmmMaCH
 implicit none
 
+integer, parameter :: RUN_HMM_NULL=0
+integer, parameter :: RUN_HMM_NO=1
+integer, parameter :: RUN_HMM_YES=2
+integer, parameter :: RUN_HMM_ONLY=3
+integer, parameter :: RUN_HMM_PREPHASE=4
+
 character(len=300) :: GenotypeFileName,CheckPhaseFileName,CheckGenoFileName
 integer :: nIndHmmMaCH,GlobalRoundHmm,nSnpHmm
 integer :: nHapInSubH,idum,useProcs,nRoundsHmm,HmmBurnInRound
@@ -105,8 +111,6 @@ do GlobalRoundHmm=1,nRoundsHmm
     ! Update transition probabilities of the HMM process
     call UpdateErrorRate(Theta)
 enddo
-write(*,*) ''
-write(*,*) 'Time: ', tT
 
 ! Average genotype probability of the different hmm processes
 !ProbImputeGenosHmm=ProbImputeGenosHmm/(nRoundsHmm-HmmBurnInRound)
