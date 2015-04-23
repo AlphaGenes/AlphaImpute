@@ -89,10 +89,11 @@ do GlobalRoundHmm=1,nRoundsHmm
 
     call ResetCrossovers
 
-    t1 = omp_get_wtime()
-
     ! Parallelise the HMM process in animals
-    !print*, 'DEBUG:: Begin paralellisation'
+#ifdef DEBUG
+        t1 = omp_get_wtime()
+        write(0,*) 'DEBUG:: Begin paralellisation [MaCHController]'
+#endif
     !$OMP PARALLEL DO DEFAULT(shared)
     !$!OMP DO 
     do i=1,nIndHmmMaCH
@@ -100,9 +101,11 @@ do GlobalRoundHmm=1,nRoundsHmm
     enddo
     !$!OMP END DO
     !$OMP END PARALLEL DO
-    t2 = omp_get_wtime()
-    tT = tT + (t2-t1)
-    !print*, 'DEBUG:: End paralellisation. Partial time:', t2-t1
+#ifdef DEBUG
+        t2 = omp_get_wtime()
+        tT = tT + (t2-t1)
+        write(0,*) 'DEBUG:: End paralellisation. Partial time:', t2-t1
+#endif
 
     Theta = 0.01
 
@@ -241,10 +244,11 @@ states = nHapInSubH*(nHapInSubH+1)/2
 allocate(ForwardProbs(states,nSnpHmm))
 allocate(SubH(nHapInSubH,nSnpHmm))
 
-
 ! Create vectors of random indexes
 ! Serial
-!print*, 'DEBUG:: Shuffle Individuals [MaCHForInd]'
+!#ifdef DEBUG
+!    write(0,*) 'DEBUG:: Shuffle Individuals [MaCHForInd]'
+!#endif
 !call RandomOrder(Shuffle1,nIndHmmMaCH,idum)
 !call RandomOrder(Shuffle2,nIndHmmMaCH,idum)
 
@@ -260,10 +264,14 @@ call ExtractTemplateHaps(CurrentInd,Shuffle1,Shuffle2)
 ! ... selecting pairs of haplotypes at random
 !call ExtractTemplateHapsByAnimals(CurrentInd,Shuffle1)
 
-!print*, 'DEBUG:: HMM Forward Algorithm [MaCHForInd]'
+#ifdef DEBUG
+    write(0,*) 'DEBUG:: HMM Forward Algorithm [MaCHForInd]'
+#endif
 call ForwardAlgorithm(CurrentInd)
 
-!print*, 'DEBUG:: Sample Chromosomes from the HMM model [MaCHForInd]'
+#ifdef DEBUG
+    write(0,*) 'DEBUG:: Sample Chromosomes from the HMM model [MaCHForInd]'
+#endif
 call SampleChromosomes(CurrentInd)
 
 ! WARNING: The idea of not to use the first HmmBurnInRound rounds suggests
@@ -284,7 +292,9 @@ call SampleChromosomes(CurrentInd)
 !       TotalCrossovers subroutines. According to MaCH code, they
 !       should go outside this subroutine and inside MaCHController.
 
-!print*, 'DEBUG:: Calculate genotype frequences [MaCHForInd]'
+#ifdef DEBUG
+    write(0,*) 'DEBUG:: Calculate genotype frequences [MaCHForInd]'
+#endif
 if (GlobalRoundHmm>HmmBurnInRound) then
     do i=1,nSnpHmm
         genotype = FullH(CurrentInd,i,1)+FullH(CurrentInd,i,2)
@@ -297,13 +307,17 @@ if (GlobalRoundHmm>HmmBurnInRound) then
 endif
 
 ! Cumulative genotype probabilities through hmm processes
-!print*, 'DEBUG:: Calculate genotype probabilities [MaCHForInd]'
+#ifdef DEBUG
+    write(0,*) 'DEBUG:: Calculate genotype probabilities [MaCHForInd]'
+#endif
 !if (GlobalRoundHmm>HmmBurnInRound) then
 !    ProbImputeGenosHmm(CurrentInd,:)=ProbImputeGenosHmm(CurrentInd,:)&
 !        +FullH(CurrentInd,:,1)+FullH(CurrentInd,:,2)
 !endif
 
-!print*, 'DEBUG:: Deallocate Forward variable and Haplotype Template [MaCHForInd]'
+#ifdef DEBUG
+    write(0,*) 'DEBUG:: Deallocate Forward variable and Haplotype Template [MaCHForInd]'
+#endif
 deallocate(ForwardProbs)
 deallocate(SubH)
 
@@ -751,7 +765,9 @@ j=1
 ! obtain the genotype of this individual in ConditionaOnData subroutine
 ! For j=1, ConditionaOnData will initialize the variable
 ! ForwardProbs(:,1) with the Prior Probabilities
-!print*, 'DEBUG:: Update forward variable with emission probabilities [ForwardAlgorithm]'
+#ifdef DEBUG
+    write(0,*) 'DEBUG:: Update forward variable with emission probabilities [ForwardAlgorithm]'
+#endif
 call ConditionOnData(CurrentInd,j)
 
 ! WARNING: This variable, Theta, should be considered as local as is
@@ -761,7 +777,9 @@ call ConditionOnData(CurrentInd,j)
 Theta=0.0
 
 PrecedingMarker=1
-!print*, 'DEBUG:: Calculate Forward variables [ForwardAlgorithm]'
+#ifdef DEBUG
+    write(0,*) 'DEBUG:: Calculate Forward variables [ForwardAlgorithm]'
+#endif
 do j=2,nSnpHmm
     ! Cumulative recombination fraction allows us to skip uninformative positions
     Theta=Theta+Thetas(j-1)-Theta*Thetas(j-1)
@@ -791,7 +809,10 @@ double precision,intent(in) :: Theta
 integer :: i,j,Index
 double precision :: Summer,Marginals(nHapInSubH),NoChange,OneChange,TwoChange
 
-!print*, 'DEBUG::  [Transpose]'
+#ifdef DEBUG
+    write(0,*) 'DEBUG: [Transpose]'
+#endif
+
 if (Theta==0.0) then
     ForwardProbs(:,CurrentMarker)=ForwardProbs(:,PrecedingMarker)
     return
@@ -803,7 +824,9 @@ Marginals(:)=0.0
 
 ! Calculate the sum of all forward variables and the marginal of a
 ! given state.
-!print*, 'DEBUG:: Calculate the acumulate sum of forward variables and the marginals [Transpose]'
+#ifdef DEBUG
+    write(0,*) 'DEBUG: Calculate the acumulate sum of forward variables and the marginals [Transpose]'
+#endif
 do i=1,nHapInSubH
     do j=1,i-1
         Index=Index+1
@@ -834,6 +857,9 @@ do i=1,nHapInSubH
     Marginals(i)=Marginals(i)+(ForwardProbs(Index,PrecedingMarker)*2.0)
 enddo
 
+#ifdef DEBUG
+    write(0,*) 'DEBUG: Calculate Probabilities of number of changes [Transpose]'
+#endif
 ! NOTE: to the transition probabilities:
 !   (1-Theta) is the probability that a haplotype does not change =>
 !       => Theta is the probability that a haplotype does change =>
@@ -841,7 +867,6 @@ enddo
 !          to a particular haplotype
 !
 ! Given those probabilities, then:
-!print*, 'DEBUG:: Calculate Probabilities of number of changes [Transpose]'
 !   * None hapltoyped have changed
 NoChange=(1.0-Theta)*(1.0-Theta)
 !   * Only one haplotype has changed
@@ -850,7 +875,9 @@ OneChange=(1.0-Theta)*Theta/nHapInSubH
 TwoChange=Summer*Theta*Theta/(nHapInSubH*nHapInSubH)
 
 !Automatically rescale likelihoods when they get too small
-!print*, 'DEBUG:: Rescale [Transpose]'
+#ifdef DEBUG
+    write(0,*) 'DEBUG: Rescale [Transpose]'
+#endif
 if (Summer < 1e-15) then
     NoChange=NoChange*1e30
     OneChange=OneChange*1e30
@@ -860,7 +887,9 @@ endif
 ! This final loop actually transposes the probabilities for each state,
 ! that is, calculates the final probabilities of getting a particular state.
 Index=0
-!print*, 'DEBUG:: Calculate the final probabilities [Transpose]'
+#ifdef DEBUG
+    write(0,*) 'DEBUG: Calculate the final probabilities [Transpose]'
+#endif
 do i=1,nHapInSubH
     do j=1,i-1
         Index=Index+1
@@ -1293,7 +1322,9 @@ HapCount=0
 ShuffleInd1=0
 ShuffleInd2=0
 
-!print*, 'DEBUG:: Create Haplotypes Template [ExtractTemplateHaps]'
+#ifdef DEBUG
+    write(0,*) 'DEBUG: Create Haplotypes Template [ExtractTemplateHaps]'
+#endif
 ! While the maximum number of haps in the template haplotypes set,
 ! H, is not reached...
 do while (HapCount<nHapInSubH)
@@ -1337,7 +1368,9 @@ integer :: HapCount, ShuffleInd
 HapCount=1
 ShuffleInd=0
 
-!print*, 'DEBUG:: Create Haplotypes Template [ExtractTemplateHaps]'
+#ifdef DEBUG
+    write(0,*) 'DEBUG:: Create Haplotypes Template [ExtractTemplateHaps]'
+#endif
 ! While the maximum number of haps in the template haplotypes set,
 ! H, is not reached...
 do while (HapCount<nHapInSubH)
