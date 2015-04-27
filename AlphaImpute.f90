@@ -276,10 +276,12 @@ else
     endif
 endif
 
-
 end subroutine ImputationManagement
 
+!#############################################################################################################################################################################################################################
+
 subroutine FromHMM2ImputePhase
+! Impute alleles from HMM dosage probabilities
 use Global
 use GlobalVariablesHmmMaCH
 use GlobalPedigree
@@ -302,10 +304,7 @@ do i=1,nAnisG
     enddo
 enddo
 
-
 end subroutine FromHMM2ImputePhase
-
-
 
 !#############################################################################################################################################################################################################################
 
