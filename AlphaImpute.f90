@@ -29,6 +29,9 @@ call InternalEdit
 call MakeFiles
 
 if (HMMOption==RUN_HMM_ONLY) then
+#ifdef DEBUG
+    write(0,*) 'DEBUG: HMM only'
+#endif
     print*, ""
     print*, "Bypass calculation of probabilities and phasing"
 
@@ -38,6 +41,9 @@ else
 
     if (SexOpt==0) then
         if (BypassGeneProb==0) then
+#ifdef DEBUG
+            write(0,*) 'DEBUG: Calculate Genotype Probabilites'
+#endif
             if (RestartOption<OPT_RESTART_PHASING) call GeneProbManagement
             if (RestartOption==OPT_RESTART_GENEPROB) then
                 print*, "Restart option 1 stops program after Geneprobs jobs have finished"
@@ -49,6 +55,9 @@ else
     endif
 
     if (ManagePhaseOn1Off0==1) then
+#ifdef DEBUG
+        write(0,*) 'DEBUG: Phase haplotypes with AlphaPhase'
+#endif
         if (RestartOption<OPT_RESTART_IMPUTATION) call PhasingManagement
         if (RestartOption==OPT_RESTART_PHASING) then
             print*, "Restart option 2 stops program after after Phasing has been managed"
@@ -78,8 +87,9 @@ if (PhaseTheDataOnly==0) then
 #ifdef DEBUG
     write(0,*) 'DEBUG: Model Recombination'
 #endif
-
-    if (HMMOption/=RUN_HMM_ONLY) call ModelRecomb
+    ! WARNING: Skip the modelling the recombination because it interferes with HMM propabilites
+    ! TODO:
+    if (HMMOption==RUN_HMM_NO) call ModelRecomb
 #ifdef DEBUG
     write(0,*) 'DEBUG: Final Checker'
 #endif
@@ -114,11 +124,20 @@ enddo
 
 if (HMMOption==RUN_HMM_ONLY) then ! Avoid any adulteration of genotypes with imputation subroutines
 #ifdef DEBUG
-        write(0,*) 'DEBUG: Only HMM'
-        write(0,*) 'DEBUG: Allocate memory for genotypes and haplotypes'
+    write(0,*) 'DEBUG: Allocate memory for genotypes and haplotypes'
 #endif
 
+    ! TODO: This hack avoid mem allocation problems with ImputeGenos and ImputePhase
+    !       up in the code: at InsteadOfGeneProb in MakeFiles subroutine.
+    !       Something has to be done with InsteadOfGeneProb cos' it is causing lots
+    !       of problems!!
+    if (allocated(ImputeGenos)) Then
+        deallocate(ImputeGenos)
+    endif
     allocate(ImputeGenos(0:nAnisP,nSnp))
+    if (allocated(ImputePhase)) Then
+        deallocate(ImputePhase)
+    endif
     allocate(ImputePhase(0:nAnisP,nSnp,2))
     ImputeGenos=9
     ImputePhase=9
@@ -192,24 +211,6 @@ else
             if (HMMOption==RUN_HMM_PREPHASE) Then
                 call MaCHController
             else
-                if (HMMOption==RUN_HMM_YES) Then
-                    call MaCHController
-                    ! Copy phase from FulLHD in MaCH into ImputePhase
-
-                    do i=1,nAnisP
-                        do j=1,nSnp
-                            do k=1,2
-                                if (FullH(i,j,k)<0.001.and.FullH(i,j,k)>=0.0) Then
-                                    ImputePhase(i,j,k)=0
-                                elseif (FullH(i,j,k)>0.999.and.FullH(i,j,k)<=1.0) then
-                                    ImputePhase(i,j,k)=1
-                                else
-                                    ImputePhase(i,j,k)=9
-                                endif
-                            enddo
-                        enddo
-                    enddo
-                endif
                 print*, " "
                 print*, " ","Imputation of base animals completed"
                 do loop=1,InternalIterations
@@ -259,6 +260,12 @@ else
                     print*, " ","Internal haplotype library imputation completed"
                 enddo
                 call ManageWorkLeftRight
+
+                if (HMMOption==RUN_HMM_YES) Then
+                    call MaCHController
+                    call FromHMM2ImputePhase
+                endif
+
             endif
         endif
 
@@ -271,6 +278,34 @@ endif
 
 
 end subroutine ImputationManagement
+
+subroutine FromHMM2ImputePhase
+use Global
+use GlobalVariablesHmmMaCH
+use GlobalPedigree
+
+implicit none
+
+integer :: i,j,k
+
+do i=1,nAnisG
+    do j=1,nSnp
+        do k=1,2
+            if (FullH(i,j,k)<0.001.and.FullH(i,j,k)>=0.0) Then
+                ImputePhase(i,j,k)=0
+            elseif (FullH(i,j,k)>0.999.and.FullH(i,j,k)<=1.0) then
+                ImputePhase(i,j,k)=1
+            else
+                ImputePhase(i,j,k)=9
+            endif
+        enddo
+    enddo
+enddo
+
+
+end subroutine FromHMM2ImputePhase
+
+
 
 !#############################################################################################################################################################################################################################
 
@@ -967,22 +1002,25 @@ if (RestartOption/=4) then
         print*, " "
         print*, " ","       Calculating genotype probabilities"
         JobsDone(:)=0
-        JDone(:)=0
-        if (RestartOption/=3) then
+        !JDone(:)=0
+
+        call system("rm -f ./IterateGeneProb/GeneProb*/GpDone.txt")
+        !if (RestartOption/=3) then
             do
                 do i=1,nProcessors
                     write (filout,'("./IterateGeneProb/GeneProb"i0,"/GpDone.txt")')i
                     inquire(file=trim(filout),exist=FileExists)
                     if (FileExists .eqv. .true.) then
-                        if (JDone(i)==0) print*, " ","      GeneProb job ",i," done"
+                        if (JobsDone(i)==0) print*, " ","      GeneProb job ",i," done"
                         JobsDone(i)=1
-                        JDone(i)=1
+                        !JDone(i)=1
                     endif
                 enddo
                 if (sum(JobsDone(:))==nProcessors) exit
             enddo
-        endif   
+        !endif
     else
+        print*, 'else'
         write (filout,'("cd IterateGeneProb/")')
         write(f,'(i0)') nProcessors
         write (109,*) trim(filout)
@@ -996,7 +1034,9 @@ if (RestartOption/=4) then
         call system("rm TempIterateGeneProb.sh")
     
         JobsDone(:)=0
-        if (RestartOption/=3) then  
+        call system("rm -f ./IterateGeneProb/GeneProb*/GpDone.txt")
+
+        !if (RestartOption/=3) then
             do
                 do i=1,nProcessors
                     write (filout,'("./IterateGeneProb/GeneProb"i0,"/GpDone.txt")')i
@@ -1009,7 +1049,7 @@ if (RestartOption/=4) then
                 call sleep(SleepParameter)
                 if (sum(JobsDone(:))==nProcessors) exit
             enddo
-        endif   
+        !endif
     endif
     
     close (109)
@@ -1022,8 +1062,8 @@ if (RestartOption/=4) then
             write (109,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ImputeGenos(i,:)
         enddo
         close (109) 
-        print*, "Restart option 3 stops program after Iterate Geneprob jobs have been submitted"
-        !stop
+        print*, "Restart option 3 stops program after Iterate Geneprob jobs have been finished"
+        stop
     endif
 endif
 
@@ -1411,7 +1451,7 @@ if (OutOpt==0) then
 else
 
 #ifdef DEBUG
-        write(0,*) 'DEBUG: Unphase wrong alleles [WriteOutResults]'
+    write(0,*) 'DEBUG: Unphase wrong alleles [WriteOutResults]'
 #endif
     do i=1,nAnisP
         do j=1,nSnp
@@ -1484,7 +1524,7 @@ else
     ImputeGenos=TmpGenos
     ImputePhase=TmpPhase
     !REMOVE THIS WHEN HMM IS FINALISED
-    if (HMMOption/=RUN_HMM_ONLY.and.HMMOption/=RUN_HMM_PREPHASE) then
+    if (HMMOption==RUN_HMM_NO) then
         if (SexOpt==0) then
             if (BypassGeneProb==0) then 
                 call IterateGeneProbs
@@ -1496,18 +1536,20 @@ else
     endif
     !REMOVE THIS
 
-    if (HMMOption==RUN_HMM_ONLY.or.HMMOption==RUN_HMM_PREPHASE) then
-        !print*, 'DEBUG: Impute genotypes based on HMM genotypes probabilites [WriteOutResults]'
+    !if (HMMOption==RUN_HMM_ONLY.or.HMMOption==RUN_HMM_PREPHASE) then
+    if (HMMOption/=RUN_HMM_NO) then
 #ifdef DEBUG
-            write(0,*) 'DEBUG: Impute genotypes based on HMM genotypes probabilites [WriteOutResults]'
+        write(0,*) 'DEBUG: Impute genotypes based on HMM genotypes probabilites [WriteOutResults]'
 #endif
 
-        nSnpIterate=nSnp
-        allocate(ProbImputeGenos(0:nAnisP,nSnpIterate))
-        allocate(ProbImputePhase(0:nAnisP,nSnpIterate,2))
-        allocate(Maf(nSnpIterate))
-        ProbImputeGenos(1:nAnisP,:)=-9.0
-        ProbImputePhase(1:nAnisP,:,:)=-9.0
+        if (HMMOption/=RUN_HMM_NO) Then
+            nSnpIterate=nSnp
+            allocate(ProbImputeGenos(0:nAnisP,nSnpIterate))
+            allocate(ProbImputePhase(0:nAnisP,nSnpIterate,2))
+            allocate(Maf(nSnpIterate))
+            ProbImputeGenos(1:nAnisP,:)=-9.0
+            ProbImputePhase(1:nAnisP,:,:)=-9.0
+        endif
         l=0 
         do j=1,nSnpRaw
             if (SnpIncluded(j)==1) then
@@ -1532,7 +1574,7 @@ else
     endif
 
 #ifdef DEBUG
-        write(0,*) 'DEBUG: Write phase, genotypes and probabilities into files [WriteOutResults]'
+    write(0,*) 'DEBUG: Write phase, genotypes and probabilities into files [WriteOutResults]'
 #endif
     do i=GlobalExtraAnimals+1,nAnisP
          write (53,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') Id(i),ImputePhase(i,:,1)
@@ -1546,9 +1588,12 @@ else
 
     if ((SexOpt==1).or.(BypassGeneProb==1)) then
 #ifdef DEBUG
-            write(0,*) 'DEBUG: Bypass genotype probabilities [WriteOutResults]'
+        write(0,*) 'DEBUG: Bypass genotype probabilities [WriteOutResults]'
 #endif
 
+        if (HMMOption/=RUN_HMM_NO) Then
+            deallocate(Maf)
+        endif
         allocate(Maf(nSnpRaw))
         do j=1,nSnpRaw
             Maf(j)=sum(ProbImputeGenos(:,j))/(2*nAnisP)
@@ -1566,7 +1611,7 @@ else
     endif
 
 #ifdef DEBUG
-        write(0,*) 'DEBUG: Imputation Quality [WriteOutResults]'
+    write(0,*) 'DEBUG: Imputation Quality [WriteOutResults]'
 #endif
 
     ImputationQuality(:,1)=sum(2*Maf(:))/nSnpRaw
@@ -1585,7 +1630,7 @@ else
     enddo
 
 #ifdef DEBUG
-        write(0,*) 'DEBUG: Write [WriteOutResults]'
+    write(0,*) 'DEBUG: Write [WriteOutResults]'
 #endif
 
     do j=1,nSnpRaw
@@ -5681,6 +5726,12 @@ implicit none
 character(len=300), intent(in) :: genosFileName
 integer :: i,j,Temp(nSnp)
 
+! TODO: This hack avoids mem allocation problems with Genos allocated
+!       somewhere else up in the code (ReadInData). Should be improved
+
+if (allocated(Genos)) then
+    deallocate(Genos)
+endif
 allocate(Genos(0:nAnisG,nSnp))
 Genos(0,:)=9
 
