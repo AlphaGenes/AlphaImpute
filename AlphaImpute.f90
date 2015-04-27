@@ -192,24 +192,6 @@ else
             if (HMMOption==RUN_HMM_PREPHASE) Then
                 call MaCHController
             else
-                if (HMMOption==RUN_HMM_YES) Then
-                    call MaCHController
-                    ! Copy phase from FulLHD in MaCH into ImputePhase
-
-                    do i=1,nAnisP
-                        do j=1,nSnp
-                            do k=1,2
-                                if (FullH(i,j,k)<0.001.and.FullH(i,j,k)>=0.0) Then
-                                    ImputePhase(i,j,k)=0
-                                elseif (FullH(i,j,k)>0.999.and.FullH(i,j,k)<=1.0) then
-                                    ImputePhase(i,j,k)=1
-                                else
-                                    ImputePhase(i,j,k)=9
-                                endif
-                            enddo
-                        enddo
-                    enddo
-                endif
                 print*, " "
                 print*, " ","Imputation of base animals completed"
                 do loop=1,InternalIterations
@@ -259,6 +241,12 @@ else
                     print*, " ","Internal haplotype library imputation completed"
                 enddo
                 call ManageWorkLeftRight
+
+                if (HMMOption==RUN_HMM_YES) Then
+                    call MaCHController
+                    call FromHMM2ImputePhase
+                endif
+
             endif
         endif
 
@@ -271,6 +259,34 @@ endif
 
 
 end subroutine ImputationManagement
+
+subroutine FromHMM2ImputePhase
+use Global
+use GlobalVariablesHmmMaCH
+use GlobalPedigree
+
+implicit none
+
+integer :: i,j,k
+
+do i=1,nAnisG
+    do j=1,nSnp
+        do k=1,2
+            if (FullH(i,j,k)<0.001.and.FullH(i,j,k)>=0.0) Then
+                ImputePhase(i,j,k)=0
+            elseif (FullH(i,j,k)>0.999.and.FullH(i,j,k)<=1.0) then
+                ImputePhase(i,j,k)=1
+            else
+                ImputePhase(i,j,k)=9
+            endif
+        enddo
+    enddo
+enddo
+
+
+end subroutine FromHMM2ImputePhase
+
+
 
 !#############################################################################################################################################################################################################################
 
