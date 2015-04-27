@@ -3,6 +3,10 @@
 module Global
 implicit none
 
+integer, parameter :: OPT_RESTART_ALL=0
+integer, parameter :: OPT_RESTART_GENEPROB=1
+integer, parameter :: OPT_RESTART_PHASING=2
+integer, parameter :: OPT_RESTART_IMPUTATION=3
 
 integer,parameter :: WindowsLinux=0     !If 1 then compile for Windows / If 0 then compile for Linux
 
