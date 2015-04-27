@@ -29,6 +29,9 @@ call InternalEdit
 call MakeFiles
 
 if (HMMOption==RUN_HMM_ONLY) then
+#ifdef DEBUG
+    write(0,*) 'DEBUG: HMM only'
+#endif
     print*, ""
     print*, "Bypass calculation of probabilities and phasing"
 
@@ -38,6 +41,9 @@ else
 
     if (SexOpt==0) then
         if (BypassGeneProb==0) then
+#ifdef DEBUG
+            write(0,*) 'DEBUG: Calculate Genotype Probabilites'
+#endif
             if (RestartOption<OPT_RESTART_PHASING) call GeneProbManagement
             if (RestartOption==OPT_RESTART_GENEPROB) then
                 print*, "Restart option 1 stops program after Geneprobs jobs have finished"
@@ -49,6 +55,9 @@ else
     endif
 
     if (ManagePhaseOn1Off0==1) then
+#ifdef DEBUG
+        write(0,*) 'DEBUG: Phase haplotypes with AlphaPhase'
+#endif
         if (RestartOption<OPT_RESTART_IMPUTATION) call PhasingManagement
         if (RestartOption==OPT_RESTART_PHASING) then
             print*, "Restart option 2 stops program after after Phasing has been managed"
@@ -1437,7 +1446,7 @@ if (OutOpt==0) then
 else
 
 #ifdef DEBUG
-        write(0,*) 'DEBUG: Unphase wrong alleles [WriteOutResults]'
+    write(0,*) 'DEBUG: Unphase wrong alleles [WriteOutResults]'
 #endif
     do i=1,nAnisP
         do j=1,nSnp
@@ -1560,7 +1569,7 @@ else
     endif
 
 #ifdef DEBUG
-        write(0,*) 'DEBUG: Write phase, genotypes and probabilities into files [WriteOutResults]'
+    write(0,*) 'DEBUG: Write phase, genotypes and probabilities into files [WriteOutResults]'
 #endif
     do i=GlobalExtraAnimals+1,nAnisP
          write (53,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') Id(i),ImputePhase(i,:,1)
@@ -1597,7 +1606,7 @@ else
     endif
 
 #ifdef DEBUG
-        write(0,*) 'DEBUG: Imputation Quality [WriteOutResults]'
+    write(0,*) 'DEBUG: Imputation Quality [WriteOutResults]'
 #endif
 
     ImputationQuality(:,1)=sum(2*Maf(:))/nSnpRaw
@@ -1616,7 +1625,7 @@ else
     enddo
 
 #ifdef DEBUG
-        write(0,*) 'DEBUG: Write [WriteOutResults]'
+    write(0,*) 'DEBUG: Write [WriteOutResults]'
 #endif
 
     do j=1,nSnpRaw

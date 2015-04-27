@@ -14,8 +14,12 @@ FFLAGS:=-O3 -m64 -openmp -fpp
 
 all: executable
 
-debug: FFLAGS = -DDEBUG -g -O0 -openmp -check bounds -fpp
-#debug: FFLAGS =  -DDEBUG -g -ffree-line-length-0 -O0 -fopenmp
+ifeq ($(DEBUG),) # If DEBUG option is not set
+    DEBUG:=0
+endif
+
+debug: FFLAGS = -DDEBUG=${DEBUG} -g -O0 -openmp -check bounds -fpp
+#debug: FFLAGS =  -DDEBUG=${DEBUG} -g -ffree-line-length-0 -O0 -fopenmp
 debug: executable
 
 OBJS:=global.o par_zig_mod.o random.o hmm.o
