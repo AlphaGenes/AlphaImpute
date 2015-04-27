@@ -1002,22 +1002,25 @@ if (RestartOption/=4) then
         print*, " "
         print*, " ","       Calculating genotype probabilities"
         JobsDone(:)=0
-        JDone(:)=0
-        if (RestartOption/=3) then
+        !JDone(:)=0
+
+        call system("rm -f ./IterateGeneProb/GeneProb*/GpDone.txt")
+        !if (RestartOption/=3) then
             do
                 do i=1,nProcessors
                     write (filout,'("./IterateGeneProb/GeneProb"i0,"/GpDone.txt")')i
                     inquire(file=trim(filout),exist=FileExists)
                     if (FileExists .eqv. .true.) then
-                        if (JDone(i)==0) print*, " ","      GeneProb job ",i," done"
+                        if (JobsDone(i)==0) print*, " ","      GeneProb job ",i," done"
                         JobsDone(i)=1
-                        JDone(i)=1
+                        !JDone(i)=1
                     endif
                 enddo
                 if (sum(JobsDone(:))==nProcessors) exit
             enddo
-        endif   
+        !endif
     else
+        print*, 'else'
         write (filout,'("cd IterateGeneProb/")')
         write(f,'(i0)') nProcessors
         write (109,*) trim(filout)
@@ -1031,7 +1034,9 @@ if (RestartOption/=4) then
         call system("rm TempIterateGeneProb.sh")
     
         JobsDone(:)=0
-        if (RestartOption/=3) then  
+        call system("rm -f ./IterateGeneProb/GeneProb*/GpDone.txt")
+
+        !if (RestartOption/=3) then
             do
                 do i=1,nProcessors
                     write (filout,'("./IterateGeneProb/GeneProb"i0,"/GpDone.txt")')i
@@ -1044,7 +1049,7 @@ if (RestartOption/=4) then
                 call sleep(SleepParameter)
                 if (sum(JobsDone(:))==nProcessors) exit
             enddo
-        endif   
+        !endif
     endif
     
     close (109)
@@ -1057,7 +1062,7 @@ if (RestartOption/=4) then
             write (109,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ImputeGenos(i,:)
         enddo
         close (109) 
-        print*, "Restart option 3 stops program after Iterate Geneprob jobs have been submitted"
+        print*, "Restart option 3 stops program after Iterate Geneprob jobs have been finished"
         stop
     endif
 endif
