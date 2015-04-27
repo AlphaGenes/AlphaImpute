@@ -78,8 +78,9 @@ if (PhaseTheDataOnly==0) then
 #ifdef DEBUG
     write(0,*) 'DEBUG: Model Recombination'
 #endif
-
-    if (HMMOption/=RUN_HMM_ONLY) call ModelRecomb
+    ! WARNING: Skip the modelling the recombination because it interferes with HMM propabilites
+    ! TODO:
+    if (HMMOption==RUN_HMM_NO) call ModelRecomb
 #ifdef DEBUG
     write(0,*) 'DEBUG: Final Checker'
 #endif
@@ -114,11 +115,20 @@ enddo
 
 if (HMMOption==RUN_HMM_ONLY) then ! Avoid any adulteration of genotypes with imputation subroutines
 #ifdef DEBUG
-        write(0,*) 'DEBUG: Only HMM'
-        write(0,*) 'DEBUG: Allocate memory for genotypes and haplotypes'
+    write(0,*) 'DEBUG: Allocate memory for genotypes and haplotypes'
 #endif
 
+    ! TODO: This hack avoid mem allocation problems with ImputeGenos and ImputePhase
+    !       up in the code: at InsteadOfGeneProb in MakeFiles subroutine.
+    !       Something has to be done with InsteadOfGeneProb cos' it is causing lots
+    !       of problems!!
+    if (allocated(ImputeGenos)) Then
+        deallocate(ImputeGenos)
+    endif
     allocate(ImputeGenos(0:nAnisP,nSnp))
+    if (allocated(ImputePhase)) Then
+        deallocate(ImputePhase)
+    endif
     allocate(ImputePhase(0:nAnisP,nSnp,2))
     ImputeGenos=9
     ImputePhase=9
@@ -1039,7 +1049,7 @@ if (RestartOption/=4) then
         enddo
         close (109) 
         print*, "Restart option 3 stops program after Iterate Geneprob jobs have been submitted"
-        !stop
+        stop
     endif
 endif
 
@@ -1500,7 +1510,7 @@ else
     ImputeGenos=TmpGenos
     ImputePhase=TmpPhase
     !REMOVE THIS WHEN HMM IS FINALISED
-    if (HMMOption/=RUN_HMM_ONLY.and.HMMOption/=RUN_HMM_PREPHASE) then
+    if (HMMOption==RUN_HMM_NO) then
         if (SexOpt==0) then
             if (BypassGeneProb==0) then 
                 call IterateGeneProbs
@@ -1512,18 +1522,20 @@ else
     endif
     !REMOVE THIS
 
-    if (HMMOption==RUN_HMM_ONLY.or.HMMOption==RUN_HMM_PREPHASE) then
-        !print*, 'DEBUG: Impute genotypes based on HMM genotypes probabilites [WriteOutResults]'
+    !if (HMMOption==RUN_HMM_ONLY.or.HMMOption==RUN_HMM_PREPHASE) then
+    if (HMMOption/=RUN_HMM_NO) then
 #ifdef DEBUG
-            write(0,*) 'DEBUG: Impute genotypes based on HMM genotypes probabilites [WriteOutResults]'
+        write(0,*) 'DEBUG: Impute genotypes based on HMM genotypes probabilites [WriteOutResults]'
 #endif
 
-        nSnpIterate=nSnp
-        allocate(ProbImputeGenos(0:nAnisP,nSnpIterate))
-        allocate(ProbImputePhase(0:nAnisP,nSnpIterate,2))
-        allocate(Maf(nSnpIterate))
-        ProbImputeGenos(1:nAnisP,:)=-9.0
-        ProbImputePhase(1:nAnisP,:,:)=-9.0
+        if (HMMOption/=RUN_HMM_NO) Then
+            nSnpIterate=nSnp
+            allocate(ProbImputeGenos(0:nAnisP,nSnpIterate))
+            allocate(ProbImputePhase(0:nAnisP,nSnpIterate,2))
+            allocate(Maf(nSnpIterate))
+            ProbImputeGenos(1:nAnisP,:)=-9.0
+            ProbImputePhase(1:nAnisP,:,:)=-9.0
+        endif
         l=0 
         do j=1,nSnpRaw
             if (SnpIncluded(j)==1) then
@@ -1562,9 +1574,12 @@ else
 
     if ((SexOpt==1).or.(BypassGeneProb==1)) then
 #ifdef DEBUG
-            write(0,*) 'DEBUG: Bypass genotype probabilities [WriteOutResults]'
+        write(0,*) 'DEBUG: Bypass genotype probabilities [WriteOutResults]'
 #endif
 
+        if (HMMOption/=RUN_HMM_NO) Then
+            deallocate(Maf)
+        endif
         allocate(Maf(nSnpRaw))
         do j=1,nSnpRaw
             Maf(j)=sum(ProbImputeGenos(:,j))/(2*nAnisP)
@@ -5697,6 +5712,12 @@ implicit none
 character(len=300), intent(in) :: genosFileName
 integer :: i,j,Temp(nSnp)
 
+! TODO: This hack avoids mem allocation problems with Genos allocated
+!       somewhere else up in the code (ReadInData). Should be improved
+
+if (allocated(Genos)) then
+    deallocate(Genos)
+endif
 allocate(Genos(0:nAnisG,nSnp))
 Genos(0,:)=9
 
