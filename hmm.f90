@@ -13,12 +13,13 @@ character(len=300) :: GenotypeFileName,CheckPhaseFileName,CheckGenoFileName
 integer :: nIndHmmMaCH,GlobalRoundHmm,nSnpHmm
 integer :: nHapInSubH,idum,useProcs,nRoundsHmm,HmmBurnInRound
 integer(kind=1),allocatable,dimension(:,:) :: GenosHmmMaCH,SubH
-integer(kind=1),allocatable,dimension(:,:,:) :: FullH
+integer(kind=1),allocatable,dimension(:,:,:) :: PhaseHmmMaCH,FullH
 integer,allocatable,dimension(:) :: ErrorUncertainty,ErrorMatches,ErrorMismatches,Crossovers,GlobalHmmHDInd
 double precision,allocatable,dimension(:) :: Thetas,Epsilon
 double precision,allocatable,dimension(:,:) :: ForwardProbs
 double precision,allocatable,dimension(:,:,:) :: Penetrance
 real,allocatable,dimension (:,:) :: ProbImputeGenosHmm
+real,allocatable,dimension (:,:,:) :: ProbImputePhaseHmm
 integer, allocatable :: frequence(:,:,:)
 !$omp threadprivate(ForwardProbs, SubH)
 
@@ -116,25 +117,26 @@ do GlobalRoundHmm=1,nRoundsHmm
 enddo
 
 ! Average genotype probability of the different hmm processes
-!ProbImputeGenosHmm=ProbImputeGenosHmm/(nRoundsHmm-HmmBurnInRound)
+ProbImputeGenosHmm=ProbImputeGenosHmm/(nRoundsHmm-HmmBurnInRound)
+ProbImputePhaseHmm=ProbImputePhaseHmm/(nRoundsHmm-HmmBurnInRound)
 
 ! Most likely genotype is the genotype that has been sampled most frequently
-do i=1,nIndHmmMaCH
-    do j=1,nSnpHmm
-        n2 = frequence(i,j,2)                           ! Homozygous: 2 case
-        n1 = frequence(i,j,1)                           ! Heterozygous
-        n0 = (nRoundsHmm-HmmBurnInRound) - n1 - n2      ! Homozygous: 0 case
-        if ((n0>n1).and.(n0>n2)) then
-            ProbImputeGenosHmm(i,j)=0
-        elseif (n1>n2) then
-            ProbImputeGenosHmm(i,j)=1
-        else
-            ProbImputeGenosHmm(i,j)=2
-        endif
-    enddo
-enddo
+!IndHmmMaCH
+!    do j=1,nSnpHmm
+!        n2 = frequence(i,j,2)                           ! Homozygous: 2 case
+!        n1 = frequence(i,j,1)                           ! Heterozygous
+!        n0 = (nRoundsHmm-HmmBurnInRound) - n1 - n2      ! Homozygous: 0 case
+!        if ((n0>n1).and.(n0>n2)) then
+!            ProbImputeGenosHmm(i,j)=0
+!        elseif (n1>n2) then
+!            ProbImputeGenosHmm(i,j)=1
+!        else
+!            ProbImputeGenosHmm(i,j)=2
+!        endif
+!    enddo
+!enddo
 
-deallocate(frequence)
+!deallocate(frequence)
 
 end subroutine MaCHController
 
@@ -158,6 +160,7 @@ nIndHmmMaCH=nAnisG
 ! Allocate a matrix to store the diploids of every Animal
 ! Template Diploids Library
 allocate(GenosHmmMaCH(nIndHmmMaCH,nSnp))
+allocate(PhaseHmmMaCH(nIndHmmMaCH,nSnp,2))
 
 ! Allocate memory to store Animals contributing to the Template
 ! Haplotype Library
@@ -171,6 +174,9 @@ allocate(GlobalHmmHDInd(nIndHmmMaCH))
 allocate(ProbImputeGenosHmm(nIndHmmMaCH,nSnp))
 ProbImputeGenosHmm=0.0
 
+allocate(ProbImputePhaseHmm(nIndHmmMaCH,nSnp,2))
+ProbImputePhaseHmm=0.0
+
 ! No animal has been HD genotyped YET
 ! WARNING: If this variable only stores 1 and 0, then its type should
 !          logical: GlobalHmmHDInd=.false.
@@ -183,6 +189,8 @@ do i=1,nAnisP
         k=k+1
         ! Add animal's diploid to the Diploids Library
         GenosHmmMaCH(k,:)=ImputeGenos(i,:)
+        PhaseHmmMaCH(k,:,1)=ImputePhase(i,:,1)
+        PhaseHmmMaCH(k,:,2)=ImputePhase(i,:,2)
         GlobalHmmID(k)=i
         ! Check if this animal is Highly Dense genotyped
         if ((float(count(GenosHmmMaCH(k,:)==9))/nSnp)<0.10) then
@@ -194,6 +202,8 @@ do i=1,nAnisP
         ! WARNING: This should have been previously done for ImputeGenos variable
         do j=1,nSnp
             if ((GenosHmmMaCH(k,j)<0).or.(GenosHmmMaCH(k,j)>2)) GenosHmmMaCH(k,j)=3
+            if (PhaseHmmMaCH(k,j,1)/=0 .or. PhaseHmmMaCH(k,j,1)/=1) PhaseHmmMaCH(k,j,1)=3
+            if (PhaseHmmMaCH(k,j,2)/=0 .or. PhaseHmmMaCH(k,j,2)/=1) PhaseHmmMaCH(k,j,1)=2
         enddo
     endif
 enddo
@@ -287,10 +297,6 @@ call SampleChromosomes(CurrentInd)
 !          independent from the previous call and so, HMM solutions
 !          given by ForwardAlgorithm and SampleChromosomes are also
 !          independent.
-!
-! TODO: Check where to implement UpdateThetas, UpdateErrorRate and
-!       TotalCrossovers subroutines. According to MaCH code, they
-!       should go outside this subroutine and inside MaCHController.
 
 #if DEBUG.EQ.1
     write(0,*) 'DEBUG: Calculate genotype frequences [MaCHForInd]'
@@ -310,10 +316,14 @@ endif
 #if DEBUG.EQ.1
     write(0,*) 'DEBUG: Calculate genotype probabilities [MaCHForInd]'
 #endif
-!if (GlobalRoundHmm>HmmBurnInRound) then
-!    ProbImputeGenosHmm(CurrentInd,:)=ProbImputeGenosHmm(CurrentInd,:)&
-!        +FullH(CurrentInd,:,1)+FullH(CurrentInd,:,2)
-!endif
+if (GlobalRoundHmm>HmmBurnInRound) then
+    ProbImputeGenosHmm(CurrentInd,:)=ProbImputeGenosHmm(CurrentInd,:)&
+        +FullH(CurrentInd,:,1)+FullH(CurrentInd,:,2)
+    ProbImputePhaseHmm(CurrentInd,:,1)=ProbImputePhaseHmm(CurrentInd,:,1)&
+        +FullH(CurrentInd,:,1)
+    ProbImputePhaseHmm(CurrentInd,:,2)=ProbImputePhaseHmm(CurrentInd,:,2)&
+        +FullH(CurrentInd,:,2)
+endif
 
 #if DEBUG.EQ.1
     write(0,*) 'DEBUG: Deallocate Forward variable and Haplotype Template [MaCHForInd]'
@@ -1035,7 +1045,7 @@ subroutine SetUpEquations
 use GlobalVariablesHmmMaCH
 implicit none
 
-integer :: i,j
+integer :: i,j,p
 double precision :: ran1
 
 ! ALLOCATE MEMORY
@@ -1091,9 +1101,6 @@ do i=1,nIndHmmMaCH      ! For every Genotyped Individual
             FullH(i,j,:)=1
         endif
 
-        ! WARNING: ran1 is a function that given a negative integer as
-        !          parameter, returns a random number between [0.0,1.0]
-        !          idum variable is set by the user in the Spec hmm param.
         ! Phase heterozygose case at random
         if (GenosHmmMaCH(i,j)==1) then
             if (ran1(idum)>=0.5) then
@@ -1118,7 +1125,6 @@ do i=1,nIndHmmMaCH      ! For every Genotyped Individual
                 FullH(i,j,2)=1
             endif
         endif
-
     enddo
 enddo
 

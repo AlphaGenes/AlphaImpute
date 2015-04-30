@@ -1319,7 +1319,9 @@ implicit none
 character(len=7) :: cm !use for formatting output - allows for up to 1 million SNPs
 integer :: i,j,k,l,WorkTmp(nSnpRaw)
 double precision :: ImputationQuality(nAnisP,6)
-character(len=300) :: TmpId 
+character(len=300) :: TmpId
+integer :: n0, n1, n2
+
 
 write(cm,'(I7)') nSnpRaw !for formatting
 cm = adjustl(cm)
@@ -1538,7 +1540,7 @@ else
     !if (HMMOption==RUN_HMM_ONLY.or.HMMOption==RUN_HMM_PREPHASE) then
     if (HMMOption/=RUN_HMM_NO) then
 #ifdef DEBUG
-        write(0,*) 'DEBUG: Impute genotypes based on HMM genotypes probabilites [WriteOutResults]'
+        write(0,*) 'DEBUG: Write HMM results [WriteOutResults]'
 #endif
 
         if (HMMOption/=RUN_HMM_NO) Then
@@ -1549,6 +1551,8 @@ else
             ProbImputeGenos(1:nAnisP,:)=-9.0
             ProbImputePhase(1:nAnisP,:,:)=-9.0
         endif
+
+        ! Feed Impute and Phase probabilites
         l=0 
         do j=1,nSnpRaw
             if (SnpIncluded(j)==1) then
@@ -1562,19 +1566,55 @@ else
         enddo
 
         ! Assign Genotypes based on genotype probabilities
-        do i=1,nAnisP
+        !do i=1,nAnisP
+        !    do j=1,nSnpIterate
+        !        if (ProbImputeGenos(i,j)==-9.0) ImputeGenos(i,j)=9
+        !        if (ProbImputeGenos(i,j)>1.999) ImputeGenos(i,j)=2
+        !        if (ProbImputeGenos(i,j)<0.0001) ImputeGenos(i,j)=0
+        !        if ((ProbImputeGenos(i,j)>0.999).and.(ProbImputeGenos(i,j)<1.00001)) ImputeGenos(i,j)=1
+        !    enddo
+        !enddo
+#ifdef DEBUG
+        write(0,*) 'DEBUG: Impute genotypes based on HMM genotypes probabilites [WriteOutResults]'
+#endif
+        ! Impute the most likely genotypes. (Most frequent genotype)
+        do i=1,nAnisG
             do j=1,nSnpIterate
-                if (ProbImputeGenos(i,j)==-9.0) ImputeGenos(i,j)=9
-                if (ProbImputeGenos(i,j)>1.999) ImputeGenos(i,j)=2
-                if (ProbImputeGenos(i,j)<0.0001) ImputeGenos(i,j)=0
-                if ((ProbImputeGenos(i,j)>0.999).and.(ProbImputeGenos(i,j)<1.00001)) ImputeGenos(i,j)=1
+                n2 = frequence(i,j,2)                           ! Homozygous: 2 case
+                n1 = frequence(i,j,1)                           ! Heterozygous
+                n0 = (nRoundsHmm-HmmBurnInRound) - n1 - n2      ! Homozygous: 0 case
+                if ((n0>n1).and.(n0>n2)) then
+                    ImputeGenos(GlobalHmmID(i),j)=0
+                elseif (n1>n2) then
+                    ImputeGenos(GlobalHmmID(i),j)=1
+                else
+                    ImputeGenos(GlobalHmmID(i),j)=2
+                endif
             enddo
         enddo
+#ifdef DEBUG
+        write(0,*) 'DEBUG: Impute alleles based on HMM phase probabilites [WriteOutResults]'
+#endif
+
+        ! Impute the most likely genotypes. (Most frequent genotype)
+        do i=1,nAnisG
+            do j=1,nSnpIterate
+                do l=1,2
+                    if (ProbImputePhaseHmm(GlobalHmmID(i),j,l)>0.5) then
+                        ImputePhase(GlobalHmmID(i),j,l)=1
+                    else
+                        ImputePhase(GlobalHmmID(i),j,l)=0
+                    endif
+                enddo
+            enddo
+        enddo
+
     endif
 
 #ifdef DEBUG
     write(0,*) 'DEBUG: Write phase, genotypes and probabilities into files [WriteOutResults]'
 #endif
+
     do i=GlobalExtraAnimals+1,nAnisP
          write (53,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') Id(i),ImputePhase(i,:,1)
          write (53,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') Id(i),ImputePhase(i,:,2)
@@ -1929,8 +1969,7 @@ do i=1,nAnisP
                                 ProbImputePhase(i,j,e)&
                                     =((1.0-(LengthVec(j)*Counter))*ImputePhase(PedId,j,GamA))&
                                     +(LengthVec(j)*Counter*ImputePhase(PedId,j,GamB))
-                                ProbImputeGenos(i,j)=ProbImputePhase(i,j,1)+ProbImputePhase(i,j,2)      
-
+                                ProbImputeGenos(i,j)=ProbImputePhase(i,j,1)+ProbImputePhase(i,j,2)
                             endif
                         endif       
                     endif
