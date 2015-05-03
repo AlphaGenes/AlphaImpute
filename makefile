@@ -9,7 +9,7 @@ FC:=ifort
 #FC:=gfortran
 
 # Options
-FFLAGS:=-O3 -m64 -openmp -fpp
+FFLAGS:=-O3 -m64 -fpp -openmp -openmp-link=static -static-intel
 #FFLAGS:=-O3 -m64 -fopenmp -ffree-line-length-0
 
 all: executable
