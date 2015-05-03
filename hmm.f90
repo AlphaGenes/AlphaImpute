@@ -1043,10 +1043,10 @@ subroutine SetUpEquations
 ! Li et al. 2010, Appendix
 
 use GlobalVariablesHmmMaCH
+use random
 implicit none
 
 integer :: i,j,p
-double precision :: ran1
 
 ! ALLOCATE MEMORY
 ! The full Template Haplotype Library, H (Li et al. 2010, Appendix)
