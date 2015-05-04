@@ -19,7 +19,7 @@ implicit none
 
 call Titles
 call ReadInParameterFile
-if (RestartOption<2) call MakeDirectories
+if (RestartOption<OPT_RESTART_PHASING) call MakeDirectories
 call CountInData
 call ReadInData
 call CheckParentage
@@ -605,7 +605,7 @@ endif
 !   * RestartOption=0 => Passes through the whole process: GenoProb,
 !                        Phasing and Imputing
 !   * RestartOption=1 => Makes only GenoProb
-!   * RestartOption=2 => Makes GenoProb and Phasing
+!   * RestartOption=2 => Makes only Phasing
 !   * RestartOption=3 => Makes only Imputation. This implies AlphaImpute
 !                        has to be run already in order to get GenoProb
 !                        done or Genotype Probabilities Genotype
@@ -774,27 +774,12 @@ implicit none
 
 integer :: i,JobsDone(nProcessors)
 character(len=300) :: filout,f
-logical :: FileExists
 
 open (unit=109,file="TempGeneProb.sh",status="unknown")
 
-if (PicVersion==.FALSE.) then         ! GeneProbForAlphaImpute algorithm to calculate probabilities of genotype
-    ! Create a bash script
-    do i=1,nProcessors
-        write (filout,'("cd GeneProb/GeneProb"i0)')i
-        write (109,*) trim(filout)
-        ! Call the external package GeneProbForAlphaImpute
-        if (GeneProbPresent==0) write (109,*) "nohup sh -c ""GeneProbForAlphaImpute > out 2>&1"" >/dev/null &"
-        if (GeneProbPresent==1) write (109,*) "nohup sh -c ""./GeneProbForAlphaImpute > out 2>&1"" >/dev/null &"    
-        write (109,*) "cd ../.."
-    enddo
-
-    print*, " "
-    print*, " ","       Calculating genotype probabilities"
-    close (109)
-    call system("chmod +x TempGeneProb.sh")
-    call system("./TempGeneProb.sh")
-else            ! PIC company algorithm to calculate probabilities of genotype
+! Create a bash script
+!if (PicVersion==.FALSE.) then         ! PIC company algorithm to calculate probabilities of genotype
+#if PIC==1
     write (filout,'("cd GeneProb/")')
     write(f,'(i0)') nProcessors
     write (109,*) trim(filout)
@@ -807,33 +792,64 @@ else            ! PIC company algorithm to calculate probabilities of genotype
     call system("chmod +x TempGeneProb.sh")
     call system("./TempGeneProb.sh")
     call system("rm TempGeneProb.sh")
+    ! Check that every process has finished before go on 
+    if (RestartOption/=OPT_RESTART_GENEPROB) Then call CheckGeneProbFinished(nProcessors)
+!else            ! GeneProbForAlphaImpute algorithm to calculate probabilities of genotype
+#else
+    do i=1,nProcessors
+        write (filout,'("cd GeneProb/GeneProb"i0)')i
+        write (109,*) trim(filout)
+        ! Call the external package GeneProbForAlphaImpute
+        if (GeneProbPresent==0) write (109,*) "GeneProbForAlphaImpute > out 2>&1 &"
+        if (GeneProbPresent==1) write (109,*) "./GeneProbForAlphaImpute > out 2>&1 &"
+        write (109,*) "cd ../.."
+    enddo
 
-endif
+    print*, " "
+    print*, " ","       Calculating genotype probabilities"
+    close (109)
+    call system("chmod +x TempGeneProb.sh")
+    call system("./TempGeneProb.sh")
+!endif
+#endif
 
 ! Check that every process has finished before go on 
-! if no PIC or if AlphaImpute goes on with imputation
-if (PicVersion==.FALSE. .or. RestartOption/=OPT_RESTART_GENEPROB) Then
-    JobsDone(:)=0
-    do
-        do i=1,nProcessors
-            write (filout,'("./GeneProb/GeneProb"i0,"/GpDone.txt")')i
-            inquire(file=trim(filout),exist=FileExists)
-            if (FileExists .eqv. .true.) then
-                if (JobsDone(i)==0) print*, " ","      GeneProb job ",i," done"
-                JobsDone(i)=1
-            endif
-        enddo
-        call sleep(SleepParameter)
-        if (sum(JobsDone(:))==nProcessors) exit
-    enddo
-endif
+call CheckGeneProbFinished(nProcessors)
+
 end subroutine GeneProbManagement
 
 !#############################################################################################################################################################################################################################
 
+subroutine CheckGeneProbFinished(nProcs)
+use Global
+implicit none
+
+integer, intent(in) :: nProcs
+character(len=300) :: filout
+integer :: i,JobsDone(nProcs)
+logical :: FileExists
+
+JobsDone(:)=0
+do
+    do i=1,nProcs
+        write (filout,'("./GeneProb/GeneProb"i0,"/GpDone.txt")')i
+        inquire(file=trim(filout),exist=FileExists)
+        if (FileExists .eqv. .true.) then
+            if (JobsDone(i)==0) print*, " ","      GeneProb job ",i," done"
+            JobsDone(i)=1
+        endif
+    enddo
+    call sleep(SleepParameter)
+    if (sum(JobsDone(:))==nProcs) exit
+enddo
+
+end subroutine CheckGeneProbFinished
+
 subroutine PhasingManagement
 use Global
 implicit none
+
+!#############################################################################################################################################################################################################################
 
 integer :: i,j,JobsDone(nPhaseInternal),StartJob,Tmp,StartNewJob,ProcUsed,JobsStarted(nPhaseInternal)
 character(len=300) :: filout,infile,f
@@ -841,7 +857,40 @@ logical :: FileExists
 
 print*, " "
 print*, " ","       Performing the phasing of the data"
-if (PicVersion==.FALSE.) then
+!if (PicVersion==.FALSE.) then
+#if PIC==1
+    open (unit=107,file="TempPhase1.sh",status="unknown")
+    write (filout,'("cd Phasing/")')
+    write(f,'(i0)') nPhaseInternal
+    write (107,*) trim(filout)
+    write(107,*) "cp ../../../SharedFiles/AlphaImpute_scripts/runSubmitPhasing.sh ."
+    write(107,*) "cp ../../../SharedFiles/AlphaImpute_scripts/submitPhasing.sh ."
+    write(107,'(a,a)') "./runSubmitPhasing.sh ",trim(f)
+    print*, " "
+    close (107)
+    call system("chmod +x TempPhase1.sh")
+    call system("./TempPhase1.sh")
+    call system("rm TempPhase1.sh")
+
+    ! Check that every process has finished before AlphaImpute goes on with imputation
+    if (RestartOption/=OPT_RESTART_PHASING) Then
+        JobsDone(:)=0
+        do
+            do i=1,nPhaseInternal
+                write (filout,'("./Phasing/Phase"i0,"/PhasingResults/Timer.txt")')i
+                inquire(file=trim(filout),exist=FileExists)
+                if ((FileExists .eqv. .true.).and.(JobsDone(i)==0)) then
+                    print*, " ","AlphaPhase job ",i," done"
+                    JobsDone(i)=1
+                endif
+            enddo
+            call sleep(SleepParameter)
+            if (sum(JobsDone(:))==nPhaseInternal) exit
+        enddo
+    endif
+
+!else
+#else
     open (unit=107,file="TempPhase1.sh",status="unknown")
     JobsStarted=0
     ProcUsed=0
@@ -849,8 +898,8 @@ if (PicVersion==.FALSE.) then
         ProcUsed=ProcUsed+1
         write (infile,'("cd Phasing/Phase"i0)')i
         write (107,*) trim(infile)
-        if (AlphaPhasePresent==0) write (107,*) "nohup sh -c ""AlphaPhase1.1 > out 2>&1"" >/dev/null &"
-        if (AlphaPhasePresent==1) write (107,*) "nohup sh -c ""./AlphaPhase1.1 > out 2>&1"" >/dev/null &"
+        if (AlphaPhasePresent==0) write (107,*) "AlphaPhase1.1 > out 2>&1 &"
+        if (AlphaPhasePresent==1) write (107,*) "./AlphaPhase1.1 > out 2>&1 &"
         write (107,*) "cd ../.."
         JobsStarted(i)=1
         if (ProcUsed==nPhaseInternal) exit
@@ -883,8 +932,8 @@ if (PicVersion==.FALSE.) then
                     open (unit=107,file=trim(filout),status="unknown")
                     write (infile,'("cd Phasing/Phase"i0)')Tmp
                     write (107,*) trim(infile)
-                    if (AlphaPhasePresent==0) write (107,*) "nohup sh -c ""AlphaPhase1.1 > out 2>&1"" >/dev/null &"
-                    if (AlphaPhasePresent==1) write (107,*) "nohup sh -c ""./AlphaPhase1.1 > out 2>&1"" >/dev/null &"
+                    if (AlphaPhasePresent==0) write (107,*) "AlphaPhase1.1 > out 2>&1 &"
+                    if (AlphaPhasePresent==1) write (107,*) "./AlphaPhase1.1 > out 2>&1 &"
                     close(107)
                     call system("chmod +x TempPhase*.sh")
                     call system("./" // filout)
@@ -895,37 +944,8 @@ if (PicVersion==.FALSE.) then
         if (sum(JobsDone(:))==nPhaseInternal) exit
     enddo
     call system("rm TempPhase*.sh")
-else
-    open (unit=107,file="TempPhase1.sh",status="unknown")
-    write (filout,'("cd Phasing/")')
-    write(f,'(i0)') nPhaseInternal
-    write (107,*) trim(filout)
-    write(107,*) "cp ../../../SharedFiles/AlphaImpute_scripts/runSubmitPhasing.sh ."
-    write(107,*) "cp ../../../SharedFiles/AlphaImpute_scripts/submitPhasing.sh ."
-    write(107,'(a,a)') "./runSubmitPhasing.sh ",trim(f)
-    print*, " "
-    close (107)
-    call system("chmod +x TempPhase1.sh")
-    call system("./TempPhase1.sh")
-    call system("rm TempPhase1.sh")
-
-    ! Check that every process has finished before AlphaImpute goes on with imputation
-    if (RestartOption/=OPT_RESTART_PHASING) Then
-        JobsDone(:)=0
-        do
-            do i=1,nPhaseInternal
-                write (filout,'("./Phasing/Phase"i0,"/PhasingResults/Timer.txt")')i
-                inquire(file=trim(filout),exist=FileExists)
-                if ((FileExists .eqv. .true.).and.(JobsDone(i)==0)) then
-                    print*, " ","AlphaPhase job ",i," done"
-                    JobsDone(i)=1
-                endif
-            enddo
-            call sleep(SleepParameter)
-            if (sum(JobsDone(:))==nPhaseInternal) exit
-        enddo
-    endif
-endif
+!endif
+#endif
 
 end subroutine PhasingManagement 
 
