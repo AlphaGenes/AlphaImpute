@@ -81,7 +81,7 @@ IMPLICIT NONE
      iv(j)=idum
      ran1=min(AM*iy,RNMX)
   RETURN
-END
+END function ran1
 
 !  (C) Copr. 1986-92 Numerical Recipes Software 6
 
