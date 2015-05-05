@@ -809,8 +809,8 @@ print*, " ","       Calculating genotype probabilities"
         write (filout,'("cd GeneProb/GeneProb"i0)')i
         write (109,*) trim(filout)
         ! Call the external package GeneProbForAlphaImpute
-        if (GeneProbPresent==0) write (109,*) "GeneProbForAlphaImpute > out 2>&1 &"
-        if (GeneProbPresent==1) write (109,*) "./GeneProbForAlphaImpute > out 2>&1 &"
+        if (GeneProbPresent==0) write (109,*) "nohup sh -c ""GeneProbForAlphaImpute > out 2>&1"" >/dev/null &"
+        if (GeneProbPresent==1) write (109,*) "nohup sh -c ""./GeneProbForAlphaImpute > out 2>&1"" >/dev/null &"
         write (109,*) "cd ../.."
     enddo
 
@@ -927,8 +927,8 @@ print*, " ","       Performing the phasing of the data"
         ProcUsed=ProcUsed+1
         write (infile,'("cd Phasing/Phase"i0)')i
         write (107,*) trim(infile)
-        if (AlphaPhasePresent==0) write (107,*) "AlphaPhase1.1 > out 2>&1 &"
-        if (AlphaPhasePresent==1) write (107,*) "./AlphaPhase1.1 > out 2>&1 &"
+        if (AlphaPhasePresent==0) write (107,*) "nohup sh -c ""AlphaPhase1.1 > out 2>&1"" >/dev/null &"
+        if (AlphaPhasePresent==1) write (107,*) "nohup sh -c ""./AlphaPhase1.1 > out 2>&1"" >/dev/null &"
         write (107,*) "cd ../.."
         JobsStarted(i)=1
         if (ProcUsed==nPhaseInternal) exit
@@ -961,8 +961,8 @@ print*, " ","       Performing the phasing of the data"
                     open (unit=107,file=trim(filout),status="unknown")
                     write (infile,'("cd Phasing/Phase"i0)')Tmp
                     write (107,*) trim(infile)
-                    if (AlphaPhasePresent==0) write (107,*) "AlphaPhase1.1 > out 2>&1 &"
-                    if (AlphaPhasePresent==1) write (107,*) "./AlphaPhase1.1 > out 2>&1 &"
+                    if (AlphaPhasePresent==0) write (107,*) "nohup sh -c ""AlphaPhase1.1 > out 2>&1"" >/dev/null &"
+                    if (AlphaPhasePresent==1) write (107,*) "nohup sh -c ""./AlphaPhase1.1 > out 2>&1"" >/dev/null &"
                     close(107)
                     call system("chmod +x TempPhase*.sh")
                     call system("./" // filout)
