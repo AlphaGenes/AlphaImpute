@@ -66,11 +66,11 @@ else
 #endif
         if (RestartOption<OPT_RESTART_IMPUTATION) call PhasingManagement
         if (RestartOption==OPT_RESTART_PHASING) then
-            if (PicVersion) Then
-                print*, "Restart option 2 stops program before Phasing has been managed"
-            else
-                print*, "Restart option 2 stops program after Phasing has been managed"
-            endif
+#if PIC==1 .or. PIC==2
+            print*, "Restart option 2 stops program before Phasing has been managed"
+#else
+            print*, "Restart option 2 stops program after Phasing has been managed"
+#endif
             stop
         endif
     endif
@@ -864,7 +864,7 @@ logical :: FileExists
 print*, " "
 print*, " ","       Performing the phasing of the data"
 !if (PicVersion==.FALSE.) then
-#if PIC==1
+#if CLUSTER==1
     open (unit=107,file="TempPhase1.sh",status="unknown")
     write (filout,'("cd Phasing/")')
     write(f,'(i0)') nPhaseInternal
@@ -897,12 +897,13 @@ print*, " ","       Performing the phasing of the data"
 
 !else
 
-#elif PIC==2
+#elif CLUSTER==2
     ! Use user specific script to run Genetoype Probabilities processes
     call system("./TempPhase1.sh")
 
     ! Check that every process has finished before AlphaImpute goes on with imputation
     if (RestartOption/=OPT_RESTART_PHASING) Then
+    print *, 'hola'
         JobsDone(:)=0
         do
             do i=1,nPhaseInternal
