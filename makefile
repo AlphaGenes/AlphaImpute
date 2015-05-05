@@ -1,7 +1,7 @@
 # General variables
 NAME:=AlphaImpute
 VERSION:=1
-SUBVERSION:=0.1
+SUBVERSION:=0.2
 PROGRAM:=${NAME}${VERSION}.${SUBVERSION}
 
 # Compiler
