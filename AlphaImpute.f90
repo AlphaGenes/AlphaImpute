@@ -799,7 +799,7 @@ print*, " ","       Calculating genotype probabilities"
 
 #elif CLUSTER==2
 ! Use user specific script to run Genetoype Probabilities processes
-    call system("./TempGeneProb.sh")
+    call system("./runGeneProb.sh")
     ! Check that every process has finished before going on
     if (RestartOption/=OPT_RESTART_GENEPROB) call CheckGeneProbFinished(nProcessors)
 
@@ -899,11 +899,10 @@ print*, " ","       Performing the phasing of the data"
 
 #elif CLUSTER==2
     ! Use user specific script to run Genetoype Probabilities processes
-    call system("./TempPhase1.sh")
+    call system("./runPhase.sh")
 
     ! Check that every process has finished before AlphaImpute goes on with imputation
     if (RestartOption/=OPT_RESTART_PHASING) Then
-    print *, 'hola'
         JobsDone(:)=0
         do
             do i=1,nPhaseInternal
