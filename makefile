@@ -8,19 +8,15 @@ PROGRAM:=${NAME}${VERSION}.${SUBVERSION}
 FC:=ifort
 #FC:=gfortran
 
+# Set precompilation options by default
+CLUSTER?=0
+DEBUG?=0
+
 # Options
-FFLAGS:=-O3 -m64 -openmp -fpp
+FFLAGS:=-O3 -m64 -openmp -fpp -DCLUSTER=$(CLUSTER)
 #FFLAGS:=-O3 -m64 -fopenmp -ffree-line-length-0
 
 all: executable
-
-ifeq ($(DEBUG),) # If DEBUG option is not set
-    DEBUG:=0
-endif
-
-ifeq ($(CLUSTER),) # If CLUSTER option is not set
-    CLUSTER:=0
-endif
 
 debug: FFLAGS = -DDEBUG=${DEBUG} -g -O0 -openmp -check bounds -fpp
 #debug: FFLAGS =  -DDEBUG=${DEBUG} -g -ffree-line-length-0 -O0 -fopenmp
@@ -32,11 +28,9 @@ OBJS:=global.o par_zig_mod.o random.o hmm.o
 	${FC} ${FFLAGS} -c $<
 
 executable: ${OBJS}
-	$(eval FFLAGS += -DCLUSTER=$(CLUSTER))
 	export OMP_STACKSIZE=" 128 M"
 	export OMP_NUM_THREADS=4
 	${FC} AlphaImpute.f90 ${OBJS} ${FFLAGS} -o ${PROGRAM}
-
 
 clean:
 	rm -f *.o *.mod *~ 
