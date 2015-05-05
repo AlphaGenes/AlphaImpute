@@ -776,6 +776,7 @@ implicit none
 
 integer :: i,JobsDone(nProcessors)
 character(len=300) :: filout,f
+logical :: FileExists
 
 open (unit=109,file="TempGeneProb.sh",status="unknown")
 
@@ -799,7 +800,13 @@ print*, " ","       Calculating genotype probabilities"
 
 #elif CLUSTER==2
 ! Use user specific script to run Genetoype Probabilities processes
-    call system("./runGeneProb.sh")
+    inquire(file="input.txt", exist=FileExists)   ! file_exists will be TRUE if the file
+                                                  ! exists and FALSE otherwise
+    if (FileExists) Then
+        call system("./runGeneProb.sh")
+    else
+        write(0,*) "'runGeneProb.sh' does not exists. Please, provide a valid script."
+    endif
     ! Check that every process has finished before going on
     if (RestartOption/=OPT_RESTART_GENEPROB) call CheckGeneProbFinished(nProcessors)
 
@@ -851,11 +858,11 @@ enddo
 
 end subroutine CheckGeneProbFinished
 
+!#############################################################################################################################################################################################################################
+
 subroutine PhasingManagement
 use Global
 implicit none
-
-!#############################################################################################################################################################################################################################
 
 integer :: i,j,JobsDone(nPhaseInternal),StartJob,Tmp,StartNewJob,ProcUsed,JobsStarted(nPhaseInternal)
 character(len=300) :: filout,infile,f
@@ -899,7 +906,13 @@ print*, " ","       Performing the phasing of the data"
 
 #elif CLUSTER==2
     ! Use user specific script to run Genetoype Probabilities processes
-    call system("./runPhase.sh")
+    inquire(file="input.txt", exist=FileExists)   ! file_exists will be TRUE if the file
+                                                  ! exists and FALSE otherwise
+    if (FileExists) Then
+        call system("./runPhase.sh")
+    else
+        write(0,*) "'runPhase.sh' does not exists. Please, provide a valid script."
+    endif
 
     ! Check that every process has finished before AlphaImpute goes on with imputation
     if (RestartOption/=OPT_RESTART_PHASING) Then
