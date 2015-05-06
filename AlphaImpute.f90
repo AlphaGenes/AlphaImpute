@@ -17,8 +17,6 @@ use Global
 use GlobalVariablesHmmMaCH
 implicit none
 
-logical :: shouldExitBefore
-
 call Titles
 call ReadInParameterFile
 if (RestartOption<OPT_RESTART_PHASING) call MakeDirectories
@@ -29,6 +27,12 @@ call FillInSnp
 call FillInBasedOnOffspring
 call InternalEdit
 call MakeFiles
+
+if (PreProcess) then
+    print*, "  "
+    print*, "  ","The program has preprocessed the data and now it stops"
+    stop
+endif
 
 if (HMMOption==RUN_HMM_ONLY) then
 #ifdef DEBUG
@@ -46,11 +50,19 @@ else
 #ifdef DEBUG
             write(0,*) 'DEBUG: Calculate Genotype Probabilites'
 #endif
-            if (RestartOption<OPT_RESTART_PHASING) call GeneProbManagement(shouldExitBefore)
-            if (RestartOption==OPT_RESTART_GENEPROB) then
-#if PIC==1 .or. PIC==2
-                print*, "Restart option 1 stops program before Geneprobs jobs have finished"
+
+#if CLUSTER==2
+            write(6,*) ""
+            write(6,*) "Restart option 1 stops program before Geneprobs jobs have been lunched"
+            stop
 #else
+            if (RestartOption<OPT_RESTART_PHASING) call GeneProbManagement
+#endif
+
+            if (RestartOption==OPT_RESTART_GENEPROB) then
+#if CLUSTER==1
+                print*, "Restart option 1 stops program before Geneprobs jobs have finished"
+#elif CLUSTER==0
                 print*, "Restart option 1 stops program after Geneprobs jobs have finished"
 #endif
                 stop
@@ -60,15 +72,25 @@ else
         endif
     endif
 
+
+
     if (ManagePhaseOn1Off0==1) then
 #ifdef DEBUG
         write(0,*) 'DEBUG: Phase haplotypes with AlphaPhase'
 #endif
-        if (RestartOption<OPT_RESTART_IMPUTATION) call PhasingManagement
-        if (RestartOption==OPT_RESTART_PHASING) then
-#if PIC==1 .or. PIC==2
-            print*, "Restart option 2 stops program before Phasing has been managed"
+
+#if CLUSTER==2
+            write(6,*) ""
+            write(6,*) "Restart option 1 stops program before Phasing has been managed"
+            stop
 #else
+        if (RestartOption<OPT_RESTART_IMPUTATION) call PhasingManagement
+#endif
+
+        if (RestartOption==OPT_RESTART_PHASING) then
+#if CLUSTER==1
+            print*, "Restart option 2 stops program before Phasing has been managed"
+#elif CLUSTER==0
             print*, "Restart option 2 stops program after Phasing has been managed"
 #endif
             stop
@@ -524,10 +546,10 @@ read (1,*) dumC,InternalIterations
 ! PreprocessDataOnly
 read (1,*) dumC,PreProcessOptions
 if (PreProcessOptions=="No") then
-    PreProcess=0
+    PreProcess=.FALSE.
 else
     if (PreProcessOptions=="Yes") then
-        PreProcess=1
+        PreProcess=.TRUE.
     else
         print*, "Stop - Preprocess of data option incorrectly specified"
         stop
@@ -798,17 +820,17 @@ print*, " ","       Calculating genotype probabilities"
     ! Check that every process has finished before going on
     if (RestartOption/=OPT_RESTART_GENEPROB) call CheckGeneProbFinished(nProcessors)
 
-#elif CLUSTER==2
-! Use user specific script to run Genetoype Probabilities processes
-    inquire(file="input.txt", exist=FileExists)   ! file_exists will be TRUE if the file
-                                                  ! exists and FALSE otherwise
-    if (FileExists) Then
-        call system("./runGeneProb.sh")
-    else
-        write(0,*) "'runGeneProb.sh' does not exists. Please, provide a valid script."
-    endif
-    ! Check that every process has finished before going on
-    if (RestartOption/=OPT_RESTART_GENEPROB) call CheckGeneProbFinished(nProcessors)
+!#elif CLUSTER==2
+!! Use user specific script to run Genetoype Probabilities processes
+!    inquire(file="input.txt", exist=FileExists)   ! file_exists will be TRUE if the file
+!                                                  ! exists and FALSE otherwise
+!    if (FileExists) Then
+!        call system("./runGeneProb.sh")
+!    else
+!        write(0,*) "'runGeneProb.sh' does not exists. Please, provide a valid script."
+!    endif
+!    ! Check that every process has finished before going on
+!    if (RestartOption/=OPT_RESTART_GENEPROB) call CheckGeneProbFinished(nProcessors)
 
 #else
 ! Create bash script for run GeneProb subprocesses
@@ -904,32 +926,32 @@ print*, " ","       Performing the phasing of the data"
 
 !else
 
-#elif CLUSTER==2
-    ! Use user specific script to run Genetoype Probabilities processes
-    inquire(file="input.txt", exist=FileExists)   ! file_exists will be TRUE if the file
-                                                  ! exists and FALSE otherwise
-    if (FileExists) Then
-        call system("./runPhase.sh")
-    else
-        write(0,*) "'runPhase.sh' does not exists. Please, provide a valid script."
-    endif
-
-    ! Check that every process has finished before AlphaImpute goes on with imputation
-    if (RestartOption/=OPT_RESTART_PHASING) Then
-        JobsDone(:)=0
-        do
-            do i=1,nPhaseInternal
-                write (filout,'("./Phasing/Phase"i0,"/PhasingResults/Timer.txt")')i
-                inquire(file=trim(filout),exist=FileExists)
-                if ((FileExists .eqv. .true.).and.(JobsDone(i)==0)) then
-                    print*, " ","AlphaPhase job ",i," done"
-                    JobsDone(i)=1
-                endif
-            enddo
-            call sleep(SleepParameter)
-            if (sum(JobsDone(:))==nPhaseInternal) exit
-        enddo
-    endif
+!#elif CLUSTER==2
+!    ! Use user specific script to run Genetoype Probabilities processes
+!    inquire(file="input.txt", exist=FileExists)   ! file_exists will be TRUE if the file
+!                                                  ! exists and FALSE otherwise
+!    if (FileExists) Then
+!        call system("./runPhase.sh")
+!    else
+!        write(0,*) "'runPhase.sh' does not exists. Please, provide a valid script."
+!    endif
+!
+!    ! Check that every process has finished before AlphaImpute goes on with imputation
+!    if (RestartOption/=OPT_RESTART_PHASING) Then
+!        JobsDone(:)=0
+!        do
+!            do i=1,nPhaseInternal
+!                write (filout,'("./Phasing/Phase"i0,"/PhasingResults/Timer.txt")')i
+!                inquire(file=trim(filout),exist=FileExists)
+!                if ((FileExists .eqv. .true.).and.(JobsDone(i)==0)) then
+!                    print*, " ","AlphaPhase job ",i," done"
+!                    JobsDone(i)=1
+!                endif
+!            enddo
+!            call sleep(SleepParameter)
+!            if (sum(JobsDone(:))==nPhaseInternal) exit
+!        enddo
+!    endif
 
 #else
     open (unit=107,file="TempPhase1.sh",status="unknown")
@@ -5093,12 +5115,6 @@ do i=1,nProcessors
     write (filout,'("GeneProb"i0)')i
     if (GeneProbPresent==1) call system ("cp GeneProbForAlphaImpute GeneProb/" // filout)
 enddo
-
-if (PreProcess==1) then
-    print*, "  "
-    print*, "  ","The program has preprocessed the data and now it stops"
-    stop    
-endif
 
 end subroutine MakeFiles
 
