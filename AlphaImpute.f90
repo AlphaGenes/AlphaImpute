@@ -51,13 +51,15 @@ else
             write(0,*) 'DEBUG: Calculate Genotype Probabilites'
 #endif
 
+            if (RestartOption<OPT_RESTART_PHASING) Then
 #if CLUSTER==2
-            write(6,*) ""
-            write(6,*) "Restart option 1 stops program before Geneprobs jobs have been lunched"
-            stop
+                write(6,*) ""
+                write(6,*) "Restart option 1 stops program before Geneprobs jobs have been launched"
+                stop
 #else
-            if (RestartOption<OPT_RESTART_PHASING) call GeneProbManagement
+                 call GeneProbManagement
 #endif
+            endif
 
             if (RestartOption==OPT_RESTART_GENEPROB) then
 #if CLUSTER==1
@@ -79,13 +81,15 @@ else
         write(0,*) 'DEBUG: Phase haplotypes with AlphaPhase'
 #endif
 
+        if (RestartOption<OPT_RESTART_IMPUTATION) Then
 #if CLUSTER==2
             write(6,*) ""
             write(6,*) "Restart option 1 stops program before Phasing has been managed"
             stop
 #else
-        if (RestartOption<OPT_RESTART_IMPUTATION) call PhasingManagement
+            call PhasingManagement
 #endif
+        endif
 
         if (RestartOption==OPT_RESTART_PHASING) then
 #if CLUSTER==1
@@ -1064,78 +1068,80 @@ do i=1,nProcessors
     write (108,*) "EndSnp       ,",GpIndex(i,2) 
     close(108)
     write (filout,'("GeneProb"i0)')i
-    if(PicVersion==.FALSE.) call system ("cp GeneProbForAlphaImpute IterateGeneProb/" // filout)
+#if CLUSTER!=1
+    call system ("cp GeneProbForAlphaImpute IterateGeneProb/" // filout)
+#endif
 enddo   
 
 open (unit=109,file="TempIterateGeneProb.sh",status="unknown")
 
 if (RestartOption/=4) then
-    if (PicVersion==.FALSE.) then
-        do i=1,nProcessors
-            write (filout,'("cd IterateGeneProb/GeneProb"i0)')i
-            write (109,*) trim(filout) 
-            if (GeneProbPresent==0) write (109,*) "nohup sh -c ""GeneProbForAlphaImpute > out 2>&1"" >/dev/null &"
-            if (GeneProbPresent==1) write (109,*) "nohup sh -c ""./GeneProbForAlphaImpute > out 2>&1"" >/dev/null &"
-            write (109,*) "cd ../.."
-            call flush(109)
-        enddo
-        close(109)
-        call system("chmod +x TempIterateGeneProb.sh")
-        call system("./TempIterateGeneProb.sh")
-    
-        print*, " "
-        print*, " ","       Calculating genotype probabilities"
-        JobsDone(:)=0
-        !JDone(:)=0
+    !if (PicVersion==.FALSE.) then
+#if CLUSTER==0
+    do i=1,nProcessors
+        write (filout,'("cd IterateGeneProb/GeneProb"i0)')i
+        write (109,*) trim(filout)
+        if (GeneProbPresent==0) write (109,*) "nohup sh -c ""GeneProbForAlphaImpute > out 2>&1"" >/dev/null &"
+        if (GeneProbPresent==1) write (109,*) "nohup sh -c ""./GeneProbForAlphaImpute > out 2>&1"" >/dev/null &"
+        write (109,*) "cd ../.."
+        call flush(109)
+    enddo
+    close(109)
+    call system("chmod +x TempIterateGeneProb.sh")
+    call system("./TempIterateGeneProb.sh")
 
-        call system("rm -f ./IterateGeneProb/GeneProb*/GpDone.txt")
-        !if (RestartOption/=3) then
+    print*, " "
+    print*, " ","       Calculating genotype probabilities"
+    JobsDone(:)=0
+    !JDone(:)=0
+
+    call system("rm -f ./IterateGeneProb/GeneProb*/GpDone.txt")
+    !if (RestartOption/=3) then
+    do
+        do i=1,nProcessors
+            write (filout,'("./IterateGeneProb/GeneProb"i0,"/GpDone.txt")')i
+            inquire(file=trim(filout),exist=FileExists)
+            if (FileExists .eqv. .true.) then
+                if (JobsDone(i)==0) print*, " ","      GeneProb job ",i," done"
+                JobsDone(i)=1
+                !JDone(i)=1
+            endif
+        enddo
+        if (sum(JobsDone(:))==nProcessors) exit
+    enddo
+    !endif
+#elif CLUSTER==1
+    write (filout,'("cd IterateGeneProb/")')
+    write(f,'(i0)') nProcessors
+    write (109,*) trim(filout)
+    write(109,*) "cp ../../../SharedFiles/AlphaImpute_scripts/runSubmitGeneProb.sh ."
+    write(109,*) "cp ../../../SharedFiles/AlphaImpute_scripts/submitGeneProb.sh ."
+    write(109,'(a,a)') "./runSubmitGeneProb.sh ",trim(f)
+    print*, " "
+    close (109)
+    call system("chmod +x TempIterateGeneProb.sh")
+    call system("./TempIterateGeneProb.sh")
+    call system("rm TempIterateGeneProb.sh")
+
+    JobsDone(:)=0
+    call system("rm -f ./IterateGeneProb/GeneProb*/GpDone.txt")
+
+    if (RestartOption/=OPT_RESTART_IMPUTATION) then
         do
             do i=1,nProcessors
                 write (filout,'("./IterateGeneProb/GeneProb"i0,"/GpDone.txt")')i
                 inquire(file=trim(filout),exist=FileExists)
-                if (FileExists .eqv. .true.) then
-                    if (JobsDone(i)==0) print*, " ","      GeneProb job ",i," done"
+                if ((FileExists .eqv. .true.).and.(JobsDone(i)==0)) then
+                    print*, " ","IterateGeneProb job ",i," done"
                     JobsDone(i)=1
-                    !JDone(i)=1
                 endif
             enddo
+            call sleep(SleepParameter)
             if (sum(JobsDone(:))==nProcessors) exit
         enddo
-        !endif
-    else
-        print*, 'else'
-        write (filout,'("cd IterateGeneProb/")')
-        write(f,'(i0)') nProcessors
-        write (109,*) trim(filout)
-        write(109,*) "cp ../../../SharedFiles/AlphaImpute_scripts/runSubmitGeneProb.sh ."
-        write(109,*) "cp ../../../SharedFiles/AlphaImpute_scripts/submitGeneProb.sh ."
-        write(109,'(a,a)') "./runSubmitGeneProb.sh ",trim(f)
-        print*, " "
-        close (109)
-        call system("chmod +x TempIterateGeneProb.sh")
-        call system("./TempIterateGeneProb.sh")
-        call system("rm TempIterateGeneProb.sh")
-    
-        JobsDone(:)=0
-        call system("rm -f ./IterateGeneProb/GeneProb*/GpDone.txt")
-
-        if (RestartOption/=OPT_RESTART_IMPUTATION) then
-            do
-                do i=1,nProcessors
-                    write (filout,'("./IterateGeneProb/GeneProb"i0,"/GpDone.txt")')i
-                    inquire(file=trim(filout),exist=FileExists)
-                    if ((FileExists .eqv. .true.).and.(JobsDone(i)==0)) then
-                        print*, " ","IterateGeneProb job ",i," done"
-                        JobsDone(i)=1
-                    endif
-                enddo
-                call sleep(SleepParameter)
-                if (sum(JobsDone(:))==nProcessors) exit
-            enddo
-        endif
     endif
-    
+#else
+#endif
     close (109)
     
     if (RestartOption==OPT_RESTART_IMPUTATION) then
@@ -1146,11 +1152,13 @@ if (RestartOption/=4) then
             write (109,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ImputeGenos(i,:)
         enddo
         close (109)
-        if (PicVersion) Then
-            print*, "Restart option 3 stops program before Iterate Geneprob jobs have been finished"
-        else
-            print*, "Restart option 3 stops program after Iterate Geneprob jobs have been finished"
-        endif
+#if CLUSTER==1
+        write(6,*) "Restart option 3 stops program before Iterate Geneprob jobs have been finished"
+#elif CLUSTER==0
+        write(6,*) "Restart option 3 stops program after Iterate Geneprob jobs have been finished"
+#else
+        write(6,*) "Restart option 3 stops program before Iterate Geneprob jobs have been launched"
+#endif
         stop
     endif
 endif
