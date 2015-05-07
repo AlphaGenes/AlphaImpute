@@ -29,8 +29,8 @@ call InternalEdit
 call MakeFiles
 
 if (PreProcess) then
-    print*, "  "
-    print*, "  ","The program has preprocessed the data and now it stops"
+    write(6,*) "  "
+    write(6,*) "  ","The program has preprocessed the data and now it stops"
     stop
 endif
 
@@ -38,12 +38,12 @@ if (HMMOption==RUN_HMM_ONLY) then
 #ifdef DEBUG
     write(0,*) 'DEBUG: HMM only'
 #endif
-    print*, ""
-    print*, "Bypass calculation of probabilities and phasing"
+    write(6,*) ""
+    write(6,*) "Bypass calculation of probabilities and phasing"
 
 else
-    print*, " "
-    print*, " ","Data editing completed"
+    write(6,*) " "
+    write(6,*) " ","Data editing completed"
 
     if (SexOpt==0) then
         if (BypassGeneProb==0) then
@@ -63,14 +63,14 @@ else
 
             if (RestartOption==OPT_RESTART_GENEPROB) then
 #if CLUSTER==1
-                print*, "Restart option 1 stops program before Geneprobs jobs have finished"
+                write(6,*) "Restart option 1 stops program before Geneprobs jobs have finished"
 #elif CLUSTER==0
-                print*, "Restart option 1 stops program after Geneprobs jobs have finished"
+                write(6,*) "Restart option 1 stops program after Geneprobs jobs have finished"
 #endif
                 stop
             endif
-            print*, " "
-            print*, " ","Genotype probabilities calculated"
+            write(6,*) " "
+            write(6,*) " ","Genotype probabilities calculated"
         endif
     endif
 
@@ -93,9 +93,9 @@ else
 
         if (RestartOption==OPT_RESTART_PHASING) then
 #if CLUSTER==1
-            print*, "Restart option 2 stops program before Phasing has been managed"
+            write(6,*) "Restart option 2 stops program before Phasing has been managed"
 #elif CLUSTER==0
-            print*, "Restart option 2 stops program after Phasing has been managed"
+            write(6,*) "Restart option 2 stops program after Phasing has been managed"
 #endif
             stop
         endif
@@ -106,7 +106,7 @@ else
 
     ! This is not necessary, already output in subroutine PhasingManagement
     if ((RestartOption/=OPT_RESTART_ALL).and.(RestartOption<OPT_RESTART_IMPUTATION)) then
-        print*, "Restart option 2 stops program after Phasing has been managed"
+        write(6,*) "Restart option 2 stops program after Phasing has been managed"
         stop
     endif
 endif
