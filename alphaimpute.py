@@ -64,8 +64,8 @@ USAGE
         # Setup argument parser
         parser = ArgumentParser(description=program_license, formatter_class=RawDescriptionHelpFormatter)
         parser.add_argument(dest="output", help="Output file", metavar="file", type=str)
-        parser.add_argument("-P", "--pedigree", dest="pedigree", help="File containing the pedigree information", metavar="file", type=file)
-        parser.add_argument("-G", "--genotype", dest="genotype", help="File containing the genotypes", metavar="file", type=file)
+        parser.add_argument("-P", "--pedigree", dest="pedigree", help="File containing the pedigree information", metavar="file", type=file, required=True)
+        parser.add_argument("-G", "--genotype", dest="genotype", help="File containing the genotypes", metavar="file", type=file, required=True)
         parser.add_argument("-X", "--sexchrom", help="Sex Chromosome File", metavar="file")
         parser.add_argument("-f", "--female", help="Set Female as the heterogametic sex. [Default: Male]", action="store_true")
         parser.add_argument("-S", "--snp", help="Number of SNP in the genotype file", type=int, metavar="nSNP", required=True)
