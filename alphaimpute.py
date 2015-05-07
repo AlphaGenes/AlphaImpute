@@ -74,7 +74,7 @@ USAGE
         parser.add_argument("-o", "--edit-output", help="Output of the editing phase [Default: %(default)s]", choices=["AllSnpOut", "EditedSnpOut"], default="AllSnpOut", metavar="str")
         parser.add_argument("--phased", help="Specify if phasing rounds have been done previously", choices=["PhaseDone","NoPhase"], metavar="str")
         parser.add_argument("--phasepath", help="Path where the phasing rounds are store", metavar="path")
-        parser.add_argument("-r", "--phasing_runs", help="Number of phasing runs", default=20, type=int, metavar="int")
+        parser.add_argument("-r", "--phasing_runs", help="Number of phasing runs", default=10, type=int, metavar="int")
         parser.add_argument("-t", "--tiles", help="Core and Tail lengths [Default: %(default)s]", nargs="*", default=[600,700,800,900,1000,1100,1200,1300,1600,1800], type=int, metavar="int")
         parser.add_argument("-c", "--cores", help="Core lengths [Default: %(default)s]", nargs="*", type=int, default=[500,600,700,800,900,1000,1100,1200,1400,1600], metavar="int")
         parser.add_argument("-F", "--freephasing", help="Pedigree free phasing", action="store_true")

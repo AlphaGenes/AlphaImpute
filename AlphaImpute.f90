@@ -54,7 +54,7 @@ else
             if (RestartOption<OPT_RESTART_PHASING) Then
 #if CLUSTER==2
                 write(6,*) ""
-                write(6,*) "Restart option 1 stops program before Geneprobs jobs have been launched"
+                write(6,*) "Restart option 1 stops program before Geneprobs jobs have been submitted"
                 stop
 #else
                  call GeneProbManagement
@@ -454,6 +454,9 @@ SecondPercGenoForHD=SecondPercGenoForHD/100
 
 ! Get Phasing parameters
 ! NumberPhasingRuns
+! WARNING: Parser complains and exits on error when this option is set
+!          number bigger than 10 because PhaseDone is a character variable
+! TODO: DEBUG!!
 read (1,*) dumC,PhaseDone
 NoPhasing=1
 ! PhaseDone: We already have phase information (AlphaPhase) and so,
@@ -830,7 +833,7 @@ print*, " ","       Calculating genotype probabilities"
 !    if (FileExists) Then
 !        call system("./runGeneProb.sh")
 !    else
-!        write(0,*) "'runGeneProb.sh' does not exists. Please, provide a valid script."
+!        write(0,*) "'runGeneProb.sh' does not exist. Please, provide a valid script."
 !    endif
 !    ! Check that every process has finished before going on
 !    if (RestartOption/=OPT_RESTART_GENEPROB) call CheckGeneProbFinished(nProcessors)
@@ -1156,7 +1159,7 @@ if (RestartOption/=4) then
 #elif CLUSTER==0
         write(6,*) "Restart option 3 stops program after Iterate Geneprob jobs have been finished"
 #else
-        write(6,*) "Restart option 3 stops program before Iterate Geneprob jobs have been launched"
+        write(6,*) "Restart option 3 stops program before Iterate Geneprob jobs have been submitted"
 #endif
         stop
     endif
