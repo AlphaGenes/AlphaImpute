@@ -130,8 +130,8 @@ USAGE
 
 
         # Construct file
-        spec= 'PedigreeFile\t\t\t\t,{0}\n'.format(pedigreeFile.name)
-        spec+= 'GenotypeFile\t\t\t\t,{0}\n'.format(genotypeFile.name)
+        spec= 'PedigreeFile\t\t\t\t,"{0}"\n'.format(pedigreeFile.name)
+        spec+= 'GenotypeFile\t\t\t\t,"{0}"\n'.format(genotypeFile.name)
         if sexChromosome is None:
             spec+= 'SexChrom\t\t\t\t,No\n'
         elif os.path.isfile(sexChromosome):
@@ -228,7 +228,7 @@ USAGE
         spec+= '\n'
 
         if trueGenotypeFile is not None and os.path.isfile(trueGenotypeFile.name):
-            spec+= 'TrueGenotypeFile\t\t\t,{0}\n'.format(trueGenotypeFile.name)
+            spec+= 'TrueGenotypeFile\t\t\t,"{0}"\n'.format(trueGenotypeFile.name)
         else:
             spec+= 'TrueGenotypeFile\t\t\t,None\n'
 
