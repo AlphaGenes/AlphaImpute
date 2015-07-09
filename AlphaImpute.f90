@@ -19,7 +19,7 @@ implicit none
 
 call Titles
 call ReadInParameterFile
-if (RestartOption<2) call MakeDirectories
+if (RestartOption<OPT_RESTART_PHASING) call MakeDirectories
 call CountInData
 call ReadInData
 call CheckParentage
@@ -28,39 +28,75 @@ call FillInBasedOnOffspring
 call InternalEdit
 call MakeFiles
 
+if (PreProcess) then
+    write(6,*) "  "
+    write(6,*) "  ","The program has preprocessed the data and now it stops"
+    stop
+endif
+
 if (HMMOption==RUN_HMM_ONLY) then
 #ifdef DEBUG
     write(0,*) 'DEBUG: HMM only'
 #endif
-    print*, ""
-    print*, "Bypass calculation of probabilities and phasing"
+    write(6,*) ""
+    write(6,*) "Bypass calculation of probabilities and phasing"
 
 else
-    print*, " "
-    print*, " ","Data editing completed"
+    write(6,*) " "
+    write(6,*) " ","Data editing completed"
 
     if (SexOpt==0) then
         if (BypassGeneProb==0) then
 #ifdef DEBUG
             write(0,*) 'DEBUG: Calculate Genotype Probabilites'
 #endif
-            if (RestartOption<OPT_RESTART_PHASING) call GeneProbManagement
+
+            if (RestartOption<OPT_RESTART_PHASING) Then
+#if CLUSTER==2
+                write(6,*) ""
+                write(6,*) "Restart option 1 stops program before Geneprobs jobs have been submitted"
+                stop
+#else
+                 call GeneProbManagement
+#endif
+            endif
+
             if (RestartOption==OPT_RESTART_GENEPROB) then
-                print*, "Restart option 1 stops program after Geneprobs jobs have finished"
+#if CLUSTER==1
+                write(6,*) "Restart option 1 stops program before Geneprobs jobs have finished"
+#elif CLUSTER==0
+                write(6,*) "Restart option 1 stops program after Geneprobs jobs have finished"
+#endif
                 stop
             endif
-            print*, " "
-            print*, " ","Genotype probabilities calculated"
+            write(6,*) " "
+            write(6,*) " ","Genotype probabilities calculated"
         endif
     endif
+
+
 
     if (ManagePhaseOn1Off0==1) then
 #ifdef DEBUG
         write(0,*) 'DEBUG: Phase haplotypes with AlphaPhase'
 #endif
-        if (RestartOption<OPT_RESTART_IMPUTATION) call PhasingManagement
+
+        if (RestartOption<OPT_RESTART_IMPUTATION) Then
+#if CLUSTER==2
+            write(6,*) ""
+            write(6,*) "Restart option 1 stops program before Phasing has been managed"
+            stop
+#else
+            call PhasingManagement
+#endif
+        endif
+
         if (RestartOption==OPT_RESTART_PHASING) then
-            print*, "Restart option 2 stops program after after Phasing has been managed"
+#if CLUSTER==1
+            write(6,*) "Restart option 2 stops program before Phasing has been managed"
+#elif CLUSTER==0
+            write(6,*) "Restart option 2 stops program after Phasing has been managed"
+#endif
             stop
         endif
     endif
@@ -70,7 +106,7 @@ else
 
     ! This is not necessary, already output in subroutine PhasingManagement
     if ((RestartOption/=OPT_RESTART_ALL).and.(RestartOption<OPT_RESTART_IMPUTATION)) then
-        print*, "Restart option 2 stops program after Phasing has been managed"
+        write(6,*) "Restart option 2 stops program after Phasing has been managed"
         stop
     endif
 endif
@@ -276,10 +312,12 @@ else
     endif
 endif
 
-
 end subroutine ImputationManagement
 
+!#############################################################################################################################################################################################################################
+
 subroutine FromHMM2ImputePhase
+! Impute alleles from HMM dosage probabilities
 use Global
 use GlobalVariablesHmmMaCH
 use GlobalPedigree
@@ -302,10 +340,7 @@ do i=1,nAnisG
     enddo
 enddo
 
-
 end subroutine FromHMM2ImputePhase
-
-
 
 !#############################################################################################################################################################################################################################
 
@@ -419,6 +454,9 @@ SecondPercGenoForHD=SecondPercGenoForHD/100
 
 ! Get Phasing parameters
 ! NumberPhasingRuns
+! WARNING: Parser complains and exits on error when this option is set
+!          number bigger than 10 because PhaseDone is a character variable
+! TODO: DEBUG!!
 read (1,*) dumC,PhaseDone
 NoPhasing=1
 ! PhaseDone: We already have phase information (AlphaPhase) and so,
@@ -514,10 +552,10 @@ read (1,*) dumC,InternalIterations
 ! PreprocessDataOnly
 read (1,*) dumC,PreProcessOptions
 if (PreProcessOptions=="No") then
-    PreProcess=0
+    PreProcess=.FALSE.
 else
     if (PreProcessOptions=="Yes") then
-        PreProcess=1
+        PreProcess=.TRUE.
     else
         print*, "Stop - Preprocess of data option incorrectly specified"
         stop
@@ -597,7 +635,7 @@ endif
 !   * RestartOption=0 => Passes through the whole process: GenoProb,
 !                        Phasing and Imputing
 !   * RestartOption=1 => Makes only GenoProb
-!   * RestartOption=2 => Makes GenoProb and Phasing
+!   * RestartOption=2 => Makes only Phasing
 !   * RestartOption=3 => Makes only Imputation. This implies AlphaImpute
 !                        has to be run already in order to get GenoProb
 !                        done or Genotype Probabilities Genotype
@@ -764,73 +802,89 @@ subroutine GeneProbManagement
 use Global
 implicit none
 
-integer :: i,JobsDone(nProcessors),JDone(nProcessors)
+integer :: i,JobsDone(nProcessors)
 character(len=300) :: filout,f
 logical :: FileExists
 
 open (unit=109,file="TempGeneProb.sh",status="unknown")
 
-if (PicVersion==0) then         ! GeneProbForAlphaImpute algorithm to calculate probabilities of genotype
-    ! Create a bash script
-    do i=1,nProcessors
-        write (filout,'("cd GeneProb/GeneProb"i0)')i
-        write (109,*) trim(filout)
-        ! Call the external package GeneProbForAlphaImpute
-        if (GeneProbPresent==0) write (109,*) "nohup sh -c ""GeneProbForAlphaImpute > out 2>&1"" >/dev/null &"
-        if (GeneProbPresent==1) write (109,*) "nohup sh -c ""./GeneProbForAlphaImpute > out 2>&1"" >/dev/null &"    
-        write (109,*) "cd ../.."
-    enddo
+print*, " "
+print*, " ","       Calculating genotype probabilities"
 
-    print*, " "
-    print*, " ","       Calculating genotype probabilities"
-    close (109)
-    call system("chmod +x TempGeneProb.sh")
-    call system("./TempGeneProb.sh")
-    JobsDone(:)=0
-    JDone(:)=0
-    do  ! This should be a while do loop
-        do i=1,nProcessors
-            write (filout,'("./GeneProb/GeneProb"i0,"/GpDone.txt")')i
-            inquire(file=trim(filout),exist=FileExists)
-            if (FileExists .eqv. .true.) then
-                if (JDone(i)==0) print*, " ","      GeneProb job ",i," done"
-                JobsDone(i)=1
-                JDone(i)=1
-            endif
-        enddo
-        call sleep(SleepParameter)
-        if (sum(JobsDone(:))==nProcessors) exit
-    enddo
-else            ! PIC company algorithm to calculate probabilities of genotype
+#if CLUSTER==1
+! PIC company algorithm to calculate probabilities of genotype
     write (filout,'("cd GeneProb/")')
     write(f,'(i0)') nProcessors
     write (109,*) trim(filout)
     write(109,*) "cp ../../../SharedFiles/AlphaImpute_scripts/runSubmitGeneProb.sh ."
     write(109,*) "cp ../../../SharedFiles/AlphaImpute_scripts/submitGeneProb.sh ."
     write(109,'(a,a)') "./runSubmitGeneProb.sh ",trim(f)
-    print*, " "
-    print*, " ","       Calculating genotype probabilities"
     close (109)
     call system("chmod +x TempGeneProb.sh")
     call system("./TempGeneProb.sh")
     call system("rm TempGeneProb.sh")
+    ! Check that every process has finished before going on
+    if (RestartOption/=OPT_RESTART_GENEPROB) call CheckGeneProbFinished(nProcessors)
 
-    JobsDone(:)=0
-    do
-        do i=1,nProcessors
-            write (filout,'("./GeneProb/GeneProb"i0,"/GpDone.txt")')i
-            inquire(file=trim(filout),exist=FileExists)
-            if (FileExists .eqv. .true.) then
-                if (JDone(i)==0) print*, " ","      GeneProb job ",i," done"
-                JobsDone(i)=1
-            endif
-        enddo
-        call sleep(SleepParameter)
-        if (sum(JobsDone(:))==nProcessors) exit
+!#elif CLUSTER==2
+!! Use user specific script to run Genetoype Probabilities processes
+!    inquire(file="input.txt", exist=FileExists)   ! file_exists will be TRUE if the file
+!                                                  ! exists and FALSE otherwise
+!    if (FileExists) Then
+!        call system("./runGeneProb.sh")
+!    else
+!        write(0,*) "'runGeneProb.sh' does not exist. Please, provide a valid script."
+!    endif
+!    ! Check that every process has finished before going on
+!    if (RestartOption/=OPT_RESTART_GENEPROB) call CheckGeneProbFinished(nProcessors)
+
+#else
+! Create bash script for run GeneProb subprocesses
+    do i=1,nProcessors
+        write (filout,'("cd GeneProb/GeneProb"i0)')i
+        write (109,*) trim(filout)
+        ! Call the external package GeneProbForAlphaImpute
+        if (GeneProbPresent==0) write (109,*) "nohup sh -c ""GeneProbForAlphaImpute > out 2>&1"" >/dev/null &"
+        if (GeneProbPresent==1) write (109,*) "nohup sh -c ""./GeneProbForAlphaImpute > out 2>&1"" >/dev/null &"
+        write (109,*) "cd ../.."
     enddo
-endif
+
+    close (109)
+    call system("chmod +x TempGeneProb.sh")
+    call system("./TempGeneProb.sh")
+
+    ! Check that every process has finished before going on
+    call CheckGeneProbFinished(nProcessors)
+#endif
 
 end subroutine GeneProbManagement
+
+!#############################################################################################################################################################################################################################
+
+subroutine CheckGeneProbFinished(nProcs)
+use Global
+implicit none
+
+integer, intent(in) :: nProcs
+character(len=300) :: filout
+integer :: i,JobsDone(nProcs)
+logical :: FileExists
+
+JobsDone(:)=0
+do
+    do i=1,nProcs
+        write (filout,'("./GeneProb/GeneProb"i0,"/GpDone.txt")')i
+        inquire(file=trim(filout),exist=FileExists)
+        if (FileExists .eqv. .true.) then
+            if (JobsDone(i)==0) print*, " ","      GeneProb job ",i," done"
+            JobsDone(i)=1
+        endif
+    enddo
+    call sleep(SleepParameter)
+    if (sum(JobsDone(:))==nProcs) exit
+enddo
+
+end subroutine CheckGeneProbFinished
 
 !#############################################################################################################################################################################################################################
 
@@ -844,7 +898,68 @@ logical :: FileExists
 
 print*, " "
 print*, " ","       Performing the phasing of the data"
-if (PicVersion==0) then
+!if (PicVersion==.FALSE.) then
+#if CLUSTER==1
+    open (unit=107,file="TempPhase1.sh",status="unknown")
+    write (filout,'("cd Phasing/")')
+    write(f,'(i0)') nPhaseInternal
+    write (107,*) trim(filout)
+    write(107,*) "cp ../../../SharedFiles/AlphaImpute_scripts/runSubmitPhasing.sh ."
+    write(107,*) "cp ../../../SharedFiles/AlphaImpute_scripts/submitPhasing.sh ."
+    write(107,'(a,a)') "./runSubmitPhasing.sh ",trim(f)
+    print*, " "
+    close (107)
+    call system("chmod +x TempPhase1.sh")
+    call system("./TempPhase1.sh")
+    call system("rm TempPhase1.sh")
+
+    ! Check that every process has finished before AlphaImpute goes on with imputation
+    if (RestartOption/=OPT_RESTART_PHASING) Then
+        JobsDone(:)=0
+        do
+            do i=1,nPhaseInternal
+                write (filout,'("./Phasing/Phase"i0,"/PhasingResults/Timer.txt")')i
+                inquire(file=trim(filout),exist=FileExists)
+                if ((FileExists .eqv. .true.).and.(JobsDone(i)==0)) then
+                    print*, " ","AlphaPhase job ",i," done"
+                    JobsDone(i)=1
+                endif
+            enddo
+            call sleep(SleepParameter)
+            if (sum(JobsDone(:))==nPhaseInternal) exit
+        enddo
+    endif
+
+!else
+
+!#elif CLUSTER==2
+!    ! Use user specific script to run Genetoype Probabilities processes
+!    inquire(file="input.txt", exist=FileExists)   ! file_exists will be TRUE if the file
+!                                                  ! exists and FALSE otherwise
+!    if (FileExists) Then
+!        call system("./runPhase.sh")
+!    else
+!        write(0,*) "'runPhase.sh' does not exists. Please, provide a valid script."
+!    endif
+!
+!    ! Check that every process has finished before AlphaImpute goes on with imputation
+!    if (RestartOption/=OPT_RESTART_PHASING) Then
+!        JobsDone(:)=0
+!        do
+!            do i=1,nPhaseInternal
+!                write (filout,'("./Phasing/Phase"i0,"/PhasingResults/Timer.txt")')i
+!                inquire(file=trim(filout),exist=FileExists)
+!                if ((FileExists .eqv. .true.).and.(JobsDone(i)==0)) then
+!                    print*, " ","AlphaPhase job ",i," done"
+!                    JobsDone(i)=1
+!                endif
+!            enddo
+!            call sleep(SleepParameter)
+!            if (sum(JobsDone(:))==nPhaseInternal) exit
+!        enddo
+!    endif
+
+#else
     open (unit=107,file="TempPhase1.sh",status="unknown")
     JobsStarted=0
     ProcUsed=0
@@ -870,7 +985,8 @@ if (PicVersion==0) then
         stop
     endif
 
-    do ! This should be a while do loop
+    ! Check that every process has finished before go on
+    do
         do i=1,nPhaseInternal
             write (filout,'("./Phasing/Phase"i0,"/PhasingResults/Timer.txt")')i
 
@@ -897,34 +1013,8 @@ if (PicVersion==0) then
         if (sum(JobsDone(:))==nPhaseInternal) exit
     enddo
     call system("rm TempPhase*.sh")
-else
-    open (unit=107,file="TempPhase1.sh",status="unknown")
-    write (filout,'("cd Phasing/")')
-    write(f,'(i0)') nPhaseInternal
-    write (107,*) trim(filout)
-    write(107,*) "cp ../../../SharedFiles/AlphaImpute_scripts/runSubmitPhasing.sh ."
-    write(107,*) "cp ../../../SharedFiles/AlphaImpute_scripts/submitPhasing.sh ."
-    write(107,'(a,a)') "./runSubmitPhasing.sh ",trim(f)
-    print*, " "
-    close (107)
-    call system("chmod +x TempPhase1.sh")
-    call system("./TempPhase1.sh")
-    call system("rm TempPhase1.sh")
-
-    JobsDone(:)=0
-    do
-        do i=1,nPhaseInternal
-            write (filout,'("./Phasing/Phase"i0,"/PhasingResults/Timer.txt")')i
-            inquire(file=trim(filout),exist=FileExists)
-            if ((FileExists .eqv. .true.).and.(JobsDone(i)==0)) then
-                print*, " ","AlphaPhase job ",i," done"
-                JobsDone(i)=1
-            endif
-        enddo
-        call sleep(SleepParameter)
-        if (sum(JobsDone(:))==nPhaseInternal) exit
-    enddo
-endif
+!endif
+#endif
 
 end subroutine PhasingManagement 
 
@@ -980,89 +1070,97 @@ do i=1,nProcessors
     write (108,*) "EndSnp       ,",GpIndex(i,2) 
     close(108)
     write (filout,'("GeneProb"i0)')i
-    if(PicVersion==0) call system ("cp GeneProbForAlphaImpute IterateGeneProb/" // filout)
+#if CLUSTER!=1
+    call system ("cp GeneProbForAlphaImpute IterateGeneProb/" // filout)
+#endif
 enddo   
 
 open (unit=109,file="TempIterateGeneProb.sh",status="unknown")
 
 if (RestartOption/=4) then
-    if (PicVersion==0) then
-        do i=1,nProcessors
-            write (filout,'("cd IterateGeneProb/GeneProb"i0)')i
-            write (109,*) trim(filout) 
-            if (GeneProbPresent==0) write (109,*) "nohup sh -c ""GeneProbForAlphaImpute > out 2>&1"" >/dev/null &"
-            if (GeneProbPresent==1) write (109,*) "nohup sh -c ""./GeneProbForAlphaImpute > out 2>&1"" >/dev/null &"
-            write (109,*) "cd ../.."
-            call flush(109)
-        enddo
-        close(109)
-        call system("chmod +x TempIterateGeneProb.sh")
-        call system("./TempIterateGeneProb.sh")
-    
-        print*, " "
-        print*, " ","       Calculating genotype probabilities"
-        JobsDone(:)=0
-        !JDone(:)=0
-
-        call system("rm -f ./IterateGeneProb/GeneProb*/GpDone.txt")
-        !if (RestartOption/=3) then
-            do
-                do i=1,nProcessors
-                    write (filout,'("./IterateGeneProb/GeneProb"i0,"/GpDone.txt")')i
-                    inquire(file=trim(filout),exist=FileExists)
-                    if (FileExists .eqv. .true.) then
-                        if (JobsDone(i)==0) print*, " ","      GeneProb job ",i," done"
-                        JobsDone(i)=1
-                        !JDone(i)=1
-                    endif
-                enddo
-                if (sum(JobsDone(:))==nProcessors) exit
-            enddo
-        !endif
-    else
-        print*, 'else'
-        write (filout,'("cd IterateGeneProb/")')
-        write(f,'(i0)') nProcessors
+    !if (PicVersion==.FALSE.) then
+#if CLUSTER==0
+    do i=1,nProcessors
+        write (filout,'("cd IterateGeneProb/GeneProb"i0)')i
         write (109,*) trim(filout)
-        write(109,*) "cp ../../../SharedFiles/AlphaImpute_scripts/runSubmitGeneProb.sh ."
-        write(109,*) "cp ../../../SharedFiles/AlphaImpute_scripts/submitGeneProb.sh ."
-        write(109,'(a,a)') "./runSubmitGeneProb.sh ",trim(f)
-        print*, " "
-        close (109)
-        call system("chmod +x TempIterateGeneProb.sh")
-        call system("./TempIterateGeneProb.sh")
-        call system("rm TempIterateGeneProb.sh")
-    
-        JobsDone(:)=0
-        call system("rm -f ./IterateGeneProb/GeneProb*/GpDone.txt")
+        if (GeneProbPresent==0) write (109,*) "nohup sh -c ""GeneProbForAlphaImpute > out 2>&1"" >/dev/null &"
+        if (GeneProbPresent==1) write (109,*) "nohup sh -c ""./GeneProbForAlphaImpute > out 2>&1"" >/dev/null &"
+        write (109,*) "cd ../.."
+        call flush(109)
+    enddo
+    close(109)
+    call system("chmod +x TempIterateGeneProb.sh")
+    call system("./TempIterateGeneProb.sh")
 
-        !if (RestartOption/=3) then
-            do
-                do i=1,nProcessors
-                    write (filout,'("./IterateGeneProb/GeneProb"i0,"/GpDone.txt")')i
-                    inquire(file=trim(filout),exist=FileExists)
-                    if ((FileExists .eqv. .true.).and.(JobsDone(i)==0)) then
-                        print*, " ","IterateGeneProb job ",i," done"
-                        JobsDone(i)=1
-                    endif
-                enddo
-                call sleep(SleepParameter)
-                if (sum(JobsDone(:))==nProcessors) exit
+    print*, " "
+    print*, " ","       Calculating genotype probabilities"
+    JobsDone(:)=0
+    !JDone(:)=0
+
+    call system("rm -f ./IterateGeneProb/GeneProb*/GpDone.txt")
+    !if (RestartOption/=3) then
+    do
+        do i=1,nProcessors
+            write (filout,'("./IterateGeneProb/GeneProb"i0,"/GpDone.txt")')i
+            inquire(file=trim(filout),exist=FileExists)
+            if (FileExists .eqv. .true.) then
+                if (JobsDone(i)==0) print*, " ","      GeneProb job ",i," done"
+                JobsDone(i)=1
+                !JDone(i)=1
+            endif
+        enddo
+        if (sum(JobsDone(:))==nProcessors) exit
+    enddo
+    !endif
+#elif CLUSTER==1
+    write (filout,'("cd IterateGeneProb/")')
+    write(f,'(i0)') nProcessors
+    write (109,*) trim(filout)
+    write(109,*) "cp ../../../SharedFiles/AlphaImpute_scripts/runSubmitGeneProb.sh ."
+    write(109,*) "cp ../../../SharedFiles/AlphaImpute_scripts/submitGeneProb.sh ."
+    write(109,'(a,a)') "./runSubmitGeneProb.sh ",trim(f)
+    print*, " "
+    close (109)
+    call system("chmod +x TempIterateGeneProb.sh")
+    call system("./TempIterateGeneProb.sh")
+    call system("rm TempIterateGeneProb.sh")
+
+    JobsDone(:)=0
+    call system("rm -f ./IterateGeneProb/GeneProb*/GpDone.txt")
+
+    if (RestartOption/=OPT_RESTART_IMPUTATION) then
+        do
+            do i=1,nProcessors
+                write (filout,'("./IterateGeneProb/GeneProb"i0,"/GpDone.txt")')i
+                inquire(file=trim(filout),exist=FileExists)
+                if ((FileExists .eqv. .true.).and.(JobsDone(i)==0)) then
+                    print*, " ","IterateGeneProb job ",i," done"
+                    JobsDone(i)=1
+                endif
             enddo
-        !endif
+            call sleep(SleepParameter)
+            if (sum(JobsDone(:))==nProcessors) exit
+        enddo
     endif
-    
+#else
+#endif
     close (109)
     
-    if (RestartOption==3) then
+    if (RestartOption==OPT_RESTART_IMPUTATION) then
         open (unit=109,file="Tmp2345678.txt",status="unknown")
         do i=1,nAnisP
             write (109,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ImputePhase(i,:,1)
             write (109,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ImputePhase(i,:,2)          
             write (109,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ImputeGenos(i,:)
         enddo
-        close (109) 
-        print*, "Restart option 3 stops program after Iterate Geneprob jobs have been finished"
+        close (109)
+#if CLUSTER==1
+        write(6,*) "Restart option 3 stops program before Iterate Geneprob jobs have been finished"
+#elif CLUSTER==0
+        write(6,*) "Restart option 3 stops program after Iterate Geneprob jobs have been finished"
+#else
+        write(6,*) "Restart option 3 stops program before Iterate Geneprob jobs have been submitted"
+#endif
         stop
     endif
 endif
@@ -1320,7 +1418,9 @@ implicit none
 character(len=7) :: cm !use for formatting output - allows for up to 1 million SNPs
 integer :: i,j,k,l,WorkTmp(nSnpRaw)
 double precision :: ImputationQuality(nAnisP,6)
-character(len=300) :: TmpId 
+character(len=300) :: TmpId
+integer :: n0, n1, n2
+
 
 write(cm,'(I7)') nSnpRaw !for formatting
 cm = adjustl(cm)
@@ -1539,7 +1639,7 @@ else
     !if (HMMOption==RUN_HMM_ONLY.or.HMMOption==RUN_HMM_PREPHASE) then
     if (HMMOption/=RUN_HMM_NO) then
 #ifdef DEBUG
-        write(0,*) 'DEBUG: Impute genotypes based on HMM genotypes probabilites [WriteOutResults]'
+        write(0,*) 'DEBUG: Write HMM results [WriteOutResults]'
 #endif
 
         if (HMMOption/=RUN_HMM_NO) Then
@@ -1550,6 +1650,8 @@ else
             ProbImputeGenos(1:nAnisP,:)=-9.0
             ProbImputePhase(1:nAnisP,:,:)=-9.0
         endif
+
+        ! Feed Impute and Phase probabilites
         l=0 
         do j=1,nSnpRaw
             if (SnpIncluded(j)==1) then
@@ -1563,19 +1665,55 @@ else
         enddo
 
         ! Assign Genotypes based on genotype probabilities
-        do i=1,nAnisP
+        !do i=1,nAnisP
+        !    do j=1,nSnpIterate
+        !        if (ProbImputeGenos(i,j)==-9.0) ImputeGenos(i,j)=9
+        !        if (ProbImputeGenos(i,j)>1.999) ImputeGenos(i,j)=2
+        !        if (ProbImputeGenos(i,j)<0.0001) ImputeGenos(i,j)=0
+        !        if ((ProbImputeGenos(i,j)>0.999).and.(ProbImputeGenos(i,j)<1.00001)) ImputeGenos(i,j)=1
+        !    enddo
+        !enddo
+#ifdef DEBUG
+        write(0,*) 'DEBUG: Impute genotypes based on HMM genotypes probabilites [WriteOutResults]'
+#endif
+        ! Impute the most likely genotypes. (Most frequent genotype)
+        do i=1,nAnisG
             do j=1,nSnpIterate
-                if (ProbImputeGenos(i,j)==-9.0) ImputeGenos(i,j)=9
-                if (ProbImputeGenos(i,j)>1.999) ImputeGenos(i,j)=2
-                if (ProbImputeGenos(i,j)<0.0001) ImputeGenos(i,j)=0
-                if ((ProbImputeGenos(i,j)>0.999).and.(ProbImputeGenos(i,j)<1.00001)) ImputeGenos(i,j)=1
+                n2 = frequence(i,j,2)                           ! Homozygous: 2 case
+                n1 = frequence(i,j,1)                           ! Heterozygous
+                n0 = (nRoundsHmm-HmmBurnInRound) - n1 - n2      ! Homozygous: 0 case
+                if ((n0>n1).and.(n0>n2)) then
+                    ImputeGenos(GlobalHmmID(i),j)=0
+                elseif (n1>n2) then
+                    ImputeGenos(GlobalHmmID(i),j)=1
+                else
+                    ImputeGenos(GlobalHmmID(i),j)=2
+                endif
             enddo
         enddo
+#ifdef DEBUG
+        write(0,*) 'DEBUG: Impute alleles based on HMM phase probabilites [WriteOutResults]'
+#endif
+
+        ! Impute the most likely genotypes. (Most frequent genotype)
+        do i=1,nAnisG
+            do j=1,nSnpIterate
+                do l=1,2
+                    if (ProbImputePhaseHmm(GlobalHmmID(i),j,l)>0.5) then
+                        ImputePhase(GlobalHmmID(i),j,l)=1
+                    else
+                        ImputePhase(GlobalHmmID(i),j,l)=0
+                    endif
+                enddo
+            enddo
+        enddo
+
     endif
 
 #ifdef DEBUG
     write(0,*) 'DEBUG: Write phase, genotypes and probabilities into files [WriteOutResults]'
 #endif
+
     do i=GlobalExtraAnimals+1,nAnisP
          write (53,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') Id(i),ImputePhase(i,:,1)
          write (53,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') Id(i),ImputePhase(i,:,2)
@@ -1930,8 +2068,7 @@ do i=1,nAnisP
                                 ProbImputePhase(i,j,e)&
                                     =((1.0-(LengthVec(j)*Counter))*ImputePhase(PedId,j,GamA))&
                                     +(LengthVec(j)*Counter*ImputePhase(PedId,j,GamB))
-                                ProbImputeGenos(i,j)=ProbImputePhase(i,j,1)+ProbImputePhase(i,j,2)      
-
+                                ProbImputeGenos(i,j)=ProbImputePhase(i,j,1)+ProbImputePhase(i,j,2)
                             endif
                         endif       
                     endif
@@ -5028,12 +5165,6 @@ do i=1,nProcessors
     if (GeneProbPresent==1) call system ("cp GeneProbForAlphaImpute GeneProb/" // filout)
 enddo
 
-if (PreProcess==1) then
-    print*, "  "
-    print*, "  ","The program has preprocessed the data and now it stops"
-    stop    
-endif
-
 end subroutine MakeFiles
 
 !#############################################################################################################################################################################################################################
@@ -7486,6 +7617,7 @@ end subroutine READINJUNK
 !#############################################################################################################################################################################################################################
 
 subroutine RandomOrder(order,n,idum)
+use random
  implicit none
 
 !     Generate a random ordering of the integers 1 ... n.
@@ -7493,7 +7625,7 @@ subroutine RandomOrder(order,n,idum)
 integer, INTENT(IN)  :: n
 integer, INTENT(OUT) :: order(n)
 integer :: idum
-double precision ran1
+!double precision ran1
 
 !     Local variables
 
@@ -7519,42 +7651,3 @@ end do
 
 RETURN
 end subroutine RandomOrder
-
-!#############################################################################################################################################################################################################################
-
-! This Function returns a uniform random deviate between 0.0 and 1.0.
-! Set IDUM to any negative value to initialize or reinitialize the sequence.
-!MODIFIED FOR REAL
-
-FUNCTION ran1(idum)
-IMPLICIT NONE
- INTEGER idum,IA,IM,IQ,IR,NTAB,NDIV
- DOUBLE PRECISION ran1,AM,EPS,RNMX
- PARAMETER (IA=16807,IM=2147483647,AM=1./IM,IQ=127773,IR=2836,NTAB=32,NDIV=1+(IM-1)/NTAB,EPS=1.2e-7,RNMX=1.-EPS)
- INTEGER j,k,iv(NTAB),iy
- SAVE iv,iy
- DATA iv /NTAB*0/, iy /0/
-  IF (idum.le.0.or.iy.eq.0) then
-      idum=max(-idum,1)
-  DO 11 j=NTAB+8,1,-1
-      k=idum/IQ
-      idum=IA*(idum-k*IQ)-IR*k
-  IF (idum.lt.0) idum=idum+IM
-  IF (j.le.NTAB) iv(j)=idum
-
-11 CONTINUE
-     iy=iv(1)
-  END IF
-     k=idum/IQ
-     idum=IA*(idum-k*IQ)-IR*k
-  IF (idum.lt.0) idum=idum+IM
-     j=1+iy/NDIV
-     iy=iv(j)
-     iv(j)=idum
-     ran1=min(AM*iy,RNMX)
-  RETURN
-END
-
-!  (C) Copr. 1986-92 Numerical Recipes Software 6
-
-!#############################################################################################################################################################################################################################

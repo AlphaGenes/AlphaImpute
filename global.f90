@@ -10,9 +10,9 @@ integer, parameter :: OPT_RESTART_IMPUTATION=3
 
 integer,parameter :: WindowsLinux=0     !If 1 then compile for Windows / If 0 then compile for Linux
 
-integer,parameter :: TestVersion=0  !If 1 then this is a development version with intermediate checking, if 0 it is not
+integer,parameter :: TestVersion=0  	!If 1 then this is a development version with intermediate checking, if 0 it is not
 
-integer,parameter :: PicVersion=0   !If 1 then this is a PIC version with suitability for their system, if 0 it is not
+logical,parameter :: PicVersion=.FALSE.	!If 1 then this is a PIC version with suitability for their system, if 0 it is not
 
 integer,parameter :: SleepParameter=1!00
 
@@ -26,8 +26,10 @@ character (len=300) :: PedigreeFile,PhasePath,TrueGenosFile,GenotypeFile,GenderF
 integer :: nAnisG,nAnisRawPedigree,nSnp,nAnisP,IntEditStat,nPhaseInternal,nPhaseExternal,OutOpt,SexOpt,HetGameticStatus,HomGameticStatus
 integer :: nProcessors,nProcessGeneProb,nProcessAlphaPhase,ManagePhaseOn1Off0,CountRawGenos,InternalIterations,nAnisInGenderFile
 integer :: nAgreeImputeHDLib,nAgreeParentPhaseElim,nAgreeInternalHapLibElim,MaxLeftRightSwitch,MinSpan,ConservativeHapLibImputation
-integer :: TrueGenos1None0,nSnpRaw,nObsDataRaw,nAgreePhaseElim,nAgreeGrandParentPhaseElim,PreProcess,UseGP,BypassGeneProb,HMMOption
+integer :: TrueGenos1None0,nSnpRaw,nObsDataRaw,nAgreePhaseElim,nAgreeGrandParentPhaseElim,UseGP,BypassGeneProb,HMMOption
 integer :: nSnpIterate,NoPhasing,AlphaPhasePresent,GeneProbPresent,PrePhased,UserDefinedHD,PedFreePhasing,PhaseTheDataOnly,RestartOption
+
+logical :: PreProcess
 
 real :: PercGenoForHD,PercSnpMiss,SecondPercGenoForHD,GenotypeErrorPhase,WellPhasedThresh
 

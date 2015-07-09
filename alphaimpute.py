@@ -64,8 +64,8 @@ USAGE
         # Setup argument parser
         parser = ArgumentParser(description=program_license, formatter_class=RawDescriptionHelpFormatter)
         parser.add_argument(dest="output", help="Output file", metavar="file", type=str)
-        parser.add_argument("-P", "--pedigree", dest="pedigree", help="File containing the pedigree information", metavar="file", type=file)
-        parser.add_argument("-G", "--genotype", dest="genotype", help="File containing the genotypes", metavar="file", type=file)
+        parser.add_argument("-P", "--pedigree", dest="pedigree", help="File containing the pedigree information", metavar="file", type=file, required=True)
+        parser.add_argument("-G", "--genotype", dest="genotype", help="File containing the genotypes", metavar="file", type=file, required=True)
         parser.add_argument("-X", "--sexchrom", help="Sex Chromosome File", metavar="file")
         parser.add_argument("-f", "--female", help="Set Female as the heterogametic sex. [Default: Male]", action="store_true")
         parser.add_argument("-S", "--snp", help="Number of SNP in the genotype file", type=int, metavar="nSNP", required=True)
@@ -74,7 +74,7 @@ USAGE
         parser.add_argument("-o", "--edit-output", help="Output of the editing phase [Default: %(default)s]", choices=["AllSnpOut", "EditedSnpOut"], default="AllSnpOut", metavar="str")
         parser.add_argument("--phased", help="Specify if phasing rounds have been done previously", choices=["PhaseDone","NoPhase"], metavar="str")
         parser.add_argument("--phasepath", help="Path where the phasing rounds are store", metavar="path")
-        parser.add_argument("-r", "--phasing_runs", help="Number of phasing runs", default=20, type=int, metavar="int")
+        parser.add_argument("-r", "--phasing_runs", help="Number of phasing runs", default=10, type=int, metavar="int")
         parser.add_argument("-t", "--tiles", help="Core and Tail lengths [Default: %(default)s]", nargs="*", default=[600,700,800,900,1000,1100,1200,1300,1600,1800], type=int, metavar="int")
         parser.add_argument("-c", "--cores", help="Core lengths [Default: %(default)s]", nargs="*", type=int, default=[500,600,700,800,900,1000,1100,1200,1400,1600], metavar="int")
         parser.add_argument("-F", "--freephasing", help="Pedigree free phasing", action="store_true")
@@ -130,8 +130,8 @@ USAGE
 
 
         # Construct file
-        spec= 'PedigreeFile\t\t\t\t,{0}\n'.format(pedigreeFile.name)
-        spec+= 'GenotypeFile\t\t\t\t,{0}\n'.format(genotypeFile.name)
+        spec= 'PedigreeFile\t\t\t\t,"{0}"\n'.format(pedigreeFile.name)
+        spec+= 'GenotypeFile\t\t\t\t,"{0}"\n'.format(genotypeFile.name)
         if sexChromosome is None:
             spec+= 'SexChrom\t\t\t\t,No\n'
         elif os.path.isfile(sexChromosome):
@@ -228,7 +228,7 @@ USAGE
         spec+= '\n'
 
         if trueGenotypeFile is not None and os.path.isfile(trueGenotypeFile.name):
-            spec+= 'TrueGenotypeFile\t\t\t,{0}\n'.format(trueGenotypeFile.name)
+            spec+= 'TrueGenotypeFile\t\t\t,"{0}"\n'.format(trueGenotypeFile.name)
         else:
             spec+= 'TrueGenotypeFile\t\t\t,None\n'
 
