@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/python
 # encoding: utf-8
 '''
 alphaimpute -- Generate the Spec file for AlphaImpute
@@ -198,12 +198,12 @@ USAGE
         spec+= 'WellPhasedThreshold\t\t\t,{0}\n'.format(wellPhasedThres)
 
         if userPhaseFile is not None and os.path.isfile(userPhaseFile):
-            spec+= 'UserDefinedAlphaPhaseAnimalsFile\t,{0}\n'.format(userPhaseFile)
+            spec+= 'UserDefinedAlphaPhaseAnimalsFile\t,"{0}"\n'.format(userPhaseFile)
         else:
             spec+= 'UserDefinedAlphaPhaseAnimalsFile\t,None\n'
 
         if prePhasedFile is not None and os.path.isfile(prePhasedFile):
-            spec+= 'PrePhasedFile\t\t\t\t,{0}\n'.format(prePhasedFile)
+            spec+= 'PrePhasedFile\t\t\t\t,"{0}"\n'.format(prePhasedFile)
         else:
             spec+= 'PrePhasedFile\t\t\t\t,None\n'
 
