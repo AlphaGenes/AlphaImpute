@@ -8,6 +8,8 @@ integer, parameter :: RUN_HMM_NO=1
 integer, parameter :: RUN_HMM_YES=2
 integer, parameter :: RUN_HMM_ONLY=3
 integer, parameter :: RUN_HMM_PREPHASE=4
+integer, parameter :: RUN_HMM_NGS=5
+
 
 character(len=300) :: GenotypeFileName,CheckPhaseFileName,CheckGenoFileName
 integer :: nIndHmmMaCH,GlobalRoundHmm,nSnpHmm
@@ -26,12 +28,14 @@ integer, allocatable :: frequence(:,:,:)
 end module GlobalVariablesHmmMaCH
 
 !######################################################################
-subroutine MaCHController
+subroutine MaCHController(HMM)
+use Global
 use GlobalVariablesHmmMaCH
 use Par_Zig_mod
 use omp_lib
 
 implicit none
+integer, intent(in) :: HMM
 integer :: i, nprocs, nthreads, j
 real(4) :: r
 real(8) :: t1, t2, tT
@@ -40,8 +44,53 @@ integer, allocatable :: seed(:)
 integer :: grainsize, count, secs, seed0
 integer :: n0, n1, n2
 
+#ifdef DEBUG
+    write(0,*) 'DEBUG: [MaCHController] Allocate memory'
+#endif
 
-call ParseMaCHData
+! Number of SNPs and genotyped animals for the HMM algorithm
+nSnpHmm=nSnp
+nIndHmmMaCH=nAnisG
+
+! ALLOCATE MEMORY
+! Allocate a matrix to store the diploids of every Animal
+! Template Diploids Library
+allocate(GenosHmmMaCH(nIndHmmMaCH,nSnp))
+allocate(PhaseHmmMaCH(nIndHmmMaCH,nSnp,2))
+
+! Allocate memory to store Animals contributing to the Template
+! Haplotype Library
+allocate(GlobalHmmID(nIndHmmMaCH))
+
+! Allocate memory to store Animals Highly Dense Genotyped
+allocate(GlobalHmmHDInd(nIndHmmMaCH))
+
+! Allocate a matrix to store probabilities of genotypes and 
+! alleles for each animal
+allocate(ProbImputeGenosHmm(nIndHmmMaCH,nSnp))
+allocate(ProbImputePhaseHmm(nIndHmmMaCH,nSnp,2))
+
+! Initialise probabilities to 0
+ProbImputeGenosHmm=0.0
+ProbImputePhaseHmm=0.0
+
+! No animal has been HD genotyped YET
+! WARNING: If this variable only stores 1 and 0, then its type should
+!          logical: GlobalHmmHDInd=.false.
+GlobalHmmHDInd=0
+
+if (HMM==RUN_HMM_NGS) call GenosToImputeGenos
+
+#ifdef DEBUG
+    write(0,*) 'DEBUG: [ParseMaCHData] ...'
+#endif
+
+call ParseMaCHData(HMM)
+
+#ifdef DEBUG
+    write(0,*) 'DEBUG: [SetUpEquations] ...'
+#endif
+
 call SetUpEquations
 
 open (unit=6,form='formatted')
@@ -91,7 +140,7 @@ do GlobalRoundHmm=1,nRoundsHmm
     call ResetCrossovers
 
     ! Parallelise the HMM process in animals
-#ifdef DEBUG
+#if DEBUG.EQ.1
         t1 = omp_get_wtime()
         write(0,*) 'DEBUG: Begin paralellisation [MaCHController]'
 #endif
@@ -102,7 +151,7 @@ do GlobalRoundHmm=1,nRoundsHmm
     enddo
     !$!OMP END DO
     !$OMP END PARALLEL DO
-#ifdef DEBUG
+#if DEBUG.EQ.1
         t2 = omp_get_wtime()
         tT = tT + (t2-t1)
         write(0,*) 'DEBUG: End paralellisation. Partial time:', t2-t1
@@ -115,6 +164,11 @@ do GlobalRoundHmm=1,nRoundsHmm
     ! Update transition probabilities of the HMM process
     call UpdateErrorRate(Theta)
 enddo
+
+#ifdef DEBUG
+    write(0,*) 'DEBUG: End paralellisation'
+#endif
+
 
 ! Average genotype probability of the different hmm processes
 ProbImputeGenosHmm=ProbImputeGenosHmm/(nRoundsHmm-HmmBurnInRound)
@@ -139,48 +193,93 @@ ProbImputePhaseHmm=ProbImputePhaseHmm/(nRoundsHmm-HmmBurnInRound)
 !deallocate(frequence)
 
 end subroutine MaCHController
+!######################################################################
+subroutine GenosToImputeGenos
+use Global
+use GlobalVariablesHmmMaCH
+
+implicit none
+integer :: i
+
+#ifdef DEBUG
+    write(0,*) 'DEBUG: [GenosToImputeGenos]'
+#endif
+
+
+! do i=1,nAnisP
+!     ImputeGenos(i,:) = 
+! enddo
+
+end subroutine GenosToImputeGenos
+!######################################################################
+subroutine ParseMaCHData(HMM)
+use Global
+use GlobalVariablesHmmMaCH
+
+implicit none
+integer, intent(in) :: HMM
+
+if (HMM == RUN_HMM_NGS) then
+    call ParseMaCHDataNGS
+else
+    call ParseMaCHDataGenos
+endif
+
+end subroutine ParseMaCHData
 
 !######################################################################
-subroutine ParseMaCHData
+subroutine ParseMaCHDataNGS
+use Global
+use GlobalVariablesHmmMaCH
+
+implicit none
+integer :: i,j
+
+write(0,*) 'DEBUG: [ParseMaCHDataNGS]'
+
+do i=1,nAnisG
+    ! Add animal's diploid to the Diploids Library
+    GenosHmmMaCH(i,:)=ImputeGenos(i,:)
+    PhaseHmmMaCH(i,:,1)=3
+    PhaseHmmMaCH(i,:,2)=3
+    GlobalHmmID(i)=i
+    ! Check if this animal is Highly Dense genotyped
+    if ((float(count(GenosHmmMaCH(i,:)==9))/nSnp)<0.10) then
+        ! WARNING: If this variable only stores 1 and 0, then its
+        !          type should logical: GlobalHmmHDInd=.true.
+        GlobalHmmHDInd(i)=1
+    endif
+
+    ! WARNING: This should have been previously done for ImputeGenos variable
+    do j=1,nSnp
+        if ((GenosHmmMaCH(i,j)<0).or.(GenosHmmMaCH(i,j)>2)) GenosHmmMaCH(i,j)=3
+    enddo
+enddo
+
+! Check if the number of Haplotypes the user has considered in the
+! Spec file, Sub H (MaCH paper: Li et al. 2010), is reached.
+if (nHapInSubH>2*sum(GlobalHmmHDInd(:))) then
+    print*, "Data set is too small for the number of Haplotypes in Sub H specified"
+    stop
+endif
+
+end subroutine ParseMaCHDataNGS
+
+!######################################################################
+subroutine ParseMaCHDataGenos
+! subroutine ParseMaCHData
 use Global
 use GlobalVariablesHmmMaCH
 
 implicit none
 integer :: i,j,k
 
-! Number of SNPs and genotyped animals for the HMM algorithm
-nSnpHmm=nSnp
-nIndHmmMaCH=nAnisG
+#ifdef DEBUG
+    write(0,*) 'DEBUG: [ParseMaCHDataGenos] ...'
+#endif
 
-! ALLOCATE MEMORY
+write(0,*) 'DEBUG: [ParseMaCHDataNGS] nAnisG', nAnisG
 
-! Test allocation ForwardProb variable for HMM parallelisation
-!allocate(ForwardProbs(nHapInSubH*nHapInSubH,nSnpHmm))
-
-! Allocate a matrix to store the diploids of every Animal
-! Template Diploids Library
-allocate(GenosHmmMaCH(nIndHmmMaCH,nSnp))
-allocate(PhaseHmmMaCH(nIndHmmMaCH,nSnp,2))
-
-! Allocate memory to store Animals contributing to the Template
-! Haplotype Library
-allocate(GlobalHmmID(nIndHmmMaCH))
-
-! Allocate memory to store Animals Highly Dense Genotyped
-allocate(GlobalHmmHDInd(nIndHmmMaCH))
-
-! Allocate a matrix to store probabilities of the genotype of every
-! Animal and inititalize to 0
-allocate(ProbImputeGenosHmm(nIndHmmMaCH,nSnp))
-ProbImputeGenosHmm=0.0
-
-allocate(ProbImputePhaseHmm(nIndHmmMaCH,nSnp,2))
-ProbImputePhaseHmm=0.0
-
-! No animal has been HD genotyped YET
-! WARNING: If this variable only stores 1 and 0, then its type should
-!          logical: GlobalHmmHDInd=.false.
-GlobalHmmHDInd=0
 
 k=0
 do i=1,nAnisP
@@ -203,14 +302,14 @@ do i=1,nAnisP
         do j=1,nSnp
             if ((GenosHmmMaCH(k,j)<0).or.(GenosHmmMaCH(k,j)>2)) GenosHmmMaCH(k,j)=3
             if (PhaseHmmMaCH(k,j,1)/=0 .or. PhaseHmmMaCH(k,j,1)/=1) PhaseHmmMaCH(k,j,1)=3
-            if (PhaseHmmMaCH(k,j,2)/=0 .or. PhaseHmmMaCH(k,j,2)/=1) PhaseHmmMaCH(k,j,1)=2
+            if (PhaseHmmMaCH(k,j,2)/=0 .or. PhaseHmmMaCH(k,j,2)/=1) PhaseHmmMaCH(k,j,1)=3
         enddo
     endif
 enddo
 
 ! Check if the number of genotyped animals is correct
 if (k/=nAnisG) then
-    print*, "Error in ParseMaCHData"
+    print*, "Error in ParseMaCHDataGenos"
     stop
 endif
 
@@ -221,7 +320,8 @@ if (nHapInSubH>2*sum(GlobalHmmHDInd(:))) then
     stop
 endif
 
-end subroutine ParseMaCHData
+! end subroutine ParseMaCHData
+end subroutine ParseMaCHDataGenos
 
 !######################################################################
 subroutine MaCHForInd(CurrentInd)
