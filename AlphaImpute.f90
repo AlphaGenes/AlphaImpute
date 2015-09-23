@@ -17,29 +17,57 @@ use Global
 use GlobalVariablesHmmMaCH
 implicit none
 
+integer :: i,j
+
 call Titles
 call ReadInParameterFile
-if (RestartOption<OPT_RESTART_PHASING) call MakeDirectories
-call CountInData
-call ReadInData
-call CheckParentage
-call FillInSnp
-call FillInBasedOnOffspring
-call InternalEdit
-call MakeFiles
+if (HMMOption /= RUN_HMM_NGS) then
+    if (RestartOption<OPT_RESTART_PHASING) call MakeDirectories(RUN_HMM_NULL)
+    call CountInData
+    call ReadInData
+    call CheckParentage
+    call FillInSnp
+    call FillInBasedOnOffspring
+    call InternalEdit
+    call MakeFiles
+else
+    call CountInData
+    call ReadInData
+    call CheckParentage
+    call InternalEdit
+    call MakeDirectories(RUN_HMM_NGS)
+    call ReadGenos(GenotypeFile)
 
-if (PreProcess) then
-    write(6,*) "  "
-    write(6,*) "  ","The program has preprocessed the data and now it stops"
-    stop
+    ! Impute observed genotypes to animals in the pedigree
+    nAnisP=nAnisG
+    allocate(ImputeGenos(0:nAnisP,nSnp))
+    allocate(ImputePhase(0:nAnisP,nSnp,2))
+    do i=1,nAnisG
+        do j=1,nAnisP
+            ImputeGenos(j,:)=Genos(i,:)
+        enddo
+    enddo
+
 endif
 
-if (HMMOption==RUN_HMM_ONLY) then
+if (HMMOption == RUN_HMM_NGS) then
+
+#ifdef DEBUG
+    write(0,*) 'DEBUG: HMM NGS'
+#endif
+    
+    call MaCHController(HMMOption)
+    call FromHMM2ImputePhase
+    call WriteOutResults
+
+else if (HMMOption==RUN_HMM_ONLY) then
+
 #ifdef DEBUG
     write(0,*) 'DEBUG: HMM only'
 #endif
-    write(6,*) ""
-    write(6,*) "Bypass calculation of probabilities and phasing"
+
+    print*, ""
+    print*, "Bypass calculation of probabilities and phasing"
 
 else
     write(6,*) " "
@@ -47,6 +75,7 @@ else
 
     if (SexOpt==0) then
         if (BypassGeneProb==0) then
+
 #ifdef DEBUG
             write(0,*) 'DEBUG: Calculate Genotype Probabilites'
 #endif
@@ -77,6 +106,7 @@ else
 
 
     if (ManagePhaseOn1Off0==1) then
+
 #ifdef DEBUG
         write(0,*) 'DEBUG: Phase haplotypes with AlphaPhase'
 #endif
@@ -111,29 +141,33 @@ else
     endif
 endif
 
-! If we only want to phase data, then skip all the imputation steps 
-if (PhaseTheDataOnly==0) then
-    call ImputationManagement
+if (HMMOption/=RUN_HMM_NGS) then
+    ! If we only want to phase data, then skip all the imputation steps
+    if (PhaseTheDataOnly==0) then
+        call ImputationManagement
 
 #ifdef DEBUG
-    write(0,*) 'DEBUG: Write results'
-#endif
-    call WriteOutResults
-
-#ifdef DEBUG
-    write(0,*) 'DEBUG: Model Recombination'
-#endif
-    ! WARNING: Skip the modelling the recombination because it interferes with HMM propabilites
-    ! TODO:
-    if (HMMOption==RUN_HMM_NO) call ModelRecomb
-#ifdef DEBUG
-    write(0,*) 'DEBUG: Final Checker'
+        write(0,*) 'DEBUG: Write results'
 #endif
 
-    if (TrueGenos1None0==1) call FinalChecker
-    !call Cleaner
+        call WriteOutResults
+
+#ifdef DEBUG
+        write(0,*) 'DEBUG: Model Recombination'
+#endif
+
+        ! WARNING: Skip the modelling the recombination because it interferes with HMM propabilites
+        ! TODO:
+        if (HMMOption==RUN_HMM_NO) call ModelRecomb
+
+#ifdef DEBUG
+        write(0,*) 'DEBUG: Final Checker'
+#endif
+
+        if (TrueGenos1None0==1) call FinalChecker
+        !call Cleaner
+    endif
 endif
-
 call PrintTimerTitles
 
 end program AlphaImpute
@@ -159,6 +193,7 @@ enddo
 ! WARNING: Need to discuss this part of code with John. Nonsense going on here!
 
 if (HMMOption==RUN_HMM_ONLY) then ! Avoid any adulteration of genotypes with imputation subroutines
+
 #ifdef DEBUG
     write(0,*) 'DEBUG: Allocate memory for genotypes and haplotypes'
 #endif
@@ -199,11 +234,13 @@ if (HMMOption==RUN_HMM_ONLY) then ! Avoid any adulteration of genotypes with imp
 #ifdef DEBUG
         write(0,*) 'DEBUG: Call Mach'
 #endif
-    call MaCHController
+
+    call MaCHController(HMMOption)
 
 #ifdef DEBUG
         write(0,*) 'DEBUG: Mach Finished'
 #endif
+
 else
 
     if (RestartOption==4) then
@@ -245,7 +282,7 @@ else
             call GeneralFillIn
 
             if (HMMOption==RUN_HMM_PREPHASE) Then
-                call MaCHController
+                call MaCHController(HMMOption)
             else
                 print*, " "
                 print*, " ","Imputation of base animals completed"
@@ -298,7 +335,7 @@ else
                 call ManageWorkLeftRight
 
                 if (HMMOption==RUN_HMM_YES) Then
-                    call MaCHController
+                    call MaCHController(HMMOption)
                     call FromHMM2ImputePhase
                 endif
 
@@ -651,6 +688,7 @@ if (trim(TmpHmmOption)=='No') HMMOption=RUN_HMM_NO
 if (trim(TmpHmmOption)=='Yes') HMMOption=RUN_HMM_YES
 if (trim(TmpHmmOption)=='Only') HMMOption=RUN_HMM_ONLY
 if (trim(TmpHmmOption)=='Prephase') HMMOption=RUN_HMM_PREPHASE
+if (trim(TmpHmmOption)=="NGS") HMMOption=RUN_HMM_NGS
 if (HMMOption==RUN_HMM_NULL) then
     print*, "HMMOption not correctly specified"
     stop
@@ -1422,6 +1460,8 @@ character(len=300) :: TmpId
 integer :: n0, n1, n2
 
 
+if (HMMOption==RUN_HMM_NGS) GlobalExtraAnimals=0
+
 write(cm,'(I7)') nSnpRaw !for formatting
 cm = adjustl(cm)
 
@@ -1553,6 +1593,7 @@ else
 #ifdef DEBUG
     write(0,*) 'DEBUG: Unphase wrong alleles [WriteOutResults]'
 #endif
+
     do i=1,nAnisP
         do j=1,nSnp
             if (ImputePhase(i,j,1)<0) ImputePhase(i,j,1)=9 
@@ -1638,6 +1679,7 @@ else
 
     !if (HMMOption==RUN_HMM_ONLY.or.HMMOption==RUN_HMM_PREPHASE) then
     if (HMMOption/=RUN_HMM_NO) then
+
 #ifdef DEBUG
         write(0,*) 'DEBUG: Write HMM results [WriteOutResults]'
 #endif
@@ -1673,9 +1715,11 @@ else
         !        if ((ProbImputeGenos(i,j)>0.999).and.(ProbImputeGenos(i,j)<1.00001)) ImputeGenos(i,j)=1
         !    enddo
         !enddo
+
 #ifdef DEBUG
         write(0,*) 'DEBUG: Impute genotypes based on HMM genotypes probabilites [WriteOutResults]'
 #endif
+
         ! Impute the most likely genotypes. (Most frequent genotype)
         do i=1,nAnisG
             do j=1,nSnpIterate
@@ -1691,18 +1735,23 @@ else
                 endif
             enddo
         enddo
+
 #ifdef DEBUG
         write(0,*) 'DEBUG: Impute alleles based on HMM phase probabilites [WriteOutResults]'
 #endif
 
         ! Impute the most likely genotypes. (Most frequent genotype)
+        print *, "nAnisG", nAnisG
+        print *, "size", size(ProbImputePhaseHmm,1), size(GlobalHmmID)
+        print *, "Maxim value", maxval(GlobalHmmID)
+
         do i=1,nAnisG
             do j=1,nSnpIterate
                 do l=1,2
-                    if (ProbImputePhaseHmm(GlobalHmmID(i),j,l)>0.5) then
-                        ImputePhase(GlobalHmmID(i),j,l)=1
+                    if (ProbImputePhaseHmm(i,j,l)>0.5) then
+                        ImputePhase(i,j,l)=1
                     else
-                        ImputePhase(GlobalHmmID(i),j,l)=0
+                        ImputePhase(i,j,l)=0
                     endif
                 enddo
             enddo
@@ -1725,6 +1774,7 @@ else
     enddo
 
     if ((SexOpt==1).or.(BypassGeneProb==1)) then
+
 #ifdef DEBUG
         write(0,*) 'DEBUG: Bypass genotype probabilities [WriteOutResults]'
 #endif
@@ -5880,47 +5930,55 @@ end subroutine ReadGenos
 
 !#############################################################################################################################################################################################################################
 
-subroutine MakeDirectories
+subroutine MakeDirectories(HMM)
 use global
+use GlobalVariablesHmmMaCH
 implicit none
 
+integer, intent(in) :: HMM
 integer :: i
 character(len=300) :: FolderName
 
-print*, ""
-
-call rmdir("Miscellaneous")
-call rmdir("Phasing")
-call rmdir("Results")
-call rmdir("InputFiles")
-call rmdir("GeneProb")      !here
-call rmdir("IterateGeneProb")   !here
-
-call system("mkdir Phasing")
-call system("mkdir Miscellaneous")
-
-call system("mkdir Results")
-call system("mkdir InputFiles")
-call system("mkdir GeneProb")       !here
-call system("mkdir IterateGeneProb")    !here
-
-if (WindowsLinux==1) then
-
-
+if (HMM == RUN_HMM_NGS) then
+    call rmdir("Results")
+    call rmdir("InputFiles")
+    call system("mkdir Results")
+    call system("mkdir InputFiles")
 else
+    print*, ""
 
-    do i=1,nProcessors
-        write (FolderName,'("GeneProb"i0)')i
-        call system ("mkdir GeneProb/" // FolderName)       !here
-    enddo
-    do i=1,nPhaseInternal
-        write (FolderName,'("Phase"i0)')i
-        call system ("mkdir Phasing/" // FolderName)
-    enddo
-    do i=1,nProcessors
-        write (FolderName,'("GeneProb"i0)')i            !here
-        call system ("mkdir IterateGeneProb/" // FolderName)    !here
-    enddo
+    call rmdir("Miscellaneous")
+    call rmdir("Phasing")
+    call rmdir("Results")
+    call rmdir("InputFiles")
+    call rmdir("GeneProb")      !here
+    call rmdir("IterateGeneProb")   !here
+
+    call system("mkdir Phasing")
+    call system("mkdir Miscellaneous")
+
+    call system("mkdir Results")
+    call system("mkdir InputFiles")
+    call system("mkdir GeneProb")       !here
+    call system("mkdir IterateGeneProb")    !here
+
+    if (WindowsLinux==1) then
+
+    else
+
+        do i=1,nProcessors
+            write (FolderName,'("GeneProb"i0)')i
+            call system ("mkdir GeneProb/" // FolderName)       !here
+        enddo
+        do i=1,nPhaseInternal
+            write (FolderName,'("Phase"i0)')i
+            call system ("mkdir Phasing/" // FolderName)
+        enddo
+        do i=1,nProcessors
+            write (FolderName,'("GeneProb"i0)')i            !here
+            call system ("mkdir IterateGeneProb/" // FolderName)    !here
+        enddo
+    endif
 endif
 
 
