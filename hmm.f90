@@ -79,7 +79,12 @@ ProbImputePhaseHmm=0.0
 !          logical: GlobalHmmHDInd=.false.
 GlobalHmmHDInd=0
 
-if (HMM==RUN_HMM_NGS) call GenosToImputeGenos
+if (HMM==RUN_HMM_NGS) then
+    shotgunErrorMatrix = allocate(3, 256)
+    call GenosToImputeGenos
+endif
+
+
 
 #ifdef DEBUG
     write(0,*) 'DEBUG: [ParseMaCHData] ...'
@@ -1026,34 +1031,50 @@ subroutine ConditionOnData(CurrentInd,Marker)
 ! Introduce the emission probabilities (the probability of observe a
 ! given genotype) into the forward variable of the HMM.
 ! It basically calculate the second term of the forward variables
+use Global
 use GlobalVariablesHmmMaCH
 implicit none
 
 integer, intent(in) :: CurrentInd, Marker
 
 ! Local variables
-integer :: i,j,Index
-double precision :: Factors(0:1)
+integer :: i,j,Index, genotype
+double precision :: Factors(0:1), cond_probs(0:2)
 
 ! We treat missing genotypes as uninformative about the mosaic's
 ! underlying state. If we were to allow for deletions and the like,
 ! that may no longer be true.
-if (GenosHmmMaCH(CurrentInd,Marker)==3) then
+genotype = GenosHmmMaCH(CurrentInd,Marker)
+if (genotype==3) then
     return
 else
     ! Index keeps track of the states already visited. The total number
     ! of states in this chunk of code is (nHapInSubH x (nHapInSubH-1)/2)
     Index=0
-    do i=1,nHapInSubH
-        ! Probability to observe genotype SubH(i) being the true
-        ! genotype GenosHmmMaCH in locus Marker
-        Factors(0)=Penetrance(Marker,SubH(i,Marker),&
-                    GenosHmmMaCH(CurrentInd,Marker))
+    if (HMMOption==RUN_HMM_NGS)
+        do j=0,2
+            cond_probs(i)=Penetrance(Marker,j,0)*shotgunErrorMatrix(0,genotype)&
+                         +Penetrance(Marker,j,1)*shotgunErrorMatrix(1,genotype)&
+                         +Penetrance(Marker,j,2)*shotgunErrorMatrix(2,genotype)
+        enddo
+    endif
 
-        ! Probability to observe genotype SubH(i)+1 being the true
-        ! genotype GenosHmmMaCH in locus Marker
-        Factors(1)=Penetrance(Marker,SubH(i,Marker)+1,&
-                    GenosHmmMaCH(CurrentInd,Marker))
+    do i=1,nHapInSubH
+        if (HMMOption /= RUN_HMM_NGS) then
+            ! Probability to observe genotype SubH(i) being the true
+            ! genotype GenosHmmMaCH in locus Marker
+            Factors(0) = Penetrance(Marker,SubH(i,Marker),genotype)
+            ! Probability to observe genotype SubH(i)+1 being the true
+            ! genotype GenosHmmMaCH in locus Marker
+            Factors(1) = Penetrance(Marker,SubH(i,Marker)+1,genotype)
+        else
+            ! Probability to observe genotype SubH(i) being the true
+            ! genotype GenosHmmMaCH in locus Marker
+            Factor(0) = cond_probs(SubH(i,Marker))
+            ! Probability to observe genotype SubH(i)+1 being the true
+            ! genotype GenosHmmMaCH in locus Marker
+            Factor(1) = cond_probs(SubH(i,Marker)+1)
+        endif
         do j=1,i
             Index=Index+1
             ForwardProbs(Index,Marker)=&
@@ -1495,3 +1516,59 @@ enddo
 end subroutine ExtractTemplateHapsByAnimals
 
 !######################################################################
+subroutine SetShotgunError(rate)
+use GlobalVariablesHmmMaCH
+
+double precision :: rate
+integer :: binomial(33,33)
+
+binomial(1,1) = 1
+binomial(2,1) = 1
+binomial(2,2) = 1
+
+do i=3,33
+    binomial(i,1) = 1
+    binomial(i,i) = 1
+    do j=2,i 
+        binomial(i,j) = binomial(i-1,j) + binomial(i-1,j-1)
+    enddo
+enddo
+
+! TODO: Change ShotgunErrorMatrix to take as input number or reads 
+!       and the frequency. Something like this:
+! 
+! ShotgunErrorMatrix(0,0) = f0**n0 * f1**n1
+! ShotgunErrorMatrix(0,1) = 
+! ShotgunErrorMatrix(0,1) = 
+! ShotgunErrorMatrix(1,0) = 
+! ShotgunErrorMatrix(1,1) = 
+! ShotgunErrorMatrix(1,2) = 
+! ShotgunErrorMatrix(2,0) = 
+! ShotgunErrorMatrix(2,1) = 
+! ShotgunErrorMatrix(2,2) = 
+
+do i=1,16
+    do j=1,16
+        if (rate==0) then
+            if (j==1) then
+                ShotgunErrorMatrix(0,j*16+i) = 1.0
+            else
+                ShotgunErrorMatrix(0,j*16+i) = 0.0
+            endif
+            ShotgunErrorMatrix(1,j*16+i) = (0.5)**(i+j) * binomial(i+j,i)
+            if (i==1) then
+                ShotgunErrorMatrix(2,j*16+i) = 1.0
+            else
+                ShotgunErrorMatrix(2,j*16+i) = 0.0
+            endif
+        else
+            ShotgunErrorMatrix(0,j*16+i) = (1-rate)**i * (rate)**j * binomial(i+j,i)
+            ShotgunErrorMatrix(1,j*16+i) = (0.5)**(i+j) * binomial(i+j,i)
+            ShotgunErrorMatrix(2,j*16+i) = (rate)**i * (1-rate)**j * binomial(i+j,i)
+        endif
+    enddo
+enddo
+
+end subroutine SetShotgunError
+!######################################################################
+
