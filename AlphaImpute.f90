@@ -1745,10 +1745,6 @@ else
 #endif
 
         ! Impute the most likely genotypes. (Most frequent genotype)
-        print *, "nAnisG", nAnisG
-        print *, "size", size(ProbImputePhaseHmm,1), size(GlobalHmmID)
-        print *, "Maxim value", maxval(GlobalHmmID)
-
         do i=1,nAnisG
             do j=1,nSnpIterate
                 do l=1,2
