@@ -38,8 +38,9 @@ else
     allocate(Reads(nAnisG,nSnp))
     allocate(ImputeGenos(0:nAnisG,nSnp))
     allocate(ImputePhase(0:nAnisG,nSnp,2))
+    allocate(SnpIncluded(nSnp))
     call CheckParentage
-    call InternalEdit
+    ! call InternalEdit
     call ReadSeq(GenotypeFile)
     write(0,*) "DEBUG: ReadSeq"
 endif
@@ -1616,6 +1617,8 @@ else
     TmpGenos=9  
     TmpPhase=9
 
+    if (HMMOption==RUN_HMM_NGS) SnpIncluded=1
+
     l=0 
     do j=1,nSnpRaw
         if (SnpIncluded(j)==1) then
@@ -1654,7 +1657,7 @@ else
          write (33,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') Id(i),TmpPhase(i,:,2)
          write (34,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') Id(i),TmpGenos(i,:)
     enddo
-    if (SexOpt==0) then
+    if (SexOpt==0 .and. HMMOption/=RUN_HMM_NGS) then
         open (unit=39,file="IterateGeneProb/IterateGeneProbInput.txt")
         do i=1,nAnisP
             write (39,'(3i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') RecPed(i,:),TmpGenos(i,:)
@@ -6004,10 +6007,10 @@ character(len=300) :: FolderName
 
 if (HMM == RUN_HMM_NGS) then
     call rmdir("Results")
-    call rmdir("InputFiles")
+    call rmdir("Miscellaneous")
     call system("mkdir Results")
-    call system("mkdir InputFiles")
     call system("mkdir Miscellaneous")
+
 else
     print*, ""
 
