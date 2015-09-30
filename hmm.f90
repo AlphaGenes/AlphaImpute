@@ -55,36 +55,62 @@ nIndHmmMaCH=nAnisG
 ! ALLOCATE MEMORY
 ! Allocate a matrix to store the diploids of every Animal
 ! Template Diploids Library
+! NOTE: GenosHmmMaCH can contain either genotype or reads information (if working with sequence data NGS)
 allocate(GenosHmmMaCH(nIndHmmMaCH,nSnp))
-allocate(PhaseHmmMaCH(nIndHmmMaCH,nSnp,2))
-
+! allocate(PhaseHmmMaCH(nIndHmmMaCH,nSnp,2))
 ! Allocate memory to store Animals contributing to the Template
 ! Haplotype Library
 allocate(GlobalHmmID(nIndHmmMaCH))
 
 ! Allocate memory to store Animals Highly Dense Genotyped
 allocate(GlobalHmmHDInd(nIndHmmMaCH))
-
-! Allocate a matrix to store probabilities of genotypes and 
-! alleles for each animal
-allocate(ProbImputeGenosHmm(nIndHmmMaCH,nSnp))
-allocate(ProbImputePhaseHmm(nIndHmmMaCH,nSnp,2))
-
-! Initialise probabilities to 0
-ProbImputeGenosHmm=0.0
-ProbImputePhaseHmm=0.0
-
 ! No animal has been HD genotyped YET
 ! WARNING: If this variable only stores 1 and 0, then its type should
 !          logical: GlobalHmmHDInd=.false.
 GlobalHmmHDInd=0
 
+! Allocate a matrix to store probabilities of genotypes and 
+! alleles for each animal
+allocate(ProbImputeGenosHmm(nIndHmmMaCH,nSnp))
+allocate(ProbImputePhaseHmm(nIndHmmMaCH,nSnp,2))
+! Initialise probabilities to 0
+ProbImputeGenosHmm=0.0
+ProbImputePhaseHmm=0.0
+
+! The full Template Haplotype Library, H (Li et al. 2010, Appendix)
+allocate(FullH(nIndHmmMaCH,nSnpHmm,2))
+
+! Vector of Combination of genotyping error (Li et al. 2010, Appendix)
+! Epsilon is related with the Penetrance Matrix of the HMM which gives
+! the emision probabilities for each state/marker/snp.
+allocate(Epsilon(nSnpHmm))
+allocate(Penetrance(nSnpHmm,0:2,0:2))
+
+! Vector of Combination of population recombination (Li et al. 2010, Appendix)
+! Thetas is related with the transition Matrix of the HMM. Since there
+! are nSnpHmm states, there are nSnpHmm transitions between states.
+! WARNING: Is this correctly implemented throughout the hmm process??
+allocate(Thetas(nSnpHmm-1))
+
+allocate(ErrorUncertainty(nSnpHmm))
+allocate(ErrorMatches(nSnpHmm))
+allocate(ErrorMismatches(nSnpHmm))
+
+! Crossover parameter in order to maximize the investigation of
+! different mosaic configurations
+! WARNING: crossovers are related with the transition matrix of the HMM.
+!          If there are nSnpHmm states and nSnpHmm-1 transitions
+!          between states, why the number of crossovers is nSnpHmm??
+allocate(Crossovers(nSnpHmm-1))
+
 if (HMM==RUN_HMM_NGS) then
-    shotgunErrorMatrix = allocate(3, 256)
-    call GenosToImputeGenos
+    ! Set the value MISSING of reads
+    MISSING = READ_MISSING
+
+    ! allocate(ShotgunErrorMatrix(0:2, MAX_READS_COUNT*MAX_READS_COUNT))
+    allocate(ShotgunErrorMatrix(0:2,0:MAX_READS_COUNT,0:MAX_READS_COUNT))
+    ! call GenosToImputeGenos
 endif
-
-
 
 #ifdef DEBUG
     write(0,*) 'DEBUG: [ParseMaCHData] ...'
@@ -96,7 +122,12 @@ call ParseMaCHData(HMM)
     write(0,*) 'DEBUG: [SetUpEquations] ...'
 #endif
 
-call SetUpEquations
+if (HMM==RUN_HMM_NGS) then
+    call SetUpEquationsReads
+
+else
+    call SetUpEquationsGenotypes
+endif
 
 open (unit=6,form='formatted')
 
@@ -1159,7 +1190,7 @@ enddo
 end subroutine SetUpPrior
 
 !######################################################################
-subroutine SetUpEquations
+subroutine SetUpEquationsGenotypes
 ! Initialize the variables and parameters of the HMM model described in
 ! Li et al. 2010, Appendix
 
@@ -1169,45 +1200,9 @@ implicit none
 
 integer :: i,j,p
 
-! ALLOCATE MEMORY
-! The full Template Haplotype Library, H (Li et al. 2010, Appendix)
-allocate(FullH(nIndHmmMaCH,nSnpHmm,2))
-
-! Subset of H, Sub H (setup by the user)
-! This is a way to restrict the size of the template library, as the
-! complexity of the algorith increases cubically with the sample size
-! (the cost of each update increases quadratically and the number of
-!  updates increases linearly with sample size)
-!allocate(SubH(nHapInSubH,nSnpHmm))
-
-! HMM PARAMETERS
-! nSnpHmm is the number of states in the HMM
-
-! Vector of Combination of genotyping error (Li et al. 2010, Appendix)
-! Epsilon is related with the Penetrance Matrix of the HMM which gives
-! the emision probabilities for each state/marker/snp.
-allocate(Epsilon(nSnpHmm))
-
-! Vector of Combination of population recombination (Li et al. 2010, Appendix)
-! Thetas is related with the transition Matrix of the HMM. Since there
-! are nSnpHmm states, there are nSnpHmm transitions between states.
-! WARNING: Is this correctly implemented throughout the hmm process??
-allocate(Thetas(nSnpHmm-1))
-
-allocate(ErrorUncertainty(nSnpHmm))
-allocate(ErrorMatches(nSnpHmm))
-allocate(ErrorMismatches(nSnpHmm))
-
-! Crossover parameter in order to maximize the investigation of
-! different mosaic configurations
-! WARNING: crossovers are related with the transition matrix of the HMM.
-!          If there are nSnpHmm states and nSnpHmm-1 transitions
-!          between states, why the number of crossovers is nSnpHmm??
-allocate(Crossovers(nSnpHmm-1))
-
-! Initialization of HMM parameters
-Epsilon=0.00000001
-Thetas=0.01
+! ! Initialization of HMM parameters
+! Epsilon=0.00000001
+! Thetas=0.01
 
 !Initialise FullH
 do i=1,nIndHmmMaCH      ! For every Genotyped Individual
@@ -1257,7 +1252,111 @@ ErrorMismatches(:)=0
 Crossovers(:)=0
 !print*, Crossovers(:)
 
-end subroutine SetUpEquations
+end subroutine SetUpEquationsGenotypes
+
+!######################################################################
+subroutine SetUpEquationsReads
+! Initialize the variables and parameters of the HMM model described in
+! Li et al. 2010, Appendix
+
+use Global
+use GlobalVariablesHmmMaCH
+use random
+implicit none
+
+integer :: i,j,p, alleles, mac, readObs, RefAll, AltAll
+double precision :: prior_11, prior_12, prior_22
+double precision :: posterior_11, posterior_12, posterior_22
+double precision :: r, frequency, summ
+
+! ! Initialization of HMM parameters
+! Epsilon=0.00000001
+! Thetas=0.01
+
+!Initialise FullH
+do j=1,nSnpHmm      ! For each SNP
+    ! alleles = 0
+    ! mac = 0
+    ! do i=1,nIndHmmMaCH      ! For every Genotyped Individual
+    !     readObs = GenosHmmMaCH(i,j)
+    !     alleles = alleles + mod(readObs,MAX_READS_COUNT)
+    !     mac = mac + readObs/MAX_READS_COUNT
+    ! enddo
+    ! alleles = alleles + mac
+
+    ! if (alleles==0) then
+    !     do i=1,nIndHmmMaCH
+    !         FullH(i,j,:)=0
+    !     enddo
+    ! endif
+
+    ! frequency = DBLE(mac) / DBLE(alleles)
+    
+
+    readObs = 0
+    alleles = 0
+
+    do i=1,nIndHmmMaCH
+        readObs = readObs + GenosHmmMaCH(i,j)
+        alleles = alleles + AlterAllele(i,j)
+    enddo
+    frequency =  dble(alleles) / dble(readObs)
+
+    prior_11 = (1.0 - frequency)**2
+    prior_12 = 2.0 * (1.0 - frequency) * frequency
+    prior_22 = frequency**2
+    ! print *, readObs, alleles, frequency, prior_11, prior_12, prior_22
+
+    do i=1,nIndHmmMaCH
+         ! readObs = GenosHmmMaCH(i,j)
+         readObs = AlterAllele(i,j)*MAX_READS_COUNT+ReferAllele(i,j)
+        RefAll = ReferAllele(i,j)
+        AltAll = AlterAllele(i,j)         
+
+         if (readObs==0) exit
+
+         ! posterior_11 = prior_11 * ShotgunErrorMatrix(0,readObs)
+         ! posterior_12 = prior_12 * ShotgunErrorMatrix(1,readObs)
+         ! posterior_22 = prior_22 * ShotgunErrorMatrix(2,readObs)
+         posterior_11 = prior_11 * ShotgunErrorMatrix(0,RefAll,AltAll)
+         posterior_12 = prior_12 * ShotgunErrorMatrix(1,RefAll,AltAll)
+         posterior_22 = prior_22 * ShotgunErrorMatrix(2,RefAll,AltAll)
+         summ = posterior_11 + posterior_12 + posterior_22
+
+         ! print *, summ, posterior_11, posterior_12, posterior_22
+
+         if (summ==0) write(0,*) 'There is a problem here!'
+
+         posterior_11 = posterior_11 / summ
+         posterior_12 = posterior_12 / summ
+
+         r = ran1(idum)
+
+         if (r < posterior_11) then
+            FullH(i,j,:) = 0
+         elseif (r < posterior_11 + posterior_12) then
+            if (ran1(idum)<0.5) then
+                FullH(i,j,1) = 0
+                FullH(i,j,2) = 1
+            else
+                FullH(i,j,1) = 1
+                FullH(i,j,2) = 0
+            endif
+        else
+            FullH(i,j,:)=1
+        endif
+    enddo
+enddo
+
+! call CalcPenetrance
+
+ErrorUncertainty(:)=0
+ErrorMatches(:)=0
+ErrorMismatches(:)=0
+Crossovers(:)=0
+!print*, Crossovers(:)
+
+end subroutine SetUpEquationsReads
 
 !######################################################################
 subroutine UpdateThetas
