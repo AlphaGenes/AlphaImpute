@@ -1153,7 +1153,7 @@ integer :: j, nprocs
 ! Penetrance(j,i,k) = P(P_j|S_j)
 ! i = G_j = {0,1,2}
 ! k = T(S_j) = T(x_j) + T(y_j) = {0,1,2}
-allocate(Penetrance(nSnpHmm,0:2,0:2))
+! allocate(Penetrance(nSnpHmm,0:2,0:2))
 
 nprocs = OMP_get_num_procs()
 call OMP_set_num_threads(nprocs)
@@ -1267,7 +1267,7 @@ do i=1,nIndHmmMaCH      ! For every Genotyped Individual
     enddo
 enddo
 
-call CalcPenetrance
+! call CalcPenetrance
 
 ErrorUncertainty(:)=0
 ErrorMatches(:)=0
@@ -1447,30 +1447,29 @@ do i=1,nSnpHmm
         mismatches=mismatches+ErrorMismatches(i)
         uncertain=uncertain+ErrorUncertainty(i)
     else
-        call SetPenetrance(i)
+        call UpdateError(ErrorMatches(i), ErrorMismatches(i), ErrorUncertainty(i), rate)
+        call SetPenetrance(i,rate)
     endif
 enddo
 
 call UpdateError(matches, mismatches, uncertain, rate)
 
 do i=1,nSnpHmm
-    if (ErrorMismatches(i)<=2) call SetPenetrance(i)
+    if (ErrorMismatches(i)<=2) call SetPenetrance(i, rate)
 enddo
 
 end subroutine UpdateErrorRate
 
 !######################################################################
-subroutine SetPenetrance(marker)
+subroutine SetPenetrance(marker, Err)
 
 use GlobalVariablesHmmMaCH
 implicit none
 
 integer,intent(in) :: marker
+double precision, intent(in) :: Err
 
-! Local variables
-double precision :: Err
-
-Err=Epsilon(marker)
+Epsilon(marker) = Err
 
 Penetrance(marker,0,0)=(1.0-Err)**2
 Penetrance(marker,0,1)=2.0*(1.0-Err)*Err
@@ -1554,6 +1553,38 @@ ErrorMatches(:)=0
 ErrorMismatches(:)=0
 
 end subroutine ResetErrors
+
+!######################################################################
+subroutine GetErrorRatebyMarker(marker, Err)
+use GlobalVariablesHmmMaCH
+
+implicit none
+integer, intent(in) :: marker
+double precision, intent(out) :: Err
+
+Err = 0.0
+Err = Epsilon(marker)
+
+end subroutine GetErrorRatebyMarker
+
+!######################################################################
+subroutine GetErrorRate(mean)
+use GlobalVariablesHmmMaCH
+
+implicit none
+double precision, intent(out) :: mean
+
+double precision :: ErrorRate
+integer :: i
+
+mean = 0.0
+do i=1,nSnpHmm
+    call GetErrorRatebyMarker(i, ErrorRate)
+    mean = mean + ErrorRate
+enddo
+mean = mean / nSnpHmm
+
+end subroutine GetErrorRate
 
 !######################################################################
 subroutine ExtractTemplateHaps(forWhom,Shuffle1,Shuffle2)
