@@ -281,7 +281,7 @@ use Global
 use GlobalVariablesHmmMaCH
 
 implicit none
-integer :: i,j
+integer :: i
 
 #ifdef DEBUG
     write(0,*) 'DEBUG: [ParseMaCHDataNGS]'
@@ -294,16 +294,11 @@ do i=1,nAnisG
     ! PhaseHmmMaCH(i,:,2)=3
     GlobalHmmID(i)=i
     ! Check if this animal is Highly Dense genotyped
-    if ((float(count(GenosHmmMaCH(i,:)==9))/nSnp)<0.10) then
+    if ((float(count(GenosHmmMaCH(i,:)/=MISSING))/nSnp)>0.90) then
         ! WARNING: If this variable only stores 1 and 0, then its
         !          type should logical: GlobalHmmHDInd=.true.
         GlobalHmmHDInd(i)=1
     endif
-
-    ! WARNING: This should have been previously done for ImputeGenos variable
-    do j=1,nSnp
-        if ((GenosHmmMaCH(i,j)<0).or.(GenosHmmMaCH(i,j)>2)) GenosHmmMaCH(i,j)=3
-    enddo
 enddo
 
 ! Check if the number of Haplotypes the user has considered in the
@@ -389,7 +384,6 @@ integer, intent(in) :: CurrentInd
 integer :: genotype, i, states, thread
 integer :: Shuffle1(nIndHmmMaCH), Shuffle2(nIndHmmMaCH)
 
-call ResetCrossovers
 
 ! The number of parameters of the HMM are:
 !   nHapInSubH = Number of haplotypes in the template haplotype set, H
@@ -485,6 +479,7 @@ end subroutine MaCHForInd
 
 !######################################################################
 subroutine SampleChromosomes(CurrentInd)
+use Global
 use GlobalVariablesHmmMaCH
 use omp_lib
 use Par_Zig_mod
@@ -912,7 +907,7 @@ FullH(CurrentInd,CurrentMarker,TopBot)=SubH(State,CurrentMarker)
 end subroutine ImputeAllele
 
 !######################################################################
-subroutine ForwardAlgorithm(CurrentInd)
+subroutine ForwardAlgorithm(CurrentInd, HMM)
 ! Update the forward variable of the HMM model
 
 use GlobalVariablesHmmMaCH
@@ -920,7 +915,7 @@ use omp_lib
 
 implicit none
 
-integer, intent(in) :: CurrentInd
+integer, intent(in) :: CurrentInd, HMM
 double precision :: Theta
 
 ! Local variables
