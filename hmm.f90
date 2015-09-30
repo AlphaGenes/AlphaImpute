@@ -1092,24 +1092,38 @@ implicit none
 integer, intent(in) :: CurrentInd, Marker
 
 ! Local variables
-integer :: i,j,Index, genotype
+integer :: i, j, Index, genotype, nReads, RefAll, AltAll
 double precision :: Factors(0:1), cond_probs(0:2)
 
 ! We treat missing genotypes as uninformative about the mosaic's
 ! underlying state. If we were to allow for deletions and the like,
 ! that may no longer be true.
-genotype = GenosHmmMaCH(CurrentInd,Marker)
-if (genotype==3) then
+! NOTE: gentoype can be refer either to genotypes or reads if working with sequence data (NGS)
+
+if (HMMOption==RUN_HMM_NGS) then
+    nReads = AlterAllele(CurrentInd,Marker)*MAX_READS_COUNT+ReferAllele(CurrentInd,Marker)
+    RefAll = ReferAllele(CurrentInd,Marker)
+    AltAll = AlterAllele(CurrentInd,Marker)
+else
+    genotype = GenosHmmMaCH(CurrentInd,Marker)
+endif
+
+
+
+if (genotype==MISSING) then
     return
 else
     ! Index keeps track of the states already visited. The total number
     ! of states in this chunk of code is (nHapInSubH x (nHapInSubH-1)/2)
     Index=0
-    if (HMMOption==RUN_HMM_NGS)
-        do j=0,2
-            cond_probs(i)=Penetrance(Marker,j,0)*shotgunErrorMatrix(0,genotype)&
-                         +Penetrance(Marker,j,1)*shotgunErrorMatrix(1,genotype)&
-                         +Penetrance(Marker,j,2)*shotgunErrorMatrix(2,genotype)
+    if (HMMOption==RUN_HMM_NGS) then
+        do i=0,2
+            ! cond_probs(i)=Penetrance(Marker,i,0)*shotgunErrorMatrix(0,nReads)&
+            !              +Penetrance(Marker,i,1)*shotgunErrorMatrix(1,nReads)&
+            !              +Penetrance(Marker,i,2)*shotgunErrorMatrix(2,nReads)
+            cond_probs(i)=Penetrance(Marker,i,0)*shotgunErrorMatrix(0,RefAll,AltAll)&
+                         +Penetrance(Marker,i,1)*shotgunErrorMatrix(1,RefAll,AltAll)&
+                         +Penetrance(Marker,i,2)*shotgunErrorMatrix(2,RefAll,AltAll)
         enddo
     endif
 
@@ -1124,10 +1138,10 @@ else
         else
             ! Probability to observe genotype SubH(i) being the true
             ! genotype GenosHmmMaCH in locus Marker
-            Factor(0) = cond_probs(SubH(i,Marker))
+            Factors(0) = cond_probs(SubH(i,Marker))
             ! Probability to observe genotype SubH(i)+1 being the true
             ! genotype GenosHmmMaCH in locus Marker
-            Factor(1) = cond_probs(SubH(i,Marker)+1)
+            Factors(1) = cond_probs(SubH(i,Marker)+1)
         endif
         do j=1,i
             Index=Index+1
