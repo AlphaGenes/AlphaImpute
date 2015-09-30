@@ -14,12 +14,12 @@ double precision, parameter :: EPSILON_ERROR=0.00000001
 character(len=300) :: GenotypeFileName,CheckPhaseFileName,CheckGenoFileName
 integer :: nIndHmmMaCH,GlobalRoundHmm,nSnpHmm
 integer :: nHapInSubH,idum,useProcs,nRoundsHmm,HmmBurnInRound
-integer(kind=1),allocatable,dimension(:,:) :: GenosHmmMaCH,SubH
+integer,allocatable,dimension(:,:) :: GenosHmmMaCH,SubH
 integer(kind=1),allocatable,dimension(:,:,:) :: PhaseHmmMaCH,FullH
 integer,allocatable,dimension(:) :: ErrorUncertainty,ErrorMatches,ErrorMismatches,Crossovers,GlobalHmmHDInd
 double precision,allocatable,dimension(:) :: Thetas,Epsilon
 double precision,allocatable,dimension(:,:) :: ForwardProbs
-double precision,allocatable,dimension(:,:,:) :: Penetrance
+double precision,allocatable,dimension(:,:,:) :: Penetrance, ShotgunErrorMatrix
 real,allocatable,dimension (:,:) :: ProbImputeGenosHmm
 real,allocatable,dimension (:,:,:) :: ProbImputePhaseHmm
 integer, allocatable :: frequence(:,:,:)
