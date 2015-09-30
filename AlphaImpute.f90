@@ -5846,13 +5846,15 @@ do i=1,nAnisRawPedigree
     read(2,*) ped(i,:)
 enddo
 
-do i=1,nAnisG
-    read (3,*) GenotypeId(i),Temp(:)
-    do j=1,nSnp
-        if ((Temp(j)<0).or.(Temp(j)>2)) Temp(j)=9
+if (HMMOption /= RUN_HMM_NGS) then
+    do i=1,nAnisG
+        read (3,*) GenotypeId(i),Temp(:)
+        do j=1,nSnp
+            if ((Temp(j)<0).or.(Temp(j)>2)) Temp(j)=9
+        enddo
+        Genos(i,:)=Temp(:)
     enddo
-    Genos(i,:)=Temp(:)
-enddo
+endif
 close(2)
 close(3)
 
