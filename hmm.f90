@@ -289,7 +289,7 @@ do i=1,nAnisG
     ! Add animal's diploid to the Diploids Library
     GenosHmmMaCH(i,:)=reads(i,:)
     GlobalHmmID(i)=i
-    ! Check if this animal is Highly Dense genotyped
+    ! Find individuals sequenced with high coverage
     if ((float(count(GenosHmmMaCH(i,:)/=MISSING))/nSnp)>0.90) then
         ! WARNING: If this variable only stores 1 and 0, then its
         !          type should logical: GlobalHmmHDInd=.true.
@@ -300,8 +300,11 @@ enddo
 ! Check if the number of Haplotypes the user has considered in the
 ! Spec file, Sub H (MaCH paper: Li et al. 2010), is reached.
 if (nHapInSubH>2*sum(GlobalHmmHDInd(:))) then
-    print*, "Data set is too small for the number of Haplotypes in Sub H specified"
-    stop
+    print*, "WARNING! Number of individuals highly-covered is too small"
+    print*, "         for the number of Haplotypes in Sub H specified."
+    print*, "         Reference haplotypes will be taken from the whole population"
+    GlobalHmmHDInd=1
+    ! stop
 endif
 
 end subroutine ParseMaCHDataNGS
