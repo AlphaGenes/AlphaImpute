@@ -33,6 +33,7 @@ logical :: PreProcess
 
 real :: PercGenoForHD,PercSnpMiss,SecondPercGenoForHD,GenotypeErrorPhase,WellPhasedThresh
 
+integer,allocatable,dimension (:,:) :: Reads,ReferAllele,AlterAllele
 integer(kind=1),allocatable,dimension (:) :: SnpIncluded,RecIdHDIndex,GenderRaw,RecGender,IndivIsGenotyped
 integer(kind=1),allocatable,dimension (:,:) :: Genos,TempGenos,TmpGenos,MSTermInfo
 integer(kind=1),allocatable,dimension (:,:) :: ImputeGenos,SireDam
