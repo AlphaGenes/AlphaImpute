@@ -289,9 +289,9 @@ integer :: i,j
 
 do i=1,nAnisG
     ! Add animal's diploid to the Diploids Library
-    GenosHmmMaCH(i,:)=ImputeGenos(i,:)
-    PhaseHmmMaCH(i,:,1)=3
-    PhaseHmmMaCH(i,:,2)=3
+    GenosHmmMaCH(i,:)=reads(i,:)
+    ! PhaseHmmMaCH(i,:,1)=3
+    ! PhaseHmmMaCH(i,:,2)=3
     GlobalHmmID(i)=i
     ! Check if this animal is Highly Dense genotyped
     if ((float(count(GenosHmmMaCH(i,:)==9))/nSnp)<0.10) then
@@ -335,8 +335,8 @@ do i=1,nAnisP
         k=k+1
         ! Add animal's diploid to the Diploids Library
         GenosHmmMaCH(k,:)=ImputeGenos(i,:)
-        PhaseHmmMaCH(k,:,1)=ImputePhase(i,:,1)
-        PhaseHmmMaCH(k,:,2)=ImputePhase(i,:,2)
+        ! PhaseHmmMaCH(k,:,1)=ImputePhase(i,:,1)
+        ! PhaseHmmMaCH(k,:,2)=ImputePhase(i,:,2)
         GlobalHmmID(k)=i
         ! Check if this animal is Highly Dense genotyped
         if ((float(count(GenosHmmMaCH(k,:)==9))/nSnp)<0.10) then
