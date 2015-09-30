@@ -348,9 +348,9 @@ do i=1,nAnisP
 
         ! WARNING: This should have been previously done for ImputeGenos variable
         do j=1,nSnp
-            if ((GenosHmmMaCH(k,j)<0).or.(GenosHmmMaCH(k,j)>2)) GenosHmmMaCH(k,j)=3
-            if (PhaseHmmMaCH(k,j,1)/=0 .or. PhaseHmmMaCH(k,j,1)/=1) PhaseHmmMaCH(k,j,1)=3
-            if (PhaseHmmMaCH(k,j,2)/=0 .or. PhaseHmmMaCH(k,j,2)/=1) PhaseHmmMaCH(k,j,1)=3
+            if ((GenosHmmMaCH(k,j)<0).or.(GenosHmmMaCH(k,j)>2)) GenosHmmMaCH(k,j)=MISSING
+            ! if (PhaseHmmMaCH(k,j,1)/=0 .or. PhaseHmmMaCH(k,j,1)/=1) PhaseHmmMaCH(k,j,1)=3
+            ! if (PhaseHmmMaCH(k,j,2)/=0 .or. PhaseHmmMaCH(k,j,2)/=1) PhaseHmmMaCH(k,j,1)=3
         enddo
     endif
 enddo
@@ -547,7 +547,7 @@ do while (SuperJ>1)
     ! but the recombination information (Thetas(SuperJ) is accumulated
     ! and used in the next location.
     Theta=Thetas(SuperJ)
-    do while ((GenosHmmMaCH(CurrentInd,SuperJ)==3).and.SuperJ>1)
+    do while ((GenosHmmMaCH(CurrentInd,SuperJ)==MISSING).and.SuperJ>1)
         SuperJ=SuperJ-1
         Theta=Theta+Thetas(SuperJ)-Theta*Thetas(SuperJ)
     enddo
@@ -948,11 +948,12 @@ PrecedingMarker=1
 #if DEBUG.EQ.1
     write(0,*) 'DEBUG: Calculate Forward variables [ForwardAlgorithm]'
 #endif
+
 do j=2,nSnpHmm
     ! Cumulative recombination fraction allows us to skip uninformative positions
     Theta=Theta+Thetas(j-1)-Theta*Thetas(j-1)
     ! Skip over uninformative positions to save time
-    if ((GenosHmmMaCH(CurrentInd,j)/=3).or.(j==nSnpHmm)) then
+    if ((GenosHmmMaCH(CurrentInd,j)/=MISSING).or.(j==nSnpHmm)) then
         call Transpose(j,PrecedingMarker,Theta)
         call ConditionOnData(CurrentInd,j)
         PrecedingMarker=j
@@ -1251,7 +1252,7 @@ do i=1,nIndHmmMaCH      ! For every Genotyped Individual
         endif
 
         ! If locus is not genotyped, phase each haplotype at random
-        if (GenosHmmMaCH(i,j)==3) then
+        if (GenosHmmMaCH(i,j)==MISSING) then
             if (ran1(idum)>=0.5) then
                 FullH(i,j,1)=0
             else
