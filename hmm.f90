@@ -3,12 +3,12 @@
 module GlobalVariablesHmmMaCH
 implicit none
 
-integer, parameter :: RUN_HMM_NULL=0
-integer, parameter :: RUN_HMM_NO=1
-integer, parameter :: RUN_HMM_YES=2
-integer, parameter :: RUN_HMM_ONLY=3
-integer, parameter :: RUN_HMM_PREPHASE=4
-integer, parameter :: RUN_HMM_NGS=5
+integer, parameter :: GENOTYPE_MISSING=3
+integer, parameter :: READ_MISSING=0
+integer            :: MISSING=3
+
+double precision, parameter :: SEQUENCING_ERROR=0.01
+double precision, parameter :: EPSILON_ERROR=0.00000001
 
 
 character(len=300) :: GenotypeFileName,CheckPhaseFileName,CheckGenoFileName
