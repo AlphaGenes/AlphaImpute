@@ -118,6 +118,18 @@ endif
 
 call ParseMaCHData(HMM)
 
+! Initialization of HMM parameters
+Epsilon=EPSILON_ERROR
+Thetas=0.01
+
+do i=1,nSnpHmm
+    call SetPenetrance(i, EPSILON_ERROR)
+enddo
+
+if (HMM==RUN_HMM_NGS) then
+    call SetShotgunError(SEQUENCING_ERROR)
+endif
+
 #ifdef DEBUG
     write(0,*) 'DEBUG: [SetUpEquations] ...'
 #endif
@@ -523,7 +535,11 @@ enddo
 SuperJ=nSnpHmm
 do while (SuperJ>1)
     SuperJ=SuperJ-1
-    call ImputeAlleles(CurrentInd,SuperJ+1,State1,State2)
+    if (HMMOption/=RUN_HMM_NGS) then
+        call ImputeAlleles(CurrentInd,SuperJ+1,State1,State2)
+    else
+        call ImputeAllelesNGS(CurrentInd,SuperJ+1,State1,State2)
+    endif
     TmpJ=SuperJ
 
     ! Cumulative recombination fraction allows us to skip over
@@ -689,7 +705,13 @@ do while (SuperJ>1)
 
 enddo
 
-call ImputeAlleles(CurrentInd,1,State1,State2)
+if (HMMOption/=RUN_HMM_NGS) then
+    call ImputeAlleles(CurrentInd,1,State1,State2)
+else
+    call ImputeAllelesNGS(CurrentInd,1,State1,State2)
+endif
+ 
+! call ImputeAlleles(CurrentInd,1,State1,State2)
 
 end subroutine SampleChromosomes
 
@@ -1615,59 +1637,196 @@ enddo
 end subroutine ExtractTemplateHapsByAnimals
 
 !######################################################################
-subroutine SetShotgunError(rate)
+subroutine SetShotgunError(ErrorRate)
+use Global
 use GlobalVariablesHmmMaCH
 
-double precision :: rate
-integer :: binomial(33,33)
+implicit none
 
-binomial(1,1) = 1
-binomial(2,1) = 1
-binomial(2,2) = 1
+double precision, intent(in) :: ErrorRate
 
-do i=3,33
-    binomial(i,1) = 1
-    binomial(i,i) = 1
-    do j=2,i 
-        binomial(i,j) = binomial(i-1,j) + binomial(i-1,j-1)
+! Local variables
+double precision :: DFactorialInLog, ProdFactTmp
+integer :: i,k,MaxReadCounts
+! integer :: binomial(33,33)
+
+
+do k=0,MAX_READS_COUNT-1
+    do i=0,MAX_READS_COUNT-1
+    ! do i=1,MAX_READS_COUNT
+        ProdFactTmp=DFactorialInLog(k+i)-(DFactorialInLog(i)+DFactorialInLog(k))
+
+        ! ShotgunErrorMatrix(0,k*MAX_READS_COUNT+i)=exp(ProdFactTmp+(dfloat(i)*log(ErrorRate))+(dfloat(k)*log(1.0-ErrorRate)))
+        ! ShotgunErrorMatrix(1,k*MAX_READS_COUNT+i)=exp(ProdFactTmp+(dfloat(k+i)*log(0.5)))
+        ! ShotgunErrorMatrix(2,k*MAX_READS_COUNT+i)=exp(ProdFactTmp+(dfloat(i)*log(1.0-ErrorRate))+(dfloat(k)*log(ErrorRate)))
+        ShotgunErrorMatrix(0,k,i)=exp(ProdFactTmp+(dfloat(i)*log(ErrorRate))+(dfloat(k)*log(1.0-ErrorRate)))
+        ShotgunErrorMatrix(1,k,i)=exp(ProdFactTmp+(dfloat(k+i)*log(0.5)))
+        ShotgunErrorMatrix(2,k,i)=exp(ProdFactTmp+(dfloat(i)*log(1.0-ErrorRate))+(dfloat(k)*log(ErrorRate)))
     enddo
 enddo
 
-! TODO: Change ShotgunErrorMatrix to take as input number or reads 
-!       and the frequency. Something like this:
-! 
-! ShotgunErrorMatrix(0,0) = f0**n0 * f1**n1
-! ShotgunErrorMatrix(0,1) = 
-! ShotgunErrorMatrix(0,1) = 
-! ShotgunErrorMatrix(1,0) = 
-! ShotgunErrorMatrix(1,1) = 
-! ShotgunErrorMatrix(1,2) = 
-! ShotgunErrorMatrix(2,0) = 
-! ShotgunErrorMatrix(2,1) = 
-! ShotgunErrorMatrix(2,2) = 
+! binomial(1,1) = 1
+! binomial(2,1) = 1
+! binomial(2,2) = 1
 
-do i=1,16
-    do j=1,16
-        if (rate==0) then
-            if (j==1) then
-                ShotgunErrorMatrix(0,j*16+i) = 1.0
-            else
-                ShotgunErrorMatrix(0,j*16+i) = 0.0
-            endif
-            ShotgunErrorMatrix(1,j*16+i) = (0.5)**(i+j) * binomial(i+j,i)
-            if (i==1) then
-                ShotgunErrorMatrix(2,j*16+i) = 1.0
-            else
-                ShotgunErrorMatrix(2,j*16+i) = 0.0
-            endif
-        else
-            ShotgunErrorMatrix(0,j*16+i) = (1-rate)**i * (rate)**j * binomial(i+j,i)
-            ShotgunErrorMatrix(1,j*16+i) = (0.5)**(i+j) * binomial(i+j,i)
-            ShotgunErrorMatrix(2,j*16+i) = (rate)**i * (1-rate)**j * binomial(i+j,i)
-        endif
-    enddo
-enddo
+! do i=3,33
+!     binomial(i,1) = 1
+!     binomial(i,i) = 1
+!     do j=2,i 
+!         binomial(i,j) = binomial(i-1,j) + binomial(i-1,j-1)
+!     enddo
+! enddo
+
+! do i=1,16
+!     do j=1,16
+!         if (rate==0) then
+!             if (j==1) then
+!                 ShotgunErrorMatrix(0,j*16+i) = 1.0
+!             else
+!                 ShotgunErrorMatrix(0,j*16+i) = 0.0
+!             endif
+!             ShotgunErrorMatrix(1,j*16+i) = (0.5)**(i+j) * binomial(i+j,i)
+!             if (i==1) then
+!                 ShotgunErrorMatrix(2,j*16+i) = 1.0
+!             else
+!                 ShotgunErrorMatrix(2,j*16+i) = 0.0
+!             endif
+!         else
+!             ShotgunErrorMatrix(0,j*16+i) = (1-rate)**i * (rate)**j * binomial(i+j,i)
+!             ShotgunErrorMatrix(1,j*16+i) = (0.5)**(i+j) * binomial(i+j,i)
+!             ShotgunErrorMatrix(2,j*16+i) = (rate)**i * (1-rate)**j * binomial(i+j,i)
+!         endif
+!     enddo
+! enddo
 
 end subroutine SetShotgunError
-!######################################################################
 
+!######################################################################
+subroutine ImputeAllelesNGS(CurrentInd,CurrentMarker,State1,State2)
+use Global
+use GlobalVariablesHmmMaCH
+use omp_lib
+use Par_Zig_mod
+
+implicit none
+
+integer, intent(in) :: CurrentInd, CurrentMarker, State1, State2
+
+! Local variables
+integer :: copied1, copied2, nReads, Thread, bin, imputed1, imputed2, Differences, RefAll, AltAll
+double precision :: posterior_11, posterior_12, posterior_22, summ, random, rate
+
+Thread = omp_get_thread_num()
+
+copied1 = SubH(State1,CurrentMarker)
+copied2 = SubH(State2,CurrentMarker)
+
+! nReads = GenosHmmMaCH(CurrentInd,CurrentMarker)
+nReads = AlterAllele(CurrentInd,CurrentMarker)*MAX_READS_COUNT+ReferAllele(CurrentInd,CurrentMarker)
+RefAll = ReferAllele(CurrentInd,CurrentMarker)
+AltAll = AlterAllele(CurrentInd,CurrentMarker)
+
+! posterior_11 = Penetrance(CurrentMarker,copied1+copied2,0)*shotgunErrorMatrix(0,nReads)
+! posterior_12 = Penetrance(CurrentMarker,copied1+copied2,1)*shotgunErrorMatrix(1,nReads)
+! posterior_22 = Penetrance(CurrentMarker,copied1+copied2,2)*shotgunErrorMatrix(2,nReads)
+posterior_11 = Penetrance(CurrentMarker,copied1+copied2,0)*shotgunErrorMatrix(0,RefAll,AltAll)
+posterior_12 = Penetrance(CurrentMarker,copied1+copied2,1)*shotgunErrorMatrix(1,RefAll,AltAll)
+posterior_22 = Penetrance(CurrentMarker,copied1+copied2,2)*shotgunErrorMatrix(2,RefAll,AltAll)
+
+summ = posterior_11 + posterior_12 + posterior_22
+
+posterior_11 = posterior_11 / summ
+posterior_22 = posterior_22 / summ
+
+random = par_uni(Thread)
+
+! if (RefAll+AltAll==0) then
+!     print *, "\n", summ, posterior_11 + posterior_22
+!     print *, posterior_11, shotgunErrorMatrix(0,RefAll,AltAll)!, Penetrance(CurrentMarker,copied1+copied2,0)
+!     print *, posterior_12/summ, shotgunErrorMatrix(1,RefAll,AltAll)!, Penetrance(CurrentMarker,copied1+copied2,1)
+!     print *, posterior_22, shotgunErrorMatrix(2,RefAll,AltAll)!, Penetrance(CurrentMarker,copied1+copied2,2)
+! endif
+
+if (random < posterior_11) then
+    ! print*, "posterior_11", random, posterior_11, AlterAllele(CurrentInd,CurrentMarker), ReferAllele(CurrentInd,CurrentMarker), nReads
+    FullH(CurrentInd,CurrentMarker,1) = 0
+    FullH(CurrentInd,CurrentMarker,2) = 0
+
+elseif (random < posterior_11 + posterior_22) then
+    ! print*, "posterior_11+posterior_22", random, posterior_11 + posterior_22, AlterAllele(CurrentInd,CurrentMarker), ReferAllele(CurrentInd,CurrentMarker), nReads
+    FullH(CurrentInd,CurrentMarker,1) = 1
+    FullH(CurrentInd,CurrentMarker,2) = 1
+
+elseif (copied1 /= copied2) then
+    call GetErrorRatebyMarker(CurrentMarker, rate)
+
+    if (par_uni(Thread) < rate*rate / ((rate*rate) + (1-rate)*(1-rate))) then
+        if (copied1 == 1) then 
+            copied1 = 0
+        else
+            copied1 = 1
+        endif
+
+        if (copied2 == 1) then 
+            copied2 = 0
+        else
+            copied2 = 1
+        endif
+    endif
+
+    FullH(CurrentInd,CurrentMarker,1) = copied1
+    FullH(CurrentInd,CurrentMarker,2) = copied2
+else
+    if (par_uni(Thread)<0.5) then
+        FullH(CurrentInd,CurrentMarker,1) = 0
+        FullH(CurrentInd,CurrentMarker,2) = 1
+    else 
+        FullH(CurrentInd,CurrentMarker,1) = 1
+        FullH(CurrentInd,CurrentMarker,2) = 0
+    endif
+endif
+
+imputed1 = FullH(CurrentInd,CurrentMarker,1)
+imputed2 = FullH(CurrentInd,CurrentMarker,2)
+
+! if (CurrentInd==1) then
+!     print *, FullH(CurrentInd,1:10,1)
+!     print *, FullH(CurrentInd,1:10,2)
+! endif
+
+
+Differences = abs(copied1 - imputed1) + abs(copied2 - imputed2)
+! count the number of alleles matching
+!$OMP ATOMIC
+ErrorMatches(CurrentMarker)=ErrorMatches(CurrentMarker)+(2-Differences)
+! count the number of mismatching alleles
+!$OMP ATOMIC
+ErrorMismatches(CurrentMarker)=ErrorMismatches(CurrentMarker)+Differences
+
+end subroutine ImputeAllelesNGS
+
+!######################################################################################################################################################
+
+real(kind=8) function DFactorialInLog(n)
+
+implicit none
+integer,intent(in) :: n
+
+! Local variables
+integer :: i
+real(kind=8) :: Ans
+
+Ans=0.0
+if (n==0) then
+    Ans=1.0
+else
+    do i=1,n
+        Ans=Ans+log(dfloat(i))
+    enddo
+endif
+
+DFactorialInLog=Ans
+
+end function DFactorialInLog
+
+!######################################################################################################################################################
