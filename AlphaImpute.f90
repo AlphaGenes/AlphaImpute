@@ -1453,8 +1453,18 @@ double precision :: ImputationQuality(nAnisP,6)
 character(len=300) :: TmpId
 integer :: n0, n1, n2
 
+#ifdef DEBUG
+    write(0,*) 'DEBUG: WriteOutResults'
+#endif
 
-if (HMMOption==RUN_HMM_NGS) GlobalExtraAnimals=0
+
+if (HMMOption==RUN_HMM_NGS) then
+    nAnisP = nAnisG
+    GlobalExtraAnimals=0
+    deallocate(Id)
+    allocate(Id(nAnisG))
+    Id = GenotypeId
+endif
 
 write(cm,'(I7)') nSnpRaw !for formatting
 cm = adjustl(cm)
