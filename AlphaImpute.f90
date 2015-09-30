@@ -31,23 +31,17 @@ if (HMMOption /= RUN_HMM_NGS) then
     call InternalEdit
     call MakeFiles
 else
+    
+    call MakeDirectories(RUN_HMM_NGS)
     call CountInData
     call ReadInData
+    allocate(Reads(nAnisG,nSnp))
+    allocate(ImputeGenos(0:nAnisG,nSnp))
+    allocate(ImputePhase(0:nAnisG,nSnp,2))
     call CheckParentage
     call InternalEdit
-    call MakeDirectories(RUN_HMM_NGS)
-    call ReadGenos(GenotypeFile)
-
-    ! Impute observed genotypes to animals in the pedigree
-    nAnisP=nAnisG
-    allocate(ImputeGenos(0:nAnisP,nSnp))
-    allocate(ImputePhase(0:nAnisP,nSnp,2))
-    do i=1,nAnisG
-        do j=1,nAnisP
-            ImputeGenos(j,:)=Genos(i,:)
-        enddo
-    enddo
-
+    call ReadSeq(GenotypeFile)
+    write(0,*) "DEBUG: ReadSeq"
 endif
 
 if (HMMOption == RUN_HMM_NGS) then
@@ -6007,6 +6001,7 @@ if (HMM == RUN_HMM_NGS) then
     call rmdir("InputFiles")
     call system("mkdir Results")
     call system("mkdir InputFiles")
+    call system("mkdir Miscellaneous")
 else
     print*, ""
 
