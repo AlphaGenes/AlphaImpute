@@ -107,9 +107,7 @@ if (HMM==RUN_HMM_NGS) then
     ! Set the value MISSING of reads
     MISSING = READ_MISSING
 
-    ! allocate(ShotgunErrorMatrix(0:2, MAX_READS_COUNT*MAX_READS_COUNT))
     allocate(ShotgunErrorMatrix(0:2,0:MAX_READS_COUNT,0:MAX_READS_COUNT))
-    ! call GenosToImputeGenos
 endif
 
 #ifdef DEBUG
@@ -290,8 +288,6 @@ integer :: i
 do i=1,nAnisG
     ! Add animal's diploid to the Diploids Library
     GenosHmmMaCH(i,:)=reads(i,:)
-    ! PhaseHmmMaCH(i,:,1)=3
-    ! PhaseHmmMaCH(i,:,2)=3
     GlobalHmmID(i)=i
     ! Check if this animal is Highly Dense genotyped
     if ((float(count(GenosHmmMaCH(i,:)/=MISSING))/nSnp)>0.90) then
