@@ -283,7 +283,9 @@ use GlobalVariablesHmmMaCH
 implicit none
 integer :: i,j
 
-write(0,*) 'DEBUG: [ParseMaCHDataNGS]'
+#ifdef DEBUG
+    write(0,*) 'DEBUG: [ParseMaCHDataNGS]'
+#endif
 
 do i=1,nAnisG
     ! Add animal's diploid to the Diploids Library
@@ -325,9 +327,6 @@ integer :: i,j,k
 #ifdef DEBUG
     write(0,*) 'DEBUG: [ParseMaCHDataGenos] ...'
 #endif
-
-write(0,*) 'DEBUG: [ParseMaCHDataNGS] nAnisG', nAnisG
-
 
 k=0
 do i=1,nAnisP
@@ -410,6 +409,9 @@ allocate(SubH(nHapInSubH,nSnpHmm))
 !call RandomOrder(Shuffle1,nIndHmmMaCH,idum)
 !call RandomOrder(Shuffle2,nIndHmmMaCH,idum)
 
+#if DEBUG.EQ.1
+    write(0,*) "DEBUG: RandomOrderPar [MaCHForInd]"
+#endif
 ! Parallel
 thread=omp_get_thread_num()
 call RandomOrderPar(Shuffle1,nIndHmmMaCH,thread)
