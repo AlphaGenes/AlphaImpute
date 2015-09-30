@@ -5787,6 +5787,7 @@ subroutine CountInData
 ! individuals genotyped.
 
 use Global
+use GlobalVariablesHmmMaCH
 implicit none
 
 integer :: k
@@ -5815,6 +5816,16 @@ do
 enddo
 
 rewind(3)
+
+if (HMMOption == RUN_HMM_NGS) then
+    if(mod(nAnisG,2)==0) then
+        nAnisG=nAnisG/2
+    else
+        write(0,*) "Error: The number of lines in the file of reads is not even. Is the file corrupt?"
+        write(0,*) "The program will now stop"
+        stop
+    endif
+endif
 
 print*, " ",nAnisG," individuals in the genotype file"
 
