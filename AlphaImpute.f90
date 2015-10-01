@@ -40,7 +40,6 @@ else
     allocate(ImputePhase(0:nAnisG,nSnp,2))
     allocate(SnpIncluded(nSnp))
     call CheckParentage
-    ! call InternalEdit
     call ReadSeq(GenotypeFile)
     write(0,*) "DEBUG: ReadSeq"
 endif
