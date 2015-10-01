@@ -41,7 +41,6 @@ else
     allocate(SnpIncluded(nSnp))
     call CheckParentage
     call ReadSeq(GenotypeFile)
-    write(0,*) "DEBUG: ReadSeq"
 endif
 
 if (HMMOption == RUN_HMM_NGS) then
@@ -5922,20 +5921,23 @@ character(len=300), intent(in) :: readsFileName
 integer :: i,j,SeqLine(nSnp), dummy
 integer, allocatable,dimension (:) :: ReferAlleleLine, AlterAlleleLine
 
-! TODO: This hack avoids mem allocation problems with Genos allocated
-!       somewhere else up in the code (ReadInData). Should be improved
-
 allocate(ReferAllele(0:nAnisG,nSnp))
 allocate(AlterAllele(0:nAnisG,nSnp))
 allocate(ReferAlleleLine(nSnp))
 allocate(AlterAlleleLine(nSnp))
 
 Reads=0
-write(0,*) "DEBUG: [ReadSeq] Reads size=", size(Reads,1)
 
+#ifdef DEBUG
+    write(0,*) "DEBUG: [ReadSeq] Reads size=", size(Reads,1)
+#endif
 
 open (unit=3,file=trim(readsFileName),status="old")
-write(0,*) "DEBUG: [ReadSeq] Reading sequence data..."
+
+#ifdef DEBUG
+    write(0,*) "DEBUG: [ReadSeq] Reading sequence data..."
+#endif
+
 do i=1,nAnisG
     read (3,*) GenotypeId(i), dummy, dummy, ReferAlleleLine(:)
     read (3,*) GenotypeId(i), dummy, dummy, AlterAlleleLine(:)
@@ -5945,20 +5947,13 @@ do i=1,nAnisG
         if (ReferAllele(i,j)>=MAX_READS_COUNT) ReferAllele(i,j)=MAX_READS_COUNT-1
         if (AlterAllele(i,j)>=MAX_READS_COUNT) AlterAllele(i,j)=MAX_READS_COUNT-1
         Reads(i,j)=AlterAllele(i,j)+ReferAllele(i,j)
-        ! if (Reads(i,j)==0) print *, GenotypeId(i)
-
-
-        ! Count the number of reads but taking into account the numb. of reference and alternative alleles
-        ! Reads(i,j)=AlterAllele(i,j)*MAX_READS_COUNT+ReferAllele(i,j)
     enddo
-
-    ! Reads(i,:)=AlterAllele(i,:)+ReferAllele(i,:)
 enddo
-! print *, "Reads(2,7)=", Reads(2,7), AlterAllele(2,7) , ReferAllele(2,7), AlterAllele(2,7)+ReferAllele(2,7)
-! stop
-write(0,*) "DEBUG: [ReadSeq] Sequence data read"
-! deallocate(ReferAllele)
-! deallocate(AlterAllele)
+
+#ifdef DEBUG
+    write(0,*) "DEBUG: [ReadSeq] Sequence data read"
+#endif
+
 close(3)
 
 end subroutine ReadSeq
