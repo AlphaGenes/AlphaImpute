@@ -8,6 +8,15 @@ integer, parameter :: OPT_RESTART_GENEPROB=1
 integer, parameter :: OPT_RESTART_PHASING=2
 integer, parameter :: OPT_RESTART_IMPUTATION=3
 
+integer, parameter :: RUN_HMM_NULL=0
+integer, parameter :: RUN_HMM_NO=1
+integer, parameter :: RUN_HMM_YES=2
+integer, parameter :: RUN_HMM_ONLY=3
+integer, parameter :: RUN_HMM_PREPHASE=4
+integer, parameter :: RUN_HMM_NGS=5
+
+integer, parameter :: MAX_READS_COUNT=100 ! Maximum number of reads for reference and alternative alleles
+
 integer,parameter :: WindowsLinux=0     !If 1 then compile for Windows / If 0 then compile for Linux
 
 integer,parameter :: TestVersion=0  	!If 1 then this is a development version with intermediate checking, if 0 it is not
@@ -33,6 +42,7 @@ logical :: PreProcess
 
 real :: PercGenoForHD,PercSnpMiss,SecondPercGenoForHD,GenotypeErrorPhase,WellPhasedThresh
 
+integer,allocatable,dimension (:,:) :: Reads,ReferAllele,AlterAllele
 integer(kind=1),allocatable,dimension (:) :: SnpIncluded,RecIdHDIndex,GenderRaw,RecGender,IndivIsGenotyped
 integer(kind=1),allocatable,dimension (:,:) :: Genos,TempGenos,TmpGenos,MSTermInfo
 integer(kind=1),allocatable,dimension (:,:) :: ImputeGenos,SireDam

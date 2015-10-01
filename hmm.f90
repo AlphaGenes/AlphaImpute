@@ -3,21 +3,23 @@
 module GlobalVariablesHmmMaCH
 implicit none
 
-integer, parameter :: RUN_HMM_NULL=0
-integer, parameter :: RUN_HMM_NO=1
-integer, parameter :: RUN_HMM_YES=2
-integer, parameter :: RUN_HMM_ONLY=3
-integer, parameter :: RUN_HMM_PREPHASE=4
+integer, parameter :: GENOTYPE_MISSING=3
+integer, parameter :: READ_MISSING=0
+integer            :: MISSING=3
+
+double precision, parameter :: SEQUENCING_ERROR=0.01
+double precision, parameter :: EPSILON_ERROR=0.00000001
+
 
 character(len=300) :: GenotypeFileName,CheckPhaseFileName,CheckGenoFileName
 integer :: nIndHmmMaCH,GlobalRoundHmm,nSnpHmm
 integer :: nHapInSubH,idum,useProcs,nRoundsHmm,HmmBurnInRound
-integer(kind=1),allocatable,dimension(:,:) :: GenosHmmMaCH,SubH
+integer,allocatable,dimension(:,:) :: GenosHmmMaCH,SubH
 integer(kind=1),allocatable,dimension(:,:,:) :: PhaseHmmMaCH,FullH
 integer,allocatable,dimension(:) :: ErrorUncertainty,ErrorMatches,ErrorMismatches,Crossovers,GlobalHmmHDInd
 double precision,allocatable,dimension(:) :: Thetas,Epsilon
 double precision,allocatable,dimension(:,:) :: ForwardProbs
-double precision,allocatable,dimension(:,:,:) :: Penetrance
+double precision,allocatable,dimension(:,:,:) :: Penetrance, ShotgunErrorMatrix
 real,allocatable,dimension (:,:) :: ProbImputeGenosHmm
 real,allocatable,dimension (:,:,:) :: ProbImputePhaseHmm
 integer, allocatable :: frequence(:,:,:)
@@ -26,12 +28,14 @@ integer, allocatable :: frequence(:,:,:)
 end module GlobalVariablesHmmMaCH
 
 !######################################################################
-subroutine MaCHController
+subroutine MaCHController(HMM)
+use Global
 use GlobalVariablesHmmMaCH
 use Par_Zig_mod
 use omp_lib
 
 implicit none
+integer, intent(in) :: HMM
 integer :: i, nprocs, nthreads, j
 real(4) :: r
 real(8) :: t1, t2, tT
@@ -40,9 +44,100 @@ integer, allocatable :: seed(:)
 integer :: grainsize, count, secs, seed0
 integer :: n0, n1, n2
 
+#ifdef DEBUG
+    write(0,*) 'DEBUG: [MaCHController] Allocate memory'
+#endif
 
-call ParseMaCHData
-call SetUpEquations
+! Number of SNPs and genotyped animals for the HMM algorithm
+nSnpHmm=nSnp
+nIndHmmMaCH=nAnisG
+
+! ALLOCATE MEMORY
+! Allocate a matrix to store the diploids of every Animal
+! Template Diploids Library
+! NOTE: GenosHmmMaCH can contain either genotype or reads information (if working with sequence data NGS)
+allocate(GenosHmmMaCH(nIndHmmMaCH,nSnp))
+! allocate(PhaseHmmMaCH(nIndHmmMaCH,nSnp,2))
+! Allocate memory to store Animals contributing to the Template
+! Haplotype Library
+allocate(GlobalHmmID(nIndHmmMaCH))
+
+! Allocate memory to store Animals Highly Dense Genotyped
+allocate(GlobalHmmHDInd(nIndHmmMaCH))
+! No animal has been HD genotyped YET
+! WARNING: If this variable only stores 1 and 0, then its type should
+!          logical: GlobalHmmHDInd=.false.
+GlobalHmmHDInd=0
+
+! Allocate a matrix to store probabilities of genotypes and 
+! alleles for each animal
+allocate(ProbImputeGenosHmm(nIndHmmMaCH,nSnp))
+allocate(ProbImputePhaseHmm(nIndHmmMaCH,nSnp,2))
+! Initialise probabilities to 0
+ProbImputeGenosHmm=0.0
+ProbImputePhaseHmm=0.0
+
+! The full Template Haplotype Library, H (Li et al. 2010, Appendix)
+allocate(FullH(nIndHmmMaCH,nSnpHmm,2))
+
+! Vector of Combination of genotyping error (Li et al. 2010, Appendix)
+! Epsilon is related with the Penetrance Matrix of the HMM which gives
+! the emision probabilities for each state/marker/snp.
+allocate(Epsilon(nSnpHmm))
+allocate(Penetrance(nSnpHmm,0:2,0:2))
+
+! Vector of Combination of population recombination (Li et al. 2010, Appendix)
+! Thetas is related with the transition Matrix of the HMM. Since there
+! are nSnpHmm states, there are nSnpHmm transitions between states.
+! WARNING: Is this correctly implemented throughout the hmm process??
+allocate(Thetas(nSnpHmm-1))
+
+allocate(ErrorUncertainty(nSnpHmm))
+allocate(ErrorMatches(nSnpHmm))
+allocate(ErrorMismatches(nSnpHmm))
+
+! Crossover parameter in order to maximize the investigation of
+! different mosaic configurations
+! WARNING: crossovers are related with the transition matrix of the HMM.
+!          If there are nSnpHmm states and nSnpHmm-1 transitions
+!          between states, why the number of crossovers is nSnpHmm??
+allocate(Crossovers(nSnpHmm-1))
+
+if (HMM==RUN_HMM_NGS) then
+    ! Set the value MISSING of reads
+    MISSING = READ_MISSING
+
+    allocate(ShotgunErrorMatrix(0:2,0:MAX_READS_COUNT,0:MAX_READS_COUNT))
+endif
+
+#ifdef DEBUG
+    write(0,*) 'DEBUG: [ParseMaCHData] ...'
+#endif
+
+call ParseMaCHData(HMM)
+
+! Initialization of HMM parameters
+Epsilon=EPSILON_ERROR
+Thetas=0.01
+
+do i=1,nSnpHmm
+    call SetPenetrance(i, EPSILON_ERROR)
+enddo
+
+if (HMM==RUN_HMM_NGS) then
+    call SetShotgunError(SEQUENCING_ERROR)
+endif
+
+#ifdef DEBUG
+    write(0,*) 'DEBUG: [SetUpEquations] ...'
+#endif
+
+if (HMM==RUN_HMM_NGS) then
+    call SetUpEquationsReads
+
+else
+    call SetUpEquationsGenotypes
+endif
 
 open (unit=6,form='formatted')
 
@@ -91,7 +186,7 @@ do GlobalRoundHmm=1,nRoundsHmm
     call ResetCrossovers
 
     ! Parallelise the HMM process in animals
-#ifdef DEBUG
+#if DEBUG.EQ.1
         t1 = omp_get_wtime()
         write(0,*) 'DEBUG: Begin paralellisation [MaCHController]'
 #endif
@@ -102,7 +197,7 @@ do GlobalRoundHmm=1,nRoundsHmm
     enddo
     !$!OMP END DO
     !$OMP END PARALLEL DO
-#ifdef DEBUG
+#if DEBUG.EQ.1
         t2 = omp_get_wtime()
         tT = tT + (t2-t1)
         write(0,*) 'DEBUG: End paralellisation. Partial time:', t2-t1
@@ -115,6 +210,11 @@ do GlobalRoundHmm=1,nRoundsHmm
     ! Update transition probabilities of the HMM process
     call UpdateErrorRate(Theta)
 enddo
+
+#ifdef DEBUG
+    write(0,*) 'DEBUG: End paralellisation'
+#endif
+
 
 ! Average genotype probability of the different hmm processes
 ProbImputeGenosHmm=ProbImputeGenosHmm/(nRoundsHmm-HmmBurnInRound)
@@ -139,48 +239,88 @@ ProbImputePhaseHmm=ProbImputePhaseHmm/(nRoundsHmm-HmmBurnInRound)
 !deallocate(frequence)
 
 end subroutine MaCHController
+!######################################################################
+subroutine GenosToImputeGenos
+use Global
+use GlobalVariablesHmmMaCH
+
+implicit none
+integer :: i
+
+#ifdef DEBUG
+    write(0,*) 'DEBUG: [GenosToImputeGenos]'
+#endif
+
+
+! do i=1,nAnisP
+!     ImputeGenos(i,:) = 
+! enddo
+
+end subroutine GenosToImputeGenos
+!######################################################################
+subroutine ParseMaCHData(HMM)
+use Global
+use GlobalVariablesHmmMaCH
+
+implicit none
+integer, intent(in) :: HMM
+
+if (HMM == RUN_HMM_NGS) then
+    call ParseMaCHDataNGS
+else
+    call ParseMaCHDataGenos
+endif
+
+end subroutine ParseMaCHData
 
 !######################################################################
-subroutine ParseMaCHData
+subroutine ParseMaCHDataNGS
+use Global
+use GlobalVariablesHmmMaCH
+
+implicit none
+integer :: i
+
+#ifdef DEBUG
+    write(0,*) 'DEBUG: [ParseMaCHDataNGS]'
+#endif
+
+do i=1,nAnisG
+    ! Add animal's diploid to the Diploids Library
+    GenosHmmMaCH(i,:)=reads(i,:)
+    GlobalHmmID(i)=i
+    ! Find individuals sequenced with high coverage
+    if ((float(count(GenosHmmMaCH(i,:)/=MISSING))/nSnp)>0.90) then
+        ! WARNING: If this variable only stores 1 and 0, then its
+        !          type should logical: GlobalHmmHDInd=.true.
+        GlobalHmmHDInd(i)=1
+    endif
+enddo
+
+! Check if the number of Haplotypes the user has considered in the
+! Spec file, Sub H (MaCH paper: Li et al. 2010), is reached.
+if (nHapInSubH>2*sum(GlobalHmmHDInd(:))) then
+    print*, "WARNING! Number of individuals highly-covered is too small"
+    print*, "         for the number of Haplotypes in Sub H specified."
+    print*, "         Reference haplotypes will be taken from the whole population"
+    GlobalHmmHDInd=1
+    ! stop
+endif
+
+end subroutine ParseMaCHDataNGS
+
+!######################################################################
+subroutine ParseMaCHDataGenos
+! subroutine ParseMaCHData
 use Global
 use GlobalVariablesHmmMaCH
 
 implicit none
 integer :: i,j,k
 
-! Number of SNPs and genotyped animals for the HMM algorithm
-nSnpHmm=nSnp
-nIndHmmMaCH=nAnisG
-
-! ALLOCATE MEMORY
-
-! Test allocation ForwardProb variable for HMM parallelisation
-!allocate(ForwardProbs(nHapInSubH*nHapInSubH,nSnpHmm))
-
-! Allocate a matrix to store the diploids of every Animal
-! Template Diploids Library
-allocate(GenosHmmMaCH(nIndHmmMaCH,nSnp))
-allocate(PhaseHmmMaCH(nIndHmmMaCH,nSnp,2))
-
-! Allocate memory to store Animals contributing to the Template
-! Haplotype Library
-allocate(GlobalHmmID(nIndHmmMaCH))
-
-! Allocate memory to store Animals Highly Dense Genotyped
-allocate(GlobalHmmHDInd(nIndHmmMaCH))
-
-! Allocate a matrix to store probabilities of the genotype of every
-! Animal and inititalize to 0
-allocate(ProbImputeGenosHmm(nIndHmmMaCH,nSnp))
-ProbImputeGenosHmm=0.0
-
-allocate(ProbImputePhaseHmm(nIndHmmMaCH,nSnp,2))
-ProbImputePhaseHmm=0.0
-
-! No animal has been HD genotyped YET
-! WARNING: If this variable only stores 1 and 0, then its type should
-!          logical: GlobalHmmHDInd=.false.
-GlobalHmmHDInd=0
+#ifdef DEBUG
+    write(0,*) 'DEBUG: [ParseMaCHDataGenos] ...'
+#endif
 
 k=0
 do i=1,nAnisP
@@ -189,8 +329,8 @@ do i=1,nAnisP
         k=k+1
         ! Add animal's diploid to the Diploids Library
         GenosHmmMaCH(k,:)=ImputeGenos(i,:)
-        PhaseHmmMaCH(k,:,1)=ImputePhase(i,:,1)
-        PhaseHmmMaCH(k,:,2)=ImputePhase(i,:,2)
+        ! PhaseHmmMaCH(k,:,1)=ImputePhase(i,:,1)
+        ! PhaseHmmMaCH(k,:,2)=ImputePhase(i,:,2)
         GlobalHmmID(k)=i
         ! Check if this animal is Highly Dense genotyped
         if ((float(count(GenosHmmMaCH(k,:)==9))/nSnp)<0.10) then
@@ -201,16 +341,16 @@ do i=1,nAnisP
 
         ! WARNING: This should have been previously done for ImputeGenos variable
         do j=1,nSnp
-            if ((GenosHmmMaCH(k,j)<0).or.(GenosHmmMaCH(k,j)>2)) GenosHmmMaCH(k,j)=3
-            if (PhaseHmmMaCH(k,j,1)/=0 .or. PhaseHmmMaCH(k,j,1)/=1) PhaseHmmMaCH(k,j,1)=3
-            if (PhaseHmmMaCH(k,j,2)/=0 .or. PhaseHmmMaCH(k,j,2)/=1) PhaseHmmMaCH(k,j,1)=2
+            if ((GenosHmmMaCH(k,j)<0).or.(GenosHmmMaCH(k,j)>2)) GenosHmmMaCH(k,j)=MISSING
+            ! if (PhaseHmmMaCH(k,j,1)/=0 .or. PhaseHmmMaCH(k,j,1)/=1) PhaseHmmMaCH(k,j,1)=3
+            ! if (PhaseHmmMaCH(k,j,2)/=0 .or. PhaseHmmMaCH(k,j,2)/=1) PhaseHmmMaCH(k,j,1)=3
         enddo
     endif
 enddo
 
 ! Check if the number of genotyped animals is correct
 if (k/=nAnisG) then
-    print*, "Error in ParseMaCHData"
+    print*, "Error in ParseMaCHDataGenos"
     stop
 endif
 
@@ -221,7 +361,8 @@ if (nHapInSubH>2*sum(GlobalHmmHDInd(:))) then
     stop
 endif
 
-end subroutine ParseMaCHData
+! end subroutine ParseMaCHData
+end subroutine ParseMaCHDataGenos
 
 !######################################################################
 subroutine MaCHForInd(CurrentInd)
@@ -242,7 +383,6 @@ integer, intent(in) :: CurrentInd
 integer :: genotype, i, states, thread
 integer :: Shuffle1(nIndHmmMaCH), Shuffle2(nIndHmmMaCH)
 
-call ResetCrossovers
 
 ! The number of parameters of the HMM are:
 !   nHapInSubH = Number of haplotypes in the template haplotype set, H
@@ -262,6 +402,9 @@ allocate(SubH(nHapInSubH,nSnpHmm))
 !call RandomOrder(Shuffle1,nIndHmmMaCH,idum)
 !call RandomOrder(Shuffle2,nIndHmmMaCH,idum)
 
+#if DEBUG.EQ.1
+    write(0,*) "DEBUG: RandomOrderPar [MaCHForInd]"
+#endif
 ! Parallel
 thread=omp_get_thread_num()
 call RandomOrderPar(Shuffle1,nIndHmmMaCH,thread)
@@ -335,6 +478,7 @@ end subroutine MaCHForInd
 
 !######################################################################
 subroutine SampleChromosomes(CurrentInd)
+use Global
 use GlobalVariablesHmmMaCH
 use omp_lib
 use Par_Zig_mod
@@ -387,7 +531,11 @@ enddo
 SuperJ=nSnpHmm
 do while (SuperJ>1)
     SuperJ=SuperJ-1
-    call ImputeAlleles(CurrentInd,SuperJ+1,State1,State2)
+    if (HMMOption/=RUN_HMM_NGS) then
+        call ImputeAlleles(CurrentInd,SuperJ+1,State1,State2)
+    else
+        call ImputeAllelesNGS(CurrentInd,SuperJ+1,State1,State2)
+    endif
     TmpJ=SuperJ
 
     ! Cumulative recombination fraction allows us to skip over
@@ -395,7 +543,7 @@ do while (SuperJ>1)
     ! but the recombination information (Thetas(SuperJ) is accumulated
     ! and used in the next location.
     Theta=Thetas(SuperJ)
-    do while ((GenosHmmMaCH(CurrentInd,SuperJ)==3).and.SuperJ>1)
+    do while ((GenosHmmMaCH(CurrentInd,SuperJ)==MISSING).and.SuperJ>1)
         SuperJ=SuperJ-1
         Theta=Theta+Thetas(SuperJ)-Theta*Thetas(SuperJ)
     enddo
@@ -553,7 +701,13 @@ do while (SuperJ>1)
 
 enddo
 
-call ImputeAlleles(CurrentInd,1,State1,State2)
+if (HMMOption/=RUN_HMM_NGS) then
+    call ImputeAlleles(CurrentInd,1,State1,State2)
+else
+    call ImputeAllelesNGS(CurrentInd,1,State1,State2)
+endif
+ 
+! call ImputeAlleles(CurrentInd,1,State1,State2)
 
 end subroutine SampleChromosomes
 
@@ -752,7 +906,7 @@ FullH(CurrentInd,CurrentMarker,TopBot)=SubH(State,CurrentMarker)
 end subroutine ImputeAllele
 
 !######################################################################
-subroutine ForwardAlgorithm(CurrentInd)
+subroutine ForwardAlgorithm(CurrentInd, HMM)
 ! Update the forward variable of the HMM model
 
 use GlobalVariablesHmmMaCH
@@ -760,7 +914,7 @@ use omp_lib
 
 implicit none
 
-integer, intent(in) :: CurrentInd
+integer, intent(in) :: CurrentInd, HMM
 double precision :: Theta
 
 ! Local variables
@@ -790,11 +944,12 @@ PrecedingMarker=1
 #if DEBUG.EQ.1
     write(0,*) 'DEBUG: Calculate Forward variables [ForwardAlgorithm]'
 #endif
+
 do j=2,nSnpHmm
     ! Cumulative recombination fraction allows us to skip uninformative positions
     Theta=Theta+Thetas(j-1)-Theta*Thetas(j-1)
     ! Skip over uninformative positions to save time
-    if ((GenosHmmMaCH(CurrentInd,j)/=3).or.(j==nSnpHmm)) then
+    if ((GenosHmmMaCH(CurrentInd,j)/=MISSING).or.(j==nSnpHmm)) then
         call Transpose(j,PrecedingMarker,Theta)
         call ConditionOnData(CurrentInd,j)
         PrecedingMarker=j
@@ -926,34 +1081,64 @@ subroutine ConditionOnData(CurrentInd,Marker)
 ! Introduce the emission probabilities (the probability of observe a
 ! given genotype) into the forward variable of the HMM.
 ! It basically calculate the second term of the forward variables
+use Global
 use GlobalVariablesHmmMaCH
 implicit none
 
 integer, intent(in) :: CurrentInd, Marker
 
 ! Local variables
-integer :: i,j,Index
-double precision :: Factors(0:1)
+integer :: i, j, Index, genotype, nReads, RefAll, AltAll
+double precision :: Factors(0:1), cond_probs(0:2)
 
 ! We treat missing genotypes as uninformative about the mosaic's
 ! underlying state. If we were to allow for deletions and the like,
 ! that may no longer be true.
-if (GenosHmmMaCH(CurrentInd,Marker)==3) then
+! NOTE: gentoype can be refer either to genotypes or reads if working with sequence data (NGS)
+
+if (HMMOption==RUN_HMM_NGS) then
+    nReads = AlterAllele(CurrentInd,Marker)*MAX_READS_COUNT+ReferAllele(CurrentInd,Marker)
+    RefAll = ReferAllele(CurrentInd,Marker)
+    AltAll = AlterAllele(CurrentInd,Marker)
+else
+    genotype = GenosHmmMaCH(CurrentInd,Marker)
+endif
+
+
+
+if (genotype==MISSING) then
     return
 else
     ! Index keeps track of the states already visited. The total number
     ! of states in this chunk of code is (nHapInSubH x (nHapInSubH-1)/2)
     Index=0
-    do i=1,nHapInSubH
-        ! Probability to observe genotype SubH(i) being the true
-        ! genotype GenosHmmMaCH in locus Marker
-        Factors(0)=Penetrance(Marker,SubH(i,Marker),&
-                    GenosHmmMaCH(CurrentInd,Marker))
+    if (HMMOption==RUN_HMM_NGS) then
+        do i=0,2
+            ! cond_probs(i)=Penetrance(Marker,i,0)*shotgunErrorMatrix(0,nReads)&
+            !              +Penetrance(Marker,i,1)*shotgunErrorMatrix(1,nReads)&
+            !              +Penetrance(Marker,i,2)*shotgunErrorMatrix(2,nReads)
+            cond_probs(i)=Penetrance(Marker,i,0)*shotgunErrorMatrix(0,RefAll,AltAll)&
+                         +Penetrance(Marker,i,1)*shotgunErrorMatrix(1,RefAll,AltAll)&
+                         +Penetrance(Marker,i,2)*shotgunErrorMatrix(2,RefAll,AltAll)
+        enddo
+    endif
 
-        ! Probability to observe genotype SubH(i)+1 being the true
-        ! genotype GenosHmmMaCH in locus Marker
-        Factors(1)=Penetrance(Marker,SubH(i,Marker)+1,&
-                    GenosHmmMaCH(CurrentInd,Marker))
+    do i=1,nHapInSubH
+        if (HMMOption /= RUN_HMM_NGS) then
+            ! Probability to observe genotype SubH(i) being the true
+            ! genotype GenosHmmMaCH in locus Marker
+            Factors(0) = Penetrance(Marker,SubH(i,Marker),genotype)
+            ! Probability to observe genotype SubH(i)+1 being the true
+            ! genotype GenosHmmMaCH in locus Marker
+            Factors(1) = Penetrance(Marker,SubH(i,Marker)+1,genotype)
+        else
+            ! Probability to observe genotype SubH(i) being the true
+            ! genotype GenosHmmMaCH in locus Marker
+            Factors(0) = cond_probs(SubH(i,Marker))
+            ! Probability to observe genotype SubH(i)+1 being the true
+            ! genotype GenosHmmMaCH in locus Marker
+            Factors(1) = cond_probs(SubH(i,Marker)+1)
+        endif
         do j=1,i
             Index=Index+1
             ForwardProbs(Index,Marker)=&
@@ -978,7 +1163,7 @@ integer :: j, nprocs
 ! Penetrance(j,i,k) = P(P_j|S_j)
 ! i = G_j = {0,1,2}
 ! k = T(S_j) = T(x_j) + T(y_j) = {0,1,2}
-allocate(Penetrance(nSnpHmm,0:2,0:2))
+! allocate(Penetrance(nSnpHmm,0:2,0:2))
 
 nprocs = OMP_get_num_procs()
 call OMP_set_num_threads(nprocs)
@@ -1038,7 +1223,7 @@ enddo
 end subroutine SetUpPrior
 
 !######################################################################
-subroutine SetUpEquations
+subroutine SetUpEquationsGenotypes
 ! Initialize the variables and parameters of the HMM model described in
 ! Li et al. 2010, Appendix
 
@@ -1048,45 +1233,9 @@ implicit none
 
 integer :: i,j,p
 
-! ALLOCATE MEMORY
-! The full Template Haplotype Library, H (Li et al. 2010, Appendix)
-allocate(FullH(nIndHmmMaCH,nSnpHmm,2))
-
-! Subset of H, Sub H (setup by the user)
-! This is a way to restrict the size of the template library, as the
-! complexity of the algorith increases cubically with the sample size
-! (the cost of each update increases quadratically and the number of
-!  updates increases linearly with sample size)
-!allocate(SubH(nHapInSubH,nSnpHmm))
-
-! HMM PARAMETERS
-! nSnpHmm is the number of states in the HMM
-
-! Vector of Combination of genotyping error (Li et al. 2010, Appendix)
-! Epsilon is related with the Penetrance Matrix of the HMM which gives
-! the emision probabilities for each state/marker/snp.
-allocate(Epsilon(nSnpHmm))
-
-! Vector of Combination of population recombination (Li et al. 2010, Appendix)
-! Thetas is related with the transition Matrix of the HMM. Since there
-! are nSnpHmm states, there are nSnpHmm transitions between states.
-! WARNING: Is this correctly implemented throughout the hmm process??
-allocate(Thetas(nSnpHmm-1))
-
-allocate(ErrorUncertainty(nSnpHmm))
-allocate(ErrorMatches(nSnpHmm))
-allocate(ErrorMismatches(nSnpHmm))
-
-! Crossover parameter in order to maximize the investigation of
-! different mosaic configurations
-! WARNING: crossovers are related with the transition matrix of the HMM.
-!          If there are nSnpHmm states and nSnpHmm-1 transitions
-!          between states, why the number of crossovers is nSnpHmm??
-allocate(Crossovers(nSnpHmm-1))
-
-! Initialization of HMM parameters
-Epsilon=0.00000001
-Thetas=0.01
+! ! Initialization of HMM parameters
+! Epsilon=0.00000001
+! Thetas=0.01
 
 !Initialise FullH
 do i=1,nIndHmmMaCH      ! For every Genotyped Individual
@@ -1113,7 +1262,7 @@ do i=1,nIndHmmMaCH      ! For every Genotyped Individual
         endif
 
         ! If locus is not genotyped, phase each haplotype at random
-        if (GenosHmmMaCH(i,j)==3) then
+        if (GenosHmmMaCH(i,j)==MISSING) then
             if (ran1(idum)>=0.5) then
                 FullH(i,j,1)=0
             else
@@ -1128,7 +1277,7 @@ do i=1,nIndHmmMaCH      ! For every Genotyped Individual
     enddo
 enddo
 
-call CalcPenetrance
+! call CalcPenetrance
 
 ErrorUncertainty(:)=0
 ErrorMatches(:)=0
@@ -1136,7 +1285,111 @@ ErrorMismatches(:)=0
 Crossovers(:)=0
 !print*, Crossovers(:)
 
-end subroutine SetUpEquations
+end subroutine SetUpEquationsGenotypes
+
+!######################################################################
+subroutine SetUpEquationsReads
+! Initialize the variables and parameters of the HMM model described in
+! Li et al. 2010, Appendix
+
+use Global
+use GlobalVariablesHmmMaCH
+use random
+implicit none
+
+integer :: i,j,p, alleles, mac, readObs, RefAll, AltAll
+double precision :: prior_11, prior_12, prior_22
+double precision :: posterior_11, posterior_12, posterior_22
+double precision :: r, frequency, summ
+
+! ! Initialization of HMM parameters
+! Epsilon=0.00000001
+! Thetas=0.01
+
+!Initialise FullH
+do j=1,nSnpHmm      ! For each SNP
+    ! alleles = 0
+    ! mac = 0
+    ! do i=1,nIndHmmMaCH      ! For every Genotyped Individual
+    !     readObs = GenosHmmMaCH(i,j)
+    !     alleles = alleles + mod(readObs,MAX_READS_COUNT)
+    !     mac = mac + readObs/MAX_READS_COUNT
+    ! enddo
+    ! alleles = alleles + mac
+
+    ! if (alleles==0) then
+    !     do i=1,nIndHmmMaCH
+    !         FullH(i,j,:)=0
+    !     enddo
+    ! endif
+
+    ! frequency = DBLE(mac) / DBLE(alleles)
+    
+
+    readObs = 0
+    alleles = 0
+
+    do i=1,nIndHmmMaCH
+        readObs = readObs + GenosHmmMaCH(i,j)
+        alleles = alleles + AlterAllele(i,j)
+    enddo
+    frequency =  dble(alleles) / dble(readObs)
+
+    prior_11 = (1.0 - frequency)**2
+    prior_12 = 2.0 * (1.0 - frequency) * frequency
+    prior_22 = frequency**2
+    ! print *, readObs, alleles, frequency, prior_11, prior_12, prior_22
+
+    do i=1,nIndHmmMaCH
+         ! readObs = GenosHmmMaCH(i,j)
+         readObs = AlterAllele(i,j)*MAX_READS_COUNT+ReferAllele(i,j)
+        RefAll = ReferAllele(i,j)
+        AltAll = AlterAllele(i,j)         
+
+         if (readObs==0) exit
+
+         ! posterior_11 = prior_11 * ShotgunErrorMatrix(0,readObs)
+         ! posterior_12 = prior_12 * ShotgunErrorMatrix(1,readObs)
+         ! posterior_22 = prior_22 * ShotgunErrorMatrix(2,readObs)
+         posterior_11 = prior_11 * ShotgunErrorMatrix(0,RefAll,AltAll)
+         posterior_12 = prior_12 * ShotgunErrorMatrix(1,RefAll,AltAll)
+         posterior_22 = prior_22 * ShotgunErrorMatrix(2,RefAll,AltAll)
+         summ = posterior_11 + posterior_12 + posterior_22
+
+         ! print *, summ, posterior_11, posterior_12, posterior_22
+
+         if (summ==0) write(0,*) 'There is a problem here!'
+
+         posterior_11 = posterior_11 / summ
+         posterior_12 = posterior_12 / summ
+
+         r = ran1(idum)
+
+         if (r < posterior_11) then
+            FullH(i,j,:) = 0
+         elseif (r < posterior_11 + posterior_12) then
+            if (ran1(idum)<0.5) then
+                FullH(i,j,1) = 0
+                FullH(i,j,2) = 1
+            else
+                FullH(i,j,1) = 1
+                FullH(i,j,2) = 0
+            endif
+        else
+            FullH(i,j,:)=1
+        endif
+    enddo
+enddo
+
+! call CalcPenetrance
+
+ErrorUncertainty(:)=0
+ErrorMatches(:)=0
+ErrorMismatches(:)=0
+Crossovers(:)=0
+!print*, Crossovers(:)
+
+end subroutine SetUpEquationsReads
 
 !######################################################################
 subroutine UpdateThetas
@@ -1204,30 +1457,29 @@ do i=1,nSnpHmm
         mismatches=mismatches+ErrorMismatches(i)
         uncertain=uncertain+ErrorUncertainty(i)
     else
-        call SetPenetrance(i)
+        call UpdateError(ErrorMatches(i), ErrorMismatches(i), ErrorUncertainty(i), rate)
+        call SetPenetrance(i,rate)
     endif
 enddo
 
 call UpdateError(matches, mismatches, uncertain, rate)
 
 do i=1,nSnpHmm
-    if (ErrorMismatches(i)<=2) call SetPenetrance(i)
+    if (ErrorMismatches(i)<=2) call SetPenetrance(i, rate)
 enddo
 
 end subroutine UpdateErrorRate
 
 !######################################################################
-subroutine SetPenetrance(marker)
+subroutine SetPenetrance(marker, Err)
 
 use GlobalVariablesHmmMaCH
 implicit none
 
 integer,intent(in) :: marker
+double precision, intent(in) :: Err
 
-! Local variables
-double precision :: Err
-
-Err=Epsilon(marker)
+Epsilon(marker) = Err
 
 Penetrance(marker,0,0)=(1.0-Err)**2
 Penetrance(marker,0,1)=2.0*(1.0-Err)*Err
@@ -1313,6 +1565,38 @@ ErrorMismatches(:)=0
 end subroutine ResetErrors
 
 !######################################################################
+subroutine GetErrorRatebyMarker(marker, Err)
+use GlobalVariablesHmmMaCH
+
+implicit none
+integer, intent(in) :: marker
+double precision, intent(out) :: Err
+
+Err = 0.0
+Err = Epsilon(marker)
+
+end subroutine GetErrorRatebyMarker
+
+!######################################################################
+subroutine GetErrorRate(mean)
+use GlobalVariablesHmmMaCH
+
+implicit none
+double precision, intent(out) :: mean
+
+double precision :: ErrorRate
+integer :: i
+
+mean = 0.0
+do i=1,nSnpHmm
+    call GetErrorRatebyMarker(i, ErrorRate)
+    mean = mean + ErrorRate
+enddo
+mean = mean / nSnpHmm
+
+end subroutine GetErrorRate
+
+!######################################################################
 subroutine ExtractTemplateHaps(forWhom,Shuffle1,Shuffle2)
 ! Set the Template of Haplotypes used in the HMM model.
 ! It differentiates between paternal (even) and maternal (odd) haps
@@ -1395,3 +1679,196 @@ enddo
 end subroutine ExtractTemplateHapsByAnimals
 
 !######################################################################
+subroutine SetShotgunError(ErrorRate)
+use Global
+use GlobalVariablesHmmMaCH
+
+implicit none
+
+double precision, intent(in) :: ErrorRate
+
+! Local variables
+double precision :: DFactorialInLog, ProdFactTmp
+integer :: i,k,MaxReadCounts
+! integer :: binomial(33,33)
+
+
+do k=0,MAX_READS_COUNT-1
+    do i=0,MAX_READS_COUNT-1
+    ! do i=1,MAX_READS_COUNT
+        ProdFactTmp=DFactorialInLog(k+i)-(DFactorialInLog(i)+DFactorialInLog(k))
+
+        ! ShotgunErrorMatrix(0,k*MAX_READS_COUNT+i)=exp(ProdFactTmp+(dfloat(i)*log(ErrorRate))+(dfloat(k)*log(1.0-ErrorRate)))
+        ! ShotgunErrorMatrix(1,k*MAX_READS_COUNT+i)=exp(ProdFactTmp+(dfloat(k+i)*log(0.5)))
+        ! ShotgunErrorMatrix(2,k*MAX_READS_COUNT+i)=exp(ProdFactTmp+(dfloat(i)*log(1.0-ErrorRate))+(dfloat(k)*log(ErrorRate)))
+        ShotgunErrorMatrix(0,k,i)=exp(ProdFactTmp+(dfloat(i)*log(ErrorRate))+(dfloat(k)*log(1.0-ErrorRate)))
+        ShotgunErrorMatrix(1,k,i)=exp(ProdFactTmp+(dfloat(k+i)*log(0.5)))
+        ShotgunErrorMatrix(2,k,i)=exp(ProdFactTmp+(dfloat(i)*log(1.0-ErrorRate))+(dfloat(k)*log(ErrorRate)))
+    enddo
+enddo
+
+! binomial(1,1) = 1
+! binomial(2,1) = 1
+! binomial(2,2) = 1
+
+! do i=3,33
+!     binomial(i,1) = 1
+!     binomial(i,i) = 1
+!     do j=2,i 
+!         binomial(i,j) = binomial(i-1,j) + binomial(i-1,j-1)
+!     enddo
+! enddo
+
+! do i=1,16
+!     do j=1,16
+!         if (rate==0) then
+!             if (j==1) then
+!                 ShotgunErrorMatrix(0,j*16+i) = 1.0
+!             else
+!                 ShotgunErrorMatrix(0,j*16+i) = 0.0
+!             endif
+!             ShotgunErrorMatrix(1,j*16+i) = (0.5)**(i+j) * binomial(i+j,i)
+!             if (i==1) then
+!                 ShotgunErrorMatrix(2,j*16+i) = 1.0
+!             else
+!                 ShotgunErrorMatrix(2,j*16+i) = 0.0
+!             endif
+!         else
+!             ShotgunErrorMatrix(0,j*16+i) = (1-rate)**i * (rate)**j * binomial(i+j,i)
+!             ShotgunErrorMatrix(1,j*16+i) = (0.5)**(i+j) * binomial(i+j,i)
+!             ShotgunErrorMatrix(2,j*16+i) = (rate)**i * (1-rate)**j * binomial(i+j,i)
+!         endif
+!     enddo
+! enddo
+
+end subroutine SetShotgunError
+
+!######################################################################
+subroutine ImputeAllelesNGS(CurrentInd,CurrentMarker,State1,State2)
+use Global
+use GlobalVariablesHmmMaCH
+use omp_lib
+use Par_Zig_mod
+
+implicit none
+
+integer, intent(in) :: CurrentInd, CurrentMarker, State1, State2
+
+! Local variables
+integer :: copied1, copied2, nReads, Thread, bin, imputed1, imputed2, Differences, RefAll, AltAll
+double precision :: posterior_11, posterior_12, posterior_22, summ, random, rate
+
+Thread = omp_get_thread_num()
+
+copied1 = SubH(State1,CurrentMarker)
+copied2 = SubH(State2,CurrentMarker)
+
+! nReads = GenosHmmMaCH(CurrentInd,CurrentMarker)
+nReads = AlterAllele(CurrentInd,CurrentMarker)*MAX_READS_COUNT+ReferAllele(CurrentInd,CurrentMarker)
+RefAll = ReferAllele(CurrentInd,CurrentMarker)
+AltAll = AlterAllele(CurrentInd,CurrentMarker)
+
+! posterior_11 = Penetrance(CurrentMarker,copied1+copied2,0)*shotgunErrorMatrix(0,nReads)
+! posterior_12 = Penetrance(CurrentMarker,copied1+copied2,1)*shotgunErrorMatrix(1,nReads)
+! posterior_22 = Penetrance(CurrentMarker,copied1+copied2,2)*shotgunErrorMatrix(2,nReads)
+posterior_11 = Penetrance(CurrentMarker,copied1+copied2,0)*shotgunErrorMatrix(0,RefAll,AltAll)
+posterior_12 = Penetrance(CurrentMarker,copied1+copied2,1)*shotgunErrorMatrix(1,RefAll,AltAll)
+posterior_22 = Penetrance(CurrentMarker,copied1+copied2,2)*shotgunErrorMatrix(2,RefAll,AltAll)
+
+summ = posterior_11 + posterior_12 + posterior_22
+
+posterior_11 = posterior_11 / summ
+posterior_22 = posterior_22 / summ
+
+random = par_uni(Thread)
+
+! if (RefAll+AltAll==0) then
+!     print *, "\n", summ, posterior_11 + posterior_22
+!     print *, posterior_11, shotgunErrorMatrix(0,RefAll,AltAll)!, Penetrance(CurrentMarker,copied1+copied2,0)
+!     print *, posterior_12/summ, shotgunErrorMatrix(1,RefAll,AltAll)!, Penetrance(CurrentMarker,copied1+copied2,1)
+!     print *, posterior_22, shotgunErrorMatrix(2,RefAll,AltAll)!, Penetrance(CurrentMarker,copied1+copied2,2)
+! endif
+
+if (random < posterior_11) then
+    ! print*, "posterior_11", random, posterior_11, AlterAllele(CurrentInd,CurrentMarker), ReferAllele(CurrentInd,CurrentMarker), nReads
+    FullH(CurrentInd,CurrentMarker,1) = 0
+    FullH(CurrentInd,CurrentMarker,2) = 0
+
+elseif (random < posterior_11 + posterior_22) then
+    ! print*, "posterior_11+posterior_22", random, posterior_11 + posterior_22, AlterAllele(CurrentInd,CurrentMarker), ReferAllele(CurrentInd,CurrentMarker), nReads
+    FullH(CurrentInd,CurrentMarker,1) = 1
+    FullH(CurrentInd,CurrentMarker,2) = 1
+
+elseif (copied1 /= copied2) then
+    call GetErrorRatebyMarker(CurrentMarker, rate)
+
+    if (par_uni(Thread) < rate*rate / ((rate*rate) + (1-rate)*(1-rate))) then
+        if (copied1 == 1) then 
+            copied1 = 0
+        else
+            copied1 = 1
+        endif
+
+        if (copied2 == 1) then 
+            copied2 = 0
+        else
+            copied2 = 1
+        endif
+    endif
+
+    FullH(CurrentInd,CurrentMarker,1) = copied1
+    FullH(CurrentInd,CurrentMarker,2) = copied2
+else
+    if (par_uni(Thread)<0.5) then
+        FullH(CurrentInd,CurrentMarker,1) = 0
+        FullH(CurrentInd,CurrentMarker,2) = 1
+    else 
+        FullH(CurrentInd,CurrentMarker,1) = 1
+        FullH(CurrentInd,CurrentMarker,2) = 0
+    endif
+endif
+
+imputed1 = FullH(CurrentInd,CurrentMarker,1)
+imputed2 = FullH(CurrentInd,CurrentMarker,2)
+
+! if (CurrentInd==1) then
+!     print *, FullH(CurrentInd,1:10,1)
+!     print *, FullH(CurrentInd,1:10,2)
+! endif
+
+
+Differences = abs(copied1 - imputed1) + abs(copied2 - imputed2)
+! count the number of alleles matching
+!$OMP ATOMIC
+ErrorMatches(CurrentMarker)=ErrorMatches(CurrentMarker)+(2-Differences)
+! count the number of mismatching alleles
+!$OMP ATOMIC
+ErrorMismatches(CurrentMarker)=ErrorMismatches(CurrentMarker)+Differences
+
+end subroutine ImputeAllelesNGS
+
+!######################################################################################################################################################
+
+real(kind=8) function DFactorialInLog(n)
+
+implicit none
+integer,intent(in) :: n
+
+! Local variables
+integer :: i
+real(kind=8) :: Ans
+
+Ans=0.0
+if (n==0) then
+    Ans=1.0
+else
+    do i=1,n
+        Ans=Ans+log(dfloat(i))
+    enddo
+endif
+
+DFactorialInLog=Ans
+
+end function DFactorialInLog
+
+!######################################################################################################################################################
