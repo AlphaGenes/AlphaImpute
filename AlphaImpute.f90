@@ -5919,7 +5919,7 @@ use Global
 implicit none
 
 character(len=300), intent(in) :: readsFileName
-integer :: i,j,SeqLine(nSnp), dummy
+integer :: i,j,SeqLine(nSnp)
 integer, allocatable,dimension (:) :: ReferAlleleLine, AlterAlleleLine
 
 ! TODO: This hack avoids mem allocation problems with Genos allocated
@@ -5937,8 +5937,8 @@ write(0,*) "DEBUG: [ReadSeq] Reads size=", size(Reads,1)
 open (unit=3,file=trim(readsFileName),status="old")
 write(0,*) "DEBUG: [ReadSeq] Reading sequence data..."
 do i=1,nAnisG
-    read (3,*) GenotypeId(i), dummy, dummy, ReferAlleleLine(:)
-    read (3,*) GenotypeId(i), dummy, dummy, AlterAlleleLine(:)
+    read (3,*) GenotypeId(i), ReferAlleleLine(:)
+    read (3,*) GenotypeId(i), AlterAlleleLine(:)
     ReferAllele(i,:) = ReferAlleleLine
     AlterAllele(i,:) = AlterAlleleLine
     do j=1,nSnp
