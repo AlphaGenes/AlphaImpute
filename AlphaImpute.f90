@@ -5918,7 +5918,7 @@ use Global
 implicit none
 
 character(len=300), intent(in) :: readsFileName
-integer :: i,j,SeqLine(nSnp), dummy
+integer :: i,j,SeqLine(nSnp)
 integer, allocatable,dimension (:) :: ReferAlleleLine, AlterAlleleLine
 
 allocate(ReferAllele(0:nAnisG,nSnp))
@@ -5939,8 +5939,8 @@ open (unit=3,file=trim(readsFileName),status="old")
 #endif
 
 do i=1,nAnisG
-    read (3,*) GenotypeId(i), dummy, dummy, ReferAlleleLine(:)
-    read (3,*) GenotypeId(i), dummy, dummy, AlterAlleleLine(:)
+    read (3,*) GenotypeId(i), ReferAlleleLine(:)
+    read (3,*) GenotypeId(i), AlterAlleleLine(:)
     ReferAllele(i,:) = ReferAlleleLine
     AlterAllele(i,:) = AlterAlleleLine
     do j=1,nSnp
