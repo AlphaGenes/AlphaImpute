@@ -1449,8 +1449,10 @@ implicit none
 character(len=7) :: cm !use for formatting output - allows for up to 1 million SNPs
 integer :: i,j,k,l,WorkTmp(nSnpRaw)
 double precision :: ImputationQuality(nAnisP,6)
+double precision, allocatable :: GenosProbs(:,:,:)
 character(len=300) :: TmpId
 integer :: n0, n1, n2
+
 
 #ifdef DEBUG
     write(0,*) 'DEBUG: WriteOutResults'
@@ -1773,6 +1775,14 @@ else
          write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') Id(i),ProbImputePhase(i,:,2)
          write (41,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') Id(i),ProbImputeGenos(i,:)
     enddo
+
+    if (HMMOption/=RUN_HMM_NO) then
+        call WriteProbabilitiesHMM("./Results/GenotypeProbabilities.txt", GlobalExtraAnimals, Id, nAnisP, nSnp)
+    else
+        allocate(GenosProbs(nAnisP,nSnp,2))
+        call ReReadIterateGeneProbs(GenosProbs)
+        call WriteProbabilitiesGeneProb("./Results/GenotypeProbabilities.txt", GenosProbs, Id, GlobalExtraAnimals, nAnisP, nSnp)
+    endif
 
     if ((SexOpt==1).or.(BypassGeneProb==1)) then
 
