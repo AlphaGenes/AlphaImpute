@@ -22,7 +22,7 @@ double precision,allocatable,dimension(:,:) :: ForwardProbs
 double precision,allocatable,dimension(:,:,:) :: Penetrance, ShotgunErrorMatrix
 real,allocatable,dimension (:,:) :: ProbImputeGenosHmm
 real,allocatable,dimension (:,:,:) :: ProbImputePhaseHmm
-integer, allocatable :: frequence(:,:,:)
+integer, allocatable :: GenosCounts(:,:,:)
 !$omp threadprivate(ForwardProbs, SubH)
 
 end module GlobalVariablesHmmMaCH
@@ -173,8 +173,8 @@ print*, " Impute genotypes by HMM"
 print*, "    Using", useProcs, "processors of", nprocs
 
 ! Allocate and set up variables storing allele frequencies
-allocate(frequence(nIndHmmMaCH,nSnpHmm,2))
-frequence=0
+allocate(GenosCounts(nIndHmmMaCH,nSnpHmm,2))
+GenosCounts=0
 
 tT=0.0
 do GlobalRoundHmm=1,nRoundsHmm
@@ -223,8 +223,8 @@ ProbImputePhaseHmm=ProbImputePhaseHmm/(nRoundsHmm-HmmBurnInRound)
 ! Most likely genotype is the genotype that has been sampled most frequently
 !IndHmmMaCH
 !    do j=1,nSnpHmm
-!        n2 = frequence(i,j,2)                           ! Homozygous: 2 case
-!        n1 = frequence(i,j,1)                           ! Heterozygous
+!        n2 = GenosCounts(i,j,3)                           ! Homozygous: 2 case
+!        n1 = GenosCounts(i,j,2)                           ! Heterozygous
 !        n0 = (nRoundsHmm-HmmBurnInRound) - n1 - n2      ! Homozygous: 0 case
 !        if ((n0>n1).and.(n0>n2)) then
 !            ProbImputeGenosHmm(i,j)=0
@@ -236,7 +236,7 @@ ProbImputePhaseHmm=ProbImputePhaseHmm/(nRoundsHmm-HmmBurnInRound)
 !    enddo
 !enddo
 
-!deallocate(frequence)
+!deallocate(GenosCounts)
 
 end subroutine MaCHController
 !######################################################################
@@ -442,22 +442,23 @@ call SampleChromosomes(CurrentInd)
 !          independent.
 
 #if DEBUG.EQ.1
-    write(0,*) 'DEBUG: Calculate genotype frequences [MaCHForInd]'
+    write(0,*) 'DEBUG: Calculate genotype counts [MaCHForInd]'
 #endif
 if (GlobalRoundHmm>HmmBurnInRound) then
     do i=1,nSnpHmm
         genotype = FullH(CurrentInd,i,1)+FullH(CurrentInd,i,2)
         if (genotype==2) then
-            frequence(CurrentInd,i,2)=frequence(CurrentInd,i,2)+1
+            GenosCounts(CurrentInd,i,2)=GenosCounts(CurrentInd,i,2)+1
         elseif (genotype==1) then
-            frequence(CurrentInd,i,1)=frequence(CurrentInd,i,1)+1
+            GenosCounts(CurrentInd,i,1)=GenosCounts(CurrentInd,i,1)+1
         endif
+        ! GenosCounts(CurrentInd,i,1)=(GlobalRoundHmm-HmmBurnInRound) - GenosCounts(CurrentInd,i,2) - GenosCounts(CurrentInd,i,3)
     enddo
 endif
 
 ! Cumulative genotype probabilities through hmm processes
 #if DEBUG.EQ.1
-    write(0,*) 'DEBUG: Calculate genotype probabilities [MaCHForInd]'
+    write(0,*) 'DEBUG: Calculate genotype dosages [MaCHForInd]'
 #endif
 if (GlobalRoundHmm>HmmBurnInRound) then
     ProbImputeGenosHmm(CurrentInd,:)=ProbImputeGenosHmm(CurrentInd,:)&

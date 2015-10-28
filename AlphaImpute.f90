@@ -1728,8 +1728,8 @@ else
         ! Impute the most likely genotypes. (Most frequent genotype)
         do i=1,nAnisG
             do j=1,nSnpIterate
-                n2 = frequence(i,j,2)                           ! Homozygous: 2 case
-                n1 = frequence(i,j,1)                           ! Heterozygous
+                n2 = GenosCounts(i,j,2)                           ! Homozygous: 2 case
+                n1 = GenosCounts(i,j,1)                           ! Heterozygous
                 n0 = (nRoundsHmm-HmmBurnInRound) - n1 - n2      ! Homozygous: 0 case
                 if ((n0>n1).and.(n0>n2)) then
                     ImputeGenos(GlobalHmmID(i),j)=0
