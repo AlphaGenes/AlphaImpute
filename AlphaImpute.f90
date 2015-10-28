@@ -1454,6 +1454,24 @@ character(len=300) :: TmpId
 integer :: n0, n1, n2
 
 
+
+INTERFACE WriteProbabilities
+  SUBROUTINE WriteProbabilitiesHMM(outFile, nExtraAnims, Ids, nAnisP, nSnps)
+    use GlobalVariablesHmmMaCH
+    character(len=*), intent(IN) :: outFile
+    integer, intent(IN) :: nExtraAnims, nAnisP, nSnps
+    character*(20), intent(IN) :: Ids(nAnisP)
+  END SUBROUTINE WriteProbabilitiesHMM
+
+  SUBROUTINE WriteProbabilitiesGeneProb(outFile, GenosProbs, Ids, nExtraAnims, nAnisP, nSnps)
+    character(len=*), intent(IN) :: outFile
+    integer, intent(IN) :: nExtraAnims, nAnisP, nSnps
+    double precision, intent(IN) :: GenosProbs(nAnisP,nSnps,4)
+    character*(20), intent(IN) :: Ids(nAnisP)
+  END SUBROUTINE WriteProbabilitiesGeneProb
+END INTERFACE
+
+
 #ifdef DEBUG
     write(0,*) 'DEBUG: WriteOutResults'
 #endif
@@ -1777,11 +1795,11 @@ else
     enddo
 
     if (HMMOption/=RUN_HMM_NO) then
-        call WriteProbabilitiesHMM("./Results/GenotypeProbabilities.txt", GlobalExtraAnimals, Id, nAnisP, nSnp)
+        call WriteProbabilities("./Results/GenotypeProbabilities.txt", GlobalExtraAnimals, Id, nAnisP, nSnp)
     else
         allocate(GenosProbs(nAnisP,nSnp,2))
         call ReReadIterateGeneProbs(GenosProbs)
-        call WriteProbabilitiesGeneProb("./Results/GenotypeProbabilities.txt", GenosProbs, Id, GlobalExtraAnimals, nAnisP, nSnp)
+        call WriteProbabilities("./Results/GenotypeProbabilities.txt", GenosProbs, Id, GlobalExtraAnimals, nAnisP, nSnp)
     endif
 
     if ((SexOpt==1).or.(BypassGeneProb==1)) then
