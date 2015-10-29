@@ -95,7 +95,7 @@ integer :: h,i,j,dum,StSnp,EnSnp
 double precision :: PatAlleleProb(nSnp,2),MatAlleleProb(nSnp,2),HetProb(nSnp),GeneProbWork(nSnp,4)
 character(len=300) :: inFile
 
-GlobalWorkPhase=9
+GeneProbWork=9
 do h=1,nProcessors
     write (inFile,'("IterateGeneProb/GeneProb"i0,"/GeneProbs.txt")')h          !here
     open (unit=110,file=trim(inFile),status="unknown")
