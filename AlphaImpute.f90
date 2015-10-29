@@ -1471,6 +1471,12 @@ INTERFACE WriteProbabilities
   END SUBROUTINE WriteProbabilitiesGeneProb
 END INTERFACE
 
+INTERFACE
+  SUBROUTINE ReReadIterateGeneProbs(GenosProbs)
+    use Global
+    double precision, intent(OUT) :: GenosProbs(nAnisP,nSnp,2)
+  END SUBROUTINE ReReadIterateGeneProbs
+END INTERFACE
 
 #ifdef DEBUG
     write(0,*) 'DEBUG: WriteOutResults'
