@@ -106,8 +106,8 @@ do h=1,nProcessors
             read (110,*) dum,GeneProbWork(StSnp:EnSnp,j)
         enddo
 
-        GenosProbs(i,:,1) = GeneProbWork(:,1)
-        GenosProbs(i,:,2) = GeneProbWork(:,2) + GeneProbWork(:,3)
+        GenosProbs(i,StSnp:EnSnp,1) = GeneProbWork(StSnp:EnSnp,1)
+        GenosProbs(i,StSnp:EnSnp,2) = GeneProbWork(StSnp:EnSnp,2) + GeneProbWork(StSnp:EnSnp,3)
 
     enddo
     close(110)
