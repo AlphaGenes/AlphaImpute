@@ -55,7 +55,7 @@ subroutine WriteProbabilitiesGeneProb(outFile, GenosProbs, Ids, nExtraAnims, nAn
 
 character(len=*), intent(IN) :: outFile
 integer, intent(IN) :: nExtraAnims, nAnisP, nSnps
-double precision, intent(IN) :: GenosProbs(nAnisP,nSnps,4)
+double precision, intent(IN) :: GenosProbs(nAnisP,nSnps,2)
 character*(20), intent(IN) :: Ids(nAnisP)
 
 ! Local Variable
@@ -92,7 +92,7 @@ double precision, intent(OUT) :: GenosProbs(nAnisP,nSnp,2)
 
 ! Local variables
 integer :: h,i,j,dum,StSnp,EnSnp
-double precision :: PatAlleleProb(nSnp,2),MatAlleleProb(nSnp,2),HetProb(nSnp),GeneProbWork(nSnp,4)
+double precision :: GeneProbWork(nSnp,4)
 character(len=300) :: inFile
 
 GeneProbWork=9

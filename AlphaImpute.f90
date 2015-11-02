@@ -1466,7 +1466,7 @@ INTERFACE WriteProbabilities
   SUBROUTINE WriteProbabilitiesGeneProb(outFile, GenosProbs, Ids, nExtraAnims, nAnisP, nSnps)
     character(len=*), intent(IN) :: outFile
     integer, intent(IN) :: nExtraAnims, nAnisP, nSnps
-    double precision, intent(IN) :: GenosProbs(nAnisP,nSnps,4)
+    double precision, intent(IN) :: GenosProbs(nAnisP,nSnps,2)
     character*(20), intent(IN) :: Ids(nAnisP)
   END SUBROUTINE WriteProbabilitiesGeneProb
 END INTERFACE
