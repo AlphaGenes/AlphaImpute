@@ -76,6 +76,7 @@ program GeneProb_sub
 
 	open(UNIT=19,FILE=trim(inputFile),STATUS="old") !INPUT FILE
 	open (UNIT=111,FILE=trim(outputFile),STATUS="unknown") !OUTPUT FILE
+  open (UNIT=222,FILE='GPI.txt',STATUS="unknown")
 
 	allocate(Probs00(nAnis,endSnp-startSnp+1))
  	allocate(Probs01(nAnis,endSnp-startSnp+1))
@@ -101,7 +102,8 @@ program GeneProb_sub
 		write(111,'(i16,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4)') i, (Probs10(i,:))
 		write(111,'(i16,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4)') i, (Probs11(i,:))
 
-		!write(111,'(I7,'//cm//'(1x,F8.4))') i, (GPI(i,:))
+    ! write(111,'(I7,'//cm//'(1x,F8.4))') i, (GPI(i,:))
+		write(222,'(i16,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4)') i, (GPI(i,:))
  	end do
 
  	deallocate(Probs00)

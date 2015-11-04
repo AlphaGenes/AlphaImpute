@@ -1070,6 +1070,7 @@ allocate(HetProb(nSnpIterate))
 allocate(GeneProbWork(nSnpIterate,4))
 allocate(ProbImputeGenos(0:nAnisP,nSnpIterate))
 allocate(ProbImputePhase(0:nAnisP,nSnpIterate,2))
+allocate(GPI(nAnisP,nSnp))
 deallocate(GpIndex)
 allocate(GpIndex(nProcessors,2))
 
@@ -1505,6 +1506,7 @@ open (unit=52,file="./Results/WellPhasedIndividuals.txt",status="unknown")
 open (unit=53,file="./Results/ImputePhaseHMM.txt",status="unknown")
 open (unit=54,file="./Results/ImputeGenotypesHMM.txt",status="unknown")
 
+open (unit=60,file="./Results/GPI.txt",status="unknown")
 
 #ifdef DEBUG
     write(0,*) 'DEBUG: output=0 [WriteOutResults]'
@@ -1570,6 +1572,7 @@ if (OutOpt==0) then
          write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') Id(i),ProbImputePhase(i,:,1)
          write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') Id(i),ProbImputePhase(i,:,2)
          write (41,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') Id(i),ProbImputeGenos(i,:)
+         write (60,'(a20,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4)') Id(i),GPI(i,:)
 
     enddo
 
@@ -1798,6 +1801,8 @@ else
          write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') Id(i),ProbImputePhase(i,:,1)
          write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') Id(i),ProbImputePhase(i,:,2)
          write (41,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') Id(i),ProbImputeGenos(i,:)
+         write (60,'(a20,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4)') Id(i),GPI(i,:)
+
     enddo
 
     if (HMMOption/=RUN_HMM_NO) then
@@ -1879,6 +1884,7 @@ close (52)
 
 close (53)
 close (54)
+close (60)
 
 end subroutine WriteOutResults
 
@@ -2213,6 +2219,7 @@ character(len=300) :: filout
 
 allocate(Maf(nSnpIterate))
 
+
 if (RestartOption==4) then
     open (unit=109,file="Tmp2345678.txt",status="unknown")
     do i=1,nAnisP
@@ -2230,9 +2237,14 @@ do h=1,nProcessors
     write (filout,'("./IterateGeneProb/GeneProb"i0,"/MinorAlleleFrequency.txt")')h          !here
     open (unit=111,file=trim(filout),status="unknown")
 
+    write (filout,'("./IterateGeneProb/GeneProb"i0,"/GPI.txt")')h
+    open (unit=222,file=filout,status="unknown")
+
     StSnp=GpIndex(h,1)
     EnSnp=GpIndex(h,2)
     do i=1,nAnisP
+        read (222,*) dum, GPI(i,StSnp:EnSnp)
+
         do j=1,4
             read (110,*) dum,GeneProbWork(StSnp:EnSnp,j)
         enddo
@@ -2273,6 +2285,7 @@ do h=1,nProcessors
 
     close(110)
     close(111)
+    close(222)
 enddo
 
 if (WindowsLinux==1) then
@@ -2285,6 +2298,7 @@ do j=1,nSnpIterate
     write (111,*) j,Maf(j)
 enddo
 close(111)
+
 
 call IterateMakeGenotype
 
