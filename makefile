@@ -3,6 +3,7 @@ NAME:=AlphaImpute
 VERSION:=1
 SUBVERSION:=2.0
 PROGRAM:=${NAME}${VERSION}.${SUBVERSION}
+GP:=GeneProbForAlphaImpute
 
 # Compiler
 FC:=ifort
@@ -15,6 +16,8 @@ DEBUG?=0
 # Options
 FFLAGS:=-O3 -m64 -openmp -fpp -DCLUSTER=$(CLUSTER) -openmp-link=static -static-intel
 #FFLAGS:=-O3 -m64 -fopenmp -ffree-line-length-0
+
+GPFFLAGS:=-O3 -m64 -static-intel
 
 all: executable
 
@@ -31,6 +34,7 @@ executable: ${OBJS}
 	export OMP_STACKSIZE=" 128 M"
 	export OMP_NUM_THREADS=4
 	${FC} AlphaImpute.f90 ${OBJS} ${FFLAGS} -o ${PROGRAM}
+	${FC} GeneProbForAlphaImpute.f90 ${GPFFLAGS} -o ${GP}
 
 clean:
 	rm -f *.o *.mod *~ 
