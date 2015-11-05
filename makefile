@@ -1,39 +1,65 @@
 # General variables
 NAME:=AlphaImpute
-VERSION:=1
-SUBVERSION:=2.0
-PROGRAM:=${NAME}${VERSION}.${SUBVERSION}
+VERSION:=$(shell git rev-parse --short HEAD)
+MASTERVERSION:=$(shell git describe --tag)
+# SUBVERSION:=2.0
+# PROGRAM:=${NAME}${VERSION}.${SUBVERSION}
+PROGRAM:=$(NAME).$(MASTERVERSION)
 
 # Compiler
 FC:=ifort
 #FC:=gfortran
 
+# Options
+FFLAGS:=-O3 -m64 -DVERS=""commit-$(VERSION)""
+
 # Set precompilation options by default
 CLUSTER?=0
 DEBUG?=0
 
+ifeq ($(OS), Windows_NT)
+	OSFLAG := "OS_WIN"
+	FFLAGS := $(FFLAGS) /static /fpp  /Qmkl /D $(OSFLAG) -D CLUSTER=0
+
+	obj:= .obj
+	exe:= .exe
+
+	DEL:= del
+else
+	OSFLAG := "OS_UNIX"
+	FFLAGS:= $(FFLAGS) -openmp -static-intel -fpp -openmp-link=static  -D $(OSFLAG) -D CLUSTER=$(CLUSTER)
+
+	obj:= .o
+	exe:= 
+
+	DEL:= rm -rf
+endif
+
 # Options
-FFLAGS:=-O3 -m64 -openmp -fpp -DCLUSTER=$(CLUSTER) -openmp-link=static -static-intel
-#FFLAGS:=-O3 -m64 -fopenmp -ffree-line-length-0
+# FFLAGS:=-O3 -m64 -openmp -fpp -DCLUSTER=$(CLUSTER) -openmp-link=static -static-intel
+# FFLAGS:=-O3 -m64 -fopenmp -ffree-line-length-0
 
 all: executable
 
-debug: FFLAGS = -DDEBUG=${DEBUG} -g -O0 -openmp -check bounds -fpp
+debug: FFLAGS = -DDEBUG=${DEBUG} -g -O0 -openmp -check bounds -fpp -openmp-link=static -static-intel
 #debug: FFLAGS =  -DDEBUG=${DEBUG} -g -ffree-line-length-0 -O0 -fopenmp
 debug: executable
 
-OBJS:=global.o par_zig_mod.o random.o hmm.o
+OBJS:=global$(obj) par_zig_mod$(obj) random$(obj) hmm$(obj)
 
-%.o:%.f90
-	${FC} ${FFLAGS} -c $<
+%$(obj):%.f90
+	$(FC) $(FFLAGS) -c $<
 
-executable: ${OBJS}
+executable: $(OBJS)
 	export OMP_STACKSIZE=" 128 M"
 	export OMP_NUM_THREADS=4
-	${FC} AlphaImpute.f90 ${OBJS} ${FFLAGS} -o ${PROGRAM}
+	$(FC) AlphaImpute.f90 $(OBJS) $(FFLAGS) -o $(PROGRAM)$(exe)
 
 clean:
-	rm -f *.o *.mod *~ 
+	$(DEL) *$(obj) *.mod *~
 
-.PHONY: make clean
+veryclean:
+	$(DEL) *$(obj)*.mod *~ AlphaImpute$(exe)
+
+.PHONY: make clean veryclean all
 
