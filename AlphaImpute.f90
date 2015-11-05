@@ -1,3 +1,21 @@
+#ifdef OS_UNIX
+
+#DEFINE DASH "/"
+#DEFINE COPY "cp"
+#DEFINE MD "mkdir"
+#DEFINE RMDIR "rm -r"
+#DEFINE RM "rm"
+#DEFINE RENAME "mv"
+
+#else
+#DEFINE DASH "\"
+#DEFINE COPY "copy"
+#DEFINE MD "md"
+#DEFINE RMDIR "RMDIR /S /Q"
+#DEFINE RM "del"
+#DEFINE RENAME "MOVE /Y"
+#endif
+
 !######################################################################
  
 program AlphaImpute
@@ -74,6 +92,7 @@ else
 #endif
 
             if (RestartOption<OPT_RESTART_PHASING) Then
+
 #if CLUSTER==2
                 write(6,*) ""
                 write(6,*) "Restart option 1 stops program before Geneprobs jobs have been submitted"
@@ -904,7 +923,11 @@ logical :: FileExists
 JobsDone(:)=0
 do
     do i=1,nProcs
+#ifdef OS_UNIX
         write (filout,'("./GeneProb/GeneProb"i0,"/GpDone.txt")')i
+#else
+        write (filout,'(".\GeneProb\GeneProb"i0,"\GpDone.txt")')i
+#endif
         inquire(file=trim(filout),exist=FileExists)
         if (FileExists .eqv. .true.) then
             if (JobsDone(i)==0) print*, " ","      GeneProb job ",i," done"
@@ -1091,7 +1114,11 @@ GpIndex(nProcessors,2)=nSnpIterate
 
 
 do i=1,nProcessors
+#ifdef OS_UNIX
     write (filout,'("./IterateGeneProb/GeneProb"i0,"/GeneProbSpec.txt")')i
+#else
+    write (filout,'(".\IterateGeneProb\GeneProb"i0,"\GeneProbSpec.txt")')i
+#endif
     open (unit=108,file=trim(filout),status='unknown')
     write (108,*) "nAnis        ,",nAnisP 
     write (108,*) "nSnp     ,",nSnpIterate
@@ -1101,9 +1128,8 @@ do i=1,nProcessors
     write (108,*) "EndSnp       ,",GpIndex(i,2) 
     close(108)
     write (filout,'("GeneProb"i0)')i
-#if CLUSTER!=1
-    call system ("cp GeneProbForAlphaImpute IterateGeneProb/" // filout)
-#endif
+    ! call system ("cp GeneProbForAlphaImpute IterateGeneProb/" // filout)
+    call system (COPY // " GeneProbForAlphaImpute IterateGeneProb" // DASH // filout)
 enddo   
 
 open (unit=109,file="TempIterateGeneProb.sh",status="unknown")
@@ -1468,16 +1494,27 @@ endif
 write(cm,'(I7)') nSnpRaw !for formatting
 cm = adjustl(cm)
 
-open (unit=33,file="./Results/ImputePhase.txt",status="unknown")
-open (unit=34,file="./Results/ImputeGenotypes.txt",status="unknown")
-open (unit=40,file="./Results/ImputePhaseProbabilities.txt",status="unknown")
-open (unit=41,file="./Results/ImputeGenotypeProbabilities.txt",status="unknown")
-open (unit=50,file="./Results/ImputationQualityIndividual.txt",status="unknown")
-open (unit=51,file="./Results/ImputationQualitySnp.txt",status="unknown")
-open (unit=52,file="./Results/WellPhasedIndividuals.txt",status="unknown")
+! open (unit=33,file="./Results/ImputePhase.txt",status="unknown")
+! open (unit=34,file="./Results/ImputeGenotypes.txt",status="unknown")
+! open (unit=40,file="./Results/ImputePhaseProbabilities.txt",status="unknown")
+! open (unit=41,file="./Results/ImputeGenotypeProbabilities.txt",status="unknown")
+! open (unit=50,file="./Results/ImputationQualityIndividual.txt",status="unknown")
+! open (unit=51,file="./Results/ImputationQualitySnp.txt",status="unknown")
+! open (unit=52,file="./Results/WellPhasedIndividuals.txt",status="unknown")
 
-open (unit=53,file="./Results/ImputePhaseHMM.txt",status="unknown")
-open (unit=54,file="./Results/ImputeGenotypesHMM.txt",status="unknown")
+! open (unit=53,file="./Results/ImputePhaseHMM.txt",status="unknown")
+! open (unit=54,file="./Results/ImputeGenotypesHMM.txt",status="unknown")
+
+open (unit=33,file="." // DASH// "Results" // DASH // "ImputePhase.txt",status="unknown")
+open (unit=34,file="." // DASH// "Results" // DASH // "ImputeGenotypes.txt",status="unknown")
+open (unit=40,file="." // DASH// "Results" // DASH // "ImputePhaseProbabilities.txt",status="unknown")
+open (unit=41,file="." // DASH// "Results" // DASH // "ImputeGenotypeProbabilities.txt",status="unknown")
+open (unit=50,file="." // DASH// "Results" // DASH // "ImputationQualityIndividual.txt",status="unknown")
+open (unit=51,file="." // DASH// "Results" // DASH // "ImputationQualitySnp.txt",status="unknown")
+open (unit=52,file="." // DASH// "Results" // DASH // "WellPhasedIndividuals.txt",status="unknown")
+
+open (unit=53,file="." // DASH// "Results" // DASH // "ImputePhaseHMM.txt",status="unknown")
+open (unit=54,file="." // DASH// "Results" // DASH // "ImputeGenotypesHMM.txt",status="unknown")
 
 
 #ifdef DEBUG
@@ -1499,7 +1536,8 @@ if (OutOpt==0) then
             enddo
         enddo
 
-        open (unit=39,file="IterateGeneProb/IterateGeneProbInput.txt")
+        ! open (unit=39,file="IterateGeneProb/IterateGeneProbInput.txt")
+        open (unit=39, file="IterateGeneProb" // DASH // "IterateGeneProbInput.txt")
         do i=1,nAnisP
             write (39,'(3i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') RecPed(i,:),ImputeGenos(i,:)
         enddo
@@ -1552,11 +1590,12 @@ if (OutOpt==0) then
         do j=1,nSnp
             Maf(j)=sum(ProbImputeGenos(:,j))/(2*nAnisP)
         enddo
-        if (WindowsLinux==1) then
-            open (unit=111,file=".\Miscellaneous\MinorAlleleFrequency.txt",status="unknown")
-        else
-            open (unit=111,file="./Miscellaneous/MinorAlleleFrequency.txt",status="unknown")
-        endif
+        ! if (WindowsLinux==1) then
+        !     open (unit=111,file=".\Miscellaneous\MinorAlleleFrequency.txt",status="unknown")
+        ! else
+        !     open (unit=111,file="./Miscellaneous/MinorAlleleFrequency.txt",status="unknown")
+        ! endif
+        open(unit=111,file="." // DASH // "Miscellaneous" // DASH // "MinorAlleleFrequency.txt", status="unknown")
 
         do j=1,nSnpRaw
             write (111,*) j,Maf(j)
@@ -1656,7 +1695,8 @@ else
          write (34,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') Id(i),TmpGenos(i,:)
     enddo
     if (SexOpt==0 .and. HMMOption/=RUN_HMM_NGS) then
-        open (unit=39,file="IterateGeneProb/IterateGeneProbInput.txt")
+        ! open (unit=39,file="IterateGeneProb/IterateGeneProbInput.txt")
+        open (unit=39, file="IterateGeneProb" // DASH // "IterateGeneProbInput.txt")
         do i=1,nAnisP
             write (39,'(3i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') RecPed(i,:),TmpGenos(i,:)
         enddo
@@ -1787,11 +1827,13 @@ else
         do j=1,nSnpRaw
             Maf(j)=sum(ProbImputeGenos(:,j))/(2*nAnisP)
         enddo
-        if (WindowsLinux==1) then
-            open (unit=111,file=".\Miscellaneous\MinorAlleleFrequency.txt",status="unknown")
-        else
-            open (unit=111,file="./Miscellaneous/MinorAlleleFrequency.txt",status="unknown")
-        endif
+        ! if (WindowsLinux==1) then
+        !     open (unit=111,file=".\Miscellaneous\MinorAlleleFrequency.txt",status="unknown")
+        ! else
+        !     open (unit=111,file="./Miscellaneous/MinorAlleleFrequency.txt",status="unknown")
+        ! endif
+        open(unit=111,file="." // DASH // "Miscellaneous" // DASH // "MinorAlleleFrequency.txt", status="unknown")
+
 
         do j=1,nSnpRaw
             write (111,*) j,Maf(j)
@@ -1869,11 +1911,16 @@ character(len=7) :: cm
 write(cm,'(I7)') nSnpRaw !for formatting
 cm = adjustl(cm)
 
-open (unit=42,file="Results/RecombinationInformation.txt",status="unknown")
-open (unit=43,file="Results/RecombinationInformationNarrow.txt",status="unknown")
-open (unit=44,file="Results/NumberRecombinations.txt",status="unknown")
-open (unit=45,file="Results/RecombinationInformationR.txt",status="unknown")
-open (unit=46,file="Results/RecombinationInformationNarrowR.txt",status="unknown")
+! open (unit=42,file="Results/RecombinationInformation.txt",status="unknown")
+! open (unit=43,file="Results/RecombinationInformationNarrow.txt",status="unknown")
+! open (unit=44,file="Results/NumberRecombinations.txt",status="unknown")
+! open (unit=45,file="Results/RecombinationInformationR.txt",status="unknown")
+! open (unit=46,file="Results/RecombinationInformationNarrowR.txt",status="unknown")
+open (unit=42, file="Results" // DASH // "RecombinationInformation.txt")
+open (unit=43, file="Results" // DASH // "RecombinationInformationNarrow.txt")
+open (unit=44, file="Results" // DASH // "NumberRecombinations.txt")
+open (unit=45, file="Results" // DASH // "RecombinationInformationR.txt")
+open (unit=46, file="Results" // DASH // "RecombinationInformationNarrowR.txt")
 
 ! Check whether to consider all the raw snps or only the snps left after the edition procedure
 ! If EditedSnpOut in Spec file
@@ -2144,10 +2191,14 @@ do i=1,nAnisP
 
 enddo
 
-open (unit=33,file="Results/ImputePhase.txt",status="unknown")
-open (unit=34,file="Results/ImputeGenotypes.txt",status="unknown")
-open (unit=40,file="Results/ImputePhaseProbabilities.txt",status="unknown")
-open (unit=41,file="Results/ImputeGenotypeProbabilities.txt",status="unknown")
+! open (unit=33,file="Results/ImputePhase.txt",status="unknown")
+! open (unit=34,file="Results/ImputeGenotypes.txt",status="unknown")
+! open (unit=40,file="Results/ImputePhaseProbabilities.txt",status="unknown")
+! open (unit=41,file="Results/ImputeGenotypeProbabilities.txt",status="unknown")
+open (unit=33,file="Results" // DASH // "ImputePhase.txt",status="unknown")
+open (unit=34,file="Results" // DASH // "ImputeGenotypes.txt",status="unknown")
+open (unit=40,file="Results" // DASH // "ImputePhaseProbabilities.txt",status="unknown")
+open (unit=41,file="Results" // DASH // "ImputeGenotypeProbabilities.txt",status="unknown")
 
 do i=GlobalExtraAnimals+1,nAnisP
      write (33,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') Id(i),ImputePhase(i,:,1)
@@ -2186,15 +2237,23 @@ if (RestartOption==4) then
         read (109,*) ImputePhase(i,:,2)         
         read (109,*) ImputeGenos(i,:)
     enddo   
-    call system("rm Tmp2345678.txt")
+    ! call system("rm Tmp2345678.txt")
+    call system(RM // " Tmp2345678.txt")
 endif
 
 counter=0
 do h=1,nProcessors
+#ifdef OS_UNIX
     write (filout,'("./IterateGeneProb/GeneProb"i0,"/GeneProbs.txt")')h         !here
     open (unit=110,file=trim(filout),status="unknown")
     write (filout,'("./IterateGeneProb/GeneProb"i0,"/MinorAlleleFrequency.txt")')h          !here
     open (unit=111,file=trim(filout),status="unknown")
+#else
+    write (filout,'(".\IterateGeneProb\GeneProb"i0,"\GeneProbs.txt")')h         !here
+    open (unit=110,file=trim(filout),status="unknown")
+    write (filout,'(".\IterateGeneProb\GeneProb"i0,"\MinorAlleleFrequency.txt")')h          !here
+    open (unit=111,file=trim(filout),status="unknown")
+#endif
 
     StSnp=GpIndex(h,1)
     EnSnp=GpIndex(h,2)
@@ -2241,11 +2300,13 @@ do h=1,nProcessors
     close(111)
 enddo
 
-if (WindowsLinux==1) then
-        open (unit=111,file=".\Miscellaneous\MinorAlleleFrequency.txt",status="unknown")
-else
-        open (unit=111,file="./Miscellaneous/MinorAlleleFrequency.txt",status="unknown")
-endif
+! if (WindowsLinux==1) then
+!         open (unit=111,file=".\Miscellaneous\MinorAlleleFrequency.txt",status="unknown")
+! else
+!         open (unit=111,file="./Miscellaneous/MinorAlleleFrequency.txt",status="unknown")
+! endif
+open(unit=111,file="." // DASH // "Miscellaneous" // "MinorAlleleFrequency.txt", status="unknown")
+
 
 do j=1,nSnpIterate
     write (111,*) j,Maf(j)
@@ -2364,7 +2425,11 @@ character(len=300) :: filout
 
 GlobalWorkPhase=9
 do h=1,nProcessors
+#ifdef OS_UNIX
     write (filout,'("GeneProb/GeneProb"i0,"/GeneProbs.txt")')h          !here
+#else
+    write (filout,'("GeneProb\GeneProb"i0,"\GeneProbs.txt")')h          !here
+#endif
     open (unit=110,file=trim(filout),status="unknown")
     StSnp=GpIndex(h,1)          ! Where SNPs start
     EnSnp=GpIndex(h,2)          ! Where SNPs end
@@ -3688,11 +3753,19 @@ AnimalOn=0
 do h=1,nPhaseInternal
     ! Set name of file containing core information
     ! WARNING: Same code as in BaseAnimalFillIn. Consider to make a function
+#ifdef OS_UNIX
     if (ManagePhaseOn1Off0==0) then 
         write (FileName,'(a,"Phase",i0,"/PhasingResults/CoreIndex.txt")') trim(PhasePath),h
     else
         write (FileName,'("./Phasing/Phase",i0,"/PhasingResults/CoreIndex.txt")')h  
     endif
+#else
+    if (ManagePhaseOn1Off0==0) then 
+        write (FileName,'(a,"Phase",i0,"\PhasingResults\CoreIndex.txt")') trim(PhasePath),h
+    else
+        write (FileName,'(".\Phasing\Phase",i0,"\PhasingResults\CoreIndex.txt")')h  
+    endif
+#endif
 
     ! Count the number of cores used during phasing step and allocate start and end cores information
     call CountLines(FileName,nCore)
@@ -3707,11 +3780,19 @@ do h=1,nPhaseInternal
 
     ! Get HIGH DENSITY phase information of this phasing step
     ! WARNING: Same code as in BaseAnimalFillIn. Consider to make a function
+#ifdef OS_UNIX
     if (ManagePhaseOn1Off0==0) then 
         write (FileName,'(a,"Phase",i0,"/PhasingResults/FinalPhase.txt")') trim(PhasePath),h
     else
         write (FileName,'("./Phasing/Phase",i0,"/PhasingResults/FinalPhase.txt")')h 
     endif
+#else
+    if (ManagePhaseOn1Off0==0) then 
+        write (FileName,'(a,"Phase",i0,"\PhasingResults\FinalPhase.txt")') trim(PhasePath),h
+    else
+        write (FileName,'(".\Phasing\Phase",i0,"\PhasingResults\FinalPhase.txt")')h 
+    endif
+#endif
     ! Get phase information from file
     open (unit=2001,file=trim(FileName),status="old")
     do i=1,nAnisHD
@@ -3894,11 +3975,26 @@ AnimalOn=0
 do h=1,nPhaseInternal
     ! Set name of file containing core information
     ! WARNING: Same code as in many other subroutines. Consider to make a function
+    ! if (ManagePhaseOn1Off0==0) then 
+    !     write (FileName,'(a,"Phase",i0,"/PhasingResults/CoreIndex.txt")') trim(PhasePath),h
+    ! else
+    !     write (FileName,'("./Phasing/Phase",i0,"/PhasingResults/CoreIndex.txt")')h  
+    ! endif
+#ifdef OS_UNIX
     if (ManagePhaseOn1Off0==0) then 
         write (FileName,'(a,"Phase",i0,"/PhasingResults/CoreIndex.txt")') trim(PhasePath),h
     else
         write (FileName,'("./Phasing/Phase",i0,"/PhasingResults/CoreIndex.txt")')h  
-    endif   
+    endif
+#else
+    if (ManagePhaseOn1Off0==0) then 
+        write (FileName,'(a,"Phase",i0,"\PhasingResults\CoreIndex.txt")') trim(PhasePath),h
+    else
+        write (FileName,'(".\Phasing\Phase",i0,"\PhasingResults\CoreIndex.txt")')h  
+    endif
+#endif
+
+
 
     ! Count the number of cores used during phasing step and allocate start and end cores information
     call CountLines(FileName,nCore)
@@ -3913,11 +4009,19 @@ do h=1,nPhaseInternal
         read (2001,*) dum,CoreIndex(g,:)
     enddo
     close(2001)
+#ifdef OS_UNIX
     if (ManagePhaseOn1Off0==0) then 
         write (FileName,'(a,"Phase",i0,"/PhasingResults/FinalPhase.txt")') trim(PhasePath),h
     else
         write (FileName,'("./Phasing/Phase",i0,"/PhasingResults/FinalPhase.txt")')h 
-    endif   
+    endif
+#else
+    if (ManagePhaseOn1Off0==0) then 
+        write (FileName,'(a,"Phase",i0,"\PhasingResults\FinalPhase.txt")') trim(PhasePath),h
+    else
+        write (FileName,'(".\Phasing\Phase",i0,"\PhasingResults\FinalPhase.txt")')h 
+    endif
+#endif
     ! Get phase information from file
     open (unit=2001,file=trim(FileName),status="old")
     do i=1,nAnisHD
@@ -4099,11 +4203,19 @@ AnimalOn=0
 do h=1,nPhaseInternal
     ! Set name of file containing core information
     ! WARNING: Same code as in many other subroutines. Consider to make a function
+#ifdef OS_UNIX
     if (ManagePhaseOn1Off0==0) then 
         write (FileName,'(a,"Phase",i0,"/PhasingResults/CoreIndex.txt")') trim(PhasePath),h
     else
         write (FileName,'("./Phasing/Phase",i0,"/PhasingResults/CoreIndex.txt")')h  
-    endif   
+    endif
+#else
+    if (ManagePhaseOn1Off0==0) then 
+        write (FileName,'(a,"Phase",i0,"\PhasingResults\CoreIndex.txt")') trim(PhasePath),h
+    else
+        write (FileName,'(".\Phasing\Phase",i0,"\PhasingResults\CoreIndex.txt")')h  
+    endif
+#endif
 
     ! Count the number of cores used during phasing step and allocate start and end cores information
     call CountLines(FileName,nCore)
@@ -4121,11 +4233,19 @@ do h=1,nPhaseInternal
         StartSnp=CoreIndex(g,1)
         EndSnp=CoreIndex(g,2)
         CoreLength=(EndSnp-StartSnp)+1
+#ifdef OS_UNIX
         if (ManagePhaseOn1Off0==0) then 
             write (FileName,'(a,"Phase",i0,"/PhasingResults/HaplotypeLibrary/HapLib",i0,".bin")') trim(PhasePath),h,g
         else
             write (FileName,'("./Phasing/Phase",i0,"/PhasingResults/HaplotypeLibrary/HapLib",i0,".bin")')h,g
-        endif   
+        endif
+#else
+        if (ManagePhaseOn1Off0==0) then 
+            write (FileName,'(a,"Phase",i0,"\PhasingResults\HaplotypeLibrary\HapLib",i0,".bin")') trim(PhasePath),h,g
+        else
+            write (FileName,'(".\Phasing\Phase",i0,"\PhasingResults\HaplotypeLibrary\HapLib",i0,".bin")')h,g
+        endif
+#endif
         open (unit=2001,file=trim(FileName),status="old",form="unformatted")
 
         ! Read the number of Hap in the library and how long they are
@@ -4337,6 +4457,7 @@ CompPhaseRun=MiddlePhaseRun+CompJump
 ! by AlphaPhase when it is called during PhasingManagement
 
 ! Get cores corresponding to this phasing step
+#ifdef OS_UNIX
 if (ManagePhaseOn1Off0==0) then
     ! Phasing has been done independently to AlphaImpute
     write (FileName,'(a,"Phase",i0,"/PhasingResults/CoreIndex.txt")') trim(PhasePath),MiddlePhaseRun
@@ -4344,6 +4465,15 @@ else
     ! Phasing has been managed by previous calls to AlphaImpute
     write (FileName,'("./Phasing/Phase",i0,"/PhasingResults/CoreIndex.txt")') MiddlePhaseRun 
 endif
+#else
+if (ManagePhaseOn1Off0==0) then
+    ! Phasing has been done independently to AlphaImpute
+    write (FileName,'(a,"Phase",i0,"\PhasingResults\CoreIndex.txt")') trim(PhasePath),MiddlePhaseRun
+else
+    ! Phasing has been managed by previous calls to AlphaImpute
+    write (FileName,'(".\Phasing\Phase",i0,"\PhasingResults\CoreIndex.txt")') MiddlePhaseRun 
+endif
+#endif
 call CountLines(FileName,nCoreA)
 allocate(CoreIndexA(nCoreA,2))
 ! Get the start and end of cores of this phasing step
@@ -4357,11 +4487,19 @@ MiddleCoreA=int(nCoreA)/2
 if (MiddleCoreA==0) MiddleCoreA=1
 
 ! Get the core corresponding to the complementary phasing step
+#ifdef OS_UNIX
 if (ManagePhaseOn1Off0==0) then 
     write (FileName,'(a,"Phase",i0,"/PhasingResults/CoreIndex.txt")') trim(PhasePath),CompPhaseRun
 else
     write (FileName,'("./Phasing/Phase",i0,"/PhasingResults/CoreIndex.txt")')CompPhaseRun   
-endif   
+endif
+#else 
+if (ManagePhaseOn1Off0==0) then 
+    write (FileName,'(a,"Phase",i0,"\PhasingResults\CoreIndex.txt")') trim(PhasePath),CompPhaseRun
+else
+    write (FileName,'(".\Phasing\Phase",i0,"\PhasingResults\CoreIndex.txt")')CompPhaseRun   
+endif
+#endif 
 call CountLines(FileName,nCoreB)
 allocate(CoreIndexB(nCoreB,2))
 open (unit=2001,file=trim(FileName),status="old")
@@ -4374,11 +4512,19 @@ if (MiddleCoreB==0) MiddleCoreB=1
 
 ! Get HIGH DENSITY phase information of this phasing step
 ! WARNING: If I only want to phase base animals, why do I need to read the whole file?
-if (ManagePhaseOn1Off0==0) then 
+#ifdef OS_UNIX
+if (ManagePhaseOn1Off0==0) then
     write (FileName,'(a,"Phase",i0,"/PhasingResults/FinalPhase.txt")') trim(PhasePath),MiddlePhaseRun
 else
     write (FileName,'("./Phasing/Phase",i0,"/PhasingResults/FinalPhase.txt")')MiddlePhaseRun    
-endif   
+endif
+#else
+if (ManagePhaseOn1Off0==0) then
+    write (FileName,'(a,"Phase",i0,"\PhasingResults\FinalPhase.txt")') trim(PhasePath),MiddlePhaseRun
+else
+    write (FileName,'(".\Phasing\Phase",i0,"\PhasingResults\FinalPhase.txt")')MiddlePhaseRun    
+endif
+#endif   
 open (unit=2001,file=trim(FileName),status="old")
 do i=1,nAnisHD
     read (2001,*) dumC,PhaseHD(i,:,1,1)
@@ -4393,11 +4539,19 @@ do i=1,nAnisHD
 enddo
 close(2001) 
 
+#ifdef OS_UNIX
 if (ManagePhaseOn1Off0==0) then 
     write (FileName,'(a,"Phase",i0,"/PhasingResults/FinalPhase.txt")') trim(PhasePath),CompPhaseRun
 else
     write (FileName,'("./Phasing/Phase",i0,"/PhasingResults/FinalPhase.txt")')CompPhaseRun  
-endif   
+endif
+#else
+if (ManagePhaseOn1Off0==0) then 
+    write (FileName,'(a,"Phase",i0,"\PhasingResults\FinalPhase.txt")') trim(PhasePath),CompPhaseRun
+else
+    write (FileName,'(".\Phasing\Phase",i0,"\PhasingResults\FinalPhase.txt")')CompPhaseRun  
+endif
+#endif
 open (unit=2001,file=trim(FileName),status="old")
 do i=1,nAnisHD
     read (2001,*) dumC,PhaseHD(i,:,1,2)
@@ -4608,7 +4762,8 @@ ImputePhase=9
 ! Get information from RecodedGeneProbInput.txt which has been created in Makefiles subroutine
 ! WARNING: Why don't read information from Geno(:,:) that has been used to feed RecodedGeneProbInput.txt instead??
 !          Read from file is always slower!
-open (unit=43,file='./InputFiles/RecodedGeneProbInput.txt',status='old')
+! open (unit=43,file='./InputFiles/RecodedGeneProbInput.txt',status='old')
+open (unit=43,file='.' // DASH // 'InputFiles' // DASH // 'RecodedGeneProbInput.txt',status='old')
 do i=1,nAnisP
     read (43,*) dum,dum,dum,ImputeGenos(i,:)
     do j=1,nSnp
@@ -4919,7 +5074,11 @@ character(len=300) :: filout
 if (BypassGeneProb==0) then
     ! Get information from GeneProb
     do h=1,nProcessors
+#ifdef OS_UNIX
         write (filout,'("./GeneProb/GeneProb"i0,"/GeneProbs.txt")')h            !here
+#else
+        write (filout,'(".\GeneProb\GeneProb"i0,"\GeneProbs.txt")')h            !here
+#endif
         open (unit=110,file=trim(filout),status="unknown")
         StSnp=GpIndex(h,1)
         EnSnp=GpIndex(h,2)
@@ -4950,17 +5109,21 @@ endif
 ImputePhase(0,:,:)=9
 ImputeGenos(0,:)=9
 
-if (WindowsLinux==1) then
-        open (unit=102,file=".\Miscellaneous\IndividualSnpInformativeness.txt",status="unknown")
-else
-        open (unit=102,file="./Miscellaneous/IndividualSnpInformativeness.txt",status="unknown")
-endif
+! if (WindowsLinux==1) then
+!         open (unit=102,file=".\Miscellaneous\IndividualSnpInformativeness.txt",status="unknown")
+! else
+!         open (unit=102,file="./Miscellaneous/IndividualSnpInformativeness.txt",status="unknown")
+! endif
+open(unit=102,file="." // DASH // "Miscellaneous" // "IndividualSnpInformativeness.txt", status="unknown")
 
-if (WindowsLinux==1) then
-        open (unit=103,file=".\Miscellaneous\IndividualMendelianInformativeness.txt",status="unknown")
-else
-        open (unit=103,file="./Miscellaneous/IndividualMendelianInformativeness.txt",status="unknown")
-endif
+
+! if (WindowsLinux==1) then
+!         open (unit=103,file=".\Miscellaneous\IndividualMendelianInformativeness.txt",status="unknown")
+! else
+!         open (unit=103,file="./Miscellaneous/IndividualMendelianInformativeness.txt",status="unknown")
+! endif
+open(unit=103,file="." // DASH // "Miscellaneous" // "IndividualMendelianInformativeness.txt", status="unknown")
+
 
 allocate(GlobalTmpCountInf(nAnisP,8))
 allocate(MSTermInfo(nAnisP,2))
@@ -5085,15 +5248,19 @@ do i=1,nPhaseExternal
     if (TempCplusT(i+nPhaseExternal)>nSnp) TempCplusT(i+nPhaseExternal)=nSnp
 enddo
 
-if (WindowsLinux==1) then
-     open (unit=103,file=".\InputFiles\AlphaPhaseInputPedigree.txt",status="unknown")
-     open (unit=104,file=".\InputFiles\RecodedGeneProbInput.txt",status="unknown")
-     open (unit=105,file=".\InputFiles\AlphaPhaseInputGenotypes.txt",status="unknown")
-else
-     open (unit=103,file="./InputFiles/AlphaPhaseInputPedigree.txt",status="unknown") 
-     open (unit=104,file="./InputFiles/RecodedGeneProbInput.txt",status="unknown")
-     open (unit=105,file="./InputFiles/AlphaPhaseInputGenotypes.txt",status="unknown")
-endif
+! if (WindowsLinux==1) then
+!      open (unit=103,file=".\InputFiles\AlphaPhaseInputPedigree.txt",status="unknown")
+!      open (unit=104,file=".\InputFiles\RecodedGeneProbInput.txt",status="unknown")
+!      open (unit=105,file=".\InputFiles\AlphaPhaseInputGenotypes.txt",status="unknown")
+! else
+!      open (unit=103,file="./InputFiles/AlphaPhaseInputPedigree.txt",status="unknown") 
+!      open (unit=104,file="./InputFiles/RecodedGeneProbInput.txt",status="unknown")
+!      open (unit=105,file="./InputFiles/AlphaPhaseInputGenotypes.txt",status="unknown")
+! endif
+open(unit=103,file="." // DASH // "InputFiles" // DASH // "AlphaPhaseInputPedigree.txt", status="unknown")
+open(unit=104,file="." // DASH // "InputFiles" // DASH // "RecodedGeneProbInput.txt", status="unknown")
+open(unit=105,file="." // DASH // "InputFiles" // DASH // "AlphaPhaseInputGenotypes.txt", status="unknown")
+
 
 do i=1,nAnisP
      write (104,'(i16,1x,i16,1x,i16,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') RecPed(i,:),Genos(i,:)        
@@ -5153,17 +5320,30 @@ do i=1,nPhaseInternal           ! Phasing is done in parallel
     if (WindowsLinux==1) then
         ! WARNING: Apparently, AlphaImpute does not work for Windows systems
     else
+#ifdef OS_UNIX
         write (filout,'("./Phasing/Phase"i0,"/AlphaPhaseSpec.txt")')i
+#else
+        write (filout,'(".\Phasing\Phase"i0,"\AlphaPhaseSpec.txt")')i
+#endif
         open (unit=106,file=trim(filout),status='unknown')
         if (PedFreePhasing==0) then
+#ifdef OS_UNIX
             if (SexOpt==0) write (106,*) 'PedigreeFile              ,"../../InputFiles/AlphaPhaseInputPedigree.txt"'
+#else
+            if (SexOpt==0) write (106,*) 'PedigreeFile              ,"..\..\InputFiles\AlphaPhaseInputPedigree.txt"'
+#endif
         else
             if (SexOpt==0) write (106,*) 'PedigreeFile                      ,"NoPedigree"'
         endif
         if (SexOpt==1) write (106,*) 'PedigreeFile                      ,"NoPedigree"'
-
+#ifdef OS_UNIX
         write (106,'(a100)') &
                 'GenotypeFile                       ,"../../InputFiles/AlphaPhaseInputGenotypes.txt",GenotypeFormat'
+#else
+        write (106,'(a100)') &
+                'GenotypeFile                       ,"..\..\InputFiles\AlphaPhaseInputGenotypes.txt",GenotypeFormat'
+#endif
+
         write (106,*) 'NumberOfSnp                      ,',nSnp
         write (106,*) 'GeneralCoreAndTailLength     ,',TempCplusT(i)
         if(i<=nPhaseInternal/2) then  
@@ -5183,7 +5363,8 @@ do i=1,nPhaseInternal           ! Phasing is done in parallel
         call flush(106)
         close(106)
         write (filout,'("Phase"i0)')i
-        if (AlphaPhasePresent==1) call system ("cp AlphaPhase1.1 Phasing/" // filout) 
+        ! if (AlphaPhasePresent==1) call system ("cp AlphaPhase1.1 Phasing/" // filout) 
+        if (AlphaPhasePresent==1) call system (COPY // " AlphaPhase1.1 Phasing" // DASH // filout) 
     endif
 enddo
 
@@ -5200,12 +5381,20 @@ GpIndex(nProcessors,2)=nSnp
 
 ! Create GeneProbSpec file
 do i=1,nProcessors
+#ifdef OS_UNIX
     write (filout,'("./GeneProb/GeneProb"i0,"/GeneProbSpec.txt")')i
+#else
+    write (filout,'(".\GeneProb\GeneProb"i0,"\GeneProbSpec.txt")')i
+#endif
 
     open (unit=108,file=trim(filout),status='unknown')
     write (108,*) "nAnis        ,",nAnisP 
     write (108,*) "nSnp     ,",nSnp
+#ifdef OS_UNIX
     write (108,*) "InputFilePath    ,",'"../../InputFiles/RecodedGeneProbInput.txt"'
+#else
+    write (108,*) "InputFilePath    ,",'"..\..\InputFiles\RecodedGeneProbInput.txt"'
+#endif
     write (108,*) "OutputFilePath   ,",'"GeneProbs.txt"'
     write (108,*) "StartSnp     ,",GpIndex(i,1) 
     write (108,*) "EndSnp       ,",GpIndex(i,2) 
@@ -5213,7 +5402,8 @@ do i=1,nProcessors
     close(108)
 
     write (filout,'("GeneProb"i0)')i
-    if (GeneProbPresent==1) call system ("cp GeneProbForAlphaImpute GeneProb/" // filout)
+    ! if (GeneProbPresent==1) call system ("cp GeneProbForAlphaImpute GeneProb/" // filout)
+    if (GeneProbPresent==1) call system (COPY // " GeneProbForAlphaImpute GeneProb" // DASH // filout)
 enddo
 
 end subroutine MakeFiles
@@ -5289,11 +5479,12 @@ else
 endif
 
 
-if (WindowsLinux==1) then
-        open (unit=102,file=".\Miscellaneous\EditingSnpSummary.txt",status="unknown")
-else
-        open (unit=102,file="./Miscellaneous/EditingSnpSummary.txt",status="unknown")
-endif
+! if (WindowsLinux==1) then
+!         open (unit=102,file=".\Miscellaneous\EditingSnpSummary.txt",status="unknown")
+! else
+!         open (unit=102,file="./Miscellaneous/EditingSnpSummary.txt",status="unknown")
+! endif
+open (unit=102,file="." // DASH // "Miscellaneous" // DASH // "EditingSnpSummary.txt",status="unknown")
 
 if (ManagePhaseOn1Off0==1) then
     TempFreq(:)=0.0
@@ -5399,7 +5590,8 @@ do j=1,nSnpRaw
 enddo
 close(102)
 
-open (unit=112,file="./Phasing/EditingSnpSummary.txt",status="unknown")
+! open (unit=112,file="./Phasing/EditingSnpSummary.txt",status="unknown")
+open (unit=112,file="." // DASH // "Phasing" // DASH // "EditingSnpSummary.txt",status="unknown")
 do j=1,nSnpRaw
     write (112,*) j,SnpSummary(j),SnpIncluded(j)        !'(i,1x,f5.3,1x,i)'
 enddo
@@ -5527,11 +5719,13 @@ integer :: TurnOn
 integer,allocatable,dimension (:) :: Genotyped,Pruned
 logical,allocatable,dimension (:) :: IsParent
 
-if (WindowsLinux==1) then
-    open (unit=101,file=".\Miscellaneous\PedigreeMistakes.txt",status="unknown")
-else
-    open (unit=101,file="./Miscellaneous/PedigreeMistakes.txt",status="unknown")
-endif
+! if (WindowsLinux==1) then
+!     open (unit=101,file=".\Miscellaneous\PedigreeMistakes.txt",status="unknown")
+! else
+!     open (unit=101,file="./Miscellaneous/PedigreeMistakes.txt",status="unknown")
+! endif
+open (unit=101,file="." // DASH // "Miscellaneous" // DASH // "PedigreeMistakes.txt",status="unknown")
+
 
 GenoYesNo=0         ! Matrix (nAnisRawPedigree x 3). 
                     ! It basically says which is the proband's genotype (GenoYesNo(:,1)) but also
@@ -5626,11 +5820,13 @@ enddo
 RecPed(1:nAnisP,2)=seqsire(1:nAnisP)
 RecPed(1:nAnisP,3)=seqdam(1:nAnisP)
 
-if (WindowsLinux==1) then
-        open (unit=101,file=".\Miscellaneous\InternalDataRecoding.txt",status="unknown")
-else
-        open (unit=101,file="./Miscellaneous/InternalDataRecoding.txt",status="unknown")
-endif
+! if (WindowsLinux==1) then
+!         open (unit=101,file=".\Miscellaneous\InternalDataRecoding.txt",status="unknown")
+! else
+!         open (unit=101,file="./Miscellaneous/InternalDataRecoding.txt",status="unknown")
+! endif
+open (unit=101,file="." // DASH // "Miscellaneous" // DASH // "InternalDataRecoding.txt",status="unknown")
+
 
 do i=1,nAnisP
     write (101,'(3i20,a20)') RecPed(i,:),trim(Id(i))
@@ -6000,46 +6196,65 @@ integer :: i
 character(len=300) :: FolderName
 
 if (HMM == RUN_HMM_NGS) then
-    call rmdir("Results")
-    call rmdir("Miscellaneous")
-    call system("mkdir Results")
-    call system("mkdir Miscellaneous")
+    ! call rmdir("Results")
+    ! call rmdir("Miscellaneous")
+    call system(RMDIR // " Results")
+    call system(RMDIR // " Miscellaneous")
+    ! call system("mkdir Results")
+    ! call system("mkdir Miscellaneous")
+    call system(MD // " Results")
+    call system(MD // " Miscellaneous")
 
 else
     print*, ""
 
-    call rmdir("Miscellaneous")
-    call rmdir("Phasing")
-    call rmdir("Results")
-    call rmdir("InputFiles")
-    call rmdir("GeneProb")      !here
-    call rmdir("IterateGeneProb")   !here
+    ! call rmdir("Miscellaneous")
+    ! call rmdir("Phasing")
+    ! call rmdir("Results")
+    ! call rmdir("InputFiles")
+    ! call rmdir("GeneProb")      !here
+    ! call rmdir("IterateGeneProb")   !here
+    call system(RMDIR // " Miscellaneous")
+    call system(RMDIR // " Phasing")
+    call system(RMDIR // " Results")
+    call system(RMDIR // " InputFiles")
+    call system(RMDIR // " GeneProb")
+    call system(RMDIR // " IterateGeneProb")
 
-    call system("mkdir Phasing")
-    call system("mkdir Miscellaneous")
+    ! call system("mkdir Phasing")
+    ! call system("mkdir Miscellaneous")
+    ! call system("mkdir Results")
+    ! call system("mkdir InputFiles")
+    ! call system("mkdir GeneProb")       !here
+    ! call system("mkdir IterateGeneProb")    !here
+    call system(MD // " Phasing")
+    call system(MD // " Miscellaneous")
+    call system(MD // " Results")
+    call system(MD // " InputFiles")
+    call system(MD // " GeneProb")
+    call system(MD // " IterateGeneProb")
 
-    call system("mkdir Results")
-    call system("mkdir InputFiles")
-    call system("mkdir GeneProb")       !here
-    call system("mkdir IterateGeneProb")    !here
 
-    if (WindowsLinux==1) then
+    ! if (WindowsLinux==1) then
 
-    else
+    ! else
 
         do i=1,nProcessors
             write (FolderName,'("GeneProb"i0)')i
-            call system ("mkdir GeneProb/" // FolderName)       !here
+            ! call system ("mkdir GeneProb/" // FolderName)       !here
+            call system(MD // " GeneProb" // DASH // FolderName)
         enddo
         do i=1,nPhaseInternal
             write (FolderName,'("Phase"i0)')i
-            call system ("mkdir Phasing/" // FolderName)
+            ! call system ("mkdir Phasing/" // FolderName)
+            call system(MD // " Phasing" // DASH // FolderName)
         enddo
         do i=1,nProcessors
             write (FolderName,'("GeneProb"i0)')i            !here
-            call system ("mkdir IterateGeneProb/" // FolderName)    !here
+            ! call system ("mkdir IterateGeneProb/" // FolderName)    !here
+            call system(MD // " IterateGeneProb" // DASH // FolderName)
         enddo
-    endif
+    ! endif
 endif
 
 
@@ -6703,22 +6918,25 @@ character(len=lengan),allocatable,dimension(:) :: TrueGenosId
 FileName=trim(TrueGenosFile)
 call CountLines(FileName,nAnisTest)
 
-if (WindowsLinux==1) then
-
-        call system("rmdir /s /q TempTestAlphaImpute")
-
-else
-
-    call rmdir("TempTestAlphaImpute")
-endif
-call system("mkdir TempTestAlphaImpute")
+! if (WindowsLinux==1) then
+!     call system("rmdir /s /q TempTestAlphaImpute")
+! else
+!     call rmdir("TempTestAlphaImpute")
+! endif
+! call system("mkdir TempTestAlphaImpute")
+call system(RMDIR // " TempTestAlphaImpute")
+call system(MD // " TempTestAlphaImpute")
 
 open (unit=35,file=trim(TrueGenosFile),status="old")
 open (unit=36,file=trim(GenotypeFile),status="unknown")
-open (unit=37,file="./TempTestAlphaImpute/IndividualAnimalAccuracy.txt",status="unknown")
-open (unit=38,file="./TempTestAlphaImpute/SummaryAnimalAccuracy.txt",status="unknown")
-open (unit=44,file="./TempTestAlphaImpute/IndividualSummaryAccuracy.txt",status="unknown")
-open (unit=45,file="./TempTestAlphaImpute/IndividualSummaryYield.txt",status="unknown")
+! open (unit=37,file="./TempTestAlphaImpute/IndividualAnimalAccuracy.txt",status="unknown")
+! open (unit=38,file="./TempTestAlphaImpute/SummaryAnimalAccuracy.txt",status="unknown")
+! open (unit=44,file="./TempTestAlphaImpute/IndividualSummaryAccuracy.txt",status="unknown")
+! open (unit=45,file="./TempTestAlphaImpute/IndividualSummaryYield.txt",status="unknown")
+open (unit=37, file="." // DASH // "TempTestAlphaImpute" // DASH // "IndividualAnimalAccuracy.txt", status="unknown")
+open (unit=38, file="." // DASH // "TempTestAlphaImpute" // DASH // "SummaryAnimalAccuracy.txt", status="unknown")
+open (unit=44, file="." // DASH // "TempTestAlphaImpute" // DASH // "IndividualSummaryAccuracy.txt", status="unknown")
+open (unit=45, file="." // DASH // "TempTestAlphaImpute" // DASH // "IndividualSummaryYield.txt", status="unknown")
 
 Names(1)="Both Parents Genotyped"
 Names(2)="Sire and Maternal GrandSire Genotyped"
@@ -7061,23 +7279,27 @@ character(len=lengan),allocatable,dimension(:) :: TrueGenosId
 FileName=trim(TrueGenosFile)
 call CountLines(FileName,nAnisTest)
 
-if (WindowsLinux==1) then
-
-     call system("rmdir /s /q TestAlphaImpute")
-
-else
-
-    call rmdir("TestAlphaImpute")
-endif
-call system("mkdir TestAlphaImpute")
+! if (WindowsLinux==1) then
+!      call system("rmdir /s /q TestAlphaImpute")
+! else
+!     call rmdir("TestAlphaImpute")
+! endif
+! call system("mkdir TestAlphaImpute")
+call system(RMDIR // " TestAlphaImpute")
+call system(MD // " TestAlphaImpute")
 
 open (unit=35,file=trim(TrueGenosFile),status="old")
 open (unit=36,file=trim(GenotypeFile),status="unknown")
-open (unit=37,file="./TestAlphaImpute/IndividualAnimalAccuracy.txt",status="unknown")
-open (unit=38,file="./TestAlphaImpute/SummaryAnimalAccuracy.txt",status="unknown")
-open (unit=44,file="./TestAlphaImpute/IndividualSummaryAccuracy.txt",status="unknown")
-open (unit=45,file="./TestAlphaImpute/IndividualSummaryYield.txt",status="unknown")
-open (unit=48,file="./TestAlphaImpute/IndividualSnpAccuracy.txt",status="unknown")
+! open (unit=37,file="./TestAlphaImpute/IndividualAnimalAccuracy.txt",status="unknown")
+! open (unit=38,file="./TestAlphaImpute/SummaryAnimalAccuracy.txt",status="unknown")
+! open (unit=44,file="./TestAlphaImpute/IndividualSummaryAccuracy.txt",status="unknown")
+! open (unit=45,file="./TestAlphaImpute/IndividualSummaryYield.txt",status="unknown")
+! open (unit=48,file="./TestAlphaImpute/IndividualSnpAccuracy.txt",status="unknown")
+open (unit=37, file="." // DASH // "TestAlphaImpute" // DASH // "IndividualAnimalAccuracy.txt", status="unknown")
+open (unit=38, file="." // DASH // "TestAlphaImpute" // DASH // "SummaryAnimalAccuracy.txt", status="unknown")
+open (unit=44, file="." // DASH // "TestAlphaImpute" // DASH // "IndividualSummaryAccuracy.txt", status="unknown")
+open (unit=45, file="." // DASH // "TestAlphaImpute" // DASH // "IndividualSummaryYield.txt", status="unknown")
+open (unit=48, file="." // DASH // "TestAlphaImpute" // DASH // "IndividualSnpAccuracy.txt", status="unknown")
 
 Names(1)="Both Parents Genotyped"
 Names(2)="Sire and Maternal GrandSire Genotyped"
@@ -7632,11 +7854,15 @@ use Global
 use GlobalPedigree
 implicit none
 
-call rmdir("GeneProb")      
-call rmdir("IterateGeneProb")   
+! call rmdir("GeneProb")      
+! call rmdir("IterateGeneProb")
+call system(RMDIR // " GeneProb")
+call system(RMDIR // " IterateGeneProb")
 
-if (SexOpt==0) call system(" rm TempGeneProb.sh")
-if (SexOpt==0) call system("rm TempIterateGeneProb.sh") 
+! if (SexOpt==0) call system(" rm TempGeneProb.sh")
+! if (SexOpt==0) call system("rm TempIterateGeneProb.sh") 
+if (SexOpt==0) call system(RM // " TempGeneProb.sh")
+if (SexOpt==0) call system(RM // " TempIterateGeneProb.sh") 
 
 end subroutine Cleaner
 
@@ -7698,11 +7924,12 @@ Hours=Minutes/60
 Minutes=INT(Minutes)-(INT(Hours)*60)
 print '(A107,A7,I3,A9,I3,A9,F6.2)', "Time Elapsed","Hours", INT(Hours),"Minutes",INT(Minutes),"Seconds",Seconds
 
-if (WindowsLinux==1) then
-        open (unit=32,file=".\Miscellaneous\Timer.txt",status="unknown")
-else
-        open (unit=32,file="./Miscellaneous/Timer.txt",status="unknown")
-endif
+! if (WindowsLinux==1) then
+!         open (unit=32,file=".\Miscellaneous\Timer.txt",status="unknown")
+! else
+!         open (unit=32,file="./Miscellaneous/Timer.txt",status="unknown")
+! endif
+open (unit=32,file="." // DASH // "Miscellaneous" // DASH // "Timer.txt",status="unknown")
 
 write(32,'(A27,A7,I3,A9,I3,A9,F6.2)') "Time Elapsed","Hours", INT(Hours),"Minutes",INT(Minutes),"Seconds",Seconds
 
