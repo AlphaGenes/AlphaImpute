@@ -6,6 +6,9 @@
 #DEFINE RMDIR "rm -r"
 #DEFINE RM "rm"
 #DEFINE RENAME "mv"
+#DEFINE SH "sh"
+#DEFINE EXE ""
+#DEFINE NULL ""
 
 #else
 #DEFINE DASH "\"
@@ -14,6 +17,9 @@
 #DEFINE RMDIR "RMDIR /S /Q"
 #DEFINE RM "del"
 #DEFINE RENAME "MOVE /Y"
+#DEFINE SH "BAT"
+#DEFINE EXE ".exe"
+#DEFINE NULL " >NUL"
 #endif
 
 !######################################################################
@@ -93,13 +99,18 @@ else
 
             if (RestartOption<OPT_RESTART_PHASING) Then
 
+#ifdef OS_UNIX
 #if CLUSTER==2
                 write(6,*) ""
                 write(6,*) "Restart option 1 stops program before Geneprobs jobs have been submitted"
                 stop
 #else
-                 call GeneProbManagement
+                call GeneProbManagement
 #endif
+#else
+                call GeneProbManagementWindows
+#endif
+
             endif
 
             if (RestartOption==OPT_RESTART_GENEPROB) then
@@ -124,12 +135,16 @@ else
 #endif
 
         if (RestartOption<OPT_RESTART_IMPUTATION) Then
+#ifdef OS_UNIX
 #if CLUSTER==2
             write(6,*) ""
             write(6,*) "Restart option 1 stops program before Phasing has been managed"
             stop
 #else
             call PhasingManagement
+#endif
+#else
+            call PhasingManagementWindows
 #endif
         endif
 
@@ -155,7 +170,7 @@ endif
 
 if (HMMOption/=RUN_HMM_NGS) then
     ! If we only want to phase data, then skip all the imputation steps
-    if (PhaseTheDataOnly==0) then
+    if (PhaseTheDataOnly==0) Then
         call ImputationManagement
 
 #ifdef DEBUG
@@ -177,7 +192,7 @@ if (HMMOption/=RUN_HMM_NGS) then
 #endif
 
         if (TrueGenos1None0==1) call FinalChecker
-        !call Cleaner
+        ! call Cleaner
     endif
 endif
 call PrintTimerTitles
@@ -1122,43 +1137,82 @@ do i=1,nProcessors
     open (unit=108,file=trim(filout),status='unknown')
     write (108,*) "nAnis        ,",nAnisP 
     write (108,*) "nSnp     ,",nSnpIterate
+#ifdef OS_UNIX
     write (108,*) "InputFilePath    ,",'"../IterateGeneProbInput.txt"'
+#else
+    write (108,*) "InputFilePath    ,",'"..\IterateGeneProbInput.txt"'
+#endif
     write (108,*) "OutputFilePath   ,",'"GeneProbs.txt"'
     write (108,*) "StartSnp     ,",GpIndex(i,1) 
     write (108,*) "EndSnp       ,",GpIndex(i,2) 
     close(108)
     write (filout,'("GeneProb"i0)')i
     ! call system ("cp GeneProbForAlphaImpute IterateGeneProb/" // filout)
-    call system (COPY // " GeneProbForAlphaImpute IterateGeneProb" // DASH // filout)
+    call system (COPY // " GeneProbForAlphaImpute" // EXE // " IterateGeneProb" // DASH // filout // NULL)
 enddo   
 
+#ifdef OS_UNIX
 open (unit=109,file="TempIterateGeneProb.sh",status="unknown")
+#else
+open (unit=109,file="TempIterateGeneProb.BAT",status="unknown")
+#endif
 
 if (RestartOption/=4) then
     !if (PicVersion==.FALSE.) then
 #if CLUSTER==0
     do i=1,nProcessors
+#ifdef OS_UNIX
         write (filout,'("cd IterateGeneProb/GeneProb"i0)')i
+#else
+        write (filout,'("cd IterateGeneProb\GeneProb"i0)')i
+#endif
         write (109,*) trim(filout)
+#ifdef OS_UNIX
         if (GeneProbPresent==0) write (109,*) "nohup sh -c ""GeneProbForAlphaImpute > out 2>&1"" >/dev/null &"
         if (GeneProbPresent==1) write (109,*) "nohup sh -c ""./GeneProbForAlphaImpute > out 2>&1"" >/dev/null &"
+#else
+        if (GeneProbPresent==0) write (109,*) "start /b GeneProbForAlphaImpute.exe > out 2>&1"
+        if (GeneProbPresent==1) write (109,*) "start /b .\GeneProbForAlphaImpute.exe > out 2>&1"
+#endif
         write (109,*) "cd ../.."
+! #ifdef OS_UNIX
+! #else
+!         write (109,*) "exit"
+! #endif
         call flush(109)
     enddo
     close(109)
+
+#ifdef OS_UNIX
     call system("chmod +x TempIterateGeneProb.sh")
     call system("./TempIterateGeneProb.sh")
+#else
+    call system("start ""Iterate GeneProbs"" .\TempIterateGeneProb.BAT >NUL")
+#endif
 
     print*, " "
     print*, " ","       Calculating genotype probabilities"
     JobsDone(:)=0
     !JDone(:)=0
 
+#ifdef OS_UNIX
     call system("rm -f ./IterateGeneProb/GeneProb*/GpDone.txt")
-    !if (RestartOption/=3) then
+#else
+    do i=1,nProcessors
+        write (f,'("IterateGeneProb\GeneProb"i0"\GpDone.txt")')i
+        inquire(file=trim(f),exist=FileExists)
+        if (FileExists .eqv. .TRUE.) call system("del /f /q " // f // NULL)
+    enddo
+#endif
+
+    !if (RestartOption/=OPT_RESTART_IMPUTATION) then
     do
         do i=1,nProcessors
+#ifdef OS_UNIX
             write (filout,'("./IterateGeneProb/GeneProb"i0,"/GpDone.txt")')i
+#else
+            write (filout,'(".\IterateGeneProb\GeneProb"i0,"\GpDone.txt")')i
+#endif
             inquire(file=trim(filout),exist=FileExists)
             if (FileExists .eqv. .true.) then
                 if (JobsDone(i)==0) print*, " ","      GeneProb job ",i," done"
@@ -1542,6 +1596,7 @@ if (OutOpt==0) then
             write (39,'(3i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') RecPed(i,:),ImputeGenos(i,:)
         enddo
         call flush(39)
+        ! close (39)
         
         if (BypassGeneProb==0) then 
             call IterateGeneProbs
@@ -2231,12 +2286,13 @@ character(len=300) :: filout
 allocate(Maf(nSnpIterate))
 
 if (RestartOption==4) then
-    open (unit=109,file="Tmp2345678.txt",status="unknown")
+    open (unit=209,file="Tmp2345678.txt",status="unknown")
     do i=1,nAnisP
-        read (109,*) ImputePhase(i,:,1)
-        read (109,*) ImputePhase(i,:,2)         
-        read (109,*) ImputeGenos(i,:)
-    enddo   
+        read (209,*) ImputePhase(i,:,1)
+        read (209,*) ImputePhase(i,:,2)         
+        read (209,*) ImputeGenos(i,:)
+    enddo 
+    close (209)
     ! call system("rm Tmp2345678.txt")
     call system(RM // " Tmp2345678.txt")
 endif
@@ -5292,7 +5348,11 @@ else                                ! Not sex chromosome
 endif
 
 ! Check whether AlphaPhase is present
-write (FileCheck,'("AlphaPhase1.1")')
+#ifdef OS_UNIX
+    write (FileCheck,'("AlphaPhase1.1")')
+#else
+    write (FileCheck,'("AlphaPhase1.1.exe")')
+#endif
 inquire(file=trim(FileCheck),exist=FileExists)      
 if (FileExists .eqv. .true.) then
     AlphaPhasePresent=1
@@ -5304,7 +5364,11 @@ else
 endif
 
 ! Check whether GeneProbForAlphaImpute is present
-write (FileCheck,'("GeneProbForAlphaImpute")')
+#ifdef OS_UNIX
+    write (FileCheck,'("GeneProbForAlphaImpute")')
+#else
+    write (FileCheck,'("GeneProbForAlphaImpute.exe")')
+#endif
 inquire(file=trim(FileCheck),exist=FileExists)      
 if (FileExists .eqv. .true.) then
     GeneProbPresent=1
@@ -5364,7 +5428,7 @@ do i=1,nPhaseInternal           ! Phasing is done in parallel
         close(106)
         write (filout,'("Phase"i0)')i
         ! if (AlphaPhasePresent==1) call system ("cp AlphaPhase1.1 Phasing/" // filout) 
-        if (AlphaPhasePresent==1) call system (COPY // " AlphaPhase1.1 Phasing" // DASH // filout) 
+        if (AlphaPhasePresent==1) call system (COPY // " AlphaPhase1.1" // EXE // " Phasing" // DASH // filout // NULL) 
     endif
 enddo
 
@@ -5403,7 +5467,7 @@ do i=1,nProcessors
 
     write (filout,'("GeneProb"i0)')i
     ! if (GeneProbPresent==1) call system ("cp GeneProbForAlphaImpute GeneProb/" // filout)
-    if (GeneProbPresent==1) call system (COPY // " GeneProbForAlphaImpute GeneProb" // DASH // filout)
+    if (GeneProbPresent==1) call system (COPY // " GeneProbForAlphaImpute" // EXE // " GeneProb" // DASH // filout // NULL)
 enddo
 
 end subroutine MakeFiles
@@ -7276,6 +7340,7 @@ double precision,allocatable,dimension(:) :: Correlations,CorrelationPerAnimal,T
 double precision,allocatable,dimension(:,:) :: AnisSummary,WorkVec,RealTestGenos,CalcCorPerAnimal
 character(len=lengan),allocatable,dimension(:) :: TrueGenosId
 
+
 FileName=trim(TrueGenosFile)
 call CountLines(FileName,nAnisTest)
 
@@ -7285,6 +7350,7 @@ call CountLines(FileName,nAnisTest)
 !     call rmdir("TestAlphaImpute")
 ! endif
 ! call system("mkdir TestAlphaImpute")
+
 call system(RMDIR // " TestAlphaImpute")
 call system(MD // " TestAlphaImpute")
 
@@ -7307,6 +7373,11 @@ Names(3)="Dam and Paternal Grandsire Genotyped"
 Names(4)="Sire Genotyped"
 Names(5)="Dam Genotyped"
 Names(6)="Other Relatives Genotyped"
+
+if (allocated(GlobalTmpCountInf)==.FALSE.) then
+    allocate(GlobalTmpCountInf(nAnisP,6))
+    GlobalTmpCountInf(:,:)=0
+endif
 
 allocate(FinalSetter(0:nAnisP))
 FinalSetter=0
@@ -7549,7 +7620,7 @@ if (OutOpt==0) then
         write (44,'(a20,i3,6f7.2,6i10)') TrueGenosId(i),GenoStratIndex(RecTestId(i)),AnisSummary(i,:),CorrelationPerAnimal(i),TestAnimInformativeness(i,:)
     enddo
     
-    
+
 else
     allocate(TrueGenos(nAnisTest,nSnpRaw))
     allocate(TrueGenosId(nAnisTest))
@@ -7570,6 +7641,7 @@ else
     RecTestId(:)=-99
     do i=1,nAnisTest
         do j=1,nAnisP
+            ! print *, i,j, TrueGenosId(i), Id(j)
             if (trim(TrueGenosId(i))==trim((Id(j)))) then
                 RecTestId(i)=j
                 TestAnimInformativeness(i,:)=GlobalTmpCountInf(j,1:6)
@@ -7753,7 +7825,6 @@ else
     do i=1,nAnisTest
         write (44,'(a20,i3,6f7.2,6i10)') TrueGenosId(i),GenoStratIndex(RecTestId(i)),AnisSummary(i,:),CorrelationPerAnimal(i),TestAnimInformativeness(i,:)  
     enddo
-    
 endif
 
 end subroutine FinalChecker
@@ -7861,8 +7932,8 @@ call system(RMDIR // " IterateGeneProb")
 
 ! if (SexOpt==0) call system(" rm TempGeneProb.sh")
 ! if (SexOpt==0) call system("rm TempIterateGeneProb.sh") 
-if (SexOpt==0) call system(RM // " TempGeneProb.sh")
-if (SexOpt==0) call system(RM // " TempIterateGeneProb.sh") 
+if (SexOpt==0) call system(RM // " TempGeneProb." // SH)
+if (SexOpt==0) call system(RM // " TempIterateGeneProb." // SH) 
 
 end subroutine Cleaner
 
