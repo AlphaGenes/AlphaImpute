@@ -1,6 +1,7 @@
 *.txt
 *.mod
 *.o
+*.obj
 *.i90
 *.dwarf
 AlphaImpute
