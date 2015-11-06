@@ -4,7 +4,7 @@ VERSION:=$(shell git rev-parse --short HEAD)
 MASTERVERSION:=$(shell git describe --tag)
 # SUBVERSION:=2.0
 # PROGRAM:=${NAME}${VERSION}.${SUBVERSION}
-PROGRAM:=$(NAME).$(MASTERVERSION)
+PROGRAM:=$(NAME)$(MASTERVERSION)
 
 # Compiler
 FC:=ifort
@@ -47,12 +47,14 @@ debug: executable
 
 OBJS:=global$(obj) par_zig_mod$(obj) random$(obj) hmm$(obj)
 
+ifeq ($(OS), Windows_NT)
+	 OBJS:= $(OBJS) manageWindows.f90
+endif
+
 %$(obj):%.f90
 	$(FC) $(FFLAGS) -c $<
 
 executable: $(OBJS)
-	export OMP_STACKSIZE=" 128 M"
-	export OMP_NUM_THREADS=4
 	$(FC) AlphaImpute.f90 $(OBJS) $(FFLAGS) -o $(PROGRAM)$(exe)
 	$(FC) GeneProbForAlphaImpute.f90 $(FFLAGS) -o GeneProbForAlphaImpute$(exe)
 
