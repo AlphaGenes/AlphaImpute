@@ -19,7 +19,7 @@ DEBUG?=0
 
 ifeq ($(OS), Windows_NT)
 	OSFLAG := "OS_WIN"
-	FFLAGS := $(FFLAGS) /static /fpp  /Qmkl /D $(OSFLAG) -D CLUSTER=0
+	FFLAGS := $(FFLAGS) /static /fpp  /Qmkl /D $(OSFLAG) -D CLUSTER=0 /Qopenmp /Qopenmp-link:static
 
 	obj:= .obj
 	exe:= .exe
