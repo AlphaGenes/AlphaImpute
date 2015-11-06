@@ -19,7 +19,7 @@
 !References:	This is same as GeneProb_sub.f90, but requires a starting and stopping SNP
 !Updates:
 
-module Global
+module Global_GP
 	implicit none
 
 	character(len=1000) :: inputFile,outputFile
@@ -66,7 +66,7 @@ module GPinput
 end module
 
 program GeneProb_sub
-	use Global
+	use Global_GP
 	use GPinput
 
 	integer :: i
@@ -139,7 +139,7 @@ subroutine ReadParms
 end subroutine ReadParms
 
 subroutine preprocessGeneprob
-	use Global
+	use Global_GP
 	use common_GP
 	use commonbits
 	use GPinput
@@ -212,7 +212,7 @@ subroutine preprocessGeneprob
 end subroutine preprocessGeneprob
 
 subroutine geneprob(currentSnp)
-	  use Global
+	  use Global_GP
 	  use common_GP
       USE commonbits
       use GPinput

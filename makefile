@@ -54,6 +54,7 @@ executable: $(OBJS)
 	export OMP_STACKSIZE=" 128 M"
 	export OMP_NUM_THREADS=4
 	$(FC) AlphaImpute.f90 $(OBJS) $(FFLAGS) -o $(PROGRAM)$(exe)
+	$(FC) GeneProbForAlphaImpute.f90 $(FFLAGS) -o GeneProbForAlphaImpute$(exe)
 
 clean:
 	$(DEL) *$(obj) *.mod *~
