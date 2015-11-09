@@ -1108,6 +1108,7 @@ allocate(HetProb(nSnpIterate))
 allocate(GeneProbWork(nSnpIterate,4))
 allocate(ProbImputeGenos(0:nAnisP,nSnpIterate))
 allocate(ProbImputePhase(0:nAnisP,nSnpIterate,2))
+allocate(GPI(nAnisP,nSnp))
 deallocate(GpIndex)
 allocate(GpIndex(nProcessors,2))
 
@@ -1529,8 +1530,34 @@ implicit none
 character(len=7) :: cm !use for formatting output - allows for up to 1 million SNPs
 integer :: i,j,k,l,WorkTmp(nSnpRaw)
 double precision :: ImputationQuality(nAnisP,6)
+double precision, allocatable :: GenosProbs(:,:,:)
 character(len=300) :: TmpId
 integer :: n0, n1, n2
+
+
+
+INTERFACE WriteProbabilities
+  SUBROUTINE WriteProbabilitiesHMM(outFile, nExtraAnims, Ids, nAnisP, nSnps)
+    use GlobalVariablesHmmMaCH
+    character(len=*), intent(IN) :: outFile
+    integer, intent(IN) :: nExtraAnims, nAnisP, nSnps
+    character*(20), intent(IN) :: Ids(nAnisP)
+  END SUBROUTINE WriteProbabilitiesHMM
+
+  SUBROUTINE WriteProbabilitiesGeneProb(outFile, GenosProbs, Ids, nExtraAnims, nAnisP, nSnps)
+    character(len=*), intent(IN) :: outFile
+    integer, intent(IN) :: nExtraAnims, nAnisP, nSnps
+    double precision, intent(IN) :: GenosProbs(nAnisP,nSnps,2)
+    character*(20), intent(IN) :: Ids(nAnisP)
+  END SUBROUTINE WriteProbabilitiesGeneProb
+END INTERFACE
+
+INTERFACE
+  SUBROUTINE ReReadIterateGeneProbs(GenosProbs)
+    use Global
+    double precision, intent(OUT) :: GenosProbs(nAnisP,nSnp,2)
+  END SUBROUTINE ReReadIterateGeneProbs
+END INTERFACE
 
 #ifdef DEBUG
     write(0,*) 'DEBUG: WriteOutResults'
@@ -1570,6 +1597,7 @@ open (unit=52,file="." // DASH// "Results" // DASH // "WellPhasedIndividuals.txt
 open (unit=53,file="." // DASH// "Results" // DASH // "ImputePhaseHMM.txt",status="unknown")
 open (unit=54,file="." // DASH// "Results" // DASH // "ImputeGenotypesHMM.txt",status="unknown")
 
+open (unit=60,file="./Results/GPI.txt",status="unknown")
 
 #ifdef DEBUG
     write(0,*) 'DEBUG: output=0 [WriteOutResults]'
@@ -1637,6 +1665,7 @@ if (OutOpt==0) then
          write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') Id(i),ProbImputePhase(i,:,1)
          write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') Id(i),ProbImputePhase(i,:,2)
          write (41,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') Id(i),ProbImputeGenos(i,:)
+         write (60,'(a20,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4)') Id(i),GPI(i,:)
 
     enddo
 
@@ -1823,8 +1852,8 @@ else
         ! Impute the most likely genotypes. (Most frequent genotype)
         do i=1,nAnisG
             do j=1,nSnpIterate
-                n2 = frequence(i,j,2)                           ! Homozygous: 2 case
-                n1 = frequence(i,j,1)                           ! Heterozygous
+                n2 = GenosCounts(i,j,2)                           ! Homozygous: 2 case
+                n1 = GenosCounts(i,j,1)                           ! Heterozygous
                 n0 = (nRoundsHmm-HmmBurnInRound) - n1 - n2      ! Homozygous: 0 case
                 if ((n0>n1).and.(n0>n2)) then
                     ImputeGenos(GlobalHmmID(i),j)=0
@@ -1867,7 +1896,17 @@ else
          write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') Id(i),ProbImputePhase(i,:,1)
          write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') Id(i),ProbImputePhase(i,:,2)
          write (41,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') Id(i),ProbImputeGenos(i,:)
+         write (60,'(a20,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4)') Id(i),GPI(i,:)
+
     enddo
+
+    if (HMMOption/=RUN_HMM_NO) then
+        call WriteProbabilities("./Results/GenotypeProbabilities.txt", GlobalExtraAnimals, Id, nAnisP, nSnp)
+    else
+        allocate(GenosProbs(nAnisP,nSnp,2))
+        call ReReadIterateGeneProbs(GenosProbs)
+        call WriteProbabilities("./Results/GenotypeProbabilities.txt", GenosProbs, Id, GlobalExtraAnimals, nAnisP, nSnp)
+    endif
 
     if ((SexOpt==1).or.(BypassGeneProb==1)) then
 
@@ -1942,6 +1981,7 @@ close (52)
 
 close (53)
 close (54)
+close (60)
 
 end subroutine WriteOutResults
 
@@ -2285,6 +2325,7 @@ character(len=300) :: filout
 
 allocate(Maf(nSnpIterate))
 
+
 if (RestartOption==4) then
     open (unit=209,file="Tmp2345678.txt",status="unknown")
     do i=1,nAnisP
@@ -2311,9 +2352,14 @@ do h=1,nProcessors
     open (unit=111,file=trim(filout),status="unknown")
 #endif
 
+    write (filout,'("./IterateGeneProb/GeneProb"i0,"/GPI.txt")')h
+    open (unit=222,file=filout,status="unknown")
+
     StSnp=GpIndex(h,1)
     EnSnp=GpIndex(h,2)
     do i=1,nAnisP
+        read (222,*) dum, GPI(i,StSnp:EnSnp)
+
         do j=1,4
             read (110,*) dum,GeneProbWork(StSnp:EnSnp,j)
         enddo
@@ -2354,6 +2400,7 @@ do h=1,nProcessors
 
     close(110)
     close(111)
+    close(222)
 enddo
 
 ! if (WindowsLinux==1) then
@@ -2368,6 +2415,7 @@ do j=1,nSnpIterate
     write (111,*) j,Maf(j)
 enddo
 close(111)
+
 
 call IterateMakeGenotype
 

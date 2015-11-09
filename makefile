@@ -5,6 +5,7 @@ MASTERVERSION:=$(shell git describe --tag)
 # SUBVERSION:=2.0
 # PROGRAM:=${NAME}${VERSION}.${SUBVERSION}
 PROGRAM:=$(NAME)$(MASTERVERSION)
+GP:=GeneProbForAlphaImpute
 
 # Compiler
 FC:=ifort
@@ -39,16 +40,18 @@ endif
 # FFLAGS:=-O3 -m64 -openmp -fpp -DCLUSTER=$(CLUSTER) -openmp-link=static -static-intel
 # FFLAGS:=-O3 -m64 -fopenmp -ffree-line-length-0
 
+GPFFLAGS:=-O3 -m64 -static-intel
+
 all: executable
 
-debug: FFLAGS = -DDEBUG=${DEBUG} -g -O0 -openmp -check bounds -fpp -openmp-link=static -static-intel
+debug: FFLAGS = -DDEBUG=${DEBUG} -g -O0 -openmp -check bounds -fpp -static-intel -openmp-link=static -traceback
 #debug: FFLAGS =  -DDEBUG=${DEBUG} -g -ffree-line-length-0 -O0 -fopenmp
 debug: executable
 
-OBJS:=global$(obj) par_zig_mod$(obj) random$(obj) hmm$(obj)
+OBJS:=global$(obj) par_zig_mod$(obj) random$(obj) hmm$(obj) Output$(obj)
 
 ifeq ($(OS), Windows_NT)
-	 OBJS:= $(OBJS) manageWindows.f90
+	 OBJS:= $(OBJS) manageWindows.obj
 endif
 
 %$(obj):%.f90
@@ -56,7 +59,7 @@ endif
 
 executable: $(OBJS)
 	$(FC) AlphaImpute.f90 $(OBJS) $(FFLAGS) -o $(PROGRAM)$(exe)
-	$(FC) GeneProbForAlphaImpute.f90 $(FFLAGS) -o GeneProbForAlphaImpute$(exe)
+	${FC} GeneProbForAlphaImpute.f90 ${GPFFLAGS} -o ${GP}
 
 clean:
 	$(DEL) *$(obj) *.mod *~
