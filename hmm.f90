@@ -444,15 +444,43 @@ call ExtractTemplateHaps(CurrentInd,Shuffle1,Shuffle2)
 ! ... selecting pairs of haplotypes at random
 !call ExtractTemplateHapsByAnimals(CurrentInd,Shuffle1)
 
+! print *, count(GlobalHmmPhasedInd(:))
+! if (GlobalHmmPhasedInd(currentInd)==.FALSE.) then
+! ! if (GlobalHmmHDInd(currentInd)==0) then
+! #if DEBUG.EQ.1
+!     write(0,*) 'DEBUG: HMM Forward Algorithm [MaCHForInd]'
+! #endif
+!     ! print *, "ForwardAlgorithm hola"
+!    call ForwardAlgorithm(CurrentInd)
+!     ! print *, "ForwardAlgorithm adios"
+! #if DEBUG.EQ.1
+!     write(0,*) 'DEBUG: Sample Chromosomes from the HMM model [MaCHForInd]'
+! #endif
+!     ! print *, "SampleChromosomes hola"
+!    call SampleChromosomes(CurrentInd)
+!     ! print *, "SampleChromosomes adios"
+! else
 #if DEBUG.EQ.1
-    write(0,*) 'DEBUG: HMM Forward Algorithm [MaCHForInd]'
+    write(0,*) 'DEBUG: HMM Forward Algorithm for paternal haplotype [MaCHForInd]'
 #endif
-call ForwardAlgorithm(CurrentInd)
-
+    call ForwardAlgorithmForHaplotype(currentInd,1)
 #if DEBUG.EQ.1
-    write(0,*) 'DEBUG: Sample Chromosomes from the HMM model [MaCHForInd]'
+    write(0,*) 'DEBUG: Sample paternal haplotype from the HMM model [MaCHForInd]'
 #endif
-call SampleChromosomes(CurrentInd)
+    ! write(0,*) 'DEBUG: Sample paternal haplotype from the HMM model [MaCHForInd] Hola'
+    call SampleHaplotypeSource(CurrentInd,1)
+    ! write(0,*) 'DEBUG: Sample paternal haplotype from the HMM model [MaCHForInd] Adios'
+#if DEBUG.EQ.1
+    write(0,*) 'DEBUG: HMM Forward Algorithm for paternal haplotype [MaCHForInd]'
+#endif
+    call ForwardAlgorithmForHaplotype(currentInd,2)
+#if DEBUG.EQ.1
+    write(0,*) 'DEBUG: Sample paternal haplotype from the HMM model [MaCHForInd]'
+#endif
+    ! write(0,*) 'DEBUG: Sample paternal haplotype from the HMM model [MaCHForInd] Hola2'
+    call SampleHaplotypeSource(CurrentInd,2)
+    ! write(0,*) 'DEBUG: Sample paternal haplotype from the HMM model [MaCHForInd] Adios2'
+! endif
 
 ! WARNING: The idea of not to use the first HmmBurnInRound rounds suggests
 !          the imputation in those rounds aren't accurate enough, which
