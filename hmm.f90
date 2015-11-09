@@ -48,6 +48,8 @@ integer :: n0, n1, n2
     write(0,*) 'DEBUG: [MaCHController] Allocate memory'
 #endif
 
+open (unit=555,file="Haplotypes.txt",status="unknown")
+
 ! Number of SNPs and genotyped animals for the HMM algorithm
 nSnpHmm=nSnp
 nIndHmmMaCH=nAnisG
@@ -237,6 +239,8 @@ ProbImputePhaseHmm=ProbImputePhaseHmm/(nRoundsHmm-HmmBurnInRound)
 !enddo
 
 !deallocate(frequence)
+
+close(555)
 
 end subroutine MaCHController
 !######################################################################
@@ -441,6 +445,10 @@ call SampleChromosomes(CurrentInd)
 !          given by ForwardAlgorithm and SampleChromosomes are also
 !          independent.
 
+if (currentInd==1243) then
+    write(555,'(50i1)') FullH(CurrentInd,1:50,1)
+    ! write(555,*) FullH(CurrentInd,1:16,2)
+endif
 #if DEBUG.EQ.1
     write(0,*) 'DEBUG: Calculate genotype frequences [MaCHForInd]'
 #endif
