@@ -50,8 +50,9 @@ integer(kind=1),allocatable,dimension (:,:,:) :: ImputePhase,TmpPhase,GlobalWork
 integer,allocatable :: RecPed(:,:),Setter(:),CoreAndTailLengths(:),CoreLengths(:),GpIndex(:,:),BaseAnimals(:),GlobalTmpCountInf(:,:)
 integer,allocatable :: GlobalHmmID(:)
 real,allocatable,dimension (:) :: Maf
-real,allocatable,dimension (:,:) :: ProbImputeGenos
+real,allocatable,dimension (:,:) :: ProbImputeGenos, GPI
 real,allocatable,dimension (:,:,:) :: ProbImputePhase
+
 character*(lengan),allocatable :: GenotypeId(:),GenderId(:)
 
 end module Global
