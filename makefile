@@ -48,10 +48,10 @@ debug: FFLAGS = -DDEBUG=${DEBUG} -g -O0 -openmp -check bounds -fpp -static-intel
 #debug: FFLAGS =  -DDEBUG=${DEBUG} -g -ffree-line-length-0 -O0 -fopenmp
 debug: executable
 
-OBJS:=global$(obj) par_zig_mod$(obj) random$(obj) hmm$(obj)
+OBJS:=global$(obj) par_zig_mod$(obj) random$(obj) hmm$(obj) Output$(obj)
 
 ifeq ($(OS), Windows_NT)
-	 OBJS:= $(OBJS) manageWindows.f90
+	 OBJS:= $(OBJS) manageWindows.obj
 endif
 
 %$(obj):%.f90
