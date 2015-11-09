@@ -123,7 +123,7 @@ program GeneProb_sub
 end program
 
 subroutine ReadParms
-	use global
+	use Global_GP
 
 	character :: tmp
 
