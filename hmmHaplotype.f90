@@ -122,12 +122,11 @@ factors(0) = ErrorRate
 factors(1) = 1.0 - factors(0)
 
 do i=1,nHapInSubH
-	if (allele==factors(1)) then
-		SubH(i,Marker) = factors(1)
-	else
-		SubH(i,Marker) = factors(0)
-	endif
-	ForwardProb(i,Marker) = ForwardProb(i,Marker) * SubH(i,Marker)
+    if (allele==SubH(i,Marker)) then
+        ForwardProbs(i,Marker) = ForwardProbs(i,Marker) * factors(1)
+    else
+        ForwardProbs(i,Marker) = ForwardProbs(i,Marker) * factors(0)
+    endif
 enddo
 
 end subroutine ConditionHaplotypeOnData
