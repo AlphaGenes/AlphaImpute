@@ -16,7 +16,9 @@ integer :: nIndHmmMaCH,GlobalRoundHmm,nSnpHmm
 integer :: nHapInSubH,idum,useProcs,nRoundsHmm,HmmBurnInRound
 integer,allocatable,dimension(:,:) :: GenosHmmMaCH,SubH
 integer(kind=1),allocatable,dimension(:,:,:) :: PhaseHmmMaCH,FullH
-integer,allocatable,dimension(:) :: ErrorUncertainty,ErrorMatches,ErrorMismatches,Crossovers,GlobalHmmHDInd
+integer,allocatable,dimension(:) :: ErrorUncertainty,ErrorMatches,ErrorMismatches,Crossovers
+integer,allocatable,dimension(:) :: GlobalHmmHDInd
+logical,allocatable,dimension(:) :: GlobalHmmPhasedInd
 double precision,allocatable,dimension(:) :: Thetas,Epsilon
 double precision,allocatable,dimension(:,:) :: ForwardProbs
 double precision,allocatable,dimension(:,:,:) :: Penetrance, ShotgunErrorMatrix
@@ -59,13 +61,16 @@ nIndHmmMaCH=nAnisG
 ! Template Diploids Library
 ! NOTE: GenosHmmMaCH can contain either genotype or reads information (if working with sequence data NGS)
 allocate(GenosHmmMaCH(nIndHmmMaCH,nSnp))
-! allocate(PhaseHmmMaCH(nIndHmmMaCH,nSnp,2))
+allocate(PhaseHmmMaCH(nIndHmmMaCH,nSnp,2))
 ! Allocate memory to store Animals contributing to the Template
 ! Haplotype Library
 allocate(GlobalHmmID(nIndHmmMaCH))
 
 ! Allocate memory to store Animals Highly Dense Genotyped
 allocate(GlobalHmmHDInd(nIndHmmMaCH))
+
+! Allocate memory to store Animals Highly Dense Genotyped
+allocate(GlobalHmmPhasedInd(nIndHmmMaCH))
 ! No animal has been HD genotyped YET
 ! WARNING: If this variable only stores 1 and 0, then its type should
 !          logical: GlobalHmmHDInd=.false.
@@ -333,8 +338,8 @@ do i=1,nAnisP
         k=k+1
         ! Add animal's diploid to the Diploids Library
         GenosHmmMaCH(k,:)=ImputeGenos(i,:)
-        ! PhaseHmmMaCH(k,:,1)=ImputePhase(i,:,1)
-        ! PhaseHmmMaCH(k,:,2)=ImputePhase(i,:,2)
+        PhaseHmmMaCH(k,:,1)=ImputePhase(i,:,1)
+        PhaseHmmMaCH(k,:,2)=ImputePhase(i,:,2)
         GlobalHmmID(k)=i
         ! Check if this animal is Highly Dense genotyped
         if ((float(count(GenosHmmMaCH(k,:)==9))/nSnp)<0.10) then
@@ -342,12 +347,15 @@ do i=1,nAnisP
             !          type should logical: GlobalHmmHDInd=.true.
             GlobalHmmHDInd(k)=1
         endif
+        if ( (float(count(PhaseHmmMaCH(k,:,1)==9 .AND. PhaseHmmMaCH(k,:,2)==9 ))/nSnp)<0.10 ) Then
+            GlobalHmmPhasedInd(k)=.TRUE.
+        endif
 
         ! WARNING: This should have been previously done for ImputeGenos variable
         do j=1,nSnp
             if ((GenosHmmMaCH(k,j)<0).or.(GenosHmmMaCH(k,j)>2)) GenosHmmMaCH(k,j)=MISSING
-            ! if (PhaseHmmMaCH(k,j,1)/=0 .or. PhaseHmmMaCH(k,j,1)/=1) PhaseHmmMaCH(k,j,1)=3
-            ! if (PhaseHmmMaCH(k,j,2)/=0 .or. PhaseHmmMaCH(k,j,2)/=1) PhaseHmmMaCH(k,j,1)=3
+            if (PhaseHmmMaCH(k,j,1)/=0 .or. PhaseHmmMaCH(k,j,1)/=1) PhaseHmmMaCH(k,j,1)=3
+            if (PhaseHmmMaCH(k,j,2)/=0 .or. PhaseHmmMaCH(k,j,2)/=1) PhaseHmmMaCH(k,j,1)=3
         enddo
     endif
 enddo
