@@ -580,6 +580,10 @@ Choice = par_uni(Thread)*Summer
 Summer=0.0
 Index=0
 OffOn=0
+
+State1 = 1
+State2 = 1
+
 Probs = ForwardProbs(:,nSnpHmm)
 do i=1,nHapInSubH
     do j=1,i
