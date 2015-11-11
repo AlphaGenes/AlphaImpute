@@ -11,6 +11,10 @@ integer, intent(in) :: CurrentInd, hap
 ! Local variables
 integer :: marker
 
+#if DEBUG.EQ.1
+    write(0,*) 'DEBUG: [ForwardAlgorithmForHaplotype]'
+#endif
+
 marker = 1
 call SetUpPriorHaplotype
 call ConditionHaplotypeOnData(CurrentInd, marker, PhaseHmmMaCH(CurrentInd,marker,hap))
@@ -39,6 +43,10 @@ integer :: i, state, marker, Thread
 ! double precision :: Probs(nHapInSubH*(nHapInSubH+1)/2)
 double precision :: Probs(nHapInSubH)
 double precision :: Summer, Choice, Theta, cross, nocross
+
+#if DEBUG.EQ.1
+    write(0,*) 'DEBUG: [SampleHaplotypeSource]'
+#endif
 
 Thread = omp_get_thread_num()
 Summer=0.0
