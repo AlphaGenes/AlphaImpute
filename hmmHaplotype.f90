@@ -38,7 +38,7 @@ implicit none
 integer,intent(IN) :: CurrentInd, hap
 
 ! Local variables
-integer :: i, state, marker, Thread
+integer :: i, state, marker, Thread, Hapi
 
 ! double precision :: Probs(nHapInSubH*(nHapInSubH+1)/2)
 double precision :: Probs(nHapInSubH)
@@ -63,12 +63,19 @@ Summer=0.0
 
 do i=1,nHapInSubH
     Summer = Summer + Probs(i)
-    if (Summer >= Choice) exit
+    if (Summer >= Choice) then
+        Hapi = i
+        exit
+    endif
 enddo
+
+if (Hapi==0) then
+    Hapi=INT(1+par_uni(Thread)*nHapInSubH)
+endif
 
 do marker=nSnpHmm-1,1,-1
     ! Track whether imputed state matches observed allele
-    if (SubH(i,marker)==PhaseHmmMaCH(CurrentInd,marker,hap)) then
+    if (SubH(Hapi,marker)==PhaseHmmMaCH(CurrentInd,marker,hap)) then
         ErrorMatches(marker)=ErrorMatches(marker)+1
     else
         ErrorMismatches(marker)=ErrorMismatches(marker)+1
@@ -76,14 +83,14 @@ do marker=nSnpHmm-1,1,-1
 
     ! Impute if allele is missing
     if (PhaseHmmMaCH(CurrentInd,marker,hap)==3) then
-        FullH(CurrentInd,marker,hap) = SubH(i,marker)
+        FullH(CurrentInd,marker,hap) = SubH(Hapi,marker)
         ! call ImputeAllele(CurrentInd,marker,i,hap)
     endif
 
     Theta = Thetas(marker)
     Probs = ForwardProbs(:,marker)
 
-    nocross = Probs(i) * (1.0 - Theta)
+    nocross = Probs(Hapi) * (1.0 - Theta)
     Summer = 0.0
 
     do i=1,nHapInSubH
@@ -108,12 +115,15 @@ do marker=nSnpHmm-1,1,-1
     Summer = 0.0
     do i=1,nHapInSubH
         Summer = Summer + Probs(i)
-        if (Summer >= Choice) exit
+        if (Summer >= Choice) then
+            Hapi = i
+            exit
+        endif
     enddo
 enddo
 
 ! Track whether imputed state matches observed allele
-if (SubH(i,1)==PhaseHmmMaCH(CurrentInd,1,hap)) then
+if (SubH(Hapi,1)==PhaseHmmMaCH(CurrentInd,1,hap)) then
     ErrorMatches(1)=ErrorMatches(1)+1
 else
     ErrorMismatches(1)=ErrorMismatches(1)+1
@@ -121,7 +131,7 @@ endif
 
 ! Impute if allele is missing
 if (PhaseHmmMaCH(CurrentInd,1,hap)==3) then
-    FullH(CurrentInd,1,hap) = SubH(i,1)
+    FullH(CurrentInd,1,hap) = SubH(Hapi,1)
     ! ImputeAllele(CurrentInd,1,i,hap)
 endif
 
