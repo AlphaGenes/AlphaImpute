@@ -121,6 +121,18 @@ endif
 
 call ParseMaCHData(HMM)
 
+! do i=1,nIndHmmMaCH
+!     do j=1,nSnp
+!         if (GenosHmmMaCH(i,j)==0) then
+!             PhaseHmmMaCH(i,j,:)=0
+!         elseif (GenosHmmMaCH(i,j)==2) then
+!             PhaseHmmMaCH(i,j,:)=1
+!         else
+!             PhaseHmmMaCH(i,j,:)=3
+!         endif
+!     enddo
+! enddo
+
 ! Initialization of HMM parameters
 Epsilon=EPSILON_ERROR
 Thetas=0.01
