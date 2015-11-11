@@ -462,7 +462,6 @@ call ExtractTemplateHaps(CurrentInd,Shuffle1,Shuffle2)
 
 
 ! WARNING: This code is something to change according to the Hybrid paper
-! print *, count(GlobalHmmPhasedInd(:))
 if (GlobalHmmPhasedInd(currentInd)==.FALSE.) then
 ! if (GlobalHmmHDInd(currentInd)==0) then
    call ForwardAlgorithm(CurrentInd)
