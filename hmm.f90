@@ -355,7 +355,7 @@ do i=1,nAnisP
         do j=1,nSnp
             if ((GenosHmmMaCH(k,j)<0).or.(GenosHmmMaCH(k,j)>2)) GenosHmmMaCH(k,j)=MISSING
             if (PhaseHmmMaCH(k,j,1)/=0 .or. PhaseHmmMaCH(k,j,1)/=1) PhaseHmmMaCH(k,j,1)=3
-            if (PhaseHmmMaCH(k,j,2)/=0 .or. PhaseHmmMaCH(k,j,2)/=1) PhaseHmmMaCH(k,j,1)=3
+            if (PhaseHmmMaCH(k,j,2)/=0 .or. PhaseHmmMaCH(k,j,2)/=1) PhaseHmmMaCH(k,j,2)=3
         enddo
     endif
 enddo
