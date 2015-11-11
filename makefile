@@ -18,7 +18,7 @@ FFLAGS:=-O3 -m64 -openmp -fpp -DCLUSTER=$(CLUSTER) -openmp-link=static -static-i
 
 all: executable
 
-debug: FFLAGS = -DDEBUG=${DEBUG} -g -O0 -openmp -check bounds -fpp -openmp-link=static -static-intel
+debug: FFLAGS = -DDEBUG=${DEBUG} -g -O0 -openmp -check bounds -fpp -openmp-link=static -static-intel -traceback
 #debug: FFLAGS =  -DDEBUG=${DEBUG} -g -ffree-line-length-0 -O0 -fopenmp
 debug: executable
 
