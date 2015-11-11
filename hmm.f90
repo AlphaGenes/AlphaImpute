@@ -16,7 +16,9 @@ integer :: nIndHmmMaCH,GlobalRoundHmm,nSnpHmm
 integer :: nHapInSubH,idum,useProcs,nRoundsHmm,HmmBurnInRound
 integer,allocatable,dimension(:,:) :: GenosHmmMaCH,SubH
 integer(kind=1),allocatable,dimension(:,:,:) :: PhaseHmmMaCH,FullH
-integer,allocatable,dimension(:) :: ErrorUncertainty,ErrorMatches,ErrorMismatches,Crossovers,GlobalHmmHDInd
+integer,allocatable,dimension(:) :: ErrorUncertainty,ErrorMatches,ErrorMismatches,Crossovers
+integer,allocatable,dimension(:) :: GlobalHmmHDInd
+logical,allocatable,dimension(:) :: GlobalHmmPhasedInd
 double precision,allocatable,dimension(:) :: Thetas,Epsilon
 double precision,allocatable,dimension(:,:) :: ForwardProbs
 double precision,allocatable,dimension(:,:,:) :: Penetrance, ShotgunErrorMatrix
@@ -57,13 +59,16 @@ nIndHmmMaCH=nAnisG
 ! Template Diploids Library
 ! NOTE: GenosHmmMaCH can contain either genotype or reads information (if working with sequence data NGS)
 allocate(GenosHmmMaCH(nIndHmmMaCH,nSnp))
-! allocate(PhaseHmmMaCH(nIndHmmMaCH,nSnp,2))
+allocate(PhaseHmmMaCH(nIndHmmMaCH,nSnp,2))
 ! Allocate memory to store Animals contributing to the Template
 ! Haplotype Library
 allocate(GlobalHmmID(nIndHmmMaCH))
 
 ! Allocate memory to store Animals Highly Dense Genotyped
 allocate(GlobalHmmHDInd(nIndHmmMaCH))
+
+! Allocate memory to store Animals Highly Dense Genotyped
+allocate(GlobalHmmPhasedInd(nIndHmmMaCH))
 ! No animal has been HD genotyped YET
 ! WARNING: If this variable only stores 1 and 0, then its type should
 !          logical: GlobalHmmHDInd=.false.
@@ -115,6 +120,18 @@ endif
 #endif
 
 call ParseMaCHData(HMM)
+
+! do i=1,nIndHmmMaCH
+!     do j=1,nSnp
+!         if (GenosHmmMaCH(i,j)==0) then
+!             PhaseHmmMaCH(i,j,:)=0
+!         elseif (GenosHmmMaCH(i,j)==2) then
+!             PhaseHmmMaCH(i,j,:)=1
+!         else
+!             PhaseHmmMaCH(i,j,:)=3
+!         endif
+!     enddo
+! enddo
 
 ! Initialization of HMM parameters
 Epsilon=EPSILON_ERROR
@@ -329,8 +346,8 @@ do i=1,nAnisP
         k=k+1
         ! Add animal's diploid to the Diploids Library
         GenosHmmMaCH(k,:)=ImputeGenos(i,:)
-        ! PhaseHmmMaCH(k,:,1)=ImputePhase(i,:,1)
-        ! PhaseHmmMaCH(k,:,2)=ImputePhase(i,:,2)
+        PhaseHmmMaCH(k,:,1)=ImputePhase(i,:,1)
+        PhaseHmmMaCH(k,:,2)=ImputePhase(i,:,2)
         GlobalHmmID(k)=i
         ! Check if this animal is Highly Dense genotyped
         if ((float(count(GenosHmmMaCH(k,:)==9))/nSnp)<0.10) then
@@ -342,9 +359,12 @@ do i=1,nAnisP
         ! WARNING: This should have been previously done for ImputeGenos variable
         do j=1,nSnp
             if ((GenosHmmMaCH(k,j)<0).or.(GenosHmmMaCH(k,j)>2)) GenosHmmMaCH(k,j)=MISSING
-            ! if (PhaseHmmMaCH(k,j,1)/=0 .or. PhaseHmmMaCH(k,j,1)/=1) PhaseHmmMaCH(k,j,1)=3
-            ! if (PhaseHmmMaCH(k,j,2)/=0 .or. PhaseHmmMaCH(k,j,2)/=1) PhaseHmmMaCH(k,j,1)=3
+            if (PhaseHmmMaCH(k,j,1)/=0 .or. PhaseHmmMaCH(k,j,1)/=1) PhaseHmmMaCH(k,j,1)=3
+            if (PhaseHmmMaCH(k,j,2)/=0 .or. PhaseHmmMaCH(k,j,2)/=1) PhaseHmmMaCH(k,j,2)=3
         enddo
+        if ( float(count(PhaseHmmMaCH(k,:,1)==3)/nSnp)<0.01 .AND. float(count(PhaseHmmMaCH(k,:,2)==3)/nSnp)<0.01) Then
+            GlobalHmmPhasedInd(k)=.TRUE.
+        endif
     endif
 enddo
 
@@ -383,6 +403,29 @@ integer, intent(in) :: CurrentInd
 integer :: genotype, i, states, thread
 integer :: Shuffle1(nIndHmmMaCH), Shuffle2(nIndHmmMaCH)
 
+INTERFACE
+  SUBROUTINE ForwardAlgorithmForHaplotype(CurrentInd, hap)
+    use Global
+    use GlobalVariablesHmmMaCH
+    use Par_Zig_mod
+    use omp_lib
+    implicit none
+    integer, intent(in) :: CurrentInd, hap
+    ! double precision, intent(IN), allocatable :: Thetas(:)
+  END SUBROUTINE ForwardAlgorithmForHaplotype
+
+  SUBROUTINE SampleHaplotypeSource(CurrentInd, hap)
+    use Global
+    use GlobalVariablesHmmMaCH
+    use Par_Zig_mod
+    use omp_lib
+
+    implicit none
+    integer,intent(IN) :: CurrentInd, hap
+  END SUBROUTINE SampleHaplotypeSource
+END INTERFACE
+
+
 
 ! The number of parameters of the HMM are:
 !   nHapInSubH = Number of haplotypes in the template haplotype set, H
@@ -417,15 +460,18 @@ call ExtractTemplateHaps(CurrentInd,Shuffle1,Shuffle2)
 ! ... selecting pairs of haplotypes at random
 !call ExtractTemplateHapsByAnimals(CurrentInd,Shuffle1)
 
-#if DEBUG.EQ.1
-    write(0,*) 'DEBUG: HMM Forward Algorithm [MaCHForInd]'
-#endif
-call ForwardAlgorithm(CurrentInd)
 
-#if DEBUG.EQ.1
-    write(0,*) 'DEBUG: Sample Chromosomes from the HMM model [MaCHForInd]'
-#endif
-call SampleChromosomes(CurrentInd)
+! WARNING: This code is something to change according to the Hybrid paper
+if (GlobalHmmPhasedInd(currentInd)==.FALSE.) then
+! if (GlobalHmmHDInd(currentInd)==0) then
+   call ForwardAlgorithm(CurrentInd)
+   call SampleChromosomes(CurrentInd)
+else
+    call ForwardAlgorithmForHaplotype(currentInd,1)
+    call SampleHaplotypeSource(CurrentInd,1)
+    call ForwardAlgorithmForHaplotype(currentInd,2)
+    call SampleHaplotypeSource(CurrentInd,2)
+endif
 
 ! WARNING: The idea of not to use the first HmmBurnInRound rounds suggests
 !          the imputation in those rounds aren't accurate enough, which
@@ -514,6 +560,10 @@ Choice = par_uni(Thread)*Summer
 Summer=0.0
 Index=0
 OffOn=0
+
+State1 = 1
+State2 = 1
+
 Probs = ForwardProbs(:,nSnpHmm)
 do i=1,nHapInSubH
     do j=1,i
