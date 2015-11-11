@@ -343,9 +343,6 @@ do i=1,nAnisP
             !          type should logical: GlobalHmmHDInd=.true.
             GlobalHmmHDInd(k)=1
         endif
-        if ( (float(count(PhaseHmmMaCH(k,:,1)==9 .AND. PhaseHmmMaCH(k,:,2)==9 ))/nSnp)<0.10 ) Then
-            GlobalHmmPhasedInd(k)=.TRUE.
-        endif
 
         ! WARNING: This should have been previously done for ImputeGenos variable
         do j=1,nSnp
@@ -353,6 +350,9 @@ do i=1,nAnisP
             if (PhaseHmmMaCH(k,j,1)/=0 .or. PhaseHmmMaCH(k,j,1)/=1) PhaseHmmMaCH(k,j,1)=3
             if (PhaseHmmMaCH(k,j,2)/=0 .or. PhaseHmmMaCH(k,j,2)/=1) PhaseHmmMaCH(k,j,2)=3
         enddo
+        if ( (float(count(PhaseHmmMaCH(k,:,1)==3 .AND. PhaseHmmMaCH(k,:,2)==3 ))/nSnp)<0.10 ) Then
+            GlobalHmmPhasedInd(k)=.TRUE.
+        endif
     endif
 enddo
 
