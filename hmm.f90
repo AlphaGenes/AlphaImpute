@@ -115,6 +115,34 @@ if (HMM==RUN_HMM_NGS) then
     allocate(ShotgunErrorMatrix(0:2,0:MAX_READS_COUNT,0:MAX_READS_COUNT))
 endif
 
+! Set up number of process to be used
+nprocs = OMP_get_num_procs()
+call OMP_set_num_threads(useProcs)
+nthreads = OMP_get_num_threads()
+
+allocate(seed(useProcs))
+
+! Warm up the random seed generator
+call system_clock(count)
+secs = mod(count,int(1e4))
+do i = 1,secs
+    call random_number(r)
+enddo
+
+! Set up random process seeds for threads
+! Feed seed as a function of the milliseconds of the system clock
+call system_clock(count)
+secs = mod(count,int(1e6))
+seed0 = secs*1e5
+idum=-abs(seed0)
+do i = 1,useProcs
+    call random_number(r)
+    seed(i) = seed0*r
+enddo
+
+grainsize = 32
+call par_zigset(useProcs, seed, grainsize)
+
 #ifdef DEBUG
     write(0,*) 'DEBUG: [ParseMaCHData] ...'
 #endif
@@ -157,33 +185,6 @@ else
 endif
 
 open (unit=6,form='formatted')
-
-! Set up number of process to be used
-nprocs = OMP_get_num_procs()
-call OMP_set_num_threads(useProcs)
-nthreads = OMP_get_num_threads()
-
-allocate(seed(useProcs))
-
-! Warm up the random seed generator
-call system_clock(count)
-secs = mod(count,int(1e4))
-do i = 1,secs
-    call random_number(r)
-enddo
-
-! Set up random process seeds for threads
-! Feed seed as a function of the milliseconds of the system clock
-call system_clock(count)
-secs = mod(count,int(1e6))
-seed0 = secs*1e5
-do i = 1,useProcs
-    call random_number(r)
-    seed(i) = seed0*r
-enddo
-
-grainsize = 32
-call par_zigset(useProcs, seed, grainsize)
 
 print*, ""
 print*, " Impute genotypes by HMM"
