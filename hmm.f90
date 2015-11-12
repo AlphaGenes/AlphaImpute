@@ -4,6 +4,7 @@ module GlobalVariablesHmmMaCH
 implicit none
 
 integer, parameter :: GENOTYPE_MISSING=3
+integer, parameter :: ALLELE_MISSING=3
 integer, parameter :: READ_MISSING=0
 integer            :: MISSING=3
 
@@ -12,8 +13,8 @@ double precision, parameter :: EPSILON_ERROR=0.00000001
 
 
 character(len=300) :: GenotypeFileName,CheckPhaseFileName,CheckGenoFileName
-integer :: nIndHmmMaCH,GlobalRoundHmm,nSnpHmm
-integer :: nHapInSubH,idum,useProcs,nRoundsHmm,HmmBurnInRound
+integer :: nIndHmmMaCH,GlobalRoundHmm,nSnpHmm,nPhased
+integer :: nHapInSubH,useProcs,nRoundsHmm,HmmBurnInRound,phasedThreshold,idum
 integer,allocatable,dimension(:,:) :: GenosHmmMaCH,SubH
 integer(kind=1),allocatable,dimension(:,:,:) :: PhaseHmmMaCH,FullH
 integer,allocatable,dimension(:) :: ErrorUncertainty,ErrorMatches,ErrorMismatches,Crossovers
@@ -366,6 +367,7 @@ do i=1,nAnisP
         if ( float(count(PhaseHmmMaCH(k,:,1)==3)/nSnp)<0.01 .AND. float(count(PhaseHmmMaCH(k,:,2)==3)/nSnp)<0.01) Then
             GlobalHmmPhasedInd(k)=.TRUE.
         endif
+        nPhased = count(GlobalHmmPhasedInd(:)==.TRUE.)*2
     endif
 enddo
 
@@ -390,6 +392,7 @@ subroutine MaCHForInd(CurrentInd)
 ! Create a Template Haplotype Library, H, and create HMM for each
 ! individual
 
+use Global
 use GlobalVariablesHmmMaCH
 use random
 use Par_Zig_mod
@@ -463,15 +466,19 @@ call ExtractTemplateHaps(CurrentInd,Shuffle1,Shuffle2)
 
 
 ! WARNING: This code is something to change according to the Hybrid paper
-if (GlobalHmmPhasedInd(currentInd)==.FALSE.) then
+! if (GlobalHmmPhasedInd(currentInd)==.FALSE.) then
 ! if (GlobalHmmHDInd(currentInd)==0) then
-   call ForwardAlgorithm(CurrentInd)
-   call SampleChromosomes(CurrentInd)
+if (phasedThreshold>nPhased/nAnisP) then ! Training mode 1
+    call ForwardAlgorithm(CurrentInd)
+    call SampleChromosomes(CurrentInd)
 else
     call ForwardAlgorithmForHaplotype(currentInd,1)
     call SampleHaplotypeSource(CurrentInd,1)
     call ForwardAlgorithmForHaplotype(currentInd,2)
     call SampleHaplotypeSource(CurrentInd,2)
+    ! TODO: We have to do something here to training mode 3
+    ! call ForwardAlgorithm(CurrentInd)
+    ! call SampleChromosomes(CurrentInd)
 endif
 
 ! WARNING: The idea of not to use the first HmmBurnInRound rounds suggests

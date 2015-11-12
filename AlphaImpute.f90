@@ -728,7 +728,7 @@ endif
 !   * nRoundsHMM: Number of HMM rounds
 !   * useProcs: Number of processors used for parallelisation
 !   * idum: Seed for generating random numbers (Negative integer)
-read (1,*) dumC,nHapInSubH,HmmBurnInRound,nRoundsHMM,useProcs,idum
+read (1,*) dumC,nHapInSubH,HmmBurnInRound,nRoundsHMM,useProcs,phasedThreshold
 
 ! Get the file containing the true genotypes
 ! TrueGenotypeFile
