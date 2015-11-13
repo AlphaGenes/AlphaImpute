@@ -135,6 +135,115 @@ endif
 
 end subroutine SampleHaplotypeSource
 
+
+!######################################################################
+subroutine SampleSegmentHaplotypeSource(CurrentInd,hap,snpStart,snpStop)
+use Global
+use GlobalVariablesHmmMaCH
+use Par_Zig_mod
+use omp_lib
+
+implicit none
+integer,intent(IN) :: CurrentInd, hap, snpStart, snpStop
+
+! Local variables
+integer :: i, state, marker, Thread, Hapi
+
+! double precision :: Probs(nHapInSubH*(nHapInSubH+1)/2)
+double precision :: Probs(nHapInSubH)
+double precision :: Summer, Choice, Theta, cross, nocross
+
+#if DEBUG.EQ.1
+    write(0,*) 'DEBUG: [SampleSegmentHaplotypeSource]'
+#endif
+
+Thread = omp_get_thread_num()
+Summer=0.0
+Probs = ForwardProbs(:,nSnpHmm)
+
+! Calculate sum over all states
+do state=1,nHapInSubH
+    Summer = Summer + Probs(state)
+enddo
+
+! Sample number and select state
+Choice = par_uni(Thread)*Summer
+Summer=0.0
+
+do i=1,nHapInSubH
+    Summer = Summer + Probs(i)
+    if (Summer >= Choice) then
+        Hapi = i
+        exit
+    endif
+enddo
+
+if (Hapi==0) then
+    Hapi=INT(1+par_uni(Thread)*nHapInSubH)
+endif
+
+do marker=snpStop,snpStart,-1
+    ! Track whether imputed state matches observed allele
+    if (SubH(Hapi,marker)==PhaseHmmMaCH(CurrentInd,marker,hap)) then
+        ErrorMatches(marker)=ErrorMatches(marker)+1
+    else
+        ErrorMismatches(marker)=ErrorMismatches(marker)+1
+    endif
+
+    ! Impute if allele is missing
+    if (PhaseHmmMaCH(CurrentInd,marker,hap)==ALLELE_MISSING) then
+        FullH(CurrentInd,marker,hap) = SubH(Hapi,marker)
+    endif
+
+    Theta = Thetas(marker)
+    Probs = ForwardProbs(:,marker)
+
+    nocross = Probs(Hapi) * (1.0 - Theta)
+    Summer = 0.0
+
+    do i=1,nHapInSubH
+        Summer = Summer + Probs(i)
+    enddo
+
+    cross = Summer * Theta / nHapInSubH
+
+    ! Sample number and decide how many state changes occurred between the
+    ! two positions
+    Choice = par_uni(Thread)*(nocross+cross)
+
+    ! The most likely outcome is that no changes occur ...
+    if (Choice <= nocross) continue
+
+    ! TODO: Look what crossovers are
+    crossovers(i)= crossovers(i)+1
+
+    ! If a crossover occured, we need to sample a state according to probability
+    Choice = par_uni(Thread)*(Summer)
+
+    Summer = 0.0
+    do i=1,nHapInSubH
+        Summer = Summer + Probs(i)
+        if (Summer >= Choice) then
+            Hapi = i
+            exit
+        endif
+    enddo
+enddo
+
+! Track whether imputed state matches observed allele
+if (SubH(Hapi,snpStart)==PhaseHmmMaCH(CurrentInd,snpStart,hap)) then
+    ErrorMatches(snpStart)=ErrorMatches(snpStart)+1
+else
+    ErrorMismatches(snpStart)=ErrorMismatches(snpStart)+1
+endif
+
+! Impute if allele is missing
+if (PhaseHmmMaCH(CurrentInd,snpStart,hap)==ALLELE_MISSING) then
+    FullH(CurrentInd,snpStart,hap) = SubH(Hapi,snpStart)
+endif
+
+end subroutine SampleSegmentHaplotypeSource
+
 !######################################################################
 subroutine TransposeHaplotype(PrecedingMarker, CurrentMarker, Theta)
 ! Calculates the probability of get a particular state at CurrentMarker
