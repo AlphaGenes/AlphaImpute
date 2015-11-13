@@ -1718,7 +1718,7 @@ HapCount=1
 ShuffleInd=0
 
 #if DEBUG.EQ.1
-    write(0,*) 'DEBUG: Create Haplotypes Template [ExtractTemplateHaps]'
+    write(0,*) 'DEBUG: Create Haplotypes Template [ExtractTemplateHapsByAnimals]'
 #endif
 ! While the maximum number of haps in the template haplotypes set,
 ! H, is not reached...
