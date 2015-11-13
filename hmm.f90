@@ -1874,6 +1874,55 @@ enddo
 end subroutine ExtractTemplateHaps
 
 !######################################################################
+subroutine ExtractTemplateByHaps(forWhom,Shuffle1,Shuffle2)
+! Set the Template of Haplotypes used in the HMM model.
+! It takes the haplotypes produced by AlphaImpute
+! It differentiates between paternal (even) and maternal (odd) haps
+
+use GlobalVariablesHmmMaCH
+
+integer, intent(in) :: Shuffle1(nIndHmmMaCH), Shuffle2(nIndHmmMaCH)
+
+! Local variables
+integer :: HapCount, ShuffleInd1, ShuffleInd2
+
+HapCount=0
+ShuffleInd1=0
+ShuffleInd2=0
+
+#if DEBUG.EQ.1
+    write(0,*) 'DEBUG: Create Haplotypes Template [ExtractTemplateByHaps]'
+#endif
+! While the maximum number of haps in the template haplotypes set,
+! H, is not reached...
+do while (HapCount<nHapInSubH)
+    if (mod(HapCount,2)==0) then
+        ShuffleInd1=ShuffleInd1+1
+
+        ! Select the paternal haplotype if the individual it belongs
+        ! to is genotyped and it is not the current individual
+        if ((Shuffle1(ShuffleInd1)/=CurrentInd).and.&
+                (GlobalHmmPhasedInd(ShuffleInd1,1)==.TRUE.)) then
+
+            HapCount=HapCount+1
+            SubH(HapCount,:)=FullH(Shuffle1(ShuffleInd1),:,1)
+        endif
+    else
+        ShuffleInd2=ShuffleInd2+1
+
+        ! Select the maternal haplotype if the individual it belongs
+        ! too is genotyped and it is not the current individual
+        if ((Shuffle2(ShuffleInd2)/=CurrentInd).and.&
+                (GlobalHmmPhasedInd(ShuffleInd2,2)==.TRUE.)) then
+            HapCount=HapCount+1
+            SubH(HapCount,:)=FullH(Shuffle2(ShuffleInd2),:,2)
+        endif
+    endif
+enddo
+
+end subroutine ExtractTemplateByHaps
+
+!######################################################################
 subroutine ExtractTemplateHapsByAnimals(forWhom,Shuffle)
 ! Extract the Template of Haplotypes used in the HMM model.
 ! It consideres the two haps of a given individual.
