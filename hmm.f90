@@ -181,8 +181,10 @@ endif
 if (HMM==RUN_HMM_NGS) then
     call SetUpEquationsReads
 
+else if (HMM==RUN_HMM_ONLY) then
+    call SetUpEquationsGenotypesDiploid
 else
-    call SetUpEquationsGenotypes
+    call SetUpEquationsGenotypesHaploid
 endif
 
 open (unit=6,form='formatted')
