@@ -1049,7 +1049,7 @@ FullH(CurrentInd,CurrentMarker,TopBot)=SubH(State,CurrentMarker)
 end subroutine ImputeAllele
 
 !######################################################################
-subroutine ForwardAlgorithm(CurrentInd, HMM)
+subroutine ForwardAlgorithm(CurrentInd)
 ! Update the forward variable of the HMM model
 
 use GlobalVariablesHmmMaCH
@@ -1057,7 +1057,7 @@ use omp_lib
 
 implicit none
 
-integer, intent(in) :: CurrentInd, HMM
+integer, intent(in) :: CurrentInd
 double precision :: Theta
 
 ! Local variables
