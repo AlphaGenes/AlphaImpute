@@ -82,7 +82,7 @@ do marker=nSnpHmm-1,1,-1
     endif
 
     ! Impute if allele is missing
-    if (GenosHmmMaCH(CurrentInd,marker)==MISSING) then
+    if (PhaseHmmMaCH(CurrentInd,marker,hap)==ALLELE_MISSING) then
         FullH(CurrentInd,marker,hap) = SubH(Hapi,marker)
     endif
 
@@ -129,7 +129,7 @@ else
 endif
 
 ! Impute if allele is missing
-if (GenosHmmMaCH(CurrentInd,1)==MISSING) then
+if (PhaseHmmMaCH(CurrentInd,1,hap)==ALLELE_MISSING) then
     FullH(CurrentInd,1,hap) = SubH(Hapi,1)
 endif
 
