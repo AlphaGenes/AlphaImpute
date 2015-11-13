@@ -1282,22 +1282,111 @@ enddo
 end subroutine SetUpPrior
 
 !######################################################################
-subroutine SetUpEquationsGenotypes
+subroutine SetUpEquationsGenotypesHaploid
 ! Initialize the variables and parameters of the HMM model described in
 ! Li et al. 2010, Appendix
 
+use Global
 use GlobalVariablesHmmMaCH
 use random
 implicit none
 
 integer :: i,j,p
 
-! ! Initialization of HMM parameters
-! Epsilon=0.00000001
-! Thetas=0.01
+!Initialise FullH
+
+! If the number of phased gametes from AlphaImpute is above a threshold, then
+! haploytpes produced from AlphaImpute are used in the model (FullH)
+if (nGametesPhased/float(2*nAnisP)>phasedThreshold/100.0) then
+    ! print *, nGametesPhased/float(2*nAnisP), phasedThreshold/100.0
+    do i=1,nIndHmmMaCH
+        FullH(i,:,:)=PhaseHmmMaCH(i,:,:)
+
+        ! Missing alleles (and individuals that are not phased) are called at random
+        do j=1,nSnpHmm
+            if (PhaseHmmMaCH(i,j,1)==ALLELE_MISSING) then
+                if (ran1(idum)>=0.5) then
+                    FullH(i,j,1)=0
+                else
+                    FullH(i,j,1)=1
+                endif
+            endif
+
+            if (PhaseHmmMaCH(i,j,2)==ALLELE_MISSING) then
+                if (ran1(idum)>=0.5) then
+                    FullH(i,j,2)=0
+                else
+                    FullH(i,j,2)=1
+                endif
+            endif
+
+        enddo
+    enddo
+
+else
+    ! If the number of phased gametes from AlphaImpute is below a threshold, then
+    ! haplotypes of phased animals from AlphaImpute are used in the model, and
+    ! haplotypes of genotyped animals are used otherwise.
+
+    ! Initialise FullH with the Genotype information
+    call SetUpEquationsGenotypesDiploid
+
+    ! Overwrite haplotypes to use phased data in case phased haplotypes from
+    ! AlphaImpute are available
+    do i=1,nIndHmmMaCH      ! For every Individual in the Genotype file
+        if (GlobalHmmPhasedInd(i,1)==.TRUE.) then
+            FullH(i,:,1)=PhaseHmmMaCH(i,:,1)
+            !  If there is missing information in the phased data, called allele at random
+            do j=1,nSnpHmm
+                if (PhaseHmmMaCH(i,j,1)==ALLELE_MISSING) then
+                    if (ran1(idum)>=0.5) then
+                        FullH(i,j,1)=0
+                    else
+                        FullH(i,j,1)=1
+                    endif
+                endif
+            enddo
+        endif
+
+        if (GlobalHmmPhasedInd(i,2)==.TRUE.) then
+            FullH(i,:,2)=PhaseHmmMaCH(i,:,2)
+            !  If there is missing information in the phased data, called allele at random
+            do j=1,nSnpHmm
+
+                if (PhaseHmmMaCH(i,j,2)==ALLELE_MISSING) then
+                    if (ran1(idum)>=0.5) then
+                        FullH(i,j,2)=0
+                    else
+                        FullH(i,j,2)=1
+                    endif
+                endif
+            enddo
+        endif
+
+    enddo
+endif
+
+ErrorUncertainty(:)=0
+ErrorMatches(:)=0
+ErrorMismatches(:)=0
+Crossovers(:)=0
+
+end subroutine SetUpEquationsGenotypesHaploid
+
+!######################################################################
+subroutine SetUpEquationsGenotypesDiploid
+! Initialize the variables and parameters of the HMM model described in
+! Li et al. 2010, Appendix
+
+use Global
+use GlobalVariablesHmmMaCH
+use random
+implicit none
+
+integer :: i,j,p
 
 !Initialise FullH
-do i=1,nIndHmmMaCH      ! For every Genotyped Individual
+do i=1,nIndHmmMaCH      ! For every Individual in the Genotype file
     do j=1,nSnpHmm      ! For each SNP
 
         ! Phase homozygose locus
@@ -1336,15 +1425,13 @@ do i=1,nIndHmmMaCH      ! For every Genotyped Individual
     enddo
 enddo
 
-! call CalcPenetrance
-
 ErrorUncertainty(:)=0
 ErrorMatches(:)=0
 ErrorMismatches(:)=0
 Crossovers(:)=0
-!print*, Crossovers(:)
 
-end subroutine SetUpEquationsGenotypes
+end subroutine SetUpEquationsGenotypesDiploid
+
 
 !######################################################################
 subroutine SetUpEquationsReads
