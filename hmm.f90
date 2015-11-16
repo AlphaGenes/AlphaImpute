@@ -511,6 +511,16 @@ INTERFACE
     implicit none
     integer,intent(IN) :: CurrentInd, hap
   END SUBROUTINE SampleHaplotypeSource
+
+  SUBROUTINE SampleSegmentHaplotypeSource(CurrentInd,hap,snpStart,snpStop)
+    use Global
+    use GlobalVariablesHmmMaCH
+    use Par_Zig_mod
+    use omp_lib
+
+    implicit none
+    integer,intent(IN) :: CurrentInd, hap, snpStart, snpStop
+  END SUBROUTINE SampleSegmentHaplotypeSource
 END INTERFACE
 
 
