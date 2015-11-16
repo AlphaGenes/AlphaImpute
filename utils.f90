@@ -5,7 +5,7 @@ subroutine RemoveInformationGameteSegment(gamete,nStart,nStop)
 use GlobalVariablesHmmMaCH
 
 INTEGER,INTENT(IN) :: nStart, nStop
-INTEGER,INTENT(OUT),ALLOCATABLE,DIMENSION(:) :: gamete
+INTEGER,INTENT(OUT),DIMENSION(:) :: gamete
 
 gamete(nStart:nStop) = ALLELE_MISSING
 
@@ -17,7 +17,7 @@ subroutine RemoveInformationGamete(gamete)
 
 use GlobalVariablesHmmMaCH
 
-INTEGER,INTENT(OUT),ALLOCATABLE,DIMENSION(:) :: gamete
+INTEGER,INTENT(OUT),DIMENSION(:) :: gamete
 
 gamete(:) = ALLELE_MISSING
 
@@ -93,7 +93,7 @@ use Global
 use GlobalVariablesHmmMaCH
 
 INTEGER :: allelesPhased
-INTEGER,ALLOCATABLE :: gamete(:)
+INTEGER,INTENT(IN) :: gamete(:)
 
 allelesPhased = count(gamete(:)==1 .OR. gamete(:)==0)
 RETURN
