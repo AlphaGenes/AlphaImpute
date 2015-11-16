@@ -1,74 +1,79 @@
+MODULE Utils
+IMPLICIT NONE
+
+CONTAINS
+
 !######################################################################
-subroutine RemoveInformationGameteSegment(gamete,nStart,nStop)
+SUBROUTINE RemoveInformationGameteSegment(gamete,nStart,nStop)
 ! Remove the allele information of a gamete segment
 
-use GlobalVariablesHmmMaCH
+USE GlobalVariablesHmmMaCH
 
 INTEGER,INTENT(IN) :: nStart, nStop
-INTEGER,INTENT(OUT),DIMENSION(:) :: gamete
+INTEGER(KIND=1),INTENT(OUT),DIMENSION(:) :: gamete
 
 gamete(nStart:nStop) = ALLELE_MISSING
 
-end subroutine RemoveInformationGameteSegment
+END SUBROUTINE RemoveInformationGameteSegment
 
 !######################################################################
-subroutine RemoveInformationGamete(gamete)
+SUBROUTINE RemoveInformationGamete(gamete)
 ! Remove the allele information of a gamete
 
-use GlobalVariablesHmmMaCH
+USE GlobalVariablesHmmMaCH
 
-INTEGER,INTENT(OUT),DIMENSION(:) :: gamete
+INTEGER(KIND=1),INTENT(OUT),DIMENSION(:) :: gamete
 
 gamete(:) = ALLELE_MISSING
 
-end subroutine RemoveInformationGamete
+END SUBROUTINE RemoveInformationGamete
 
 !######################################################################
-subroutine RemoveAlleleInformationIndividual(ToWhom)
+SUBROUTINE RemoveAlleleInformationIndividual(ToWhom)
 ! Remove the genotype information of an individual
 
-use GlobalVariablesHmmMaCH
+USE GlobalVariablesHmmMaCH
 
 INTEGER, INTENT(IN) :: ToWhom
 
 call RemoveAlleleInformationSegment(ToWhom, 1, nSnpHmm)
 
-end subroutine RemoveAlleleInformationIndividual
+END SUBROUTINE RemoveAlleleInformationIndividual
 
 !######################################################################
-subroutine RemoveAlleleInformationSegment(ToWhom,nStart,nStop)
+SUBROUTINE RemoveAlleleInformationSegment(ToWhom,nStart,nStop)
 ! Remove the genotype information of an individual
 
-use GlobalVariablesHmmMaCH
+USE GlobalVariablesHmmMaCH
 
 INTEGER, INTENT(IN) :: ToWhom, nStart, nStop
 
-call RemoveInformationGamete(PhaseHmmMaCH(ToWhom,:,1), nStart, nStop)
-call RemoveInformationGamete(PhaseHmmMaCH(ToWhom,:,2), nStart, nStop)
+call RemoveInformationGamete(PhaseHmmMaCH(ToWhom,nStart:nStop,1))
+call RemoveInformationGamete(PhaseHmmMaCH(ToWhom,nStart:nStop,2))
 
-end subroutine RemoveAlleleInformationSegment
+END SUBROUTINE RemoveAlleleInformationSegment
 
 !######################################################################
-subroutine RemoveGenotypeInformationIndividual(ToWhom)
+SUBROUTINE RemoveGenotypeInformationIndividual(ToWhom)
 ! Remove the genotype information of an individual
 
-use GlobalVariablesHmmMaCH
+USE GlobalVariablesHmmMaCH
 
 INTEGER, INTENT(IN) :: ToWhom
 
 GenosHmmMaCH(ToWhom,:) = MISSING
 
-end subroutine RemoveGenotypeInformationIndividual
+END SUBROUTINE RemoveGenotypeInformationIndividual
 
 !######################################################################
 FUNCTION CountPhasedGametes RESULT( gametesPhased )
 
-use Global
-use GlobalVariablesHmmMaCH
+USE Global
+USE GlobalVariablesHmmMaCH
 
 INTEGER :: gametesPhased, ind
 INTEGER :: CountPhasedAlleles
-INTEGER, ALLOCATABLE :: gamete(:)
+INTEGER(KIND=1), ALLOCATABLE :: gamete(:)
 
 allocate(gamete(nSnpHmm))
 gametesPhased=0
@@ -84,17 +89,19 @@ do ind=1,nAnisP
     endif
 enddo
 RETURN
-end FUNCTION CountPhasedGametes
+END FUNCTION CountPhasedGametes
 
 !######################################################################
 FUNCTION CountPhasedAlleles(gamete) RESULT( allelesPhased )
 
-use Global
-use GlobalVariablesHmmMaCH
+USE Global
+USE GlobalVariablesHmmMaCH
 
 INTEGER :: allelesPhased
-INTEGER,INTENT(IN) :: gamete(:)
+INTEGER(KIND=1),INTENT(IN) :: gamete(:)
 
 allelesPhased = count(gamete(:)==1 .OR. gamete(:)==0)
 RETURN
-end FUNCTION CountPhasedAlleles
+END FUNCTION CountPhasedAlleles
+
+END MODULE

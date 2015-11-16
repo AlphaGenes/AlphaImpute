@@ -335,21 +335,11 @@ subroutine ParseMaCHDataGenos
 ! subroutine ParseMaCHData
 use Global
 use GlobalVariablesHmmMaCH
+use Utils
 
 implicit none
 integer :: i,j,k
 integer :: maxHaps      ! Maximum number of haplotypes possible
-
-INTERFACE
-  FUNCTION CountPhasedGametes RESULT( gametesPhased )
-    use Global
-    use GlobalVariablesHmmMaCH
-
-    INTEGER :: gametesPhased, ind
-    INTEGER :: CountPhasedAlleles
-    INTEGER, ALLOCATABLE :: gamete(:)
-  END FUNCTION CountPhasedGametes
-END INTERFACE
 
 #ifdef DEBUG
     write(0,*) 'DEBUG: [ParseMaCHDataGenos] ...'
