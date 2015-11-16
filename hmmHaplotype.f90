@@ -1,3 +1,9 @@
+MODULE hmmHaplotyper
+
+IMPLICIT NONE
+
+CONTAINS
+
 subroutine ForwardAlgorithmForHaplotype(CurrentInd, hap)
 use Global
 use GlobalVariablesHmmMaCH
@@ -17,12 +23,12 @@ integer :: marker
 
 marker = 1
 call SetUpPriorHaplotype
-call ConditionHaplotypeOnData(CurrentInd, marker, PhaseHmmMaCH(CurrentInd,marker,hap))
+call ConditionHaplotypeOnData(marker, PhaseHmmMaCH(CurrentInd,marker,hap))
 
 do marker=2,nSnpHmm
     ! call GetSmallMemoryBlock
     call TransposeHaplotype(marker-1, marker, Thetas(marker-1))
-    call ConditionHaplotypeOnData(CurrentInd, marker, PhaseHmmMaCH(CurrentInd,marker,hap))
+    call ConditionHaplotypeOnData(marker, PhaseHmmMaCH(CurrentInd,marker,hap))
 enddo
 
 end subroutine ForwardAlgorithmForHaplotype
@@ -290,7 +296,8 @@ use Par_Zig_mod
 use omp_lib
 
 implicit none
-integer, intent(IN) :: Marker, allele
+integer, intent(IN) :: Marker
+integer(kind=1),intent(IN) :: allele
 
 ! Local variables
 integer :: i
@@ -331,3 +338,5 @@ do i=1,nHapInSubH
 enddo
 
 end subroutine SetUpPriorHaplotype
+
+END MODULE hmmHaplotyper

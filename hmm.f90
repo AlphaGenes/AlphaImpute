@@ -478,6 +478,7 @@ subroutine MaCHForInd(CurrentInd, HMM)
 
 use Global
 use GlobalVariablesHmmMaCH
+use hmmHaplotyper
 use random
 use Par_Zig_mod
 use omp_lib
@@ -490,40 +491,6 @@ integer, intent(in) :: CurrentInd, HMM
 !integer :: HapCount, ShuffleInd1, ShuffleInd2, states, thread
 integer :: genotype, i, states, thread
 integer :: Shuffle1(nIndHmmMaCH), Shuffle2(nIndHmmMaCH)
-
-INTERFACE
-  SUBROUTINE ForwardAlgorithmForHaplotype(CurrentInd, hap)
-    use Global
-    use GlobalVariablesHmmMaCH
-    use Par_Zig_mod
-    use omp_lib
-    implicit none
-    integer, intent(in) :: CurrentInd, hap
-    ! double precision, intent(IN), allocatable :: Thetas(:)
-  END SUBROUTINE ForwardAlgorithmForHaplotype
-
-  SUBROUTINE SampleHaplotypeSource(CurrentInd, hap)
-    use Global
-    use GlobalVariablesHmmMaCH
-    use Par_Zig_mod
-    use omp_lib
-
-    implicit none
-    integer,intent(IN) :: CurrentInd, hap
-  END SUBROUTINE SampleHaplotypeSource
-
-  SUBROUTINE SampleSegmentHaplotypeSource(CurrentInd,hap,snpStart,snpStop)
-    use Global
-    use GlobalVariablesHmmMaCH
-    use Par_Zig_mod
-    use omp_lib
-
-    implicit none
-    integer,intent(IN) :: CurrentInd, hap, snpStart, snpStop
-  END SUBROUTINE SampleSegmentHaplotypeSource
-END INTERFACE
-
-
 
 ! The number of parameters of the HMM are:
 !   nHapInSubH = Number of haplotypes in the template haplotype set, H
