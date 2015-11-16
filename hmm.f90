@@ -13,13 +13,13 @@ double precision, parameter :: EPSILON_ERROR=0.00000001
 
 
 character(len=300) :: GenotypeFileName,CheckPhaseFileName,CheckGenoFileName
-integer :: nIndHmmMaCH,GlobalRoundHmm,nSnpHmm,nPhased
+integer :: nIndHmmMaCH,GlobalRoundHmm,nSnpHmm,nGametesPhased,nAnimPhased
 integer :: nHapInSubH,useProcs,nRoundsHmm,HmmBurnInRound,phasedThreshold,idum
 integer,allocatable,dimension(:,:) :: GenosHmmMaCH,SubH
 integer(kind=1),allocatable,dimension(:,:,:) :: PhaseHmmMaCH,FullH
 integer,allocatable,dimension(:) :: ErrorUncertainty,ErrorMatches,ErrorMismatches,Crossovers
 integer,allocatable,dimension(:) :: GlobalHmmHDInd
-logical,allocatable,dimension(:) :: GlobalHmmPhasedInd
+logical,allocatable,dimension(:,:) :: GlobalHmmPhasedInd
 double precision,allocatable,dimension(:) :: Thetas,Epsilon
 double precision,allocatable,dimension(:,:) :: ForwardProbs
 double precision,allocatable,dimension(:,:,:) :: Penetrance, ShotgunErrorMatrix
@@ -69,7 +69,7 @@ allocate(GlobalHmmID(nIndHmmMaCH))
 allocate(GlobalHmmHDInd(nIndHmmMaCH))
 
 ! Allocate memory to store Animals Highly Dense Genotyped
-allocate(GlobalHmmPhasedInd(nIndHmmMaCH))
+allocate(GlobalHmmPhasedInd(nIndHmmMaCH,2))
 ! No animal has been HD genotyped YET
 ! WARNING: If this variable only stores 1 and 0, then its type should
 !          logical: GlobalHmmHDInd=.false.
@@ -214,7 +214,7 @@ do GlobalRoundHmm=1,nRoundsHmm
     !$OMP PARALLEL DO DEFAULT(shared)
     !$!OMP DO 
     do i=1,nIndHmmMaCH
-        call MaCHForInd(i)
+        call MaCHForInd(i, HMM)
     enddo
     !$!OMP END DO
     !$OMP END PARALLEL DO
@@ -472,7 +472,7 @@ endif
 end subroutine ParseMaCHDataGenos
 
 !######################################################################
-subroutine MaCHForInd(CurrentInd)
+subroutine MaCHForInd(CurrentInd, HMM)
 ! Create a Template Haplotype Library, H, and create HMM for each
 ! individual
 
@@ -484,7 +484,7 @@ use omp_lib
 
 implicit none
 
-integer, intent(in) :: CurrentInd
+integer, intent(in) :: CurrentInd, HMM
 
 ! Local variables
 !integer :: HapCount, ShuffleInd1, ShuffleInd2, states, thread
@@ -569,17 +569,39 @@ endif
 ! WARNING: This code is something to change according to the Hybrid paper
 ! if (GlobalHmmPhasedInd(currentInd)==.FALSE.) then
 ! if (GlobalHmmHDInd(currentInd)==0) then
-if (phasedThreshold>nPhased/nAnisP) then ! Training mode 1
+
+
+if (HMM==RUN_HMM_ONLY) then
     call ForwardAlgorithm(CurrentInd)
     call SampleChromosomes(CurrentInd)
 else
-    call ForwardAlgorithmForHaplotype(currentInd,1)
-    call SampleHaplotypeSource(CurrentInd,1)
-    call ForwardAlgorithmForHaplotype(currentInd,2)
-    call SampleHaplotypeSource(CurrentInd,2)
-    ! TODO: We have to do something here to training mode 3
-    ! call ForwardAlgorithm(CurrentInd)
-    ! call SampleChromosomes(CurrentInd)
+! TODO: HERE IT GOES THE IMPUTATION MODES
+    if (nGametesPhased/float(2*nAnisP)>phasedThreshold/100.0) then ! Imputation mode: haplotypes! 1
+        ! TODO: IF THIS IS TRUE, GenosHmmMaCH HAS NOT BEEN INITIALISED
+        ! AND CALLING FORWARDALGORITHM WILL GIVE AN ERROR!!!!!!!!!!!!!!!!!!!!!!!!!!
+        ! TODO: RECONSIDER TO CHANGE PARSEMACHDATA SUBROUTINE TO READ GenosHmmMaCH AS WELL!!!!!!!!!!!!
+
+        ! print *,'FA'
+        ! call ForwardAlgorithm(CurrentInd)
+        ! print *, 'SC'
+        ! call SampleChromosomes(CurrentInd)
+        ! print *,'adios'
+            call ForwardAlgorithmForHaplotype(currentInd,1)
+            call SampleHaplotypeSource(CurrentInd,1)
+            call ForwardAlgorithmForHaplotype(currentInd,2)
+            call SampleHaplotypeSource(CurrentInd,2)
+    else
+        if (GlobalHmmPhasedInd(currentInd,1)==.FALSE. .OR. &
+            GlobalHmmPhasedInd(currentInd,2)==.FALSE.) then
+            call ForwardAlgorithmForHaplotype(currentInd,1)
+            call SampleHaplotypeSource(CurrentInd,1)
+            call ForwardAlgorithmForHaplotype(currentInd,2)
+            call SampleHaplotypeSource(CurrentInd,2)
+        else
+            call ForwardAlgorithm(CurrentInd)
+            call SampleChromosomes(CurrentInd)
+        endif
+    endif
 endif
 
 ! WARNING: The idea of not to use the first HmmBurnInRound rounds suggests
