@@ -581,14 +581,14 @@ deallocate(SubH)
 end subroutine MaCHForInd
 
 !######################################################################
-subroutine SampleChromosomes(CurrentInd)
+subroutine SampleChromosomes(CurrentInd,StartSnp,StopSnp)
 use Global
 use GlobalVariablesHmmMaCH
 use omp_lib
 use Par_Zig_mod
 implicit none
 
-integer,intent(in) :: CurrentInd
+integer,intent(in) :: CurrentInd,StartSnp,StopSnp
 
 ! Local variables
 integer :: i,j,k,l,SuperJ,Index,OffOn,State1,State2,TmpJ,TopBot,FirstState,SecondState,Tmp,Thread
@@ -598,7 +598,7 @@ double precision :: Theta
 
 Summer=0.0
 Index=0
-Probs = ForwardProbs(:,nSnpHmm)
+Probs = ForwardProbs(:,StopSnp)
 Thread = omp_get_thread_num()
 
 ! Calculate sum over all states. The sum corresponds to all the
@@ -621,7 +621,7 @@ OffOn=0
 State1 = 1
 State2 = 1
 
-Probs = ForwardProbs(:,nSnpHmm)
+Probs = ForwardProbs(:,StopSnp)
 do i=1,nHapInSubH
     do j=1,i
         Index=Index+1
@@ -636,8 +636,8 @@ do i=1,nHapInSubH
     if (OffOn==1) exit
 enddo
 
-SuperJ=nSnpHmm
-do while (SuperJ>1)
+SuperJ=StopSnp
+do while (SuperJ>StartSnp)
     SuperJ=SuperJ-1
     if (HMMOption/=RUN_HMM_NGS) then
         call ImputeAlleles(CurrentInd,SuperJ+1,State1,State2)
@@ -809,12 +809,10 @@ do while (SuperJ>1)
 enddo
 
 if (HMMOption/=RUN_HMM_NGS) then
-    call ImputeAlleles(CurrentInd,1,State1,State2)
+    call ImputeAlleles(CurrentInd,StartSnp,State1,State2)
 else
-    call ImputeAllelesNGS(CurrentInd,1,State1,State2)
+    call ImputeAllelesNGS(CurrentInd,StartSnp,State1,State2)
 endif
- 
-! call ImputeAlleles(CurrentInd,1,State1,State2)
 
 end subroutine SampleChromosomes
 
