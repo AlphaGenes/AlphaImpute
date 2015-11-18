@@ -778,11 +778,10 @@ do while (SuperJ>1)
     Summer=0.0
     Index=0
     OffOn=0
-    Probs=ForwardProbs(:,nSnpHmm)
     do i=1,nHapInSubH
         do j=1,i
             Index=Index+1
-            Summer=Summer+Probs(Index)
+            Summer=Summer+ForwardProbs(Index,SuperJ)
             if (Summer>Choice) then
                 State1=i
                 State2=j
