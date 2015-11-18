@@ -320,8 +320,6 @@ k=0
 nGametesPhased=0
 nGametesPhased = CountPhasedGametes()
 
-print *,nGametesPhased
-
 if (nGametesPhased/float(2*nAnisP) > phasedThreshold/100.0) then
 ! If the number of phased gametes is above a threshold, then
 ! read the phased information of AlphaImpute, store it in
@@ -420,7 +418,6 @@ endif
 
 ! Check if the number of Haplotypes the user has considered in the
 ! Spec file, Sub H (MaCH paper: Li et al. 2010), is reached.
-print *, nHapInSubH, maxHaps
 if (nHapInSubH>maxHaps) then
     print*, "Data set is too small for the number of Haplotypes in Sub H specified"
     stop
