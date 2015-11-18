@@ -477,14 +477,18 @@ call RandomOrderPar(Shuffle1,nIndHmmMaCH,thread)
 call RandomOrderPar(Shuffle2,nIndHmmMaCH,thread)
 
 ! Extract haps template (SubH) ...
-if (nGametesPhased/float(2*nAnisP)>phasedThreshold/100.0) then
-    ! If the number of phased gametes with AlphaImpute is above
-    ! a threshold, then template is populated with the phased data
-    call ExtractTemplateByHaps(CurrentInd,Shuffle1,Shuffle2)
-else
-    ! Otherwise, the template is populated with haplotypes at random
-    ! from all the HD animals
+if (HMM==RUN_HMM_ONLY) then
     call ExtractTemplateHaps(CurrentInd,Shuffle1,Shuffle2)
+else
+    if (nGametesPhased/float(2*nAnisP)>phasedThreshold/100.0) then
+        ! If the number of phased gametes with AlphaImpute is above
+        ! a threshold, then template is populated with the phased data
+        call ExtractTemplateByHaps(CurrentInd,Shuffle1,Shuffle2)
+    else
+        ! Otherwise, the template is populated with haplotypes at random
+        ! from all the HD animals
+        call ExtractTemplateHaps(CurrentInd,Shuffle1,Shuffle2)
+    endif
 endif
 
 ! ... selecting pairs of haplotypes at random
