@@ -61,9 +61,21 @@ USE GlobalVariablesHmmMaCH
 
 INTEGER, INTENT(IN) :: ToWhom
 
-GenosHmmMaCH(ToWhom,:) = MISSING
+call RemoveGenotypeInformationIndividualSegment(ToWhom,1,nSnpHmm)
 
 END SUBROUTINE RemoveGenotypeInformationIndividual
+
+!######################################################################
+SUBROUTINE RemoveGenotypeInformationIndividualSegment(ToWhom,nStart,nStop)
+! Remove the genotype information of an individual
+
+USE GlobalVariablesHmmMaCH
+
+INTEGER, INTENT(IN) :: ToWhom,nStart,nStop
+
+GenosHmmMaCH(ToWhom,nStart:nStop) = MISSING
+
+END SUBROUTINE RemoveGenotypeInformationIndividualSegment
 
 !######################################################################
 FUNCTION CountPhasedGametes RESULT( gametesPhased )
