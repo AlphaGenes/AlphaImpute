@@ -1065,6 +1065,62 @@ enddo
 end subroutine ForwardAlgorithm
 
 !######################################################################
+subroutine ForwardAlgorithmForSegment(CurrentInd, StartSnp, StopSnp)
+! Update the forward variable of the HMM model
+
+use GlobalVariablesHmmMaCH
+use omp_lib
+
+implicit none
+
+integer, intent(in) :: CurrentInd, StartSnp, StopSnp
+double precision :: Theta
+
+! Local variables
+integer :: i,j,PrecedingMarker
+
+! Setup the initial state distributions
+
+call SetUpPrior
+
+j=1
+! CurrentInd is the individual being studied and it is necessary to
+! obtain the genotype of this individual in ConditionaOnData subroutine
+! For j=1, ConditionaOnData will initialize the variable
+! ForwardProbs(:,1) with the Prior Probabilities
+#if DEBUG.EQ.1
+    write(0,*) 'DEBUG: Update forward variable with emission probabilities [ForwardAlgorithm]'
+#endif
+call ConditionOnData(CurrentInd,j)
+
+! WARNING: This variable, Theta, should be considered as local as is
+!          global through out the HMM code for different purposes.
+!          Look at subroutines Transpose, SampleChromosomes and
+!          SamplePath
+Theta=0.0
+
+! PrecedingMarker=1
+PrecedingMarker=StartSnp
+#if DEBUG.EQ.1
+    write(0,*) 'DEBUG: Calculate Forward variables [ForwardAlgorithm]'
+#endif
+
+! do j=2,nSnpHmm
+do j=2,StopSnp
+    ! Cumulative recombination fraction allows us to skip uninformative positions
+    Theta=Theta+Thetas(j-1)-Theta*Thetas(j-1)
+    ! Skip over uninformative positions to save time
+    if ((GenosHmmMaCH(CurrentInd,j)/=MISSING).or.(j==nSnpHmm)) then
+        call Transpose(j,PrecedingMarker,Theta)
+        call ConditionOnData(CurrentInd,j)
+        PrecedingMarker=j
+        Theta=0.0
+    endif
+enddo
+
+end subroutine ForwardAlgorithmForSegment
+
+!######################################################################
 subroutine Transpose(CurrentMarker,PrecedingMarker,Theta)
 ! Calculates the probability of get a particular state at CurrentMarker
 ! from any other state at PrecedingMarker using the transition probabilities.

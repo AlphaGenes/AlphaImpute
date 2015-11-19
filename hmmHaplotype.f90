@@ -12,7 +12,6 @@ use omp_lib
 
 implicit none
 integer, intent(in) :: CurrentInd, hap
-! double precision, intent(IN), allocatable :: Thetas(:)
 
 ! Local variables
 integer :: marker
@@ -26,12 +25,43 @@ call SetUpPriorHaplotype
 call ConditionHaplotypeOnData(marker, PhaseHmmMaCH(CurrentInd,marker,hap))
 
 do marker=2,nSnpHmm
-    ! call GetSmallMemoryBlock
     call TransposeHaplotype(marker-1, marker, Thetas(marker-1))
     call ConditionHaplotypeOnData(marker, PhaseHmmMaCH(CurrentInd,marker,hap))
 enddo
 
 end subroutine ForwardAlgorithmForHaplotype
+
+!######################################################################
+subroutine ForwardAlgorithmForSegmentHaplotype(CurrentInd, hap, StartSnp, StopSnp)
+use Global
+use GlobalVariablesHmmMaCH
+use Par_Zig_mod
+use omp_lib
+
+implicit none
+integer, intent(in) :: CurrentInd, hap, StartSnp, StopSnp
+! double precision, intent(IN), allocatable :: Thetas(:)
+
+! Local variables
+integer :: marker
+
+#if DEBUG.EQ.1
+    write(0,*) 'DEBUG: [ForwardAlgorithmForHaplotype]'
+#endif
+
+! marker = 1
+marker = StartSnp
+call SetUpPriorHaplotype
+call ConditionHaplotypeOnData(marker, PhaseHmmMaCH(CurrentInd,marker,hap))
+
+! do marker=2,nSnpHmm
+do marker=2,StopSnp
+    ! call GetSmallMemoryBlock
+    call TransposeHaplotype(marker-1, marker, Thetas(marker-1))
+    call ConditionHaplotypeOnData(marker, PhaseHmmMaCH(CurrentInd,marker,hap))
+enddo
+
+end subroutine ForwardAlgorithmForSegmentHaplotype
 
 !######################################################################
 subroutine SampleHaplotypeSource(CurrentInd,hap)
@@ -143,14 +173,14 @@ end subroutine SampleHaplotypeSource
 
 
 !######################################################################
-subroutine SampleSegmentHaplotypeSource(CurrentInd,hap,snpStart,snpStop)
+subroutine SampleSegmentHaplotypeSource(CurrentInd,hap,StartSnp,StopSnp)
 use Global
 use GlobalVariablesHmmMaCH
 use Par_Zig_mod
 use omp_lib
 
 implicit none
-integer,intent(IN) :: CurrentInd, hap, snpStart, snpStop
+integer,intent(IN) :: CurrentInd, hap, StartSnp, StopSnp
 
 ! Local variables
 integer :: i, state, marker, Thread, Hapi
@@ -165,7 +195,7 @@ double precision :: Summer, Choice, Theta, cross, nocross
 
 Thread = omp_get_thread_num()
 Summer=0.0
-Probs = ForwardProbs(:,nSnpHmm)
+Probs = ForwardProbs(:,StopSnp)
 
 ! Calculate sum over all states
 do state=1,nHapInSubH
@@ -188,7 +218,7 @@ if (Hapi==0) then
     Hapi=INT(1+par_uni(Thread)*nHapInSubH)
 endif
 
-do marker=snpStop,snpStart,-1
+do marker=StopSnp,StartSnp,-1
     ! Track whether imputed state matches observed allele
     if (SubH(Hapi,marker)==PhaseHmmMaCH(CurrentInd,marker,hap)) then
         ErrorMatches(marker)=ErrorMatches(marker)+1
@@ -237,15 +267,15 @@ do marker=snpStop,snpStart,-1
 enddo
 
 ! Track whether imputed state matches observed allele
-if (SubH(Hapi,snpStart)==PhaseHmmMaCH(CurrentInd,snpStart,hap)) then
-    ErrorMatches(snpStart)=ErrorMatches(snpStart)+1
+if (SubH(Hapi,StartSnp)==PhaseHmmMaCH(CurrentInd,StartSnp,hap)) then
+    ErrorMatches(StartSnp)=ErrorMatches(StartSnp)+1
 else
-    ErrorMismatches(snpStart)=ErrorMismatches(snpStart)+1
+    ErrorMismatches(StartSnp)=ErrorMismatches(StartSnp)+1
 endif
 
 ! Impute if allele is missing
-if (PhaseHmmMaCH(CurrentInd,snpStart,hap)==ALLELE_MISSING) then
-    FullH(CurrentInd,snpStart,hap) = SubH(Hapi,snpStart)
+if (PhaseHmmMaCH(CurrentInd,StartSnp,hap)==ALLELE_MISSING) then
+    FullH(CurrentInd,StartSnp,hap) = SubH(Hapi,StartSnp)
 endif
 
 end subroutine SampleSegmentHaplotypeSource
