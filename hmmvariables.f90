@@ -9,6 +9,7 @@ integer            :: MISSING=3
 double precision, parameter :: SEQUENCING_ERROR=0.01
 double precision, parameter :: EPSILON_ERROR=0.00000001
 
+integer, parameter :: NUM_SEGMENTS=10
 
 character(len=300) :: GenotypeFileName,CheckPhaseFileName,CheckGenoFileName
 integer :: nIndHmmMaCH,GlobalRoundHmm,nSnpHmm,nGametesPhased,nAnimPhased
