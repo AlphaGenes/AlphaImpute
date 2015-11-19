@@ -101,7 +101,78 @@ INTEGER :: allelesPhased
 INTEGER(KIND=1),INTENT(IN) :: gamete(:)
 
 allelesPhased = count(gamete(:)==1 .OR. gamete(:)==0)
+
+
 RETURN
 END FUNCTION CountPhasedAlleles
+
+!######################################################################
+FUNCTION CountMissingAlleles(gamete) RESULT( allelesMissing )
+
+USE Global
+USE GlobalVariablesHmmMaCH
+
+INTEGER :: allelesMissing
+INTEGER(KIND=1),INTENT(IN) :: gamete(:)
+
+allelesMissing = nSnpHmm - CountPhasedAlleles(gamete)
+
+RETURN
+END FUNCTION CountMissingAlleles
+
+!######################################################################
+FUNCTION CountGenotypedAllelesByGametes(gamete1, gamete2) RESULT( allelesGenotyped )
+
+USE Global
+USE GlobalVariablesHmmMaCH
+
+INTEGER(KIND=1),INTENT(IN) :: gamete1(:), gamete2(:)
+
+! Local variables
+INTEGER :: allelesGenotyped
+INTEGER :: i
+
+do i=1,size(gamete1)
+    if ((gamete1(i)==1 .OR. gamete1(i)==0) .AND. (gamete2(i)==1 .OR. gamete2(i)==0)) then
+        allelesGenotyped = allelesGenotyped + 1
+    endif
+enddo
+
+RETURN
+END FUNCTION CountGenotypedAllelesByGametes
+
+!######################################################################
+FUNCTION CountGenotypedGenotypesByChromosome(chromosome) RESULT( genotypesMissing )
+
+USE Global
+USE GlobalVariablesHmmMaCH
+
+INTEGER,INTENT(IN) :: chromosome(:)
+
+! Local variables
+INTEGER :: genotypesMissing
+
+genotypesMissing = count(chromosome(:)==0 .or. chromosome(:)==2 .or. chromosome(:)==1)
+
+RETURN
+END FUNCTION CountGenotypedGenotypesByChromosome
+
+!######################################################################
+FUNCTION CountMissingdGenotypesByChromosome(chromosome) RESULT( genotypesMissing )
+
+USE Global
+USE GlobalVariablesHmmMaCH
+
+INTEGER,INTENT(IN) :: chromosome(:)
+
+! Local variables
+INTEGER :: genotypesMissing
+
+genotypesMissing = nSnpHmm - CountGenotypedGenotypesByChromosome(chromosome)
+
+RETURN
+END FUNCTION CountMissingdGenotypesByChromosome
+
+!######################################################################
 
 END MODULE
