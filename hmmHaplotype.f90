@@ -228,8 +228,11 @@ do marker=StopSnp,StartSnp,-1
 
     ! Impute if allele is missing
     if (PhaseHmmMaCH(CurrentInd,marker,hap)==ALLELE_MISSING) then
+    ! if (PhaseHmmMaCH(CurrentInd,marker,hap)==ALLELE_MISSING .OR. &
+    !         (GenosHmmMaCH(CurrentInd,marker)/=1 .AND. GenosHmmMaCH(CurrentInd,marker)/=2)) then
         FullH(CurrentInd,marker,hap) = SubH(Hapi,marker)
     endif
+
 
     Theta = Thetas(marker)
     Probs = ForwardProbs(:,marker)
@@ -275,6 +278,8 @@ endif
 
 ! Impute if allele is missing
 if (PhaseHmmMaCH(CurrentInd,StartSnp,hap)==ALLELE_MISSING) then
+! if (PhaseHmmMaCH(CurrentInd,StartSnp,hap)==ALLELE_MISSING .OR. &
+!         (GenosHmmMaCH(CurrentInd,StartSnp)/=1 .AND. GenosHmmMaCH(CurrentInd,StartSnp)/=2)) then
     FullH(CurrentInd,StartSnp,hap) = SubH(Hapi,StartSnp)
 endif
 
