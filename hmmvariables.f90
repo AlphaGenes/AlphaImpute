@@ -9,7 +9,7 @@ integer            :: MISSING=3
 double precision, parameter :: SEQUENCING_ERROR=0.01
 double precision, parameter :: EPSILON_ERROR=0.00000001
 
-integer, parameter :: NUM_SEGMENTS=10
+integer, parameter :: NUM_SEGMENTS=1
 
 character(len=300) :: GenotypeFileName,CheckPhaseFileName,CheckGenoFileName
 integer :: nIndHmmMaCH,GlobalRoundHmm,nSnpHmm,nGametesPhased,nAnimPhased
@@ -25,6 +25,7 @@ double precision,allocatable,dimension(:,:,:) :: Penetrance, ShotgunErrorMatrix
 real,allocatable,dimension (:,:) :: ProbImputeGenosHmm
 real,allocatable,dimension (:,:,:) :: ProbImputePhaseHmm
 integer, allocatable :: GenosCounts(:,:,:)
+
 !$omp threadprivate(ForwardProbs, SubH)
 
 end module GlobalVariablesHmmMaCH

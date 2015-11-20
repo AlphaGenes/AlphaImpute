@@ -263,15 +263,19 @@ integer :: StartSnp, StopSnp, nSegments, SegmentSize
 integer,allocatable :: nRecomb(:)
 integer :: i,k,indv
 
+
 allocate(nRecomb(nAnisP))
-nSegments=NUM_SEGMENTS
-SegmentSize=nSnpHmm/nSegments
+StartSnp=1
+StopSnp=nSnpHmm
+nSegments=nSnpHmm/windowLength
+if (MOD(nSnpHmm,windowLength)/=0) nSegments=nSegments+1
+SegmentSize=windowLength
 
 do i=1,nSegments
     nRecomb=0
     StartSnp=SegmentSize*(i-1)+1
     StopSnp=SegmentSize*i
-    if (i==nSegments) StopSnp=nSnpHmm
+    if (StopSnp>nSegments) StopSnp=nSnpHmm
 
     call ModelRecombSegment(StartSnp, StopSnp, nRecomb)
     k=0
