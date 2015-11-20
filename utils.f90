@@ -133,6 +133,21 @@ RETURN
 END FUNCTION CountMissingAlleles
 
 !######################################################################
+FUNCTION CountMissingAllelesByGametes(gamete1,gamete2) RESULT( allelesMissing )
+! TODO: THIS SUBROUTINE IS NOT WORKING PROPERLY. ALLELESMISSING GETS SHIT
+
+USE Global
+USE GlobalVariablesHmmMaCH
+
+INTEGER :: allelesMissing
+INTEGER(KIND=1),INTENT(IN) :: gamete1(:),gamete2(:)
+
+allelesMissing = nSnpHmm - CountGenotypedAllelesByGametes(gamete1,gamete2)
+
+RETURN
+END FUNCTION CountMissingAllelesByGametes
+
+!######################################################################
 FUNCTION CountGenotypedAllelesByGametes(gamete1, gamete2) RESULT( allelesGenotyped )
 
 USE Global
@@ -144,11 +159,14 @@ INTEGER(KIND=1),INTENT(IN) :: gamete1(:), gamete2(:)
 INTEGER :: allelesGenotyped
 INTEGER :: i
 
-do i=1,size(gamete1)
-    if ((gamete1(i)==1 .OR. gamete1(i)==0) .AND. (gamete2(i)==1 .OR. gamete2(i)==0)) then
-        allelesGenotyped = allelesGenotyped + 1
-    endif
-enddo
+
+allelesGenotyped = count((gamete1(:)==1 .OR. gamete1(:)==0) .AND. (gamete2(:)==1 .OR. gamete2(:)==0))
+
+! do i=1,size(gamete1)
+!     if ((gamete1(i)==1 .OR. gamete1(i)==0) .AND. (gamete2(i)==1 .OR. gamete2(i)==0)) then
+!         allelesGenotyped = allelesGenotyped + 1
+!     endif
+! enddo
 
 RETURN
 END FUNCTION CountGenotypedAllelesByGametes
