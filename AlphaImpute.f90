@@ -361,18 +361,19 @@ else
                 enddo
                 call ManageWorkLeftRight
 
-                if (HMMOption==RUN_HMM_YES) Then
-                    call MaCHController(HMMOption)
-                    call FromHMM2ImputePhase
-                endif
-
             endif
         endif
 
         if (SexOpt==1) call EnsureHetGametic
         call GeneralFillIn
 
+        if (HMMOption==RUN_HMM_YES) Then
+            call MaCHController(HMMOption)
+            call FromHMM2ImputePhase
+        endif
+
         deallocate(GlobalWorkPhase)
+
     endif
 endif
 
@@ -727,8 +728,9 @@ endif
 !   * HmmBurnInRound: Number of HMM rounds avoided during imputation
 !   * nRoundsHMM: Number of HMM rounds
 !   * useProcs: Number of processors used for parallelisation
-!   * idum: Seed for generating random numbers (Negative integer)
-read (1,*) dumC,nHapInSubH,HmmBurnInRound,nRoundsHMM,useProcs,idum
+!   * phasedThreshold: Threshold for well phased gametes
+!   * windLength: Length for the moving window
+read (1,*) dumC,nHapInSubH,HmmBurnInRound,nRoundsHMM,useProcs,idum,phasedThreshold,imputedThreshold,windowLength
 
 ! Get the file containing the true genotypes
 ! TrueGenotypeFile
