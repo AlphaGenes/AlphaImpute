@@ -316,99 +316,58 @@ integer :: maxHaps      ! Maximum number of haplotypes possible
 GlobalHmmPhasedInd=.FALSE.
 k=0
 
-! Count the number of phased gametes
-nGametesPhased=0
-nGametesPhased = CountPhasedGametes()
 
-if (nGametesPhased/float(2*nAnisP) > phasedThreshold/100.0) then
-! If the number of phased gametes is above a threshold, then
-! read the phased information of AlphaImpute, store it in
-! PhaseHmmMaCH, and keep track of which gamete is phased (GlobalHmmPhasedInd)
-    ! print *, nGametesPhased/float(2*nAnisP), phasedThreshold/100.0
-    do i=1,nAnisP
-        ! Check if individual is in the genotype file
-       if (IndivIsGenotyped(i)==1) then
-            k=k+1
-            GlobalHmmID(k)=i
-
-            ! Take the phased information from AlphaImpute
-            PhaseHmmMaCH(k,:,1)=ImputePhase(i,:,1)
-            PhaseHmmMaCH(k,:,2)=ImputePhase(i,:,2)
-
-            ! Clean the alleles from possible coding errors
-            do j=1,nSnp
-                if ((PhaseHmmMaCH(k,j,1)/=0) .AND. (PhaseHmmMaCH(k,j,1)/=1)) PhaseHmmMaCH(k,j,1)=3
-                if ((PhaseHmmMaCH(k,j,2)/=0) .AND. (PhaseHmmMaCH(k,j,2)/=1)) PhaseHmmMaCH(k,j,2)=3
-            enddo
-
-            ! Check if this individual has its haplotypes phased
-            if (float(count(PhaseHmmMaCH(k,:,1)/=3))/nSnpHmm >= (WellPhasedThresh/100.0)) Then
-                GlobalHmmPhasedInd(k,1)=.TRUE.
-            endif
-
-            if (float(count(PhaseHmmMaCH(k,:,2)/=3))/nSnpHmm >= (WellPhasedThresh/100.0)) Then
-                GlobalHmmPhasedInd(k,2)=.TRUE.
-            endif
-
-            ! Count the number of phased animals
-            if ((GlobalHmmPhasedInd(k,1)==.TRUE.).AND.(GlobalHmmPhasedInd(k,2)==.TRUE.)) Then
-                nAnimPhased=nAnimPhased+1
-            endif
-        endif
-
-    enddo
-    maxHaps = 2*nAnimPhased
-else
-! If the number of phased gametes is below a threshold, then
-! read both the phased information of AlphaImpute and high-denisty genotypes,
+! Read both the phased information of AlphaImpute and high-denisty genotypes,
 ! store it in PhaseHmmMaCH and GenosHmmMaCH, and keep track of  which
 ! gamete is phased (GlobalHmmPhasedInd) and the high-denisity
 ! genotyped animal (GlobalHmmHDInd)
 
-    do i=1,nAnisP
+do i=1,nAnisP
 
-        ! Check if individual is in the genotype file
-        if (IndivIsGenotyped(i)==1) then
-            k=k+1
-            GlobalHmmID(k)=i
+    ! Check if individual is in the genotype file
+    if (IndivIsGenotyped(i)==1) then
+        k=k+1
+        GlobalHmmID(k)=i
 
-            ! Add animal's diploid to the Diploids Library
-            GenosHmmMaCH(k,:)=ImputeGenos(i,:)
+        ! Add animal's diploid to the Diploids Library
+        GenosHmmMaCH(k,:)=ImputeGenos(i,:)
 
-            ! Take the phased information from AlphaImpute
-            PhaseHmmMaCH(k,:,1)=ImputePhase(i,:,1)
-            PhaseHmmMaCH(k,:,2)=ImputePhase(i,:,2)
+        ! Take the phased information from AlphaImpute
+        PhaseHmmMaCH(k,:,1)=ImputePhase(i,:,1)
+        PhaseHmmMaCH(k,:,2)=ImputePhase(i,:,2)
 
-            ! Check if this animal is Highly Dense genotyped
-            if ((float(count(GenosHmmMaCH(k,:)==9))/nSnp)<0.10) then
-                GlobalHmmHDInd(k)=1
-            endif
-
-            ! Clean the genotypes and alleles from possible coding errors
-            do j=1,nSnp
-                if ((GenosHmmMaCH(k,j)<0).or.(GenosHmmMaCH(k,j)>2)) GenosHmmMaCH(k,j)=MISSING
-                if ((PhaseHmmMaCH(k,j,1)/=0) .AND. (PhaseHmmMaCH(k,j,1)/=1)) PhaseHmmMaCH(k,j,1)=3
-                if ((PhaseHmmMaCH(k,j,2)/=0) .AND. (PhaseHmmMaCH(k,j,2)/=1)) PhaseHmmMaCH(k,j,2)=3
-            enddo
-
-            ! Check if this individual has its haplotypes phased
-            if (float(count(PhaseHmmMaCH(k,:,1)/=3))/nSnpHmm >= (WellPhasedThresh/100.0)) Then
-                GlobalHmmPhasedInd(k,1)=.TRUE.
-            endif
-            if (float(count(PhaseHmmMaCH(k,:,2)/=3))/nSnpHmm >= (WellPhasedThresh/100.0)) Then
-                GlobalHmmPhasedInd(k,2)=.TRUE.
-            endif
-
-            ! Count the number of phased animals
-            if ((GlobalHmmPhasedInd(k,1)==.TRUE.).AND.(GlobalHmmPhasedInd(k,2)==.TRUE.)) Then
-                nAnimPhased=nAnimPhased+1
-            endif
+        ! Check if this animal is Highly Dense genotyped
+        if ((float(count(GenosHmmMaCH(k,:)==9))/nSnp)<0.10) then
+            GlobalHmmHDInd(k)=1
         endif
-    enddo
 
-    maxHaps = 2*sum(GlobalHmmHDInd(:))
-endif
+        ! Clean the genotypes and alleles from possible coding errors
+        do j=1,nSnp
+            if ((GenosHmmMaCH(k,j)<0).or.(GenosHmmMaCH(k,j)>2)) GenosHmmMaCH(k,j)=MISSING
+            if ((PhaseHmmMaCH(k,j,1)/=0) .AND. (PhaseHmmMaCH(k,j,1)/=1)) PhaseHmmMaCH(k,j,1)=3
+            if ((PhaseHmmMaCH(k,j,2)/=0) .AND. (PhaseHmmMaCH(k,j,2)/=1)) PhaseHmmMaCH(k,j,2)=3
+        enddo
 
+        ! Check if this individual has its haplotypes phased
+        if (float(count(PhaseHmmMaCH(k,:,1)/=3))/nSnpHmm >= (WellPhasedThresh/100.0)) Then
+            GlobalHmmPhasedInd(k,1)=.TRUE.
+        endif
+        if (float(count(PhaseHmmMaCH(k,:,2)/=3))/nSnpHmm >= (WellPhasedThresh/100.0)) Then
+            GlobalHmmPhasedInd(k,2)=.TRUE.
+        endif
+
+        ! Count the number of phased animals
+        if ((GlobalHmmPhasedInd(k,1)==.TRUE.).AND.(GlobalHmmPhasedInd(k,2)==.TRUE.)) Then
+            nAnimPhased=nAnimPhased+1
+        endif
+    endif
+enddo
+
+! Count the number of phased gametes
+nGametesPhased=0
+nGametesPhased = CountPhasedGametes()
+
+maxHaps = 2*sum(GlobalHmmHDInd(:))
 
 ! Check if the number of genotyped animals is correct
 if (k/=nAnisG) then
