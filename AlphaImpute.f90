@@ -361,18 +361,19 @@ else
                 enddo
                 call ManageWorkLeftRight
 
-                if (HMMOption==RUN_HMM_YES) Then
-                    call MaCHController(HMMOption)
-                    call FromHMM2ImputePhase
-                endif
-
             endif
         endif
 
         if (SexOpt==1) call EnsureHetGametic
         call GeneralFillIn
 
+        if (HMMOption==RUN_HMM_YES) Then
+            call MaCHController(HMMOption)
+            call FromHMM2ImputePhase
+        endif
+
         deallocate(GlobalWorkPhase)
+
     endif
 endif
 
