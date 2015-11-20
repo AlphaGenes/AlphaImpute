@@ -730,7 +730,7 @@ endif
 !   * useProcs: Number of processors used for parallelisation
 !   * phasedThreshold: Threshold for well phased gametes
 !   * windLength: Length for the moving window
-read (1,*) dumC,nHapInSubH,HmmBurnInRound,nRoundsHMM,useProcs,phasedThreshold,windowLength
+read (1,*) dumC,nHapInSubH,HmmBurnInRound,nRoundsHMM,useProcs,idum,phasedThreshold,imputedThreshold,windowLength
 
 ! Get the file containing the true genotypes
 ! TrueGenotypeFile

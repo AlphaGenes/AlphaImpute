@@ -13,7 +13,9 @@ integer, parameter :: NUM_SEGMENTS=1
 
 character(len=300) :: GenotypeFileName,CheckPhaseFileName,CheckGenoFileName
 integer :: nIndHmmMaCH,GlobalRoundHmm,nSnpHmm,nGametesPhased,nAnimPhased
-integer :: nHapInSubH,useProcs,nRoundsHmm,HmmBurnInRound,phasedThreshold,idum,windowLength
+integer :: nHapInSubH,useProcs,nRoundsHmm,HmmBurnInRound,idum,windowLength
+real 	:: phasedThreshold,imputedThreshold
+logical :: segmentOverlap
 integer,allocatable,dimension(:,:) :: GenosHmmMaCH,SubH
 integer(kind=1),allocatable,dimension(:,:,:) :: PhaseHmmMaCH,FullH
 integer,allocatable,dimension(:) :: ErrorUncertainty,ErrorMatches,ErrorMismatches,Crossovers

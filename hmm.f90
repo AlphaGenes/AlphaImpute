@@ -463,7 +463,7 @@ if (HMM==RUN_HMM_ONLY) then
     call ForwardAlgorithm(CurrentInd,StartSnp,StopSnp)
     call SampleChromosomes(CurrentInd,StartSnp,StopSnp)
 else
-    WellPhased = 1.0
+    ! WellPhased = imputedThreshold
     StartSnp=1
     StopSnp=nSnpHmm
     nSegments=nSnpHmm/windowLength
@@ -486,9 +486,7 @@ else
         ! is above a threshold
         if (float(CountGenotypedAllelesByGametes(&
                 PhaseHmmMaCH(currentInd,StartSnp:StopSnp,1), &
-                PhaseHmmMaCH(currentInd,StartSnp:StopSnp,2))) /(StopSnp-StartSnp+1)<=WellPhased) then
-            if (StartSnp - (windowLength/10) > 0) StartSnp=StartSnp - (windowLength/10)
-            if (StopSnp + (windowLength/10) < nSnpHmm) StopSnp=StopSnp + (windowLength/10)
+                PhaseHmmMaCH(currentInd,StartSnp:StopSnp,2))) /(StopSnp-StartSnp+1)<=imputedThreshold/100.0) then
             ! Impute
             call SampleChromosomes(CurrentInd,StartSnp,StopSnp)
             SegmentImputeDiploidHMM(i)=.TRUE.
