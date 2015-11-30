@@ -50,6 +50,23 @@ if (HMMOption /= RUN_HMM_NGS) then
     call CountInData
     call ReadInData
     call CheckParentage
+
+
+    open (unit=2222,file='nSnpsAnimal.txt',status='unknown')
+    allocate(nSnpsAnimal(nAnisG))
+    do i=1,nAnisG
+        ! write(2222,*) count(TempGenos(i,:)/=9)
+        nSnpsAnimal(i)=count(TempGenos(i,:)/=9)
+    enddo
+
+    call ClusterIndivByChip(nSnpChips)
+    do i=1,nAnisG
+    write(2222,*) i, ClusterMemberIndv(i), Centroid(ClusterMemberIndv(i))
+    enddo
+
+    close(2222)
+
+    stop
     call FillInSnp
     call FillInBasedOnOffspring
     call InternalEdit
@@ -482,7 +499,7 @@ endif
 
 ! Get the number of SNPs in the chromosome
 ! nSnp
-read (1,*) dumC,nSnp
+read (1,*) dumC,nSnp,nSnpChips
 if (nSnp>240000) then
     print*, "Contact John Hickey if you want to do more than 240,000 SNP"
     stop
@@ -5768,6 +5785,15 @@ implicit none
 
 integer :: i,j,k,TurnOn
 
+open (unit=2222,file=   'nSnpsAnimal.txt',status='unknown')
+do i=1,nAnisP
+    write(2222,*) i,count(TempGenos(i,:)/=9)
+    ! if (count(Genos(i,:)==9)<100) write(2222,*) i, TempGenos(i,:)
+enddo
+close(2222)
+stop
+
+
 do i=1,nAnisP
     do k=2,3
         TurnOn=1
@@ -8118,3 +8144,115 @@ end do
 
 RETURN
 end subroutine RandomOrder
+
+!#############################################################################################################################################################################################################################
+
+! SUBROUTINE ClusterIndivByChip(nClusters,ClusterMemberIndv,Centroid)
+SUBROUTINE ClusterIndivByChip(nClusters)
+  use Global
+  ! use GlobalClustering
+  implicit none
+  integer, intent(IN) :: nClusters              ! Number of different SNP chips
+  ! integer, intent(OUT) :: ClusterMemberIndv(:), Centroid(:)
+
+  integer, allocatable :: res(:)             ! The output
+  integer :: k                               ! The number of unique elements
+  integer :: i, j
+
+  ! integer :: nChips=3, SurrCounter, nClusters, dist, nIterations, NewCluster
+  integer :: SurrCounter,dist,nIterations,NewCluster
+  integer, allocatable :: ClusterMember(:), nSurrPerCluster(:)!, Centroid(:), ClusterMemberIndv(:)
+  logical :: moved
+
+  allocate(res(nAnisG))
+  k = 1
+  res(1) = nSnpsAnimal(1)
+
+  outer: do i=2,size(nSnpsAnimal)
+     do j=1,k
+        if (res(j) == nSnpsAnimal(i)) then
+           ! Found a match so start looking again
+           cycle outer
+        end if
+     end do
+     ! No match found so add it to the output
+     k = k + 1
+     res(k) = nSnpsAnimal(i)
+  end do outer
+  ! write(*,advance='no',fmt='(a,i0,a)') 'Unique list has ',k,' elements: '
+  ! write(*,*) res(1:k)
+
+  ! nClusters=nChips
+  SurrCounter=k
+  allocate(ClusterMember(SurrCounter))
+  allocate(ClusterMemberIndv(nAnisG))
+  allocate(centroid(nClusters))
+  allocate(nSurrPerCluster(nClusters))
+
+  ! First clusterization fixing centroids equally distant. Recalculation of centroids
+  Centroid=0
+  nSurrPerCluster=0
+
+  do j=1,nClusters
+    Centroid(j)=((j*nSnp/nClusters)+((j-1)*nSnp/nClusters))/2
+  enddo
+
+  nIterations=0
+  moved=.TRUE.
+  ClusterMember=0
+  do while (moved==.TRUE. .and. nIterations<=100)
+    nIterations=nIterations+1
+    moved=.FALSE.
+
+    do i=1,SurrCounter
+      ! print *, ClusterMember(i)
+      dist=nSnp
+      do j=1,nClusters
+        if(abs(res(i)-Centroid(j))<dist) then
+            dist=abs(res(i)-Centroid(j))
+            NewCluster=j
+        endif
+      enddo
+      if (NewCluster/=ClusterMember(i)) then
+          moved=.TRUE.
+          ClusterMember(i)=NewCluster
+      endif
+    enddo
+    nSurrPerCluster=0
+    Centroid=0
+    do i=1,SurrCounter
+      do j=1,nClusters
+        if (ClusterMember(i)==j) then
+          Centroid(j)=Centroid(j)+res(i)
+          nSurrPerCluster(j)=nSurrPerCluster(j)+1
+        endif
+      enddo
+    enddo
+    do j=1,nClusters
+        if (nSurrPerCluster(j)/=0) Centroid(j)=Centroid(j)/nSurrPerCluster(j)
+    enddo
+  enddo
+
+  ! Assign individuals to clusters
+  NewCluster=0
+  dist=0
+  print *, size(ClusterMemberIndv)
+  ClusterMemberIndv=0
+
+  ! open (unit=2222,file='nSnpsAnimalCluster.txt',status='unknown')
+  do i=1,nAnisG
+    dist=nSnp
+    do j=1,nClusters
+        if(abs(nSnpsAnimal(i)-Centroid(j))<dist) then
+            dist=abs(nSnpsAnimal(i)-Centroid(j))
+            NewCluster=j
+        endif
+    enddo
+    if (NewCluster/=ClusterMemberIndv(i)) then
+        ClusterMemberIndv(i)=NewCluster
+    endif
+    ! write(2222,*) i, ClusterMemberIndv(i), Centroid(ClusterMemberIndv(i))
+  enddo
+  ! close(2222)
+
+end SUBROUTINE ClusterIndivByChip
