@@ -52,25 +52,17 @@ if (HMMOption /= RUN_HMM_NGS) then
     call CheckParentage
 
 
-    open (unit=2222,file='nSnpsAnimal.txt',status='unknown')
-    allocate(nSnpsAnimal(nAnisG))
-    do i=1,nAnisG
-        ! write(2222,*) count(TempGenos(i,:)/=9)
-        nSnpsAnimal(i)=count(TempGenos(i,:)/=9)
-    enddo
+    ! allocate(nSnpsAnimal(nAnisG))
+    ! do i=1,nAnisG
+    !     nSnpsAnimal(i)=count(TempGenos(i,:)/=9)
+    ! enddo
+    ! call ClusterIndivByChip(nSnpChips)
 
-    call ClusterIndivByChip(nSnpChips)
-    do i=1,nAnisG
-    write(2222,*) i, ClusterMemberIndv(i), Centroid(ClusterMemberIndv(i))
-    enddo
-
-    close(2222)
-
-    stop
     call FillInSnp
     call FillInBasedOnOffspring
     call InternalEdit
     call MakeFiles
+    ! stop
 else
     
     call MakeDirectories(RUN_HMM_NGS)
@@ -435,7 +427,7 @@ implicit none
 integer :: k,i,resid,Changer,nLines
 character (len=300) :: dumC,IntEdit,PhaseDone,OutputOptions,PreProcessOptions,TempOpt,TempHetGameticStatus
 character (len=300) :: UserDefinedHDAnimalsFile,PrePhasedAnimalFile,PedigreeFreePhasing,PhasingOnlyOptions
-character (len=300) :: UseGeneProb,ConservHapLibImp,CharBypassGeneProb,TmpHmmOption
+character (len=300) :: UseGeneProb,ConservHapLibImp,CharBypassGeneProb,TmpHmmOption,MultipleHDpanels
 
 open (unit=1,file="AlphaImputeSpec.txt",status="old")
 
@@ -505,18 +497,19 @@ if (nSnp>240000) then
     stop
 endif
 
-! Get Editing parameters
-! InternalEdit
-read (1,*) dumC,IntEdit
-if (trim(IntEdit)=='Yes') IntEditStat=1
-if (trim(IntEdit)=='No') IntEditStat=0
-if ((trim(IntEdit)/='Yes').and.(trim(IntEdit)/='No')) then
+! Get the information of Multiple HD chips
+! MultipleHDpanels
+read (1,*) dumC,MultipleHDpanels,PercGenoForHD
+if (trim(MultipleHDpanels)=='Yes') MultiHD=1
+if (trim(MultipleHDpanels)=='No') MultiHD=0
+if ((trim(MultipleHDpanels)/='Yes').and.(trim(IntEdit)/='No')) then
     write (*,*) "Specify editing status properly"               ! write (*,*) "You fucking bastard! X-)
 endif
 
 ! EditingParameters
 OutOpt=9
-if (IntEditStat==1) then
+IntEditStat=0
+if (MultiHD==0) then
     read (1,*) dumC,PercGenoForHD,PercSnpMiss,SecondPercGenoForHD,OutputOptions
     if (trim(OutputOptions)=="AllSnpOut") OutOpt=1
     if (trim(OutputOptions)=="EditedSnpOut") OutOpt=0
@@ -525,10 +518,14 @@ if (IntEditStat==1) then
         print*, "Beware!!!!! AlphaImpute is case sensitive"
         stop
     endif
+    ! In case no editing is set, a threshold to determine HD individuals is needed
+    if (PercGenoForHD==0.0 .and. PercSnpMiss==0.0 .and. SecondPercGenoForHD==0.0) PercGenoForHD=90.0
+    IntEditStat=1
 else
-    PercGenoForHD=90.0
     read (1,*) dumC
     OutOpt=1
+    PercSnpMiss=0.0
+    SecondPercGenoForHD=0.0
 endif
 PercGenoForHD=PercGenoForHD/100
 PercSnpMiss=PercSnpMiss/100
@@ -5565,6 +5562,7 @@ endif
 
 if (NoPhasing==0) SnpIncluded(:)=1
 
+! I user do not specify any file with HD individuals
 if (UserDefinedHD==0) then
     Setter(0)=0
     Setter(1:nAnisP)=1
@@ -5578,7 +5576,7 @@ if (UserDefinedHD==0) then
         endif
     enddo
     CountHD=count(Setter(:)==1)
-else
+else                                ! User has specified HD individuals
     Setter(0)=0
     Setter(1:nAnisP)=0
     RecIdHDIndex(0)=0
@@ -5609,12 +5607,6 @@ else
     print*, " ",CountHD," valid indiviudals in the user specified AlphaPhase1.1 file"
 endif
 
-
-! if (WindowsLinux==1) then
-!         open (unit=102,file=".\Miscellaneous\EditingSnpSummary.txt",status="unknown")
-! else
-!         open (unit=102,file="./Miscellaneous/EditingSnpSummary.txt",status="unknown")
-! endif
 open (unit=102,file="." // DASH // "Miscellaneous" // DASH // "EditingSnpSummary.txt",status="unknown")
 
 if (ManagePhaseOn1Off0==1) then
@@ -5644,7 +5636,7 @@ if (ManagePhaseOn1Off0==1) then
     enddo   
 endif
 
-if (IntEditStat==0) then
+if (MultiHD==1 .or. IntEditStat==0) then
     nSnpR=nSnp
     allocate(Genos(0:nAnisP,nSnp))
     Genos=TempGenos

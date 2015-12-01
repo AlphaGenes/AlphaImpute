@@ -32,7 +32,7 @@ real,parameter :: DisagreeThreshold=0.05,GeneProbThresh=0.99
 
 character (len=300) :: PedigreeFile,PhasePath,TrueGenosFile,GenotypeFile,GenderFile
 
-integer :: nAnisG,nAnisRawPedigree,nSnp,nAnisP,IntEditStat,nPhaseInternal,nPhaseExternal,OutOpt,SexOpt,HetGameticStatus,HomGameticStatus
+integer :: nAnisG,nAnisRawPedigree,nSnp,nAnisP,IntEditStat,nPhaseInternal,nPhaseExternal,OutOpt,SexOpt,HetGameticStatus,HomGameticStatus,MultiHD
 integer :: nProcessors,nProcessGeneProb,nProcessAlphaPhase,ManagePhaseOn1Off0,CountRawGenos,InternalIterations,nAnisInGenderFile
 integer :: nAgreeImputeHDLib,nAgreeParentPhaseElim,nAgreeInternalHapLibElim,MaxLeftRightSwitch,MinSpan,ConservativeHapLibImputation
 integer :: TrueGenos1None0,nSnpRaw,nObsDataRaw,nAgreePhaseElim,nAgreeGrandParentPhaseElim,UseGP,BypassGeneProb,HMMOption
