@@ -5784,16 +5784,7 @@ use Global
 implicit none
 
 integer :: i,j,k,TurnOn
-
-open (unit=2222,file=   'nSnpsAnimal.txt',status='unknown')
-do i=1,nAnisP
-    write(2222,*) i,count(TempGenos(i,:)/=9)
-    ! if (count(Genos(i,:)==9)<100) write(2222,*) i, TempGenos(i,:)
-enddo
-close(2222)
-stop
-
-
+    
 do i=1,nAnisP
     do k=2,3
         TurnOn=1
