@@ -440,7 +440,7 @@ do
 enddo
 rewind(1)
 
-if (nLines/=34) then
+if (nLines/=41) then
     print*, "   ","There are some lines missing from AlphaImputeSpec.txt"
     print*, "   ","HINT - maybe you are using the Spec file from the beta version which is out of date"
     stop
@@ -573,7 +573,6 @@ read(1,*) dumC
 ! TODO: DEBUG!!
 
 read (1,*) dumC,PhaseDone
-print *, dumC
 NoPhasing=1
 ! PhaseDone: We already have phase information (AlphaPhase) and so,
 !            phasing is not necessary
@@ -712,8 +711,14 @@ endif
 !   * useProcs: Number of processors used for parallelisation
 !   * phasedThreshold: Threshold for well phased gametes
 !   * windLength: Length for the moving window
-read (1,*) dumC,nHapInSubH,HmmBurnInRound,nRoundsHMM,useProcs,idum,phasedThreshold,imputedThreshold,windowLength
-
+read (1,*) dumC, nHapInSubH
+read (1,*) dumC, HmmBurnInRound
+read (1,*) dumC, nRoundsHMM
+read (1,*) dumC, useProcs
+read (1,*) dumC, idum
+read (1,*) dumC, phasedThreshold
+read (1,*) dumC, imputedThreshold
+read (1,*) dumC, windowLength
 ! print *, trim(TmpHmmOption), nHapInSubH,HmmBurnInRound,nRoundsHMM,useProcs,idum,phasedThreshold,imputedThreshold,windowLength
 
 ! Options managing the software workflow
