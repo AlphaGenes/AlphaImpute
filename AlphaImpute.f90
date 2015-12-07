@@ -50,10 +50,16 @@ if (HMMOption /= RUN_HMM_NGS) then
     call CountInData
     call ReadInData
     call CheckParentage
+    ! allocate(nSnpsAnimal(nAnisG))
+    ! do i=1,nAnisG
+    !     nSnpsAnimal(i)=count(TempGenos(i,:)/=9)
+    ! enddo
+    ! call ClusterIndivByChip(nSnpChips)
     call FillInSnp
     call FillInBasedOnOffspring
     call InternalEdit
     call MakeFiles
+    ! stop
 else
     
     call MakeDirectories(RUN_HMM_NGS)
@@ -418,7 +424,7 @@ implicit none
 integer :: k,i,resid,Changer,nLines
 character (len=300) :: dumC,IntEdit,PhaseDone,OutputOptions,PreProcessOptions,TempOpt,TempHetGameticStatus
 character (len=300) :: UserDefinedHDAnimalsFile,PrePhasedAnimalFile,PedigreeFreePhasing,PhasingOnlyOptions
-character (len=300) :: UseGeneProb,ConservHapLibImp,CharBypassGeneProb,TmpHmmOption
+character (len=300) :: UseGeneProb,ConservHapLibImp,CharBypassGeneProb,TmpHmmOption,MultipleHDpanels
 
 open (unit=1,file="AlphaImputeSpec.txt",status="old")
 
@@ -434,19 +440,30 @@ do
 enddo
 rewind(1)
 
-if (nLines/=24) then
+if (nLines/=41) then
     print*, "   ","There are some lines missing from AlphaImputeSpec.txt"
     print*, "   ","HINT - maybe you are using the Spec file from the beta version which is out of date"
     stop
 endif
 
-! Get Input files: Pedigree and genotype information
+! Get Input files: Pedigree and genotype information and True genotypes
+read(1,*) dumC
 ! PedigreeFile
 read (1,*) dumC,PedigreeFile
 ! GentoypeFile
 read (1,*) dumC,GenotypeFile
+! TrueGenotypeFile
+read (1,*) dumC,TrueGenosFile
+if (TrueGenosFile=="None") then
+    TrueGenos1None0=0
+else
+    TrueGenos1None0=1
+endif
+
+! print *, PedigreeFile, GenotypeFile, TrueGenosFile
 
 ! SEX Chromosome
+read(1,*) dumC
 ! SexChrom
 read (1,*) dumC,TempOpt
 SexOpt=9
@@ -480,7 +497,10 @@ if (SexOpt==9) then
     stop
 endif
 
+! print *, TempOpt
+
 ! Get the number of SNPs in the chromosome
+read(1,*) dumC
 ! nSnp
 read (1,*) dumC,nSnp
 if (nSnp>240000) then
@@ -488,14 +508,39 @@ if (nSnp>240000) then
     stop
 endif
 
+! Get the information of Multiple HD chips
+! MultipleHDpanels
+read (1,*) dumC,MultipleHDpanels
+if (trim(MultipleHDpanels)=='Yes') MultiHD=1
+if (trim(MultipleHDpanels)=='No') MultiHD=0
+if ((trim(MultipleHDpanels)/='Yes').and.(trim(MultipleHDpanels)/='No')) then
+    write (*,*) "Please, provide a valid option,"
+    write (*,*) "MultipleHDpanels only acepts 'No' or 'Yes'"
+    stop
+endif
+! PercGenoForHD
+read (1,*) dumC,PercGenoForHD
+
+! print *, nSnp,trim(MultipleHDpanels),PercGenoForHD
+
 ! Get Editing parameters
+read(1,*) dumC
 ! InternalEdit
 read (1,*) dumC,IntEdit
 if (trim(IntEdit)=='Yes') IntEditStat=1
 if (trim(IntEdit)=='No') IntEditStat=0
 if ((trim(IntEdit)/='Yes').and.(trim(IntEdit)/='No')) then
-    write (*,*) "Specify editing status properly"               ! write (*,*) "You fucking bastard! X-)
+    write (*,*) "Please, provide a valid option,"
+    write (*,*) "InternalEdit only acepts 'No' or 'Yes'"
+    stop
 endif
+if (IntEditStat==1 .AND. MultiHD==1) then
+    write(*,*) "IntEditStat and MultipleHDpanels are incompatible,"
+    write(*,*) "Please, considere to use only one HD panel or to disable internal editing"
+    stop
+endif
+
+! print *, IntEdit
 
 ! EditingParameters
 OutOpt=9
@@ -509,7 +554,8 @@ if (IntEditStat==1) then
         stop
     endif
 else
-    PercGenoForHD=90.0
+    ! In case no editing is set and there is a single HD panel, a threshold to determine HD individuals is needed 
+    if (MultiHD==0) PercGenoForHD=90.0
     read (1,*) dumC
     OutOpt=1
 endif
@@ -517,11 +563,15 @@ PercGenoForHD=PercGenoForHD/100
 PercSnpMiss=PercSnpMiss/100
 SecondPercGenoForHD=SecondPercGenoForHD/100
 
+! print *, PercGenoForHD,PercSnpMiss,SecondPercGenoForHD,OutOpt
+
 ! Get Phasing parameters
+read(1,*) dumC
 ! NumberPhasingRuns
 ! WARNING: Parser complains and exits on error when this option is set
 !          number bigger than 10 because PhaseDone is a character variable
 ! TODO: DEBUG!!
+
 read (1,*) dumC,PhaseDone
 NoPhasing=1
 ! PhaseDone: We already have phase information (AlphaPhase) and so,
@@ -529,7 +579,7 @@ NoPhasing=1
 if (trim(PhaseDone)=="PhaseDone") then
     ManagePhaseOn1Off0=0
     rewind (1)
-    do i=1,6
+    do i=1,14
         read (1,*) dumC
     enddo
     ! Get Path to the phased data and the number of cores used
@@ -541,7 +591,7 @@ elseif (trim(PhaseDone)=="NoPhase") then
     NoPhasing=0
     ManagePhaseOn1Off0=0
     rewind (1)
-    do i=1,6
+    do i=1,14
         read (1,*) dumC
     enddo    
     read (1,*) dumC
@@ -550,11 +600,13 @@ elseif (trim(PhaseDone)=="NoPhase") then
 else
     ManagePhaseOn1Off0=1
     rewind (1)
-    do i=1,6
+    do i=1,14
         read (1,*) dumC
     enddo
     read (1,*) dumC,nPhaseExternal
 endif
+
+! print *, nPhaseExternal
 
 if (trim(PhaseDone)/="PhaseDone" .and. trim(PhaseDone)/="NoPhase") then
     if (nPhaseExternal>40) then
@@ -609,10 +661,68 @@ endif
 ! NumberOfProcessorsAvailable
 read (1,*) dumC,nProcessors
 
+! print *, nProcessors
+
 ! Iteration of the internal haplotype matching
+read(1,*) dumC
 ! InternalIterations
 read (1,*) dumC,InternalIterations
 
+! Whether to use the Haplotype Library in a conservative way
+! ConservativeHaplotypeLibraryUse
+ConservativeHapLibImputation=-1
+read (1,*) dumC,ConservHapLibImp
+if (trim(ConservHapLibImp)=="No") then
+    ConservativeHapLibImputation=0
+endif
+if (trim(ConservHapLibImp)=="Yes") then
+        ConservativeHapLibImputation=1
+endif
+if (ConservativeHapLibImputation==-1) then
+    print*, "ConservativeHaplotypeLibraryUse not correctly specified"
+    stop
+endif
+
+! Get threshold for haplotype phasing errors
+! WellPhasedThreshold
+read (1,*) dumC,WellPhasedThresh
+
+
+! Whether to use a hidden Markov model (HMM) for genotype imputation
+read(1,*) dumC
+! HMMOption
+read (1,*) dumC,TmpHmmOption
+HMMOption=RUN_HMM_NULL
+if (trim(TmpHmmOption)=='No') HMMOption=RUN_HMM_NO
+if (trim(TmpHmmOption)=='Yes') HMMOption=RUN_HMM_YES
+if (trim(TmpHmmOption)=='Only') HMMOption=RUN_HMM_ONLY
+if (trim(TmpHmmOption)=='Prephase') HMMOption=RUN_HMM_PREPHASE
+if (trim(TmpHmmOption)=="NGS") HMMOption=RUN_HMM_NGS
+if (HMMOption==RUN_HMM_NULL) then
+    print*, "HMMOption not correctly specified"
+    stop
+endif
+
+! HMMParameters
+! HMM parameters:
+!   * nHapInSubH: Number of Haplotypes used as templates
+!   * HmmBurnInRound: Number of HMM rounds avoided during imputation
+!   * nRoundsHMM: Number of HMM rounds
+!   * useProcs: Number of processors used for parallelisation
+!   * phasedThreshold: Threshold for well phased gametes
+!   * windLength: Length for the moving window
+read (1,*) dumC, nHapInSubH
+read (1,*) dumC, HmmBurnInRound
+read (1,*) dumC, nRoundsHMM
+read (1,*) dumC, useProcs
+read (1,*) dumC, idum
+read (1,*) dumC, phasedThreshold
+read (1,*) dumC, imputedThreshold
+read (1,*) dumC, windowLength
+! print *, trim(TmpHmmOption), nHapInSubH,HmmBurnInRound,nRoundsHMM,useProcs,idum,phasedThreshold,imputedThreshold,windowLength
+
+! Options managing the software workflow
+read(1,*) dumC
 ! Whether to create the folder and files structure and exit
 ! PreprocessDataOnly
 read (1,*) dumC,PreProcessOptions
@@ -640,25 +750,6 @@ else
         stop
     endif
 endif
-
-! Whether to use the Haplotype Library in a conservative way
-! ConservativeHaplotypeLibraryUse
-ConservativeHapLibImputation=-1
-read (1,*) dumC,ConservHapLibImp
-if (trim(ConservHapLibImp)=="No") then
-    ConservativeHapLibImputation=0
-endif
-if (trim(ConservHapLibImp)=="Yes") then
-        ConservativeHapLibImputation=1
-endif
-if (ConservativeHapLibImputation==-1) then
-    print*, "ConservativeHaplotypeLibraryUse not correctly specified"
-    stop
-endif
-
-! Get threshold for haplotype phasing errors
-! WellPhasedThreshold
-read (1,*) dumC,WellPhasedThresh
 
 ! Get file of animals Highly Dense genotyped
 ! UserDefinedAlphaPhaseAnimalsFile
@@ -694,8 +785,6 @@ if (BypassGeneProb==-1) then
     print*, "BypassGeneProb not correctly specified"
     stop
 endif
-
-! Options managing the software workflow
 ! RestartOptions handle this situation, so:
 !   * RestartOption=0 => Passes through the whole process: GenoProb,
 !                        Phasing and Imputing
@@ -707,39 +796,6 @@ endif
 !                        Probabilities have to be edited by hand
 !   * RestartOption=4 =>
 read (1,*) dumC,RestartOption
-
-! Whether to use a hidden Markov model (HMM) for genotype imputation
-! HMMOption
-read (1,*) dumC,TmpHmmOption
-HMMOption=RUN_HMM_NULL
-if (trim(TmpHmmOption)=='No') HMMOption=RUN_HMM_NO
-if (trim(TmpHmmOption)=='Yes') HMMOption=RUN_HMM_YES
-if (trim(TmpHmmOption)=='Only') HMMOption=RUN_HMM_ONLY
-if (trim(TmpHmmOption)=='Prephase') HMMOption=RUN_HMM_PREPHASE
-if (trim(TmpHmmOption)=="NGS") HMMOption=RUN_HMM_NGS
-if (HMMOption==RUN_HMM_NULL) then
-    print*, "HMMOption not correctly specified"
-    stop
-endif
-
-! HMMParameters
-! HMM parameters:
-!   * nHapInSubH: Number of Haplotypes used as templates
-!   * HmmBurnInRound: Number of HMM rounds avoided during imputation
-!   * nRoundsHMM: Number of HMM rounds
-!   * useProcs: Number of processors used for parallelisation
-!   * phasedThreshold: Threshold for well phased gametes
-!   * windLength: Length for the moving window
-read (1,*) dumC,nHapInSubH,HmmBurnInRound,nRoundsHMM,useProcs,idum,phasedThreshold,imputedThreshold,windowLength
-
-! Get the file containing the true genotypes
-! TrueGenotypeFile
-read (1,*) dumC,TrueGenosFile
-if (TrueGenosFile=="None") then
-    TrueGenos1None0=0
-else
-    TrueGenos1None0=1
-endif
 
 
 open (unit=2,file=trim(PedigreeFile),status="old")
@@ -5548,6 +5604,7 @@ endif
 
 if (NoPhasing==0) SnpIncluded(:)=1
 
+! I user do not specify any file with HD individuals
 if (UserDefinedHD==0) then
     Setter(0)=0
     Setter(1:nAnisP)=1
@@ -5561,7 +5618,7 @@ if (UserDefinedHD==0) then
         endif
     enddo
     CountHD=count(Setter(:)==1)
-else
+else                                ! User has specified HD individuals
     Setter(0)=0
     Setter(1:nAnisP)=0
     RecIdHDIndex(0)=0
@@ -5592,12 +5649,6 @@ else
     print*, " ",CountHD," valid indiviudals in the user specified AlphaPhase1.1 file"
 endif
 
-
-! if (WindowsLinux==1) then
-!         open (unit=102,file=".\Miscellaneous\EditingSnpSummary.txt",status="unknown")
-! else
-!         open (unit=102,file="./Miscellaneous/EditingSnpSummary.txt",status="unknown")
-! endif
 open (unit=102,file="." // DASH // "Miscellaneous" // DASH // "EditingSnpSummary.txt",status="unknown")
 
 if (ManagePhaseOn1Off0==1) then
@@ -5627,7 +5678,7 @@ if (ManagePhaseOn1Off0==1) then
     enddo   
 endif
 
-if (IntEditStat==0) then
+if (MultiHD==1 .or. IntEditStat==0) then
     nSnpR=nSnp
     allocate(Genos(0:nAnisP,nSnp))
     Genos=TempGenos
@@ -5767,7 +5818,7 @@ use Global
 implicit none
 
 integer :: i,j,k,TurnOn
-
+    
 do i=1,nAnisP
     do k=2,3
         TurnOn=1
@@ -8118,3 +8169,115 @@ end do
 
 RETURN
 end subroutine RandomOrder
+
+!#############################################################################################################################################################################################################################
+
+! SUBROUTINE ClusterIndivByChip(nClusters,ClusterMemberIndv,Centroid)
+SUBROUTINE ClusterIndivByChip(nClusters)
+  use Global
+  ! use GlobalClustering
+  implicit none
+  integer, intent(IN) :: nClusters              ! Number of different SNP chips
+  ! integer, intent(OUT) :: ClusterMemberIndv(:), Centroid(:)
+
+  integer, allocatable :: res(:)             ! The output
+  integer :: k                               ! The number of unique elements
+  integer :: i, j
+
+  ! integer :: nChips=3, SurrCounter, nClusters, dist, nIterations, NewCluster
+  integer :: SurrCounter,dist,nIterations,NewCluster
+  integer, allocatable :: ClusterMember(:), nSurrPerCluster(:)!, Centroid(:), ClusterMemberIndv(:)
+  logical :: moved
+
+  allocate(res(nAnisG))
+  k = 1
+  res(1) = nSnpsAnimal(1)
+
+  outer: do i=2,size(nSnpsAnimal)
+     do j=1,k
+        if (res(j) == nSnpsAnimal(i)) then
+           ! Found a match so start looking again
+           cycle outer
+        end if
+     end do
+     ! No match found so add it to the output
+     k = k + 1
+     res(k) = nSnpsAnimal(i)
+  end do outer
+  ! write(*,advance='no',fmt='(a,i0,a)') 'Unique list has ',k,' elements: '
+  ! write(*,*) res(1:k)
+
+  ! nClusters=nChips
+  SurrCounter=k
+  allocate(ClusterMember(SurrCounter))
+  allocate(ClusterMemberIndv(nAnisG))
+  allocate(centroid(nClusters))
+  allocate(nSurrPerCluster(nClusters))
+
+  ! First clusterization fixing centroids equally distant. Recalculation of centroids
+  Centroid=0
+  nSurrPerCluster=0
+
+  do j=1,nClusters
+    Centroid(j)=((j*nSnp/nClusters)+((j-1)*nSnp/nClusters))/2
+  enddo
+
+  nIterations=0
+  moved=.TRUE.
+  ClusterMember=0
+  do while (moved==.TRUE. .and. nIterations<=100)
+    nIterations=nIterations+1
+    moved=.FALSE.
+
+    do i=1,SurrCounter
+      ! print *, ClusterMember(i)
+      dist=nSnp
+      do j=1,nClusters
+        if(abs(res(i)-Centroid(j))<dist) then
+            dist=abs(res(i)-Centroid(j))
+            NewCluster=j
+        endif
+      enddo
+      if (NewCluster/=ClusterMember(i)) then
+          moved=.TRUE.
+          ClusterMember(i)=NewCluster
+      endif
+    enddo
+    nSurrPerCluster=0
+    Centroid=0
+    do i=1,SurrCounter
+      do j=1,nClusters
+        if (ClusterMember(i)==j) then
+          Centroid(j)=Centroid(j)+res(i)
+          nSurrPerCluster(j)=nSurrPerCluster(j)+1
+        endif
+      enddo
+    enddo
+    do j=1,nClusters
+        if (nSurrPerCluster(j)/=0) Centroid(j)=Centroid(j)/nSurrPerCluster(j)
+    enddo
+  enddo
+
+  ! Assign individuals to clusters
+  NewCluster=0
+  dist=0
+  print *, size(ClusterMemberIndv)
+  ClusterMemberIndv=0
+
+  ! open (unit=2222,file='nSnpsAnimalCluster.txt',status='unknown')
+  do i=1,nAnisG
+    dist=nSnp
+    do j=1,nClusters
+        if(abs(nSnpsAnimal(i)-Centroid(j))<dist) then
+            dist=abs(nSnpsAnimal(i)-Centroid(j))
+            NewCluster=j
+        endif
+    enddo
+    if (NewCluster/=ClusterMemberIndv(i)) then
+        ClusterMemberIndv(i)=NewCluster
+    endif
+    ! write(2222,*) i, ClusterMemberIndv(i), Centroid(ClusterMemberIndv(i))
+  enddo
+  ! close(2222)
+
+end SUBROUTINE ClusterIndivByChip
