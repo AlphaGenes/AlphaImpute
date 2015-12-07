@@ -50,14 +50,11 @@ if (HMMOption /= RUN_HMM_NGS) then
     call CountInData
     call ReadInData
     call CheckParentage
-
-
     ! allocate(nSnpsAnimal(nAnisG))
     ! do i=1,nAnisG
     !     nSnpsAnimal(i)=count(TempGenos(i,:)/=9)
     ! enddo
     ! call ClusterIndivByChip(nSnpChips)
-
     call FillInSnp
     call FillInBasedOnOffspring
     call InternalEdit
@@ -443,19 +440,30 @@ do
 enddo
 rewind(1)
 
-if (nLines/=24) then
+if (nLines/=41) then
     print*, "   ","There are some lines missing from AlphaImputeSpec.txt"
     print*, "   ","HINT - maybe you are using the Spec file from the beta version which is out of date"
     stop
 endif
 
-! Get Input files: Pedigree and genotype information
+! Get Input files: Pedigree and genotype information and True genotypes
+read(1,*) dumC
 ! PedigreeFile
 read (1,*) dumC,PedigreeFile
 ! GentoypeFile
 read (1,*) dumC,GenotypeFile
+! TrueGenotypeFile
+read (1,*) dumC,TrueGenosFile
+if (TrueGenosFile=="None") then
+    TrueGenos1None0=0
+else
+    TrueGenos1None0=1
+endif
+
+! print *, PedigreeFile, GenotypeFile, TrueGenosFile
 
 ! SEX Chromosome
+read(1,*) dumC
 ! SexChrom
 read (1,*) dumC,TempOpt
 SexOpt=9
@@ -489,9 +497,12 @@ if (SexOpt==9) then
     stop
 endif
 
+! print *, TempOpt
+
 ! Get the number of SNPs in the chromosome
+read(1,*) dumC
 ! nSnp
-read (1,*) dumC,nSnp,nSnpChips
+read (1,*) dumC,nSnp
 if (nSnp>240000) then
     print*, "Contact John Hickey if you want to do more than 240,000 SNP"
     stop
@@ -499,17 +510,41 @@ endif
 
 ! Get the information of Multiple HD chips
 ! MultipleHDpanels
-read (1,*) dumC,MultipleHDpanels,PercGenoForHD
+read (1,*) dumC,MultipleHDpanels
 if (trim(MultipleHDpanels)=='Yes') MultiHD=1
 if (trim(MultipleHDpanels)=='No') MultiHD=0
-if ((trim(MultipleHDpanels)/='Yes').and.(trim(IntEdit)/='No')) then
-    write (*,*) "Specify editing status properly"               ! write (*,*) "You fucking bastard! X-)
+if ((trim(MultipleHDpanels)/='Yes').and.(trim(MultipleHDpanels)/='No')) then
+    write (*,*) "Please, provide a valid option,"
+    write (*,*) "MultipleHDpanels only acepts 'No' or 'Yes'"
+    stop
 endif
+! PercGenoForHD
+read (1,*) dumC,PercGenoForHD
+
+! print *, nSnp,trim(MultipleHDpanels),PercGenoForHD
+
+! Get Editing parameters
+read(1,*) dumC
+! InternalEdit
+read (1,*) dumC,IntEdit
+if (trim(IntEdit)=='Yes') IntEditStat=1
+if (trim(IntEdit)=='No') IntEditStat=0
+if ((trim(IntEdit)/='Yes').and.(trim(IntEdit)/='No')) then
+    write (*,*) "Please, provide a valid option,"
+    write (*,*) "InternalEdit only acepts 'No' or 'Yes'"
+    stop
+endif
+if (IntEditStat==1 .AND. MultiHD==1) then
+    write(*,*) "IntEditStat and MultipleHDpanels are incompatible,"
+    write(*,*) "Please, considere to use only one HD panel or to disable internal editing"
+    stop
+endif
+
+! print *, IntEdit
 
 ! EditingParameters
 OutOpt=9
-IntEditStat=0
-if (MultiHD==0) then
+if (IntEditStat==1) then
     read (1,*) dumC,PercGenoForHD,PercSnpMiss,SecondPercGenoForHD,OutputOptions
     if (trim(OutputOptions)=="AllSnpOut") OutOpt=1
     if (trim(OutputOptions)=="EditedSnpOut") OutOpt=0
@@ -518,24 +553,25 @@ if (MultiHD==0) then
         print*, "Beware!!!!! AlphaImpute is case sensitive"
         stop
     endif
-    ! In case no editing is set, a threshold to determine HD individuals is needed
-    if (PercGenoForHD==0.0 .and. PercSnpMiss==0.0 .and. SecondPercGenoForHD==0.0) PercGenoForHD=90.0
-    IntEditStat=1
 else
+    ! In case no editing is set and there is a single HD panel, a threshold to determine HD individuals is needed 
+    if (MultiHD==0) PercGenoForHD=90.0
     read (1,*) dumC
     OutOpt=1
-    PercSnpMiss=0.0
-    SecondPercGenoForHD=0.0
 endif
 PercGenoForHD=PercGenoForHD/100
 PercSnpMiss=PercSnpMiss/100
 SecondPercGenoForHD=SecondPercGenoForHD/100
 
+! print *, PercGenoForHD,PercSnpMiss,SecondPercGenoForHD,OutOpt
+
 ! Get Phasing parameters
+read(1,*) dumC
 ! NumberPhasingRuns
 ! WARNING: Parser complains and exits on error when this option is set
 !          number bigger than 10 because PhaseDone is a character variable
 ! TODO: DEBUG!!
+
 read (1,*) dumC,PhaseDone
 NoPhasing=1
 ! PhaseDone: We already have phase information (AlphaPhase) and so,
@@ -543,7 +579,7 @@ NoPhasing=1
 if (trim(PhaseDone)=="PhaseDone") then
     ManagePhaseOn1Off0=0
     rewind (1)
-    do i=1,6
+    do i=1,14
         read (1,*) dumC
     enddo
     ! Get Path to the phased data and the number of cores used
@@ -555,7 +591,7 @@ elseif (trim(PhaseDone)=="NoPhase") then
     NoPhasing=0
     ManagePhaseOn1Off0=0
     rewind (1)
-    do i=1,6
+    do i=1,14
         read (1,*) dumC
     enddo    
     read (1,*) dumC
@@ -564,11 +600,13 @@ elseif (trim(PhaseDone)=="NoPhase") then
 else
     ManagePhaseOn1Off0=1
     rewind (1)
-    do i=1,6
+    do i=1,14
         read (1,*) dumC
     enddo
     read (1,*) dumC,nPhaseExternal
 endif
+
+! print *, nPhaseExternal
 
 if (trim(PhaseDone)/="PhaseDone" .and. trim(PhaseDone)/="NoPhase") then
     if (nPhaseExternal>40) then
@@ -623,10 +661,68 @@ endif
 ! NumberOfProcessorsAvailable
 read (1,*) dumC,nProcessors
 
+! print *, nProcessors
+
 ! Iteration of the internal haplotype matching
+read(1,*) dumC
 ! InternalIterations
 read (1,*) dumC,InternalIterations
 
+! Whether to use the Haplotype Library in a conservative way
+! ConservativeHaplotypeLibraryUse
+ConservativeHapLibImputation=-1
+read (1,*) dumC,ConservHapLibImp
+if (trim(ConservHapLibImp)=="No") then
+    ConservativeHapLibImputation=0
+endif
+if (trim(ConservHapLibImp)=="Yes") then
+        ConservativeHapLibImputation=1
+endif
+if (ConservativeHapLibImputation==-1) then
+    print*, "ConservativeHaplotypeLibraryUse not correctly specified"
+    stop
+endif
+
+! Get threshold for haplotype phasing errors
+! WellPhasedThreshold
+read (1,*) dumC,WellPhasedThresh
+
+
+! Whether to use a hidden Markov model (HMM) for genotype imputation
+read(1,*) dumC
+! HMMOption
+read (1,*) dumC,TmpHmmOption
+HMMOption=RUN_HMM_NULL
+if (trim(TmpHmmOption)=='No') HMMOption=RUN_HMM_NO
+if (trim(TmpHmmOption)=='Yes') HMMOption=RUN_HMM_YES
+if (trim(TmpHmmOption)=='Only') HMMOption=RUN_HMM_ONLY
+if (trim(TmpHmmOption)=='Prephase') HMMOption=RUN_HMM_PREPHASE
+if (trim(TmpHmmOption)=="NGS") HMMOption=RUN_HMM_NGS
+if (HMMOption==RUN_HMM_NULL) then
+    print*, "HMMOption not correctly specified"
+    stop
+endif
+
+! HMMParameters
+! HMM parameters:
+!   * nHapInSubH: Number of Haplotypes used as templates
+!   * HmmBurnInRound: Number of HMM rounds avoided during imputation
+!   * nRoundsHMM: Number of HMM rounds
+!   * useProcs: Number of processors used for parallelisation
+!   * phasedThreshold: Threshold for well phased gametes
+!   * windLength: Length for the moving window
+read (1,*) dumC, nHapInSubH
+read (1,*) dumC, HmmBurnInRound
+read (1,*) dumC, nRoundsHMM
+read (1,*) dumC, useProcs
+read (1,*) dumC, idum
+read (1,*) dumC, phasedThreshold
+read (1,*) dumC, imputedThreshold
+read (1,*) dumC, windowLength
+! print *, trim(TmpHmmOption), nHapInSubH,HmmBurnInRound,nRoundsHMM,useProcs,idum,phasedThreshold,imputedThreshold,windowLength
+
+! Options managing the software workflow
+read(1,*) dumC
 ! Whether to create the folder and files structure and exit
 ! PreprocessDataOnly
 read (1,*) dumC,PreProcessOptions
@@ -654,25 +750,6 @@ else
         stop
     endif
 endif
-
-! Whether to use the Haplotype Library in a conservative way
-! ConservativeHaplotypeLibraryUse
-ConservativeHapLibImputation=-1
-read (1,*) dumC,ConservHapLibImp
-if (trim(ConservHapLibImp)=="No") then
-    ConservativeHapLibImputation=0
-endif
-if (trim(ConservHapLibImp)=="Yes") then
-        ConservativeHapLibImputation=1
-endif
-if (ConservativeHapLibImputation==-1) then
-    print*, "ConservativeHaplotypeLibraryUse not correctly specified"
-    stop
-endif
-
-! Get threshold for haplotype phasing errors
-! WellPhasedThreshold
-read (1,*) dumC,WellPhasedThresh
 
 ! Get file of animals Highly Dense genotyped
 ! UserDefinedAlphaPhaseAnimalsFile
@@ -708,8 +785,6 @@ if (BypassGeneProb==-1) then
     print*, "BypassGeneProb not correctly specified"
     stop
 endif
-
-! Options managing the software workflow
 ! RestartOptions handle this situation, so:
 !   * RestartOption=0 => Passes through the whole process: GenoProb,
 !                        Phasing and Imputing
@@ -721,39 +796,6 @@ endif
 !                        Probabilities have to be edited by hand
 !   * RestartOption=4 =>
 read (1,*) dumC,RestartOption
-
-! Whether to use a hidden Markov model (HMM) for genotype imputation
-! HMMOption
-read (1,*) dumC,TmpHmmOption
-HMMOption=RUN_HMM_NULL
-if (trim(TmpHmmOption)=='No') HMMOption=RUN_HMM_NO
-if (trim(TmpHmmOption)=='Yes') HMMOption=RUN_HMM_YES
-if (trim(TmpHmmOption)=='Only') HMMOption=RUN_HMM_ONLY
-if (trim(TmpHmmOption)=='Prephase') HMMOption=RUN_HMM_PREPHASE
-if (trim(TmpHmmOption)=="NGS") HMMOption=RUN_HMM_NGS
-if (HMMOption==RUN_HMM_NULL) then
-    print*, "HMMOption not correctly specified"
-    stop
-endif
-
-! HMMParameters
-! HMM parameters:
-!   * nHapInSubH: Number of Haplotypes used as templates
-!   * HmmBurnInRound: Number of HMM rounds avoided during imputation
-!   * nRoundsHMM: Number of HMM rounds
-!   * useProcs: Number of processors used for parallelisation
-!   * phasedThreshold: Threshold for well phased gametes
-!   * windLength: Length for the moving window
-read (1,*) dumC,nHapInSubH,HmmBurnInRound,nRoundsHMM,useProcs,idum,phasedThreshold,imputedThreshold,windowLength
-
-! Get the file containing the true genotypes
-! TrueGenotypeFile
-read (1,*) dumC,TrueGenosFile
-if (TrueGenosFile=="None") then
-    TrueGenos1None0=0
-else
-    TrueGenos1None0=1
-endif
 
 
 open (unit=2,file=trim(PedigreeFile),status="old")
