@@ -7,7 +7,7 @@ integer, parameter :: READ_MISSING=0
 integer            :: MISSING=3
 
 double precision, parameter :: SEQUENCING_ERROR=0.01
-double precision, parameter :: EPSILON_ERROR=0.00000001
+double precision, parameter :: EPSILON_ERROR=0.01
 
 integer, parameter :: NUM_SEGMENTS=1
 
