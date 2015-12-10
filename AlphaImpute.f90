@@ -5395,7 +5395,7 @@ implicit none
 integer :: i,j,TempCore(nPhaseInternal),TempCplusT(nPhaseInternal)
 integer :: Tmp
 character(len=7) :: cm 
-character(len=300) :: filout,FileCheck
+character(len=300) :: filout,FileCheck,fmt
 logical :: FileExists
 
 allocate(GpIndex(nProcessors,2))
@@ -5536,6 +5536,15 @@ do i=1,nPhaseInternal           ! Phasing is done in parallel
         write (106,*) 'Graphics             ,0'
         write (106,*) 'Simulation           ,0'
         write (106,*) 'TruePhaseFile            ,None'
+        if (MultiHD==0) then
+            write (106,*) 'MultipleHDPanels         ,',0
+            write (106,*) 'NumberSnpxChip           ,',0
+        else
+            write(fmt,"(I1)"), MultiHD
+            fmt = trim("(A26," // trim(fmt) // "("","",I))")
+            write (106,*) 'MultipleHDPanels         ,',MultiHD
+            write (106,trim(fmt)) 'NumberSnpxChip           ',nSnpByChip
+        endif
         call flush(106)
         close(106)
         write (filout,'("Phase"i0)')i
@@ -5810,8 +5819,6 @@ print*, " "
 print*, " "
 print*, " ",CountHD," indiviudals passed to AlphaPhase1.1"
 print*, " ",nSnp," snp remain after editing"
-
-stop
 
 end subroutine InternalEdit
 
