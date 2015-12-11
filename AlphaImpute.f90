@@ -5610,18 +5610,17 @@ integer :: i,j, CountMiss
 
 allocate(animChip(nAnisP))
 animChip(:)=0
-open(unit=9999,file='borrar.txt',status='unknown')
 do i=1,nAnisP
     CountMiss=count(TempGenos(i,:)==9)
     do j=1,MultiHD
-        if ( (CountMiss-(nSnp-nSnpByChip(j))) < (1.0-PercGenoForHD)*float(nSnpByChip(j)) .and. (nSnp-CountMiss)<nSnpByChip(j)) then
+        if ( (CountMiss-(nSnp-nSnpByChip(j))) < (1.0-PercGenoForHD)*nSnpByChip(j)&
+                .and. (nSnp-CountMiss)<nSnpByChip(j)&
+                .and. IndivIsGenotyped(i)) then
             animChip(i)=j
             exit
         endif
     enddo
-    write(9999,*) animChip(i)
 enddo
-close(9999)
 end subroutine ClassifyAnimByChips
 
 !#############################################################################################################################################################################################################################
