@@ -361,10 +361,10 @@ do i=1,nAnisP
         enddo
 
         ! Check if this individual has its haplotypes phased
-        if (float(count(PhaseHmmMaCH(k,:,1)/=3))/nSnpHmm >= (WellPhasedThresh/100.0)) Then
+        if (float(count(PhaseHmmMaCH(k,:,1)/=3))/nSnpHmm >= (imputedThreshold/100.0)) Then
             GlobalHmmPhasedInd(k,1)=.TRUE.
         endif
-        if (float(count(PhaseHmmMaCH(k,:,2)/=3))/nSnpHmm >= (WellPhasedThresh/100.0)) Then
+        if (float(count(PhaseHmmMaCH(k,:,2)/=3))/nSnpHmm >= (imputedThreshold/100.0)) Then
             GlobalHmmPhasedInd(k,2)=.TRUE.
         endif
 
