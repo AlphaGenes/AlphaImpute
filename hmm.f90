@@ -489,8 +489,8 @@ else
     if (nGametesPhased/float(2*nAnisP)>phasedThreshold/100.0) then
         if (GlobalHmmPhasedInd(CurrentInd,1)/=.TRUE. .AND. GlobalHmmPhasedInd(CurrentInd,2)/=.TRUE.) Then
             allocate(ForwardProbs(states,nSnpHmm))
-            call ForwardAlgorithm(CurrentInd,StartSnp,StopSnp)
-            call SampleChromosomes(CurrentInd,StartSnp,StopSnp)
+            call ForwardAlgorithm(CurrentInd,1,nSnpHmm)
+            call SampleChromosomes(CurrentInd,1,nSnpHmm)
         else
             allocate(ForwardProbs(nHapInSubH,nSnpHmm))
             call ForwardAlgorithmForSegmentHaplotype(currentInd,1,1,nSnpHmm)     ! Paternal haplotype
@@ -561,8 +561,8 @@ else
         ! enddo
     else
         allocate(ForwardProbs(states,nSnpHmm))
-        call ForwardAlgorithm(CurrentInd,StartSnp,StopSnp)
-        call SampleChromosomes(CurrentInd,StartSnp,StopSnp)
+        call ForwardAlgorithm(CurrentInd,1,nSnpHmm)
+        call SampleChromosomes(CurrentInd,1,nSnpHmm)
     endif
 endif
 
@@ -1436,7 +1436,6 @@ integer :: i,j,p
 ! If the number of phased gametes from AlphaImpute is above a threshold, then
 ! haploytpes produced from AlphaImpute are used in the model (FullH)
 if (nGametesPhased/float(2*nAnisP)>phasedThreshold/100.0) then
-    print *, nGametesPhased/float(2*nAnisP), phasedThreshold/100.0
     do i=1,nIndHmmMaCH
         FullH(i,:,:)=PhaseHmmMaCH(i,:,:)
 
