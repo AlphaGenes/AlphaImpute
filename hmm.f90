@@ -1912,7 +1912,7 @@ do while (HapCount<nHapInSubH)
         ! Select the paternal haplotype if the individual it belongs
         ! to is genotyped and it is not the current individual
         if ((Shuffle1(ShuffleInd1)/=CurrentInd)&
-                .and.(GlobalHmmHDInd(ShuffleInd1)==1)) then
+                .and.(GlobalHmmHDInd(Shuffle1(ShuffleInd1))==1)) then
             HapCount=HapCount+1
             SubH(HapCount,:)=FullH(Shuffle1(ShuffleInd1),:,1)
         endif
@@ -1922,7 +1922,7 @@ do while (HapCount<nHapInSubH)
         ! Select the maternal haplotype if the individual it belongs
         ! too is genotyped and it is not the current individual
         if ((Shuffle2(ShuffleInd2)/=CurrentInd)&
-                .and.(GlobalHmmHDInd(ShuffleInd2)==1)) then
+                .and.(GlobalHmmHDInd(Shuffle2(ShuffleInd2))==1)) then
             HapCount=HapCount+1
             SubH(HapCount,:)=FullH(Shuffle2(ShuffleInd2),:,2)
         endif
@@ -1960,7 +1960,7 @@ do while (HapCount<nHapInSubH)
         ! Select the paternal haplotype if the individual it belongs
         ! to is genotyped and it is not the current individual
         if ((Shuffle1(ShuffleInd1)/=CurrentInd).and.&
-                (GlobalHmmPhasedInd(ShuffleInd1,1)==.TRUE.)) then
+                (GlobalHmmPhasedInd(Shuffle1(ShuffleInd1),1)==.TRUE.)) then
 
             HapCount=HapCount+1
             SubH(HapCount,:)=FullH(Shuffle1(ShuffleInd1),:,1)
@@ -1971,7 +1971,7 @@ do while (HapCount<nHapInSubH)
         ! Select the maternal haplotype if the individual it belongs
         ! too is genotyped and it is not the current individual
         if ((Shuffle2(ShuffleInd2)/=CurrentInd).and.&
-                (GlobalHmmPhasedInd(ShuffleInd2,2)==.TRUE.)) then
+                (GlobalHmmPhasedInd(Shuffle2(ShuffleInd2),2)==.TRUE.)) then
             HapCount=HapCount+1
             SubH(HapCount,:)=FullH(Shuffle2(ShuffleInd2),:,2)
         endif
