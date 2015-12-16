@@ -110,6 +110,8 @@ if (Hapi==0) then
 endif
 
 do marker=nSnpHmm-1,1,-1
+! do while (marker>1)
+    ! marker=marker-1
     ! Track whether imputed state matches observed allele
     if (SubH(Hapi,marker)==PhaseHmmMaCH(CurrentInd,marker,hap)) then
         ErrorMatches(marker)=ErrorMatches(marker)+1
@@ -183,11 +185,11 @@ implicit none
 integer,intent(IN) :: CurrentInd, hap, StartSnp, StopSnp
 
 ! Local variables
-integer :: i, state, marker, Thread, Hapi
+integer :: i, state, marker, Thread, Hapi, ToHap, sampleHap, FromMarker, tmpMarker
 
 ! double precision :: Probs(nHapInSubH*(nHapInSubH+1)/2)
 double precision :: Probs(nHapInSubH)
-double precision :: Summer, Choice, Theta, cross, nocross
+double precision :: Summer, Choice, Theta, cross, nocross, Theta1, Recomb
 
 #if DEBUG.EQ.1
     write(0,*) 'DEBUG: [SampleSegmentHaplotypeSource]'
@@ -214,11 +216,14 @@ do i=1,nHapInSubH
     endif
 enddo
 
-if (Hapi==0) then
-    Hapi=INT(1+par_uni(Thread)*nHapInSubH)
-endif
+! if (Hapi==0) then
+!     Hapi=INT(1+par_uni(Thread)*nHapInSubH)
+! endif
 
-do marker=StopSnp,StartSnp,-1
+! do marker=StopSnp,StartSnp,-1
+marker=StopSnp
+do while (marker>StartSnp)
+    marker=marker-1
     ! Track whether imputed state matches observed allele
     if (SubH(Hapi,marker)==PhaseHmmMaCH(CurrentInd,marker,hap)) then
         ErrorMatches(marker)=ErrorMatches(marker)+1
@@ -232,6 +237,17 @@ do marker=StopSnp,StartSnp,-1
     !         (GenosHmmMaCH(CurrentInd,marker)/=1 .AND. GenosHmmMaCH(CurrentInd,marker)/=2)) then
         FullH(CurrentInd,marker,hap) = SubH(Hapi,marker)
     endif
+
+    ! Cumulative recombination fraction allows us to skip over
+    ! uninformative positions: Alleles with missing genotype are skipped
+    ! but the recombination information (Thetas(SuperJ) is accumulated
+    ! and used in the next location.
+    tmpMarker=marker
+    Theta=Thetas(marker)
+    do while (PhaseHmmMaCH(CurrentInd,marker,hap)==ALLELE_MISSING .AND. marker>StartSnp)
+        marker=marker-1
+        Theta=Theta+Thetas(marker)-Theta*Thetas(marker)
+    enddo
 
 
     Theta = Thetas(marker)
@@ -251,14 +267,26 @@ do marker=StopSnp,StartSnp,-1
     Choice = par_uni(Thread)*(nocross+cross)
 
     ! The most likely outcome is that no changes occur ...
-    if (Choice <= nocross) cycle
+    if (Choice <= nocross) then
+            do i=marker,tmpMarker
+                if (SubH(Hapi,i)==PhaseHmmMaCH(CurrentInd,i,hap)) then
+                    ErrorMatches(i)=ErrorMatches(i)+1
+                else
+                    ErrorMismatches(i)=ErrorMismatches(i)+1
+                endif
 
-    ! TODO: Look what crossovers are
-    crossovers(i)= crossovers(i)+1
+                ! Impute if allele is missing
+                if (PhaseHmmMaCH(CurrentInd,i,hap)==ALLELE_MISSING) then
+                ! if (PhaseHmmMaCH(CurrentInd,marker,hap)==ALLELE_MISSING .OR. &
+                !         (GenosHmmMaCH(CurrentInd,marker)/=1 .AND. GenosHmmMaCH(CurrentInd,marker)/=2)) then
+                    FullH(CurrentInd,i,hap)=SubH(Hapi,i)
+                endif
+            enddo
+        cycle
+    endif
 
-    ! If a crossover occured, we need to sample a state according to probability
+   ! If a crossover occured, we need to sample a state according to probability
     Choice = par_uni(Thread)*(Summer)
-
     Summer = 0.0
     do i=1,nHapInSubH
         Summer = Summer + Probs(i)
@@ -267,6 +295,60 @@ do marker=StopSnp,StartSnp,-1
             exit
         endif
     enddo
+
+    Theta=0.0
+    do i=marker,tmpMarker-1
+        Theta=Thetas(i)+Theta-Theta*Thetas(i)
+    enddo
+    FromMarker=marker
+    do while (FromMarker<tmpMarker)
+        Recomb = par_uni(Thread)*Theta
+
+        Theta1 = Thetas(FromMarker)
+
+        if (Theta < 0.9) then
+            !Fast closed formula
+            Theta=(Theta-Theta1)/(1.0-Theta1)
+        else
+            Theta = 0.0
+            !More accurate, iterative formula
+            do i=FromMarker+1,tmpMarker-1
+                Theta=Thetas(i)+Theta-Theta*Thetas(i)
+            enddo
+        endif
+
+        if (Recomb>Theta1) then
+        ! No recombinant in the first interval =>
+        !    => Recombinant in second interval
+            FromMarker=FromMarker+1
+            if (PhaseHmmMaCH(CurrentInd,FromMarker,hap)==ALLELE_MISSING) then
+                FullH(CurrentInd,FromMarker,hap) = SubH(ToHap,FromMarker)
+            endif
+            cycle
+        endif
+
+        !$OMP ATOMIC
+        crossovers(i)= crossovers(i)+1
+
+        if (Recomb < Theta1*(1.0-Theta)) then
+            ! No recombinant in the second interval
+            do i=FromMarker,tmpMarker
+                if (PhaseHmmMaCH(CurrentInd,i,hap)==ALLELE_MISSING) then
+                    FullH(CurrentInd,i,hap) = SubH(Hapi,i)
+                endif
+            enddo
+            exit
+        else
+            ! Recombinants in both intervals, so we must sample
+            ! an intervening state
+            FromMarker=FromMarker+1
+            sampleHap=1+INT(par_uni(Thread)*nHapInSubH)
+            if (PhaseHmmMaCH(CurrentInd,FromMarker,hap)==ALLELE_MISSING) then
+                FullH(CurrentInd,FromMarker,hap) = SubH(sampleHap,FromMarker)
+            endif
+        endif
+    enddo
+
 enddo
 
 ! Track whether imputed state matches observed allele
