@@ -139,7 +139,7 @@ do marker=nSnpHmm-1,1,-1
     Choice = par_uni(Thread)*(nocross+cross)
 
     ! The most likely outcome is that no changes occur ...
-    if (Choice <= nocross) continue
+    if (Choice <= nocross) cycle
 
     ! TODO: Look what crossovers are
     crossovers(i)= crossovers(i)+1
@@ -251,7 +251,7 @@ do marker=StopSnp,StartSnp,-1
     Choice = par_uni(Thread)*(nocross+cross)
 
     ! The most likely outcome is that no changes occur ...
-    if (Choice <= nocross) continue
+    if (Choice <= nocross) cycle
 
     ! TODO: Look what crossovers are
     crossovers(i)= crossovers(i)+1
