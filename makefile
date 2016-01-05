@@ -4,7 +4,8 @@ VERSION:=$(shell git rev-parse --short HEAD)
 MASTERVERSION:=$(shell git describe --tag)
 # SUBVERSION:=2.0
 # PROGRAM:=${NAME}${VERSION}.${SUBVERSION}
-PROGRAM:=$(NAME)$(MASTERVERSION)
+#PROGRAM:=$(NAME)$(MASTERVERSION)
+PROGRAM:=$(NAME).gamete
 GP:=GeneProbForAlphaImpute
 
 # Compiler

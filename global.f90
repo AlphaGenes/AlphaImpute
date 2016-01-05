@@ -32,11 +32,12 @@ real,parameter :: DisagreeThreshold=0.05,GeneProbThresh=0.99
 
 character (len=300) :: PedigreeFile,PhasePath,TrueGenosFile,GenotypeFile,GenderFile
 
-integer :: nAnisG,nAnisRawPedigree,nSnp,nAnisP,IntEditStat,nPhaseInternal,nPhaseExternal,OutOpt,SexOpt,HetGameticStatus,HomGameticStatus
+integer :: nAnisG,nAnisRawPedigree,nSnp,nAnisP,IntEditStat,nPhaseInternal,nPhaseExternal,OutOpt,SexOpt,HetGameticStatus,HomGameticStatus,MultiHD
 integer :: nProcessors,nProcessGeneProb,nProcessAlphaPhase,ManagePhaseOn1Off0,CountRawGenos,InternalIterations,nAnisInGenderFile
 integer :: nAgreeImputeHDLib,nAgreeParentPhaseElim,nAgreeInternalHapLibElim,MaxLeftRightSwitch,MinSpan,ConservativeHapLibImputation
 integer :: TrueGenos1None0,nSnpRaw,nObsDataRaw,nAgreePhaseElim,nAgreeGrandParentPhaseElim,UseGP,BypassGeneProb,HMMOption
 integer :: nSnpIterate,NoPhasing,AlphaPhasePresent,GeneProbPresent,PrePhased,UserDefinedHD,PedFreePhasing,PhaseTheDataOnly,RestartOption
+integer :: nSnpChips
 
 logical :: PreProcess
 
@@ -54,6 +55,8 @@ real,allocatable,dimension (:,:) :: ProbImputeGenos, GPI
 real,allocatable,dimension (:,:,:) :: ProbImputePhase
 
 character*(lengan),allocatable :: GenotypeId(:),GenderId(:)
+
+integer, allocatable :: nSnpsAnimal(:), Centroid(:), ClusterMemberIndv(:)
 
 end module Global
 
