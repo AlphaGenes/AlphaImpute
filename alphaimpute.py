@@ -69,6 +69,9 @@ USAGE
         parser.add_argument("-X", "--sexchrom", help="Sex Chromosome File", metavar="file")
         parser.add_argument("-f", "--female", help="Set Female as the heterogametic sex. [Default: Male]", action="store_true")
         parser.add_argument("-S", "--snp", help="Number of SNP in the genotype file", type=int, metavar="nSNP", required=True)
+        parser.add_argument("-D", "--multiHD", help="Number of multiple HD arrays [Default: %(default)s]", default=0, type=int, metavar="int")
+        parser.add_argument("-a", "--arrays", help="Number of nominal SNP in each array [Default: %(default)s]", nargs="*", default=0, type=int, metavar="int")
+        parser.add_argument("-d", "--HD_thres", help="HD animals threshold [Default: %(default)3.1f]", type=float, default=90.0, dest="hdthres", metavar="float")
         parser.add_argument("-E", "--edit", help="Edit data internally", action="store_true", dest="edit")
         parser.add_argument("-e", "--edit_param", help="Parameters to edit data internally [Default: %(default)s]", metavar="int", nargs=3, default=[95.0,2.0,98.0], dest='editParam')
         parser.add_argument("-o", "--edit-output", help="Output of the editing phase [Default: %(default)s]", choices=["AllSnpOut", "EditedSnpOut"], default="AllSnpOut", metavar="str")
@@ -90,7 +93,15 @@ USAGE
         parser.add_argument("-b", "--bypass", help="Bypass GeneProb", action="store_true")
         parser.add_argument("-R", "--restart", help="Restart Option [Default: %(default)d]", type=int, default=0, required=True, metavar="int")
         parser.add_argument("-M", "--hmm", help="Use Hidden Markov Model [Default: %(default)s]", dest="hmm", choices=["No","Only", "Yes"], metavar="str")
-        parser.add_argument("-m", "--hmm_param", help="Hidden Markov Model parameters[Default: %(default)s]", nargs=5, default=[300,19,20,4,-123456788], metavar="int", dest="hmmParam")
+        # parser.add_argument("-m", "--hmm_param", help="Hidden Markov Model parameters[Default: %(default)s]", nargs=5, default=[300,19,20,4,-123456788], metavar="int", dest="hmmParam")
+        parser.add_argument("-H", "--haplotypes", help="Number of haplotypes for the HMM [Default: %(default)d]", default=200, type=int, metavar="int")
+        parser.add_argument("-B", "--burnin", help="Number of burn-in rounds for the HMM [Default: %(default)d]", default=5, type=int, metavar="int")
+        parser.add_argument("-N", "--rounds", help="Number of rounds for the HMM [Default: %(default)d]", default=20, type=int, metavar="int")
+        parser.add_argument("-s", "--seed", help="Random Number Generator seed for the HMM [Default (negative): %(default)d]", default=-123456789, type=int, metavar="int")
+        parser.add_argument("-O", "--hmmprocessors", help="Number of Processors Available for the HMM [Default: %(default)d]", default=2, type=int, metavar="int")
+        parser.add_argument("-m", "--missing_alleles_thres", help="Missing alleles threshold [Default: %(default)3.1f]", type=float, default=90.0, dest="missthres", metavar="float")
+        parser.add_argument("-I", "--imputed_snps_thres", help="Imputed SNPs threshold [Default: %(default)3.1f]", type=float, default=90.0, dest="imptThres", metavar="float")
+        parser.add_argument("-W", "--window_length", help="Moving window length for HMM imputatoin [Default: %(default)3.1f]", type=float, default=100.0, dest="windlength", metavar="float")
 
         parser.add_argument("-T", "--truegenotype", help="True Genotype File", metavar="file", type=file)
         parser.add_argument("-V", "--version", action="version", version=program_version_message)
@@ -104,6 +115,9 @@ USAGE
         sexChromosome = args.sexchrom
         female = args.female
         nSnps = args.snp
+        MultipleHDPanels = args.multiHD
+        snpChips= args.arrays
+        HDAnimalsThreshold = args.hdthres
         edit = args.edit
         editParameters = args.editParam
         editOutput = args.edit_output
@@ -125,13 +139,49 @@ USAGE
         bypass = args.bypass
         restartOption = args.restart
         hmm = args.hmm
-        hmmParameters = args.hmmParam
+        templateHaplotypes = args.haplotypes
+        burnInRounds = args.burnin
+        rounds = args.rounds
+        hmmNProcessors = args.hmmprocessors
+        seed = args.seed
+        missAllelThres = args.missthres
+        imputedThres = args.imptThres
+        windowlength = args.windlength
         trueGenotypeFile = args.truegenotype
+
+        # Sanity check
+        if burnInRounds >= rounds:
+            msg = 'The number of burn-in rounds cannot be bigger than the number of rounds in the HMM'
+            print msg
+            return 2
+
+        if seed > 0:
+            msg = "{0} is an invalid negative int value".format(seed)
+            print msg
+            return 2
+
+        if type(snpChips)!=int:
+            if len(snpChips)!=MultipleHDPanels:
+                msg = "The number of HD arrays {0} does not correspond with the number of densities provided {1}".format(MultipleHDPanels,len(snpChips))
+                print msg
+                return 2
+            for chip in snpChips:
+                if chip > nSnps:
+                    msg = "The number of SNP in a chip {0} cannot be greater than the total number of SNPs {1}".format(chip,nSnps)
+                    print msg
+                    return 2
 
 
         # Construct file
-        spec= 'PedigreeFile\t\t\t\t,"{0}"\n'.format(pedigreeFile.name)
+        spec= '= BOX 1: Input Files ==========================================================\n'
+        spec+= 'PedigreeFile\t\t\t\t,"{0}"\n'.format(pedigreeFile.name)
         spec+= 'GenotypeFile\t\t\t\t,"{0}"\n'.format(genotypeFile.name)
+        if trueGenotypeFile is not None and os.path.isfile(trueGenotypeFile.name):
+            spec+= 'TrueGenotypeFile\t\t\t,"{0}"\n'.format(trueGenotypeFile.name)
+        else:
+            spec+= 'TrueGenotypeFile\t\t\t,None\n'
+
+        spec+= '= BOX 2: Sex Chromosome ========================================================\n'
         if sexChromosome is None:
             spec+= 'SexChrom\t\t\t\t,No\n'
         elif os.path.isfile(sexChromosome):
@@ -140,7 +190,23 @@ USAGE
             spec+= 'SexChrom\t\t\t\t,Yes,{0},{1}\n'.format(sexChromosome,heterogamete)
         else:
             parser.error(program_name + ": " + '<{0}> is not a valid sex chromosome file'.format(sexChromosome))
+        
+
+        spec+= '= BOX 3: SNPs ==================================================================\n'
         spec+= 'NumberSnp\t\t\t\t,{0}\n'.format(nSnps)
+        if MultipleHDPanels!=0:
+            spec+= 'MultipleHDPanels\t\t\t,{0}\n'.format(MultipleHDPanels)
+            spec+= 'NumberSnpxChip\t\t\t\t'
+            for chip in snpChips:
+                spec+= ',' + str(chip)
+            spec+= '\n'
+            spec+= 'HDAnimalsThreshold\t\t\t,{0}\n'.format(HDAnimalsThreshold)
+        else:
+            spec+= 'MultipleHDPanels\t\t\t,0\n'
+            spec+= 'NumberSnpxChip\t\t\t\t,0\n'
+            spec+= 'HDAnimalsThreshold\t\t\t,0.0\n'
+        
+        spec+= '= BOX 4: Internal Editing =======================================================\n'
         if edit:
             spec+= 'InternalEdit\t\t\t\t,Yes\n'
             spec+= 'EditingParameters\t\t\t,'
@@ -150,6 +216,8 @@ USAGE
         else:
             spec+= 'InternalEdit\t\t\t\t,No\n'
             spec+= 'EditingParameters\t\t\t,0.0,0.0,0.0,AllSnpOut\n'
+        
+        spec+= '= BOX 5: Phasing ================================================================\n'
         if phased=='PhaseDone':
             if phasePath is not None and os.path.isfile(phasePath):
                 spec+= 'NumberPhasingRuns\t\t\t,{0},{1},{2}\n'.format(phased,phasePath,phaseRuns)
@@ -178,8 +246,32 @@ USAGE
         spec+= 'GenotypeError\t\t\t\t,{0}\n'.format(genotypeError)
 
         spec+= 'NumberOfProcessorsAvailable\t\t,{0}\n'.format(nProcessors)
-        spec+= 'InternalIterations\t\t\t,{0}\n'.format(nIterations)
 
+        spec+= '= BOX 6: Imputation =========================================================\n'
+        spec+= 'InternalIterations\t\t\t,{0}\n'.format(nIterations)
+        if library:
+            spec+= 'ConservativeHaplotypeLibraryUse\t\t,Yes\n'
+        else:
+            spec+= 'ConservativeHaplotypeLibraryUse\t\t,No\n'
+        spec+= 'WellPhasedThreshold\t\t\t,{0}\n'.format(wellPhasedThres)
+
+        spec+= '= BOX 7: Hidden Markov Model ================================================\n'
+        if hmm=="Yes":
+            spec+= 'HMMOption\t\t\t\t,Yes\n'
+        elif hmm=="Only":
+            spec+= 'HMMOption\t\t\t\t,Only\n'
+        else:
+            spec+= 'HMMOption\t\t\t\t,No\n'
+        spec+= 'TemplateHaplotypes\t\t\t,{0}\n'.format(templateHaplotypes)
+        spec+= 'BurnInRounds\t\t\t\t,{0}\n'.format(burnInRounds)
+        spec+= 'Rounds\t\t\t\t\t,{0}\n'.format(rounds)
+        spec+= 'ParallelProcessors\t\t\t,{0}\n'.format(hmmNProcessors)
+        spec+= 'Seed\t\t\t\t\t,{0}\n'.format(seed)
+        spec+= 'ThresholdForMissingAlleles\t\t,{0}\n'.format(missAllelThres)
+        spec+= 'ThresholdImputed\t\t\t,{0}\n'.format(imputedThres)
+        spec+= 'WindowLength\t\t\t\t,{0}\n'.format(windowlength)
+
+        spec+= '= BOX 8: Running options ====================================================\n'
         if dataOnly:
             spec+= 'PreprocessDataOnly\t\t\t,Yes\n'
         else:
@@ -189,13 +281,6 @@ USAGE
             spec+= 'PhasingOnly\t\t\t\t,Yes\n'
         else:
             spec+= 'PhasingOnly\t\t\t\t,No\n'
-
-        if library:
-            spec+= 'ConservativeHaplotypeLibraryUse\t\t,Yes\n'
-        else:
-            spec+= 'ConservativeHaplotypeLibraryUse\t\t,No\n'
-
-        spec+= 'WellPhasedThreshold\t\t\t,{0}\n'.format(wellPhasedThres)
 
         if userPhaseFile is not None and os.path.isfile(userPhaseFile):
             spec+= 'UserDefinedAlphaPhaseAnimalsFile\t,"{0}"\n'.format(userPhaseFile)
@@ -212,25 +297,7 @@ USAGE
         else:
             spec+= 'BypassGeneProb\t\t\t\t,No\n'
 
-
         spec+= 'RestartOption\t\t\t\t,{0}\n'.format(restartOption)
-
-        if hmm=="Yes":
-            spec+= 'HMMOption\t\t\t\t,Yes\n'
-        elif hmm=="Only":
-            spec+= 'HMMOption\t\t\t\t,Only\n'
-        else:
-            spec+= 'HMMOption\t\t\t\t,No\n'
-
-        spec+= 'HmmParameters\t\t\t\t'
-        for param in hmmParameters:
-            spec+= ',' + str(param)
-        spec+= '\n'
-
-        if trueGenotypeFile is not None and os.path.isfile(trueGenotypeFile.name):
-            spec+= 'TrueGenotypeFile\t\t\t,"{0}"\n'.format(trueGenotypeFile.name)
-        else:
-            spec+= 'TrueGenotypeFile\t\t\t,None\n'
 
 
         # Write and close file

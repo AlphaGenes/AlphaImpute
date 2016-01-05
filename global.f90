@@ -57,6 +57,8 @@ real,allocatable,dimension (:,:,:) :: ProbImputePhase
 character*(lengan),allocatable :: GenotypeId(:),GenderId(:)
 
 integer, allocatable :: nSnpsAnimal(:), Centroid(:), ClusterMemberIndv(:)
+integer, allocatable :: nSnpByChip(:), animChip(:)
+
 
 end module Global
 
