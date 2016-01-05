@@ -1967,9 +1967,11 @@ else
     if (HMMOption/=RUN_HMM_NO) then
         call WriteProbabilities("./Results/GenotypeProbabilities.txt", GlobalExtraAnimals, Id, nAnisP, nSnp)
     else
-        allocate(GenosProbs(nAnisP,nSnp,2))
-        call ReReadIterateGeneProbs(GenosProbs)
-        call WriteProbabilities("./Results/GenotypeProbabilities.txt", GenosProbs, Id, GlobalExtraAnimals, nAnisP, nSnp)
+        if (BypassGeneProb==0) then
+            allocate(GenosProbs(nAnisP,nSnp,2))
+            call ReReadIterateGeneProbs(GenosProbs)
+            call WriteProbabilities("./Results/GenotypeProbabilities.txt", GenosProbs, Id, GlobalExtraAnimals, nAnisP, nSnp)
+        endif
     endif
 
     if ((SexOpt==1).or.(BypassGeneProb==1)) then
