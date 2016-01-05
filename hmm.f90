@@ -4,6 +4,8 @@ use Global
 use GlobalVariablesHmmMaCH
 use Par_Zig_mod
 use omp_lib
+use random
+
 
 implicit none
 integer, intent(in) :: HMM
@@ -124,6 +126,14 @@ call ParseMaCHData(HMM)
 !             PhaseHmmMaCH(i,j,:)=0
 !         elseif (GenosHmmMaCH(i,j)==2) then
 !             PhaseHmmMaCH(i,j,:)=1
+!         elseif (GenosHmmMaCH(i,j)==1) then
+!             if (ran1(idum)>=0.5) then
+!                 PhaseHmmMaCH(i,j,1)=0
+!                 PhaseHmmMaCH(i,j,2)=1
+!             else
+!                 PhaseHmmMaCH(i,j,1)=1
+!                 PhaseHmmMaCH(i,j,2)=0
+!             endif
 !         else
 !             PhaseHmmMaCH(i,j,:)=3
 !         endif
@@ -166,6 +176,7 @@ allocate(GenosCounts(nIndHmmMaCH,nSnpHmm,2))
 GenosCounts=0
 
 tT=0.0
+
 do GlobalRoundHmm=1,nRoundsHmm
     write(6, 100, advance="no") char(13),"   HMM Round   ",GlobalRoundHmm
     !write(6, 100) char(13),"   HMM Round   ",GlobalRoundHmm
@@ -199,6 +210,7 @@ do GlobalRoundHmm=1,nRoundsHmm
     ! Update transition probabilities of the HMM process
     call UpdateErrorRate(Theta)
 enddo
+
 
 #ifdef DEBUG
     write(0,*) 'DEBUG: End paralellisation'
@@ -349,10 +361,10 @@ do i=1,nAnisP
         enddo
 
         ! Check if this individual has its haplotypes phased
-        if (float(count(PhaseHmmMaCH(k,:,1)/=3))/nSnpHmm >= (WellPhasedThresh/100.0)) Then
+        if (float(count(PhaseHmmMaCH(k,:,1)/=3))/nSnpHmm >= (imputedThreshold/100.0)) Then
             GlobalHmmPhasedInd(k,1)=.TRUE.
         endif
-        if (float(count(PhaseHmmMaCH(k,:,2)/=3))/nSnpHmm >= (WellPhasedThresh/100.0)) Then
+        if (float(count(PhaseHmmMaCH(k,:,2)/=3))/nSnpHmm >= (imputedThreshold/100.0)) Then
             GlobalHmmPhasedInd(k,2)=.TRUE.
         endif
 
@@ -445,6 +457,10 @@ else
         ! If the number of phased gametes with AlphaImpute is above
         ! a threshold, then template is populated with the phased data
         call ExtractTemplateByHaps(CurrentInd,Shuffle1,Shuffle2)
+        ! do i=1,nHapInSubH
+        !     print *, ''
+        !     print *,i, SubH(i,:)
+        ! enddo
     else
         ! Otherwise, the template is populated with haplotypes at random
         ! from all the HD animals
@@ -455,74 +471,99 @@ endif
 ! ... selecting pairs of haplotypes at random
 !call ExtractTemplateHapsByAnimals(CurrentInd,Shuffle1)
 
-
 StartSnp=1
 StopSnp=nSnpHmm
 if (HMM==RUN_HMM_ONLY) then
-    allocate(ForwardProbs(states,nSnpHmm))
-    call ForwardAlgorithm(CurrentInd,StartSnp,StopSnp)
-    call SampleChromosomes(CurrentInd,StartSnp,StopSnp)
-else
-    ! WellPhased = imputedThreshold
-    StartSnp=1
-    StopSnp=nSnpHmm
-    nSegments=nSnpHmm/windowLength
-    if (MOD(nSnpHmm,windowLength)/=0) nSegments=nSegments+1
-    SegmentSize=windowLength
-    allocate(SegmentImputeDiploidHMM(nSegments))
-    SegmentImputeDiploidHMM=.FALSE.
-
-    ! Impute animal with diploid HMM by segments.
-    if (allocated(ForwardProbs)==.TRUE.) deallocate(ForwardProbs)
-    allocate(ForwardProbs(states,nSnpHmm))
-    ! Calculate Forward probabilities for chromosome
-    call ForwardAlgorithm(CurrentInd)
-    do i=1,nSegments
-        StartSnp=SegmentSize*(i-1)+1
-        StopSnp=SegmentSize*i
-        if (StopSnp>nSnpHmm) StopSnp=nSnpHmm
-
-        ! Impute segment if the number of missing alleles for both gametes
-        ! is above a threshold
-        if (float(CountGenotypedAllelesByGametes(&
-                PhaseHmmMaCH(currentInd,StartSnp:StopSnp,1), &
-                PhaseHmmMaCH(currentInd,StartSnp:StopSnp,2))) /(StopSnp-StartSnp+1)<=imputedThreshold/100.0) then
-            ! Impute
-            call SampleChromosomes(CurrentInd,StartSnp,StopSnp)
-            SegmentImputeDiploidHMM(i)=.TRUE.
-        endif
-    enddo
-
-    ! Impute paternal gamete with haploid HMM by segments.
-    ! If segment has already been imputed by diploid HMM, then skip
-    if (allocated(ForwardProbs)==.TRUE.) deallocate(ForwardProbs)
+    ! allocate(ForwardProbs(states,nSnpHmm))
+    ! call ForwardAlgorithm(CurrentInd,StartSnp,StopSnp)
+    ! call SampleChromosomes(CurrentInd,StartSnp,StopSnp)
     allocate(ForwardProbs(nHapInSubH,nSnpHmm))
-    ! Calculate Forward probabilities for paternal gamete
     call ForwardAlgorithmForSegmentHaplotype(currentInd,1,1,nSnpHmm)     ! Paternal haplotype
-    do i=1,nSegments
-        if (SegmentImputeDiploidHMM(i)==.TRUE.) cycle
-        StartSnp=SegmentSize*(i-1)+1
-        StopSnp=SegmentSize*i
-        if (StopSnp>nSnpHmm) StopSnp=nSnpHmm
-        ! Impute
-        call SampleSegmentHaplotypeSource(CurrentInd,1,StartSnp,StopSnp)
-    enddo
-
-    ! Impute maternal gamete with haploid HMM by segments.
-    ! If segment has already been imputed by diploid HMM, then skip
-    if (allocated(ForwardProbs)==.TRUE.) deallocate(ForwardProbs)
+    call SampleSegmentHaplotypeSource(CurrentInd,1,1,nSnpHmm)
+    deallocate(ForwardProbs)
     allocate(ForwardProbs(nHapInSubH,nSnpHmm))
-    ! Calculate Forward probabilities for maternal gamete
     call ForwardAlgorithmForSegmentHaplotype(currentInd,2,1,nSnpHmm)     ! Paternal haplotype
-    do i=1,nSegments
-        if (SegmentImputeDiploidHMM(i)==.TRUE.) cycle
-        StartSnp=SegmentSize*(i-1)+1
-        StopSnp=SegmentSize*i
-        if (StopSnp>nSnpHmm) StopSnp=nSnpHmm
-        ! Impute
-        call SampleSegmentHaplotypeSource(CurrentInd,2,StartSnp,StopSnp)
-    enddo
+    call SampleSegmentHaplotypeSource(CurrentInd,2,1,nSnpHmm)
 
+else
+    if (nGametesPhased/float(2*nAnisP)>phasedThreshold/100.0) then
+        if (GlobalHmmPhasedInd(CurrentInd,1)/=.TRUE. .AND. GlobalHmmPhasedInd(CurrentInd,2)/=.TRUE.) Then
+            allocate(ForwardProbs(states,nSnpHmm))
+            call ForwardAlgorithm(CurrentInd,1,nSnpHmm)
+            call SampleChromosomes(CurrentInd,1,nSnpHmm)
+        else
+            allocate(ForwardProbs(nHapInSubH,nSnpHmm))
+            call ForwardAlgorithmForSegmentHaplotype(currentInd,1,1,nSnpHmm)     ! Paternal haplotype
+            call SampleSegmentHaplotypeSource(CurrentInd,1,1,nSnpHmm)
+            deallocate(ForwardProbs)
+            allocate(ForwardProbs(nHapInSubH,nSnpHmm))
+            call ForwardAlgorithmForSegmentHaplotype(currentInd,2,1,nSnpHmm)     ! Paternal haplotype
+            call SampleSegmentHaplotypeSource(CurrentInd,2,1,nSnpHmm)
+        endif
+        ! ! WellPhased = imputedThreshold
+        ! StartSnp=1
+        ! StopSnp=nSnpHmm
+        ! nSegments=nSnpHmm/windowLength
+        ! if (MOD(nSnpHmm,windowLength)/=0) nSegments=nSegments+1
+        ! SegmentSize=windowLength
+        ! allocate(SegmentImputeDiploidHMM(nSegments))
+        ! SegmentImputeDiploidHMM=.FALSE.
+
+        ! ! Impute animal with diploid HMM by segments.
+        ! if (allocated(ForwardProbs)==.TRUE.) deallocate(ForwardProbs)
+        ! allocate(ForwardProbs(states,nSnpHmm))
+        ! ! Calculate Forward probabilities for chromosome
+        ! call ForwardAlgorithm(CurrentInd)
+        ! do i=1,nSegments
+        !     StartSnp=SegmentSize*(i-1)+1
+        !     StopSnp=SegmentSize*i
+        !     if (StopSnp>nSnpHmm) StopSnp=nSnpHmm
+
+        !     ! Impute segment if the number of missing alleles for both gametes
+        !     ! is above a threshold
+        !     if (float(CountGenotypedAllelesByGametes(&
+        !             PhaseHmmMaCH(currentInd,StartSnp:StopSnp,1), &
+        !             PhaseHmmMaCH(currentInd,StartSnp:StopSnp,2))) /(StopSnp-StartSnp+1)<=imputedThreshold/100.0) then
+        !         ! Impute
+        !         call SampleChromosomes(CurrentInd,StartSnp,StopSnp)
+        !         SegmentImputeDiploidHMM(i)=.TRUE.
+        !     endif
+        ! enddo
+
+        ! ! Impute paternal gamete with haploid HMM by segments.
+        ! ! If segment has already been imputed by diploid HMM, then skip
+        ! if (allocated(ForwardProbs)==.TRUE.) deallocate(ForwardProbs)
+        ! allocate(ForwardProbs(nHapInSubH,nSnpHmm))
+        ! ! Calculate Forward probabilities for paternal gamete
+        ! call ForwardAlgorithmForSegmentHaplotype(currentInd,1,1,nSnpHmm)     ! Paternal haplotype
+        ! do i=1,nSegments
+        !     if (SegmentImputeDiploidHMM(i)==.TRUE.) cycle
+        !     StartSnp=SegmentSize*(i-1)+1
+        !     StopSnp=SegmentSize*i
+        !     if (StopSnp>nSnpHmm) StopSnp=nSnpHmm
+        !     ! Impute
+        !     call SampleSegmentHaplotypeSource(CurrentInd,1,StartSnp,StopSnp)
+        ! enddo
+
+        ! ! Impute maternal gamete with haploid HMM by segments.
+        ! ! If segment has already been imputed by diploid HMM, then skip
+        ! if (allocated(ForwardProbs)==.TRUE.) deallocate(ForwardProbs)
+        ! allocate(ForwardProbs(nHapInSubH,nSnpHmm))
+        ! ! Calculate Forward probabilities for maternal gamete
+        ! call ForwardAlgorithmForSegmentHaplotype(currentInd,2,1,nSnpHmm)     ! Paternal haplotype
+        ! do i=1,nSegments
+        !     if (SegmentImputeDiploidHMM(i)==.TRUE.) cycle
+        !     StartSnp=SegmentSize*(i-1)+1
+        !     StopSnp=SegmentSize*i
+        !     if (StopSnp>nSnpHmm) StopSnp=nSnpHmm
+        !     ! Impute
+        !     call SampleSegmentHaplotypeSource(CurrentInd,2,StartSnp,StopSnp)
+        ! enddo
+    else
+        allocate(ForwardProbs(states,nSnpHmm))
+        call ForwardAlgorithm(CurrentInd,1,nSnpHmm)
+        call SampleChromosomes(CurrentInd,1,nSnpHmm)
+    endif
 endif
 
 ! WARNING: The idea of not to use the first HmmBurnInRound rounds suggests
@@ -1395,7 +1436,6 @@ integer :: i,j,p
 ! If the number of phased gametes from AlphaImpute is above a threshold, then
 ! haploytpes produced from AlphaImpute are used in the model (FullH)
 if (nGametesPhased/float(2*nAnisP)>phasedThreshold/100.0) then
-    ! print *, nGametesPhased/float(2*nAnisP), phasedThreshold/100.0
     do i=1,nIndHmmMaCH
         FullH(i,:,:)=PhaseHmmMaCH(i,:,:)
 
@@ -1430,6 +1470,9 @@ else
 
     ! Overwrite haplotypes to use phased data in case phased haplotypes from
     ! AlphaImpute are available
+
+! if (nGametesPhased/float(2*nAnisP)>phasedThreshold/100.0) then
+
     do i=1,nIndHmmMaCH      ! For every Individual in the Genotype file
         if (GlobalHmmPhasedInd(i,1)==.TRUE.) then
             FullH(i,:,1)=PhaseHmmMaCH(i,:,1)
@@ -1868,7 +1911,7 @@ do while (HapCount<nHapInSubH)
         ! Select the paternal haplotype if the individual it belongs
         ! to is genotyped and it is not the current individual
         if ((Shuffle1(ShuffleInd1)/=CurrentInd)&
-                .and.(GlobalHmmHDInd(ShuffleInd1)==1)) then
+                .and.(GlobalHmmHDInd(Shuffle1(ShuffleInd1))==1)) then
             HapCount=HapCount+1
             SubH(HapCount,:)=FullH(Shuffle1(ShuffleInd1),:,1)
         endif
@@ -1878,7 +1921,7 @@ do while (HapCount<nHapInSubH)
         ! Select the maternal haplotype if the individual it belongs
         ! too is genotyped and it is not the current individual
         if ((Shuffle2(ShuffleInd2)/=CurrentInd)&
-                .and.(GlobalHmmHDInd(ShuffleInd2)==1)) then
+                .and.(GlobalHmmHDInd(Shuffle2(ShuffleInd2))==1)) then
             HapCount=HapCount+1
             SubH(HapCount,:)=FullH(Shuffle2(ShuffleInd2),:,2)
         endif
@@ -1916,7 +1959,7 @@ do while (HapCount<nHapInSubH)
         ! Select the paternal haplotype if the individual it belongs
         ! to is genotyped and it is not the current individual
         if ((Shuffle1(ShuffleInd1)/=CurrentInd).and.&
-                (GlobalHmmPhasedInd(ShuffleInd1,1)==.TRUE.)) then
+                (GlobalHmmPhasedInd(Shuffle1(ShuffleInd1),1)==.TRUE.)) then
 
             HapCount=HapCount+1
             SubH(HapCount,:)=FullH(Shuffle1(ShuffleInd1),:,1)
@@ -1927,7 +1970,7 @@ do while (HapCount<nHapInSubH)
         ! Select the maternal haplotype if the individual it belongs
         ! too is genotyped and it is not the current individual
         if ((Shuffle2(ShuffleInd2)/=CurrentInd).and.&
-                (GlobalHmmPhasedInd(ShuffleInd2,2)==.TRUE.)) then
+                (GlobalHmmPhasedInd(Shuffle2(ShuffleInd2),2)==.TRUE.)) then
             HapCount=HapCount+1
             SubH(HapCount,:)=FullH(Shuffle2(ShuffleInd2),:,2)
         endif
