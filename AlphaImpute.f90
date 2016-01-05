@@ -1,5 +1,8 @@
 #ifdef OS_UNIX
 
+#define STRINGIFY(x) #x
+#define TOSTRING(x) STRINGIFY(x)
+
 #DEFINE DASH "/"
 #DEFINE COPY "cp"
 #DEFINE MD "mkdir"
@@ -8100,9 +8103,10 @@ print*, ""
 print*, "                              ***********************                         "
 print*, "                              *                     *                         "
 print*, "                              *     AlphaImpute     *                         "
-print*, "                              *      Beta 1.21      *                         "
+! print*, "                              *      Beta 1.21      *                         "
 print*, "                              *                     *                         "
 print*, "                              ***********************                         "
+print*, "                              VERSION:"//TOSTRING(VERS),"                     "
 print*, "                                                                              "
 print*, "                    Software For Phasing and Imputing Genotypes               "
 print*, ""
@@ -8133,6 +8137,7 @@ print*, "                              *                     *                  
 print*, "                              *     AlphaImpute     *                         "
 print*, "                              *                     *                         "
 print*, "                              ***********************                         "
+print*, "                              VERSION:"//TOSTRING(VERS),"                     "
 print*, "                                                                              "
 print*, "                    Software For Phasing and Imputing Genotypes               "
 print*, ""
