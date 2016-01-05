@@ -55,11 +55,11 @@ if (HMMOption /= RUN_HMM_NGS) then
     !     nSnpsAnimal(i)=count(TempGenos(i,:)/=9)
     ! enddo
     ! call ClusterIndivByChip(nSnpChips)
+    if (MultiHD/=0) call ClassifyAnimByChips
     call FillInSnp
     call FillInBasedOnOffspring
     call InternalEdit
     call MakeFiles
-    ! stop
 else
     
     call MakeDirectories(RUN_HMM_NGS)
@@ -424,7 +424,8 @@ implicit none
 integer :: k,i,resid,Changer,nLines
 character (len=300) :: dumC,IntEdit,PhaseDone,OutputOptions,PreProcessOptions,TempOpt,TempHetGameticStatus
 character (len=300) :: UserDefinedHDAnimalsFile,PrePhasedAnimalFile,PedigreeFreePhasing,PhasingOnlyOptions
-character (len=300) :: UseGeneProb,ConservHapLibImp,CharBypassGeneProb,TmpHmmOption,MultipleHDpanels
+character (len=300) :: UseGeneProb,ConservHapLibImp,CharBypassGeneProb,TmpHmmOption
+integer :: MultipleHDpanels
 
 open (unit=1,file="AlphaImputeSpec.txt",status="old")
 
@@ -440,7 +441,7 @@ do
 enddo
 rewind(1)
 
-if (nLines/=41) then
+if (nLines/=42) then
     print*, "   ","There are some lines missing from AlphaImputeSpec.txt"
     print*, "   ","HINT - maybe you are using the Spec file from the beta version which is out of date"
     stop
@@ -511,17 +512,22 @@ endif
 ! Get the information of Multiple HD chips
 ! MultipleHDpanels
 read (1,*) dumC,MultipleHDpanels
-if (trim(MultipleHDpanels)=='Yes') MultiHD=1
-if (trim(MultipleHDpanels)=='No') MultiHD=0
-if ((trim(MultipleHDpanels)/='Yes').and.(trim(MultipleHDpanels)/='No')) then
-    write (*,*) "Please, provide a valid option,"
-    write (*,*) "MultipleHDpanels only acepts 'No' or 'Yes'"
-    stop
-endif
+if (MultipleHDpanels/=0) MultiHD=MultipleHDpanels
+if (MultipleHDpanels==0) MultiHD=0
+! if ((trim(MultipleHDpanels)/='Yes').and.(trim(MultipleHDpanels)/='No')) then
+!     write (*,*) "Please, provide a valid option,"
+!     write (*,*) "MultipleHDpanels only acepts 'No' or 'Yes'"
+!     stop
+! endif
+! Snps of the multiple HD panels
+allocate(nSnpByChip(MultipleHDpanels))
+nSnpByChip=0
+read (1,*) dumC,nSnpByChip(:)
+
 ! PercGenoForHD
 read (1,*) dumC,PercGenoForHD
 
-! print *, nSnp,trim(MultipleHDpanels),PercGenoForHD
+! print *, nSnp,MultipleHDpanels,PercGenoForHD,nSnpByChip
 
 ! Get Editing parameters
 read(1,*) dumC
@@ -534,7 +540,7 @@ if ((trim(IntEdit)/='Yes').and.(trim(IntEdit)/='No')) then
     write (*,*) "InternalEdit only acepts 'No' or 'Yes'"
     stop
 endif
-if (IntEditStat==1 .AND. MultiHD==1) then
+if (IntEditStat==1 .AND. MultiHD/=0) then
     write(*,*) "IntEditStat and MultipleHDpanels are incompatible,"
     write(*,*) "Please, considere to use only one HD panel or to disable internal editing"
     stop
@@ -579,7 +585,7 @@ NoPhasing=1
 if (trim(PhaseDone)=="PhaseDone") then
     ManagePhaseOn1Off0=0
     rewind (1)
-    do i=1,14
+    do i=1,15
         read (1,*) dumC
     enddo
     ! Get Path to the phased data and the number of cores used
@@ -591,7 +597,7 @@ elseif (trim(PhaseDone)=="NoPhase") then
     NoPhasing=0
     ManagePhaseOn1Off0=0
     rewind (1)
-    do i=1,14
+    do i=1,15
         read (1,*) dumC
     enddo    
     read (1,*) dumC
@@ -600,7 +606,7 @@ elseif (trim(PhaseDone)=="NoPhase") then
 else
     ManagePhaseOn1Off0=1
     rewind (1)
-    do i=1,14
+    do i=1,15
         read (1,*) dumC
     enddo
     read (1,*) dumC,nPhaseExternal
@@ -1961,9 +1967,11 @@ else
     if (HMMOption/=RUN_HMM_NO) then
         call WriteProbabilities("./Results/GenotypeProbabilities.txt", GlobalExtraAnimals, Id, nAnisP, nSnp)
     else
-        allocate(GenosProbs(nAnisP,nSnp,2))
-        call ReReadIterateGeneProbs(GenosProbs)
-        call WriteProbabilities("./Results/GenotypeProbabilities.txt", GenosProbs, Id, GlobalExtraAnimals, nAnisP, nSnp)
+        if (BypassGeneProb==0) then
+            allocate(GenosProbs(nAnisP,nSnp,2))
+            call ReReadIterateGeneProbs(GenosProbs)
+            call WriteProbabilities("./Results/GenotypeProbabilities.txt", GenosProbs, Id, GlobalExtraAnimals, nAnisP, nSnp)
+        endif
     endif
 
     if ((SexOpt==1).or.(BypassGeneProb==1)) then
@@ -5389,7 +5397,7 @@ implicit none
 integer :: i,j,TempCore(nPhaseInternal),TempCplusT(nPhaseInternal)
 integer :: Tmp
 character(len=7) :: cm 
-character(len=300) :: filout,FileCheck
+character(len=300) :: filout,FileCheck,fmt
 logical :: FileExists
 
 allocate(GpIndex(nProcessors,2))
@@ -5530,6 +5538,15 @@ do i=1,nPhaseInternal           ! Phasing is done in parallel
         write (106,*) 'Graphics             ,0'
         write (106,*) 'Simulation           ,0'
         write (106,*) 'TruePhaseFile            ,None'
+        if (MultiHD==0) then
+            write (106,*) 'MultipleHDPanels         ,',0
+            write (106,*) 'NumberSnpxChip           ,',0
+        else
+            write(fmt,"(I1)"), MultiHD
+            fmt = trim("(A26," // trim(fmt) // "("","",I))")
+            write (106,*) 'MultipleHDPanels         ,',MultiHD
+            write (106,trim(fmt)) 'NumberSnpxChip           ',nSnpByChip
+        endif
         call flush(106)
         close(106)
         write (filout,'("Phase"i0)')i
@@ -5579,7 +5596,36 @@ enddo
 end subroutine MakeFiles
 
 !#############################################################################################################################################################################################################################
+subroutine ClassifyAnimByChips
+! Classify animals according to the HD chip information with a margin of missing markers
+! The condition for an animal to be classify with a particular HD snp chip is:
+! If the missing markers are not above a threshold and the number of markers is below the
+! nominal number of markers for that chip
+! LD animals or HD animals with missing markers above a threshold are not assign to any
+! snp panel
 
+use Global
+use GlobalPedigree
+implicit none
+
+integer :: i,j, CountMiss
+
+allocate(animChip(nAnisP))
+animChip(:)=0
+do i=1,nAnisP
+    CountMiss=count(TempGenos(i,:)==9)
+    do j=1,MultiHD
+        if ( (CountMiss-(nSnp-nSnpByChip(j))) < (1.0-PercGenoForHD)*nSnpByChip(j)&
+                .and. (nSnp-CountMiss)<nSnpByChip(j)&
+                .and. IndivIsGenotyped(i)) then
+            animChip(i)=j
+            exit
+        endif
+    enddo
+enddo
+end subroutine ClassifyAnimByChips
+
+!#############################################################################################################################################################################################################################
 subroutine InternalEdit
 use Global
 use GlobalPedigree
@@ -5612,9 +5658,17 @@ if (UserDefinedHD==0) then
     RecIdHDIndex(1:nAnisP)=1
     do i=1,nAnisP
         CountMiss=count(TempGenos(i,:)==9)
-        if ((float(CountMiss)/nSnp)>(1.0-PercGenoForHD)) then
-            Setter(i)=0
-            RecIdHDIndex(i)=0
+        if (MultiHD/=0) then
+            ! Disregard animals at LD or those HD animals with a number of markers missing
+            if (animChip(i)==0) then
+                Setter(i)=0
+                RecIdHDIndex(i)=0
+            endif
+        else
+            if ((float(CountMiss)/nSnp)>(1.0-PercGenoForHD)) then
+                Setter(i)=0
+                RecIdHDIndex(i)=0
+            endif
         endif
     enddo
     CountHD=count(Setter(:)==1)
@@ -5678,7 +5732,7 @@ if (ManagePhaseOn1Off0==1) then
     enddo   
 endif
 
-if (MultiHD==1 .or. IntEditStat==0) then
+if (MultiHD/=0 .or. IntEditStat==0) then
     nSnpR=nSnp
     allocate(Genos(0:nAnisP,nSnp))
     Genos=TempGenos
