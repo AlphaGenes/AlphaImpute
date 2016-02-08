@@ -444,7 +444,7 @@ do
 enddo
 rewind(1)
 
-if (nLines/=42) then
+if (nLines/=41) then
     print*, "   ","There are some lines missing from AlphaImputeSpec.txt"
     print*, "   ","HINT - maybe you are using the Spec file from the beta version which is out of date"
     stop
@@ -727,7 +727,7 @@ read (1,*) dumC, useProcs
 read (1,*) dumC, idum
 read (1,*) dumC, phasedThreshold
 read (1,*) dumC, imputedThreshold
-read (1,*) dumC, windowLength
+! read (1,*) dumC, windowLength
 ! print *, trim(TmpHmmOption), nHapInSubH,HmmBurnInRound,nRoundsHMM,useProcs,idum,phasedThreshold,imputedThreshold,windowLength
 
 ! Options managing the software workflow
