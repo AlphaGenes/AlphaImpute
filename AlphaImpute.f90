@@ -159,7 +159,7 @@ else
 
         if (RestartOption==OPT_RESTART_PHASING) then
 #if CLUSTER==1
-            write(6,*) "Restart option 2 stops program before Phasing has been managed"
+            write(6,*) "Restart option 2 stops program before Phasing has finished"
 #elif CLUSTER==0
             write(6,*) "Restart option 2 stops program after Phasing has been managed"
 #endif
