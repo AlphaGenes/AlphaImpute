@@ -8144,7 +8144,7 @@ print*, ""
 print*, "  Written by John Hickey, Matt Cleveland, Andreas Kranis, and Brian Kinghorn  "
 print*, ""
 print*, "                                  No Liability"
-print*, "                          Bugs to John.Hickey@une.edu.au"
+print*, "                          Bugs to John.Hickey@roslin.ed.ac.uk"
 print*, ""
 print*, "                Analysis Finished                         "
 
