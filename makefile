@@ -4,8 +4,7 @@ VERSION:=$(shell git rev-parse --short HEAD)
 MASTERVERSION:=$(shell git describe --tag)
 # SUBVERSION:=2.0
 # PROGRAM:=${NAME}${VERSION}.${SUBVERSION}
-#PROGRAM:=$(NAME)$(MASTERVERSION)
-PROGRAM:=$(NAME).gamete
+PROGRAM:=$(NAME)$(MASTERVERSION)
 GP:=GeneProbForAlphaImpute
 
 # Compiler
@@ -19,9 +18,10 @@ FFLAGS:=-O3 -m64 -DVERS=""commit-$(VERSION)""
 CLUSTER?=0
 DEBUG?=0
 
+# MS Windows
 ifeq ($(OS), Windows_NT)
 	OSFLAG := "OS_WIN"
-	FFLAGS := $(FFLAGS) /static /fpp  /Qmkl /D $(OSFLAG) -D CLUSTER=0 /Qopenmp /Qopenmp-link:static
+	FFLAGS := $(FFLAGS) /static /fpp  /D $(OSFLAG) -D CLUSTER=0 /Qopenmp /libs:static
 
 	obj:= .obj
 	exe:= .exe

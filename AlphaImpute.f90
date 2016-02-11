@@ -1,5 +1,8 @@
 #ifdef OS_UNIX
 
+#define STRINGIFY(x) #x
+#define TOSTRING(x) STRINGIFY(x)
+
 #DEFINE DASH "/"
 #DEFINE COPY "cp"
 #DEFINE MD "mkdir"
@@ -156,7 +159,7 @@ else
 
         if (RestartOption==OPT_RESTART_PHASING) then
 #if CLUSTER==1
-            write(6,*) "Restart option 2 stops program before Phasing has been managed"
+            write(6,*) "Restart option 2 stops program before Phasing has finished"
 #elif CLUSTER==0
             write(6,*) "Restart option 2 stops program after Phasing has been managed"
 #endif
@@ -441,7 +444,7 @@ do
 enddo
 rewind(1)
 
-if (nLines/=42) then
+if (nLines/=41) then
     print*, "   ","There are some lines missing from AlphaImputeSpec.txt"
     print*, "   ","HINT - maybe you are using the Spec file from the beta version which is out of date"
     stop
@@ -724,7 +727,7 @@ read (1,*) dumC, useProcs
 read (1,*) dumC, idum
 read (1,*) dumC, phasedThreshold
 read (1,*) dumC, imputedThreshold
-read (1,*) dumC, windowLength
+! read (1,*) dumC, windowLength
 ! print *, trim(TmpHmmOption), nHapInSubH,HmmBurnInRound,nRoundsHMM,useProcs,idum,phasedThreshold,imputedThreshold,windowLength
 
 ! Options managing the software workflow
@@ -8100,9 +8103,10 @@ print*, ""
 print*, "                              ***********************                         "
 print*, "                              *                     *                         "
 print*, "                              *     AlphaImpute     *                         "
-print*, "                              *      Beta 1.21      *                         "
+! print*, "                              *      Beta 1.21      *                         "
 print*, "                              *                     *                         "
 print*, "                              ***********************                         "
+print*, "                              VERSION:"//TOSTRING(VERS),"                     "
 print*, "                                                                              "
 print*, "                    Software For Phasing and Imputing Genotypes               "
 print*, ""
@@ -8133,13 +8137,14 @@ print*, "                              *                     *                  
 print*, "                              *     AlphaImpute     *                         "
 print*, "                              *                     *                         "
 print*, "                              ***********************                         "
+print*, "                              VERSION:"//TOSTRING(VERS),"                     "
 print*, "                                                                              "
 print*, "                    Software For Phasing and Imputing Genotypes               "
 print*, ""
 print*, "  Written by John Hickey, Matt Cleveland, Andreas Kranis, and Brian Kinghorn  "
 print*, ""
 print*, "                                  No Liability"
-print*, "                          Bugs to John.Hickey@une.edu.au"
+print*, "                          Bugs to John.Hickey@roslin.ed.ac.uk"
 print*, ""
 print*, "                Analysis Finished                         "
 
