@@ -1216,7 +1216,7 @@ do i=1,nProcessors
     close(108)
     write (filout,'("GeneProb"i0)')i
     ! call system ("cp GeneProbForAlphaImpute IterateGeneProb/" // filout)
-    call system (COPY // " GeneProbForAlphaImpute" // EXE // " IterateGeneProb" // DASH // filout // NULL)
+    if (GeneProbPresent==1) call system (COPY // " GeneProbForAlphaImpute" // EXE // " IterateGeneProb" // DASH // filout // NULL)
 enddo   
 
 #ifdef OS_UNIX
