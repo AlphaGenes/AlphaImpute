@@ -1,3 +1,4 @@
+*.exe
 *.txt
 *.mod
 *.o
@@ -5,7 +6,9 @@
 *.i90
 *.dwarf
 AlphaImpute
-AlphaImpute1.?*
+AlphaImpute1*
+AlphaImpute*v*
 GeneProbForAlphaImpute
 proj*
 penmp
+hmmErrors.f90
