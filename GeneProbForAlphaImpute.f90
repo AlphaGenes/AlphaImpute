@@ -543,7 +543,7 @@ LeastPositive = 0
 LeastNegative = 0
 
 
-do WHILE (ifreq_iterate < nfreq_max)
+do WHILE (ifreq_iterate < nfreq_max-1)
 
       ifreq_iterate = ifreq_iterate + 1
 
