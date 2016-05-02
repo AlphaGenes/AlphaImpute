@@ -14,6 +14,10 @@
 #DEFINE NULL ""
 
 #else
+
+#define STRINGIFY(x) #x
+#define TOSTRING(x) STRINGIFY(x)
+
 #DEFINE DASH "\"
 #DEFINE COPY "copy"
 #DEFINE MD "md"
