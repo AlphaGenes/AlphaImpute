@@ -14,6 +14,10 @@
 #DEFINE NULL ""
 
 #else
+
+#define STRINGIFY(x) #x
+#define TOSTRING(x) STRINGIFY(x)
+
 #DEFINE DASH "\"
 #DEFINE COPY "copy"
 #DEFINE MD "md"
@@ -52,6 +56,7 @@ if (HMMOption /= RUN_HMM_NGS) then
     if (RestartOption<OPT_RESTART_PHASING) call MakeDirectories(RUN_HMM_NULL)
     call CountInData
     call ReadInData
+    call SnpCallRate
     call CheckParentage
     ! allocate(nSnpsAnimal(nAnisG))
     ! do i=1,nAnisG
@@ -68,6 +73,7 @@ else
     call MakeDirectories(RUN_HMM_NGS)
     call CountInData
     call ReadInData
+    call SnpCallRate
     allocate(Reads(nAnisG,nSnp))
     allocate(ImputeGenos(0:nAnisG,nSnp))
     allocate(ImputePhase(0:nAnisG,nSnp,2))
@@ -5596,6 +5602,12 @@ do i=1,nProcessors
     if (GeneProbPresent==1) call system (COPY // " GeneProbForAlphaImpute" // EXE // " GeneProb" // DASH // filout // NULL)
 enddo
 
+if (PreProcess==.true.) then
+    print*, "  "
+    print*, "  ","The program has preprocessed the data and now it stops"
+    stop
+endif
+
 end subroutine MakeFiles
 
 !#############################################################################################################################################################################################################################
@@ -5609,12 +5621,19 @@ subroutine ClassifyAnimByChips
 
 use Global
 use GlobalPedigree
+use ISO_Fortran_Env
 implicit none
 
-integer :: i,j, CountMiss
+integer :: i, j, CountMiss, UOutputs
+logical, allocatable :: printed(:)
 
+open(newunit=UOutputs, file="." // DASH // "Miscellaneous" // DASH // "SnpCallRateByAnimalByChip.txt",status='unknown')
 allocate(animChip(nAnisP))
 animChip(:)=0
+
+allocate(printed(nAnisP))
+printed=.FALSE.
+
 do i=1,nAnisP
     CountMiss=count(TempGenos(i,:)==9)
     do j=1,MultiHD
@@ -5622,10 +5641,19 @@ do i=1,nAnisP
                 .and. (nSnp-CountMiss)<nSnpByChip(j)&
                 .and. IndivIsGenotyped(i)) then
             animChip(i)=j
+            write(UOutputs,'(a20,6f5.1)') ID(i), (nSnp-CountMiss)*100/real(nSnpByChip(j))
             exit
         endif
+        if ((CountMiss-(nSnp-nSnpByChip(j))) > (1.0-PercGenoForHD)*nSnpByChip(j)&
+                ! .and. animChip(i)/=0&
+                .and. printed(i)==.false.&
+                .and. IndivIsGenotyped(i)) Then
+            write(UOutputs,'(a20,6f5.1)') ID(i), (nSnp-CountMiss)*100/real(nSnpByChip(j))
+            printed(i)=.true.
+        end if
     enddo
 enddo
+close(UOutputs)
 end subroutine ClassifyAnimByChips
 
 !#############################################################################################################################################################################################################################
@@ -8340,3 +8368,29 @@ SUBROUTINE ClusterIndivByChip(nClusters)
   ! close(2222)
 
 end SUBROUTINE ClusterIndivByChip
+
+!#############################################################################################################################################################################################################################
+SUBROUTINE SnpCallRate()
+use Global
+use GlobalPedigree
+use ISO_Fortran_Env
+
+implicit none
+
+integer :: i, CountMiss, UOutputs
+! character(len=11) :: fmt
+
+open(newunit=UOutputs, file="." // DASH // "Miscellaneous" // DASH // "SnpCallRateByAnimal.txt",status='unknown')
+
+do i=1,nAnisG
+    CountMiss=count(Genos(i,:)==9)
+    write(UOutputs,'(a20,6f5.1)') GenotypeId(i), (nSnp-CountMiss)*100/real(nSnp)
+end do
+close(UOutputs)
+
+! fmt = '(i, ,6f5.3)'
+! do i=1,nSnp
+!     CountMiss=count(Genos(:,i)==9)
+!     write(*,fmt) i, CountMiss/real(nAnisG)
+! end do
+END SUBROUTINE SnpCallRate
