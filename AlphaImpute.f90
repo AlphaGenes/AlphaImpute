@@ -5602,6 +5602,12 @@ do i=1,nProcessors
     if (GeneProbPresent==1) call system (COPY // " GeneProbForAlphaImpute" // EXE // " GeneProb" // DASH // filout // NULL)
 enddo
 
+if (PreProcess==.true.) then
+    print*, "  "
+    print*, "  ","The program has preprocessed the data and now it stops"
+    stop
+endif
+
 end subroutine MakeFiles
 
 !#############################################################################################################################################################################################################################
