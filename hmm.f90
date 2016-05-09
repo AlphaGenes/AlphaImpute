@@ -308,6 +308,9 @@ if (nHapInSubH>2*sum(GlobalHmmHDInd(:))) then
     ! stop
 endif
 
+! AlphaImpute does not phase sequence data, thus no individual has been phased. 
+nGametesPhased=0
+
 end subroutine ParseMaCHDataNGS
 
 !######################################################################
