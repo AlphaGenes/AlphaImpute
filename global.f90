@@ -30,7 +30,7 @@ integer,parameter :: ImputeFromHDLibraryCountThresh=1,ImputeFromHDPhaseThresh=1
 integer,parameter :: ImputeFromParentCountThresh=1,ImputeFromGrandParentCountThresh=1
 real,parameter :: DisagreeThreshold=0.05,GeneProbThresh=0.99
 
-character (len=300) :: PedigreeFile,PhasePath,TrueGenosFile,GenotypeFile,GenderFile
+character (len=300) :: PedigreeFile,PhasePath,TrueGenosFile,GenotypeFile,GenderFile,InbredAnimalsFile
 
 integer :: nAnisG,nAnisRawPedigree,nSnp,nAnisP,IntEditStat,nPhaseInternal,nPhaseExternal,OutOpt,SexOpt,HetGameticStatus,HomGameticStatus,MultiHD
 integer :: nProcessors,nProcessGeneProb,nProcessAlphaPhase,ManagePhaseOn1Off0,CountRawGenos,InternalIterations,nAnisInGenderFile

@@ -58,11 +58,6 @@ if (HMMOption /= RUN_HMM_NGS) then
     call ReadInData
     call SnpCallRate
     call CheckParentage
-    ! allocate(nSnpsAnimal(nAnisG))
-    ! do i=1,nAnisG
-    !     nSnpsAnimal(i)=count(TempGenos(i,:)/=9)
-    ! enddo
-    ! call ClusterIndivByChip(nSnpChips)
     if (MultiHD/=0) call ClassifyAnimByChips
     call FillInSnp
     call FillInBasedOnOffspring
@@ -450,7 +445,7 @@ do
 enddo
 rewind(1)
 
-if (nLines/=41) then
+if (nLines/=42) then
     print*, "   ","There are some lines missing from AlphaImputeSpec.txt"
     print*, "   ","HINT - maybe you are using the Spec file from the beta version which is out of date"
     stop
@@ -733,6 +728,7 @@ read (1,*) dumC, useProcs
 read (1,*) dumC, idum
 read (1,*) dumC, phasedThreshold
 read (1,*) dumC, imputedThreshold
+read (1,*) dumC, InbredAnimalsFile
 ! read (1,*) dumC, windowLength
 ! print *, trim(TmpHmmOption), nHapInSubH,HmmBurnInRound,nRoundsHMM,useProcs,idum,phasedThreshold,imputedThreshold,windowLength
 

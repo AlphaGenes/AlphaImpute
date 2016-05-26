@@ -12,7 +12,8 @@ double precision, parameter :: EPSILON_ERROR=0.01
 integer, parameter :: NUM_SEGMENTS=1
 
 character(len=300) :: GenotypeFileName,CheckPhaseFileName,CheckGenoFileName
-integer :: nIndHmmMaCH,GlobalRoundHmm,nSnpHmm,nGametesPhased,nAnimPhased
+character*(20), allocatable, dimension(:) :: AnimalsInbred,GlobalHmmMachID
+integer :: nIndHmmMaCH,GlobalRoundHmm,nSnpHmm,nGametesPhased,nAnimPhased,nAnisInbred
 integer :: nHapInSubH,useProcs,nRoundsHmm,HmmBurnInRound,idum,windowLength
 real 	:: phasedThreshold,imputedThreshold
 logical :: segmentOverlap
@@ -20,6 +21,7 @@ integer,allocatable,dimension(:,:) :: GenosHmmMaCH,SubH
 integer(kind=1),allocatable,dimension(:,:,:) :: PhaseHmmMaCH,FullH
 integer,allocatable,dimension(:) :: ErrorUncertainty,ErrorMatches,ErrorMismatches,Crossovers
 integer,allocatable,dimension(:) :: GlobalHmmHDInd
+logical,allocatable,dimension(:) :: GlobalInbredInd
 logical,allocatable,dimension(:,:) :: GlobalHmmPhasedInd
 double precision,allocatable,dimension(:) :: Thetas,Epsilon
 double precision,allocatable,dimension(:,:) :: ForwardProbs

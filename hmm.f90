@@ -34,6 +34,7 @@ allocate(PhaseHmmMaCH(nIndHmmMaCH,nSnp,2))
 ! Allocate memory to store Animals contributing to the Template
 ! Haplotype Library
 allocate(GlobalHmmID(nIndHmmMaCH))
+allocate(GlobalHmmMachID(nIndHmmMaCH))
 
 ! Allocate memory to store Animals Highly Dense Genotyped
 allocate(GlobalHmmHDInd(nIndHmmMaCH))
@@ -117,6 +118,10 @@ call par_zigset(useProcs, seed, grainsize)
 #ifdef DEBUG
     write(0,*) 'DEBUG: [ParseMaCHData] ...'
 #endif
+
+if (InbredAnimalsFile/="None") then
+    call ReadInbred(InbredAnimalsFile)
+end if
 
 call ParseMaCHData(HMM)
 
@@ -271,8 +276,62 @@ if (HMM == RUN_HMM_NGS) then
 else
     call ParseMaCHDataGenos
 endif
+call ParseInbred
 
 end subroutine ParseMaCHData
+!######################################################################
+subroutine ParseInbred
+use Global
+use GlobalVariablesHmmMaCH
+
+implicit none
+integer :: i,j
+allocate(GlobalInbredInd(nAnisG))
+GlobalInbredInd=.FALSE.
+do i=1,nAnisG
+    do j=1,nAnisInbred
+        if (GenotypeId(i)==AnimalsInbred(j)) then
+            GlobalInbredInd(i)=.TRUE.
+        end if
+    end do
+end do
+
+end subroutine ParseInbred
+
+!######################################################################
+subroutine ReadInbred(InbredFile)
+use ISO_Fortran_Env
+use Global
+use GlobalVariablesHmmMaCH
+
+implicit none
+
+character (len=300), intent(in) :: InbredFile
+
+integer :: i,k,dumC
+integer(kind=int32) :: UGenotypes
+
+open(newunit=UGenotypes, file=InbredFile, status='unknown')
+
+do
+    read (UGenotypes,*,iostat=k) dumC
+    nAnisInbred=nAnisInbred+1
+    if (k/=0) then
+        nAnisInbred=nAnisInbred-1
+        exit            ! This forces to exit if an error is found
+    endif
+enddo
+rewind(UGenotypes)
+
+allocate(AnimalsInbred(nAnisInbred))
+
+do i=1,nAnisInbred
+    read (UGenotypes,*) AnimalsInbred(i)
+end do
+close(UGenotypes)
+
+end subroutine ReadInbred
+
 
 !######################################################################
 subroutine ParseMaCHDataNGS
@@ -476,18 +535,21 @@ endif
 
 StartSnp=1
 StopSnp=nSnpHmm
-if (HMM==RUN_HMM_ONLY) then
-    ! allocate(ForwardProbs(states,nSnpHmm))
-    ! call ForwardAlgorithm(CurrentInd,StartSnp,StopSnp)
-    ! call SampleChromosomes(CurrentInd,StartSnp,StopSnp)
-    allocate(ForwardProbs(nHapInSubH,nSnpHmm))
-    call ForwardAlgorithmForSegmentHaplotype(currentInd,1,1,nSnpHmm)     ! Paternal haplotype
-    call SampleSegmentHaplotypeSource(CurrentInd,1,1,nSnpHmm)
-    deallocate(ForwardProbs)
-    allocate(ForwardProbs(nHapInSubH,nSnpHmm))
-    call ForwardAlgorithmForSegmentHaplotype(currentInd,2,1,nSnpHmm)     ! Paternal haplotype
-    call SampleSegmentHaplotypeSource(CurrentInd,2,1,nSnpHmm)
+if (HMM==RUN_HMM_ONLY .OR. HMM==RUN_HMM_NGS) then
 
+    if (GlobalInbredInd(currentInd)==.TRUE.) then
+        allocate(ForwardProbs(nHapInSubH,nSnpHmm))
+        call ForwardAlgorithmForSegmentHaplotype(currentInd,1,1,nSnpHmm)     ! Paternal haplotype
+        call SampleSegmentHaplotypeSource(CurrentInd,1,1,nSnpHmm)
+        deallocate(ForwardProbs)
+        allocate(ForwardProbs(nHapInSubH,nSnpHmm))
+        call ForwardAlgorithmForSegmentHaplotype(currentInd,2,1,nSnpHmm)     ! Paternal haplotype
+        call SampleSegmentHaplotypeSource(CurrentInd,2,1,nSnpHmm)
+    else
+        allocate(ForwardProbs(states,nSnpHmm))
+        call ForwardAlgorithm(CurrentInd,StartSnp,StopSnp)
+        call SampleChromosomes(CurrentInd,StartSnp,StopSnp)
+    end if
 else
     if (nGametesPhased/float(2*nAnisP)>phasedThreshold/100.0) then
         if (GlobalHmmPhasedInd(CurrentInd,1)/=.TRUE. .AND. GlobalHmmPhasedInd(CurrentInd,2)/=.TRUE.) Then
