@@ -503,65 +503,6 @@ else
             call ForwardAlgorithmForSegmentHaplotype(currentInd,2,1,nSnpHmm)     ! Paternal haplotype
             call SampleSegmentHaplotypeSource(CurrentInd,2,1,nSnpHmm)
         endif
-        ! ! WellPhased = imputedThreshold
-        ! StartSnp=1
-        ! StopSnp=nSnpHmm
-        ! nSegments=nSnpHmm/windowLength
-        ! if (MOD(nSnpHmm,windowLength)/=0) nSegments=nSegments+1
-        ! SegmentSize=windowLength
-        ! allocate(SegmentImputeDiploidHMM(nSegments))
-        ! SegmentImputeDiploidHMM=.FALSE.
-
-        ! ! Impute animal with diploid HMM by segments.
-        ! if (allocated(ForwardProbs)==.TRUE.) deallocate(ForwardProbs)
-        ! allocate(ForwardProbs(states,nSnpHmm))
-        ! ! Calculate Forward probabilities for chromosome
-        ! call ForwardAlgorithm(CurrentInd)
-        ! do i=1,nSegments
-        !     StartSnp=SegmentSize*(i-1)+1
-        !     StopSnp=SegmentSize*i
-        !     if (StopSnp>nSnpHmm) StopSnp=nSnpHmm
-
-        !     ! Impute segment if the number of missing alleles for both gametes
-        !     ! is above a threshold
-        !     if (float(CountGenotypedAllelesByGametes(&
-        !             PhaseHmmMaCH(currentInd,StartSnp:StopSnp,1), &
-        !             PhaseHmmMaCH(currentInd,StartSnp:StopSnp,2))) /(StopSnp-StartSnp+1)<=imputedThreshold/100.0) then
-        !         ! Impute
-        !         call SampleChromosomes(CurrentInd,StartSnp,StopSnp)
-        !         SegmentImputeDiploidHMM(i)=.TRUE.
-        !     endif
-        ! enddo
-
-        ! ! Impute paternal gamete with haploid HMM by segments.
-        ! ! If segment has already been imputed by diploid HMM, then skip
-        ! if (allocated(ForwardProbs)==.TRUE.) deallocate(ForwardProbs)
-        ! allocate(ForwardProbs(nHapInSubH,nSnpHmm))
-        ! ! Calculate Forward probabilities for paternal gamete
-        ! call ForwardAlgorithmForSegmentHaplotype(currentInd,1,1,nSnpHmm)     ! Paternal haplotype
-        ! do i=1,nSegments
-        !     if (SegmentImputeDiploidHMM(i)==.TRUE.) cycle
-        !     StartSnp=SegmentSize*(i-1)+1
-        !     StopSnp=SegmentSize*i
-        !     if (StopSnp>nSnpHmm) StopSnp=nSnpHmm
-        !     ! Impute
-        !     call SampleSegmentHaplotypeSource(CurrentInd,1,StartSnp,StopSnp)
-        ! enddo
-
-        ! ! Impute maternal gamete with haploid HMM by segments.
-        ! ! If segment has already been imputed by diploid HMM, then skip
-        ! if (allocated(ForwardProbs)==.TRUE.) deallocate(ForwardProbs)
-        ! allocate(ForwardProbs(nHapInSubH,nSnpHmm))
-        ! ! Calculate Forward probabilities for maternal gamete
-        ! call ForwardAlgorithmForSegmentHaplotype(currentInd,2,1,nSnpHmm)     ! Paternal haplotype
-        ! do i=1,nSegments
-        !     if (SegmentImputeDiploidHMM(i)==.TRUE.) cycle
-        !     StartSnp=SegmentSize*(i-1)+1
-        !     StopSnp=SegmentSize*i
-        !     if (StopSnp>nSnpHmm) StopSnp=nSnpHmm
-        !     ! Impute
-        !     call SampleSegmentHaplotypeSource(CurrentInd,2,StartSnp,StopSnp)
-        ! enddo
     else
         allocate(ForwardProbs(states,nSnpHmm))
         call ForwardAlgorithm(CurrentInd,1,nSnpHmm)
