@@ -6030,7 +6030,7 @@ do e=1,2                    ! Do whatever this does, first on males and then on 
             enddo
             if ((float(CountDisagree)/CountBothGeno)>DisagreeThreshold) then ! Mendelenian error
                 Ped(i,ParPos)='0'
-                write (101,*) Ped(i,1)
+                write (101,*) Ped(i,1), Ped(i,2), CountDisagree
                 CountChanges=CountChanges+1
             else
                 ! Remove genotype of proband and parent
