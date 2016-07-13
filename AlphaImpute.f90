@@ -6035,14 +6035,13 @@ do e=1,2                    ! Do whatever this does, first on males and then on 
                             nBothHomo =  nBothHomo + 1
                         end if
                     end if
-                    end if
                     if ((Genos(IndId,j)==0).and.(Genos(ParId,j)==2)) CountDisagree=CountDisagree+1
                     if ((Genos(IndId,j)==2).and.(Genos(ParId,j)==0)) CountDisagree=CountDisagree+1
                 endif
             enddo
             if ((float(CountDisagree)/CountBothGeno)>DisagreeThreshold) then ! Mendelenian error
                 write (101,'(2a20,4I,3f5.3)') &
-                    Ped(i,1), Ped(i,ParPos), CountDisagree, CountBothGeno, nHomoParent, nBothHome, &
+                    Ped(i,1), Ped(i,ParPos), CountDisagree, CountBothGeno, nHomoParent, nBothHomo, &
                     float(CountDisagree)/CountBothGeno, float(CountDisagree)/nHomoParent, float(CountDisagree)/nBothHomo
                 CountChanges=CountChanges+1
                 Ped(i,ParPos)='0'
