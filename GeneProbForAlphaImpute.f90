@@ -1346,23 +1346,26 @@ fs=1
 do i=2,nobs
   parent1=INT(family(i)/multiplier)
   parent2=family(i)-multiplier*parent1
- IF(parent1 /= 0 .and. parent2 /= 0) then  ! note how this is handled
-  IF(family(i) == family(i-1)) then
-    fs = fs + 1
-  else
-    IF(fs > maxfs) then
-     maxfs = fs
-     holdfamily=family(i-1)
+  IF(parent1 /= 0 .and. parent2 /= 0) then  ! note how this is handled
+    IF(family(i) == family(i-1)) then
+      fs = fs + 1
+    else
+      IF(fs > maxfs) then
+        maxfs = fs
+        holdfamily=family(i-1)
+      endif
+      fs = 1
     endif
-    fs = 1
   endif
- endif
 end do
+if (fs > maxfs) then
+  maxfs = fs
+  holdfamily = family(nobs)
+end if
 
 parent1=INT(holdfamily/multiplier)
 parent2=holdfamily-multiplier*parent1
-!PRINT*, '  Maximum FS family size ... ',maxfs, ' for parents: ',parent1,' ',parent2
-PRINT*, '  Maximum FS family size ... ',maxfs, ' for parents: ',id(parent1),' ',id(parent2)
+PRINT*, '  Maximum FS family size ... ',maxfs, ' for parents: ',parent1,' ',parent2
 
 Maxmates1 = 0
 mates=1
