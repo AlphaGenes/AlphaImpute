@@ -5968,6 +5968,7 @@ integer :: e,i,j,k,CountBothGeno,CountDisagree,CountChanges,GenoYesNo(nAnisRawPe
 integer :: TurnOn
 integer,allocatable,dimension (:) :: Genotyped,Pruned
 logical,allocatable,dimension (:) :: IsParent
+integer :: nHomoParent, nBothHomo
 
 ! if (WindowsLinux==1) then
 !     open (unit=101,file=".\Miscellaneous\PedigreeMistakes.txt",status="unknown")
@@ -6002,6 +6003,8 @@ do i=1,nAnisRawPedigree
 enddo
 
 CountChanges=0
+nHomoParent = 0
+nBothHomo = 0
 do e=1,2                    ! Do whatever this does, first on males and then on females
     ParPos=e+1              ! Index in the Genotype and Pedigree matrices for sires and dams
     do i=1,nAnisRawPedigree
@@ -6019,19 +6022,29 @@ do e=1,2                    ! Do whatever this does, first on males and then on 
         if ((IndId/=0).and.(ParId/=0).and.(TurnOn==1)) then
             CountBothGeno=0                         
             CountDisagree=0
+            nHomoParent = 0
+            nBothHomo = 0
 
             ! Look for mendelenian errors
             do j=1,nSnp
                 if ((Genos(IndId,j)/=9).and.(Genos(ParId,j)/=9)) then
                     CountBothGeno=CountBothGeno+1
+                    if (Genos(ParID,j)/=1) then
+                        nHomoParent = nHomoParent+1
+                        if ( Genos(IndID,j)/=1) then
+                            nBothHomo =  nBothHomo + 1
+                        end if
+                    end if
                     if ((Genos(IndId,j)==0).and.(Genos(ParId,j)==2)) CountDisagree=CountDisagree+1
                     if ((Genos(IndId,j)==2).and.(Genos(ParId,j)==0)) CountDisagree=CountDisagree+1
                 endif
             enddo
             if ((float(CountDisagree)/CountBothGeno)>DisagreeThreshold) then ! Mendelenian error
-                Ped(i,ParPos)='0'
-                write (101,*) Ped(i,1), Ped(i,2), CountDisagree
+                write (101,'(2a20,4I,3f5.3)') &
+                    Ped(i,1), Ped(i,ParPos), CountDisagree, CountBothGeno, nHomoParent, nBothHomo, &
+                    float(CountDisagree)/CountBothGeno, float(CountDisagree)/nHomoParent, float(CountDisagree)/nBothHomo
                 CountChanges=CountChanges+1
+                Ped(i,ParPos)='0'
             else
                 ! Remove genotype of proband and parent
                 do j=1,nSnp
