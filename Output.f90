@@ -88,14 +88,19 @@ use Global
 
 implicit none
 
-double precision, intent(OUT) :: GenosProbs(nAnisP,nSnp,2)
+double precision, intent(OUT) :: GenosProbs(nAnisP,nSnpIterate,2)
 
 ! Local variables
 integer :: h,i,j,dum,StSnp,EnSnp
-double precision :: GeneProbWork(nSnp,4)
+double precision, allocatable :: GeneProbWork(:,:)
 character(len=300) :: inFile
 
+!if (OutOpt==0) nSnpIterate=nSnp
+!if (OutOpt==1) nSnpIterate=nSnpRaw
+
+allocate(GeneProbWork(nSnpIterate,4))
 GeneProbWork=9
+
 do h=1,nProcessors
     write (inFile,'("IterateGeneProb/GeneProb"i0,"/GeneProbs.txt")')h          !here
     open (unit=110,file=trim(inFile),status="unknown")

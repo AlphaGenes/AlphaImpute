@@ -1181,7 +1181,7 @@ allocate(HetProb(nSnpIterate))
 allocate(GeneProbWork(nSnpIterate,4))
 allocate(ProbImputeGenos(0:nAnisP,nSnpIterate))
 allocate(ProbImputePhase(0:nAnisP,nSnpIterate,2))
-allocate(GPI(nAnisP,nSnp))
+allocate(GPI(nAnisP,nSnpIterate))
 deallocate(GpIndex)
 allocate(GpIndex(nProcessors,2))
 
@@ -1628,7 +1628,7 @@ END INTERFACE
 INTERFACE
   SUBROUTINE ReReadIterateGeneProbs(GenosProbs)
     use Global
-    double precision, intent(OUT) :: GenosProbs(nAnisP,nSnp,2)
+    double precision, intent(OUT) :: GenosProbs(nAnisP,nSnpIterate,2)
   END SUBROUTINE ReReadIterateGeneProbs
 END INTERFACE
 
@@ -1977,7 +1977,7 @@ else
         call WriteProbabilities("./Results/GenotypeProbabilities.txt", GlobalExtraAnimals, Id, nAnisP, nSnp)
     else
         if (BypassGeneProb==0) then
-            allocate(GenosProbs(nAnisP,nSnp,2))
+            allocate(GenosProbs(nAnisP,nSnpIterate,2))
             call ReReadIterateGeneProbs(GenosProbs)
             call WriteProbabilities("./Results/GenotypeProbabilities.txt", GenosProbs, Id, GlobalExtraAnimals, nAnisP, nSnp)
         endif
