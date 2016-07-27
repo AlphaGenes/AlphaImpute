@@ -43,7 +43,7 @@ MODULE PhaseRounds
   !   END SUBROUTINE getFileNameCoreIndex_NoPath
   ! END interface getCoreIndexes
 
-  PUBLIC getFileNameCoreIndex, getFileNameFinalPhase
+  PUBLIC getFileNameCoreIndex, getFileNameFinalPhase, getFileNameHapLib
   PUBLIC ReadCores, ReadPhased
   ! PUBLIC destroy
 
@@ -54,6 +54,10 @@ MODULE PhaseRounds
   INTERFACE getFileNameFinalPhase
     MODULE PROCEDURE getFileNameFinalPhase_NoPath, getFileNameFinalPhase_Path
   END INTERFACE getFileNameFinalPhase
+
+  INTERFACE getFileNameHapLib
+    MODULE PROCEDURE getFileNameHapLib_NoPath, getFileNameHapLib_Path
+  END INTERFACE getFileNameHapLib
 
   TYPE, PUBLIC :: CoreIndex
     ! PUBLIC
@@ -131,7 +135,7 @@ CONTAINS
 !---------------------------------------------------------------------------  
   FUNCTION ReadCores(FileName) result(CoreI)
     use Utils
-    
+
     character(len=1000), intent(in) :: FileName
     type(CoreIndex)                 :: CoreI
 
@@ -203,7 +207,6 @@ CONTAINS
 #endif
   END FUNCTION getFileNameCoreIndex_NoPath
 
-
 !---------------------------------------------------------------------------  
 ! DESCRIPTION: 
 !> @brief      Return file of the final phase of a internal phasing
@@ -232,8 +235,8 @@ CONTAINS
 #endif
   END FUNCTION getFileNameFinalPhase_Path
 
-!---------------------------------------------------------------------------  
-! DESCRIPTION: 
+!---------------------------------------------------------------------------
+! DESCRIPTION:
 !> @brief      Return file of the final phase of a internal phasing
 !
 !> @details    Return the correct path of the file containing the final phase 
@@ -247,7 +250,7 @@ CONTAINS
 !> @param[in] PhasePath       Path of phased data
 !> @param[in] phaseInternal   Number of a internal phase
 !> @return    File name
-!---------------------------------------------------------------------------  
+!---------------------------------------------------------------------------
   FUNCTION getFileNameFinalPhase_NoPath(phaseInternal) result(FileName)
     integer, intent(in)            :: phaseInternal
     character(len=1000)            :: FileName
@@ -257,8 +260,62 @@ CONTAINS
 #else
       write (FileName,'(".\Phasing\Phase",i0,"\PhasingResults\FinalPhase.txt")')phaseInternal
 #endif
-      ! ReadCores(FileName, CoreIndexes(h))
   END FUNCTION getFileNameFinalPhase_NoPath
+
+!---------------------------------------------------------------------------
+! DESCRIPTION:
+!> @brief      Return file of the haplotype library of a internal phasing
+!
+!> @details    Return the correct path of the file containing the haplotype library
+!>             of a given intenal phase and core
+!
+!> @author     Roberto Antolin, roberto.antolin@roslin.ed.ac.uk
+!
+!> @date       July 25, 2016
+!
+! PARAMETERS:
+!> @param[in] PhasePath       Path of phased data
+!> @param[in] phaseInternal   Number of a internal phase
+!> @return    File name
+!---------------------------------------------------------------------------
+  FUNCTION getFileNameHapLib_Path(PhasePath, phaseInternal, core) result(FileName)
+    integer, intent(in)             :: phaseInternal, core
+    character(len=300), intent(in)  :: PhasePath
+    character(len=1000)             :: FileName
+
+#ifdef OS_UNIX
+    write (FileName,'(a,"Phase",i0,"/PhasingResults/HaplotypeLibrary/HapLib",i0,".bin")') trim(PhasePath), phaseInternal, core
+#else
+    write (FileName,'(a,"Phase",i0,"\PhasingResults\HaplotypeLibrary\HapLib",i0,".bin")') trim(PhasePath), phaseInternal, core
+#endif
+  END FUNCTION getFileNameHapLib_Path
+
+!---------------------------------------------------------------------------
+! DESCRIPTION:
+!> @brief      Return file of the haplotype library of a internal phasing
+!
+!> @details    Return the correct path of the file containing the haplotype library
+!>             of a given intenal phase and core
+!
+!> @author     Roberto Antolin, roberto.antolin@roslin.ed.ac.uk
+!
+!> @date       July 25, 2016
+!
+! PARAMETERS:
+!> @param[in] PhasePath       Path of phased data
+!> @param[in] phaseInternal   Number of a internal phase
+!> @return    File name
+!---------------------------------------------------------------------------
+  FUNCTION getFileNameHapLib_NoPath(phaseInternal, core) result(FileName)
+    integer, intent(in)            :: phaseInternal, core
+    character(len=1000)            :: FileName
+
+#ifdef OS_UNIX
+    write (FileName,'("./Phasing/Phase",i0,"/PhasingResults/HaplotypeLibrary/HapLib",i0,".bin")') phaseInternal, core
+#else
+    write (FileName,'(".\Phasing\Phase",i0,"\PhasingResults\HaplotypeLibrary\HapLib",i0,".bin")') phaseInternal, core
+#endif
+  END FUNCTION getFileNameHapLib_NoPath
 
 
   SUBROUTINE ReadPhased(nAnis, nAnisPed, FileName, Ids, PhaseHD, PosHD)
