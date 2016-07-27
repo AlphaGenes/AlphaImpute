@@ -1791,107 +1791,123 @@ end subroutine GeneralFillIn
 
 !#############################################################################################################################################################################################################################
 
-subroutine EnsureHetGametic
-! Impute phase to Y chromosome from X chromosome for heterogametic individuals 
-use Global
-implicit none
+  SUBROUTINE EnsureHetGametic
+    ! Impute phase to Y chromosome from X chromosome for heterogametic individuals
+    use Global
+    implicit none
 
-integer :: i,j
+    integer :: i,j
 
-do i=1,nAnisP
-    if (RecGender(i)==HetGameticStatus) then
+    do i=1,nAnisP
+      if (RecGender(i)==HetGameticStatus) then
         do j=1,nSnp
-            if ((ImputePhase(i,j,1)==9).and.(ImputePhase(i,j,2)/=9)) ImputePhase(i,j,1)=ImputePhase(i,j,2)
-            if ((ImputePhase(i,j,2)==9).and.(ImputePhase(i,j,1)/=9)) ImputePhase(i,j,2)=ImputePhase(i,j,1)      
+          if ((ImputePhase(i,j,1)==9).and.(ImputePhase(i,j,2)/=9)) then
+            ImputePhase(i,j,1)=ImputePhase(i,j,2)
+          end if
+          if ((ImputePhase(i,j,2)==9).and.(ImputePhase(i,j,1)/=9)) then
+            ImputePhase(i,j,2)=ImputePhase(i,j,1)
+          end if
         enddo
-    endif
-enddo
+      endif
+    enddo
 
-end subroutine EnsureHetGametic
+  END SUBROUTINE EnsureHetGametic
 
 !#############################################################################################################################################################################################################################
 
-subroutine MakeGenotype
-! Any individual that has a missing genotype information but has both alleles
-! known, has its genotype filled in as the sum of the two alleles
-use Global
-implicit none
+  SUBROUTINE MakeGenotype
+    ! Any individual that has a missing genotype information but has both alleles
+    ! known, has its genotype filled in as the sum of the two alleles
+    use Global
+    implicit none
 
-integer :: i,j
+    integer :: i,j
 
-do i=1,nAnisP
     do j=1,nSnp
+      do i=1,nAnisP
         if (ImputeGenos(i,j)==9) then
-            if ((ImputePhase(i,j,1)/=9).and.(ImputePhase(i,j,2)/=9)) ImputeGenos(i,j)=sum(ImputePhase(i,j,:))
+          if ((ImputePhase(i,j,1)/=9).and.(ImputePhase(i,j,2)/=9)) then
+            ImputeGenos(i,j)=sum(ImputePhase(i,j,:))
+          end if
         endif
+      enddo
     enddo
-enddo
 
-ImputePhase(0,:,:)=9
-ImputeGenos(0,:)=9
+    ImputePhase(0,:,:)=9
+    ImputeGenos(0,:)=9
 
-end subroutine MakeGenotype
+  END SUBROUTINE MakeGenotype
 
 !#############################################################################################################################################################################################################################
 
-subroutine PhaseComplement
-! If the genotype at a locus for an individual is known and one of its alleles has been determined
-! then impute the missing allele as the complement of the genotype and the known phased allele
-use Global
-implicit none
+  subroutine PhaseComplement
+    ! If the genotype at a locus for an individual is known and one of its alleles has been determined
+    ! then impute the missing allele as the complement of the genotype and the known phased allele
+    use Global
+    implicit none
 
-integer :: i,j
+    integer :: i,j
 
-do i=1,nAnisP
     do j=1,nSnp
+      do i=1,nAnisP
         if (ImputeGenos(i,j)/=9) then
-            if ((ImputePhase(i,j,1)/=9).and.(ImputePhase(i,j,2)==9)) ImputePhase(i,j,2)=ImputeGenos(i,j)-ImputePhase(i,j,1)
-            if ((ImputePhase(i,j,2)/=9).and.(ImputePhase(i,j,1)==9)) ImputePhase(i,j,1)=ImputeGenos(i,j)-ImputePhase(i,j,2)
+            if ((ImputePhase(i,j,1)/=9).and.(ImputePhase(i,j,2)==9)) then
+              ImputePhase(i,j,2)=ImputeGenos(i,j)-ImputePhase(i,j,1)
+            end if
+            if ((ImputePhase(i,j,2)/=9).and.(ImputePhase(i,j,1)==9)) then
+              ImputePhase(i,j,1)=ImputeGenos(i,j)-ImputePhase(i,j,2)
+            end if
         endif
+      enddo
     enddo
-enddo
 
-ImputePhase(0,:,:)=9
-ImputeGenos(0,:)=9
+    ImputePhase(0,:,:)=9
+    ImputeGenos(0,:)=9
 
-end subroutine PhaseComplement
+  end subroutine PhaseComplement
 
 !#############################################################################################################################################################################################################################
 
-subroutine ParentHomoFill
-! Fill in the allele of an offspring of a parent that has both its 
-! alleles filled in and has a resulting genotype that is homozygous
-use Global
-implicit none
+  subroutine ParentHomoFill
+    ! Fill in the allele of an offspring of a parent that has both its
+    ! alleles filled in and has a resulting genotype that is homozygous
+    use Global
+    implicit none
 
-integer :: e,i,j,PatMat,ParId
+    integer :: e,i,j,PatMat,ParId
 
-do i=1,nAnisP
-    ! WARNING: (SexOpt==0).or.((SexOpt==1) is always TRUE
-    if ((SexOpt==0).or.((SexOpt==1).and.(RecGender(i)/=HetGameticStatus))) then     ! If individual is homogametic
+    do i=1,nAnisP
+      ! WARNING: (SexOpt==0).or.((SexOpt==1) is always TRUE
+      if ((SexOpt==0).or.((SexOpt==1).and.(RecGender(i)/=HetGameticStatus))) then     ! If individual is homogametic
         do e=1,2
-            ParId=RecPed(i,e+1)
-            do j=1,nSnp
-                if (ImputePhase(i,j,e)==9) then                                     ! Always that the SNP is not genotyped
-                    if ((ImputePhase(ParId,j,1)==ImputePhase(ParId,j,2)).and.(ImputePhase(ParId,j,1)/=9)) &
-                        ImputePhase(i,j,e)=ImputePhase(ParId,j,1)                   ! Imput phase if parent is homozygous
-                endif
-            enddo
+          ParId=RecPed(i,e+1)
+          do j=1,nSnp
+            if (ImputePhase(i,j,e)==9) then                 ! Always that the SNP is not genotyped
+              if ((ImputePhase(ParId,j,1)==ImputePhase(ParId,j,2)).and. &
+                  (ImputePhase(ParId,j,1)/=9)) then
+                    ! Imput phase if parent is homozygous
+                    ImputePhase(i,j,e)=ImputePhase(ParId,j,1)
+              end if
+            endif
+          enddo
         enddo
-    else
+      else
         ParId=RecPed(i,HomGameticStatus+1)      ! The homogametic parent
         do j=1,nSnp
-            if (ImputePhase(i,j,1)==9) then     !Comment from John Hickey see analogous iterate subroutine
-                if ((ImputePhase(ParId,j,1)==ImputePhase(ParId,j,2)).and.(ImputePhase(ParId,j,1)/=9)) &
-                    ImputePhase(i,j,:)=ImputePhase(ParId,j,1)                      ! Imput phase to the two haplotypes if parent is homozygous 
-            endif
+          if (ImputePhase(i,j,1)==9) then !Comment from John Hickey see analogous iterate subroutine
+            if ((ImputePhase(ParId,j,1)==ImputePhase(ParId,j,2)).and. &
+                (ImputePhase(ParId,j,1)/=9)) then
+                  ! Imput phase to the two haplotypes if parent is homozygous
+                  ImputePhase(i,j,:)=ImputePhase(ParId,j,1)
+            end if
+          endif
         enddo
-    endif
-enddo
-ImputePhase(0,:,:)=9
-ImputeGenos(0,:)=9
+      endif
+    enddo
+    ImputePhase(0,:,:)=9
+    ImputeGenos(0,:)=9
 
-end subroutine ParentHomoFill
+  end subroutine ParentHomoFill
 
 !#############################################################################################################################################################################################################################
 
