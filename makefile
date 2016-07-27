@@ -49,7 +49,7 @@ debug: FFLAGS = -DDEBUG=${DEBUG} -g -O0 -openmp -check bounds -fpp -static-intel
 #debug: FFLAGS =  -DDEBUG=${DEBUG} -g -ffree-line-length-0 -O0 -fopenmp
 debug: executable
 
-OBJS:=global$(obj) par_zig_mod$(obj) random$(obj) hmmvariables$(obj) Output$(obj) hmmHaplotype$(obj) utils$(obj) recombination$(obj) hmm$(obj)
+OBJS:=global$(obj) par_zig_mod$(obj) random$(obj) hmmvariables$(obj) Output$(obj) hmmHaplotype$(obj) utils$(obj) recombination$(obj) hmm$(obj) PhaseRounds$(obj) Imputation$(obj)
 
 ifeq ($(OS), Windows_NT)
 	 OBJS:= $(OBJS) manageWindows.obj
