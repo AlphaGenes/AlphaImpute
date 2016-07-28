@@ -69,6 +69,10 @@ MODULE PhaseRounds
     final :: destroy_CoreIndex
   END TYPE CoreIndex
 
+  INTERFACE CoreIndex
+    MODULE PROCEDURE newCoreIndex
+  END INTERFACE CoreIndex
+
 CONTAINS
 !---------------------------------------------------------------------------  
 ! DESCRIPTION: 
@@ -83,15 +87,15 @@ CONTAINS
 ! PARAMETERS:
 !> @param[inout]  CoreI  CoreIndex
 !---------------------------------------------------------------------------  
-  FUNCTION newCoreIndex(nCores) result(CoreI) 
+  FUNCTION newCoreIndex(nCores) result(this)
     integer, intent(in) :: nCores
-    type(CoreIndex)     :: CoreI
+    type(CoreIndex)     :: this
 
     integer :: UInputs
 
-    CoreI%nCores = nCores
-    allocate(CoreI%StartSnp(CoreI%nCores))
-    allocate(CoreI%EndSnp(CoreI%nCores))
+    this%nCores = nCores
+    allocate(this%StartSnp(this%nCores))
+    allocate(this%EndSnp(this%nCores))
 
   END FUNCTION newCoreIndex
 
