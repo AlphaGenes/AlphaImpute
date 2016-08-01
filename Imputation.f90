@@ -749,7 +749,7 @@ deallocate(Temp)
 ImputePhase(0,:,:)=9
 ImputeGenos(0,:)=9
 
-end subroutine InternalHapLibImputation
+END SUBROUTINE InternalHapLibImputation
 
 !#############################################################################################################################################################################################################################
 
@@ -772,31 +772,45 @@ end subroutine InternalHapLibImputation
     use GlobalPedigree
     use PhaseRounds
     use Utils
+    use HaplotypeBits
     implicit none
 
     integer :: e,g,h,i,j,nCore,CoreLength,dum,GamA,GamB,nAnisHD,PosHDInd
     integer :: StartSnp,EndSnp,Gam1,Gam2,TempCount,AnimalOn(nAnisP,2)
     integer,allocatable,dimension (:) :: PosHD
     integer,allocatable,dimension (:,:,:) :: PhaseHD
+    integer(kind=8), allocatable, dimension(:,:,:) :: BitPhaseHD, BitImputePhase, MissPhaseHD, MissImputePhase
     integer(kind=1),allocatable,dimension (:,:,:,:) :: Temp
 
     integer :: UPhased
     character(len=1000) :: FileName,FileNamePhase,dumC
     type(CoreIndex) :: CoreI
 
+    integer :: numSections, overhang, curSection, curPos
+
     ! Number of animals that have been HD phased
     nAnisHD=(count(Setter(:)==1))
 
+!    numSections = nSnp / 32 + 1
+!    overhang = 32 - (nSnp - (numSections - 1) * 32)
+
     allocate(Temp(nAnisP,nSnp,2,2))
     allocate(PhaseHD(nAnisHD,nSnp,2))
+!    allocate(BitPhaseHD(nAnisHD,numSections,2))
+!    allocate(BitImputePhase(nAnisHD,numSections,2))
+!    allocate(MissPhaseHD(nAnisHD,numSections,2))
+!    allocate(MissImputePhase(nAnisHD,numSections,2))
     allocate(PosHD(nAnisP))
     PosHD=0
     Temp=0
     AnimalOn=0
     ! FOR EACH CORE OF EACH ROUND OF THE LRPHLI
+!    do h=1,nPhaseInternal
     do h=1,nPhaseInternal
       ! Get HIGH DENSITY phase information of this phasing step and information
       ! of core indexes
+      FileName=""
+      FileNamePhase=""
       if (ManagePhaseOn1Off0==0) then
         FileName = getFileNameCoreIndex(trim(PhasePath),h)
         FileNamePhase = getFileNameFinalPhase(trim(PhasePath),h)
@@ -816,56 +830,88 @@ end subroutine InternalHapLibImputation
         StartSnp=CoreI%StartSnp(g)
         EndSnp=CoreI%EndSnp(g)
 
+        numSections = (EndSnp - StartSnp + 1) / 64
+        if (MOD((EndSnp - StartSnp + 1), 64)/=0) then
+          numSections = numSections + 1
+        end if
+        overhang = 64 - ((EndSnp - StartSnp + 1) - (numSections - 1) * 64)
+
+        if (allocated(BitPhaseHD)) then
+          deallocate(BitPhaseHD)
+          deallocate(BitImputePhase)
+          deallocate(MissPhaseHD)
+          deallocate(MissImputePhase)
+        end if
+        allocate(BitPhaseHD(nAnisHD,numSections,2))
+        allocate(BitImputePhase(0:nAnisP,numSections,2))
+        allocate(MissPhaseHD(nAnisHD,numSections,2))
+        allocate(MissImputePhase(0:nAnisP,numSections,2))
+
+        BitPhaseHD = 0
+        MissPhaseHD = 0
+        BitImputePhase = 0
+        MissImputePhase = 0
+
+        do e=1,2
+          curSection = 1
+          curPos = 1
+
+          do j = StartSnp, EndSnp
+
+            do i = 1, nAnisHD
+              select case (PhaseHD(i, j, e))
+                case (1)
+                  BitPhaseHD(i, curSection, e) = ibset(BitPhaseHD(i, curSection, e), curPos)
+                case (9)
+                  MissPhaseHD(i, curSection, e) = ibset(MissPhaseHD(i, curSection, e), curPos)
+              end select
+            end do
+
+            do i = 1, nAnisP
+              select case (ImputePhase(i, j, e))
+                case (1)
+                  BitImputePhase(i, curSection, e) = ibset(BitImputePhase(i, curSection, e), curPos)
+                case (9)
+                  MissImputePhase(i, curSection, e) = ibset(MissImputePhase(i, curSection, e), curPos)
+              end select
+           end do
+
+            curPos = curPos + 1
+            if (curPos == 65) then
+              curPos = 1
+              curSection = curSection + 1
+            end if
+          end do
+        end do
+
         !! PARALLELIZATION BEGINS
-        !# PARALLEL DO SHARED (nAnisP,PosHD,RecPed,ImputePhase,StartSnp,EndSnp,PhaseHD,AnimalOn,Temp) private(i,PosHDInd,Gam1,Gam2,e,GamA,GamB,TempCount,j)
+        !$OMP PARALLEL DO SHARED (nAnisP,PosHD,RecPed,ImputePhase,StartSnp,EndSnp,PhaseHD,AnimalOn,Temp) private(i,PosHDInd,Gam1,Gam2,e,GamA,GamB,TempCount,j)
         do i=1,nAnisP
           ! Look for possible gametes through the Haplotype
           ! Library constructed during the phasing step
           PosHDInd=PosHD(RecPed(i,1))         ! Index of the individual in the HD phase information
 
           ! If there is one allele phased at least
-          if ((count(ImputePhase(i,StartSnp:EndSnp,:)==9)/=0).and.(PosHDInd>0)) then
+          if ((BitCountAlleleImputed(MissImputePhase(i,:,1), numSections) + &
+               BitCountAlleleImputed(MissImputePhase(i,:,2), numSections)) > 0 .AND. PosHDInd>0) then
             ! If at least one locus is heterozygous
-            if (count(ImputePhase(i,StartSnp:EndSnp,1)/=ImputePhase(i,StartSnp:EndSnp,2))>0) then
+              if (.NOT. compareHaplotype(BitImputePhase(i,:,1), BitImputePhase(i,:,2), &
+                  MissImputePhase(i,:,1), MissImputePhase(i,:,2), numSections)) then
               Gam1=0
               Gam2=0
               do e=1,2
                 GamA=1
                 GamB=1
-                TempCount=0
-                do j=StartSnp,EndSnp
-                  if (ImputePhase(i,j,e)/=9) then
-                    ! Count the number of times that alleles are not coincident with HD
-                    ! phase of the paternal haplotype
-                    if (ImputePhase(i,j,e)/=PhaseHD(PosHDInd,j,1)) then
-                      TempCount=TempCount+1
-                      ! Exit when this number is greater than a threshold. This threshold is equal
-                      ! to 1, so this means that the loop will finish if haplotypes are strictly
-                      ! different. This will lead to reject this individual and its haplotypes.
-                      if (ImputeFromHDPhaseThresh==TempCount) then
-                        GamA=0
-                        exit
-                      endif
-                    endif
-                  endif
-                enddo
-                TempCount=0
-                do j=StartSnp,EndSnp
-                  if (ImputePhase(i,j,e)/=9) then
-                    ! Count the number of times that alleles are not coincident with HD
-                    ! phase of the maternal haplotype
-                    if (ImputePhase(i,j,e)/=PhaseHD(PosHDInd,j,2)) then
-                      TempCount=TempCount+1
-                      ! Exit when this number is greater than a threshold. This threshold is equal
-                      ! to 1, so this means that the loop will finish if haplotypes are strictly
-                      ! different. This will lead to reject this individual and its haplotypes.
-                      if (ImputeFromHDPhaseThresh==TempCount) then
-                        GamB=0
-                        exit
-                      endif
-                    endif
-                  endif
-                enddo
+
+                if (.NOT. compareHaplotypeAllowMissingThreshold(BitPhaseHD(PosHDInd,:,1), BitImputePhase(i,:,e), &
+                    MissPhaseHD(PosHDInd,:,1), MissImputePhase(i,:,e), numSections, ImputeFromHDPhaseThresh)) then
+                  GamA = 0
+                end if
+
+                if (.NOT. compareHaplotypeAllowMissingThreshold(BitPhaseHD(PosHDInd,:,2), BitImputePhase(i,:,e), &
+                    MissPhaseHD(PosHDInd,:,2), MissImputePhase(i,:,e), numSections, ImputeFromHDPhaseThresh)) then
+                  GamB = 0
+                end if
 
                 ! Paternal haplotype is strictly my paternal haplotype from the Hap Library
                 if ((e==1).and.(GamA==1).and.(GamB==0)) Gam1=1
@@ -899,6 +945,7 @@ end subroutine InternalHapLibImputation
                     endif
                   enddo
                 endif
+
                 ! Maternal gamete is in the Hap Library
                 if (Gam2/=0) then
                   do j=StartSnp,EndSnp
@@ -913,11 +960,14 @@ end subroutine InternalHapLibImputation
                     endif
                   enddo
                 endif
+
               endif
+
             endif
           endif
+
         enddo
-        !# END PARALLEL DO
+        !$OMP END PARALLEL DO
       enddo
     enddo
 
@@ -1580,28 +1630,28 @@ endif
 
       h=0
       do ! Repeat till all SNPs have been covered
-        if ((nCoreA==1).and.(nCoreB==1)) exit   ! If the number of cores is 1, EXIT
+        if ((CoreIA%nCores==1).and.(CoreIB%nCores==1)) exit   ! If the number of cores is 1, EXIT
                                                 ! This will force the subroutine to finish 
                                                 ! since it will be exit from both DO statements
         h=h+1
         if (mod(h,2)/=0) then                   ! If ODD
-          do g=1,nCoreB
+          do g=1,CoreIB%nCores
             if ((CoreIB%StartSnp(g)<UptoSnp).and.(CoreIB%EndSnp(g)>UptoSnp)) then
               UpToCoreB=g
               exit
             endif
           enddo
           if (e==1) then
-            StartSnp=CoreIB%StartSnp(g)
-            EndSnp=CoreIB%EndSnp(g)
+            StartSnp=CoreIB%StartSnp(UpToCoreB)
+            EndSnp=CoreIB%EndSnp(UpToCoreB)
 
             StPt=StartSnp
             EndPt=UpToSnp
             FillInSt=StartSnp
             FillInEnd=EndSnp
           else
-            StartSnp=CoreIB%EndSnp(g)
-            EndSnp=CoreIB%StartSnp(g)
+            StartSnp=CoreIB%EndSnp(UpToCoreB)
+            EndSnp=CoreIB%StartSnp(UpToCoreB)
             StPt=UpToSnp
             EndPt=StartSnp
             FillInSt=EndSnp
@@ -1661,7 +1711,7 @@ endif
             UpToSnp=CoreIB%EndSnp(UpToCoreB)
           end if
         else                                    ! if EVEN
-          do g=1,nCoreA
+          do g=1,CoreIA%nCores
             if ((CoreIA%StartSnp(g)<UptoSnp).and.(CoreIA%EndSnp(g)>UptoSnp)) then
               UpToCoreA=g
               exit
