@@ -6,6 +6,7 @@
 *.i90
 *.dwarf
 AlphaImpute
+AlphaImpute_*
 AlphaImpute1*
 AlphaImpute*v*
 GeneProbForAlphaImpute
