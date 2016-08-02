@@ -42,11 +42,50 @@ MODULE HaplotypeBits
     MODULE PROCEDURE compareHaplotypeAllowMissingThreshold, compareHaplotypeAllowMissingExtrict
   END INTERFACE compareHaplotypeAllowMissing
 
+  TYPE, PUBLIC :: BitSection
+    ! PUBLIC
+    integer :: numSections
+    integer :: overhang
+  END TYPE BitSection
   
+  INTERFACE BitSection
+    MODULE PROCEDURE newBitSection
+  END INTERFACE BitSection
+
+
 CONTAINS
 
-!---------------------------------------------------------------------------  
-! DESCRIPTION: 
+!---------------------------------------------------------------------------
+! DESCRIPTION:
+!> @brief      Initialise new bit section
+!
+!> @details    Initialise new bit section
+!
+!> @author     Roberto Antolin, roberto.antolin@roslin.ed.ac.uk
+!
+!> @date       August 02, 2016
+!
+! PARAMETERS:
+!> @param[inout]  this  BitSection
+!---------------------------------------------------------------------------
+  FUNCTION newBitSection(snps, bits) result(this)
+    integer, intent(in) :: snps, bits
+    type(BitSection)    :: this
+
+    integer :: nsecs
+
+    nsecs = snps / bits
+    if (MOD(snps, bits)/=0) then
+      nsecs = nsecs + 1
+    end if
+
+    this%numSections = nsecs
+    this%overhang = bits - (snps - (nsecs - 1) * bits)
+
+  END FUNCTION newBitSection
+
+!---------------------------------------------------------------------------
+! DESCRIPTION:
 !> @brief      Compare two haplotypes
 !
 !> @details    Return .FALSE. if at least a number of alleles (thres) of hap1 is

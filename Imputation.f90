@@ -785,21 +785,15 @@ END SUBROUTINE InternalHapLibImputation
     integer :: UPhased
     character(len=1000) :: FileName,FileNamePhase,dumC
     type(CoreIndex) :: CoreI
+    type(BitSection) :: Section
 
     integer :: numSections, overhang, curSection, curPos
 
     ! Number of animals that have been HD phased
     nAnisHD=(count(Setter(:)==1))
 
-!    numSections = nSnp / 32 + 1
-!    overhang = 32 - (nSnp - (numSections - 1) * 32)
-
     allocate(Temp(nAnisP,nSnp,2,2))
     allocate(PhaseHD(nAnisHD,nSnp,2))
-!    allocate(BitPhaseHD(nAnisHD,numSections,2))
-!    allocate(BitImputePhase(nAnisHD,numSections,2))
-!    allocate(MissPhaseHD(nAnisHD,numSections,2))
-!    allocate(MissImputePhase(nAnisHD,numSections,2))
     allocate(PosHD(nAnisP))
     PosHD=0
     Temp=0
@@ -830,11 +824,8 @@ END SUBROUTINE InternalHapLibImputation
         StartSnp=CoreI%StartSnp(g)
         EndSnp=CoreI%EndSnp(g)
 
-        numSections = (EndSnp - StartSnp + 1) / 64
-        if (MOD((EndSnp - StartSnp + 1), 64)/=0) then
-          numSections = numSections + 1
-        end if
-        overhang = 64 - ((EndSnp - StartSnp + 1) - (numSections - 1) * 64)
+        Section = BitSection((EndSnp - StartSnp + 1), 64)
+        numSections = Section%numSections
 
         allocate(BitPhaseHD(nAnisHD,numSections,2))
         allocate(BitImputePhase(0:nAnisP,numSections,2))
