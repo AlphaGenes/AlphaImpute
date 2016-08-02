@@ -897,12 +897,12 @@ END SUBROUTINE InternalHapLibImputation
                 GamA=1
                 GamB=1
 
-                if (.NOT. compareHaplotypeAllowMissingThreshold(BitPhaseHD(PosHDInd,:,1), BitImputePhase(i,:,e), &
+                if (.NOT. compareHaplotypeAllowMissing(BitPhaseHD(PosHDInd,:,1), BitImputePhase(i,:,e), &
                     MissPhaseHD(PosHDInd,:,1), MissImputePhase(i,:,e), numSections, ImputeFromHDPhaseThresh)) then
                   GamA = 0
                 end if
 
-                if (.NOT. compareHaplotypeAllowMissingThreshold(BitPhaseHD(PosHDInd,:,2), BitImputePhase(i,:,e), &
+                if (.NOT. compareHaplotypeAllowMissing(BitPhaseHD(PosHDInd,:,2), BitImputePhase(i,:,e), &
                     MissPhaseHD(PosHDInd,:,2), MissImputePhase(i,:,e), numSections, ImputeFromHDPhaseThresh)) then
                   GamB = 0
                 end if
