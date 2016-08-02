@@ -836,12 +836,6 @@ END SUBROUTINE InternalHapLibImputation
         end if
         overhang = 64 - ((EndSnp - StartSnp + 1) - (numSections - 1) * 64)
 
-        if (allocated(BitPhaseHD)) then
-          deallocate(BitPhaseHD)
-          deallocate(BitImputePhase)
-          deallocate(MissPhaseHD)
-          deallocate(MissImputePhase)
-        end if
         allocate(BitPhaseHD(nAnisHD,numSections,2))
         allocate(BitImputePhase(0:nAnisP,numSections,2))
         allocate(MissPhaseHD(nAnisHD,numSections,2))
@@ -968,6 +962,13 @@ END SUBROUTINE InternalHapLibImputation
 
         enddo
         !$OMP END PARALLEL DO
+
+!        if (allocated(BitPhaseHD)) then
+          deallocate(BitPhaseHD)
+          deallocate(BitImputePhase)
+          deallocate(MissPhaseHD)
+          deallocate(MissImputePhase)
+!        end if
       enddo
     enddo
 
