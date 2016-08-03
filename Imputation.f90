@@ -504,22 +504,34 @@ LoopIndex(23,1)=6
 LoopIndex(24,1)=5
 LoopIndex(25,1)=4
 
-! WARNING: This can be better arrange with a ELSEIF statement and should go in a function since it
-!          is the same code as InternalParentPhaseElim subroutine
 ! LoopStart indicates which is the first loop the algorithm should treat. The bigger the number of 
 ! SNPs, the more the loops to be considered
-if(nSnp<=50) return
-if(nSnp>50) LoopStart=24
-if(nSnp>100) LoopStart=21
-if(nSnp>200) LoopStart=20
-if(nSnp>400) LoopStart=17
-if(nSnp>800) LoopStart=17
-if(nSnp>1000) LoopStart=15
-if(nSnp>1500) LoopStart=13
-if(nSnp>2000) LoopStart=10
-if(nSnp>3000) LoopStart=6
-if(nSnp>4000) LoopStart=3
-if(nSnp>5000) LoopStart=1
+    select case (nSnp)
+      case (:50)
+        return
+      case (51:100)
+        LoopStart = 24
+      case (101:200)
+        LoopStart = 21
+      case (201:400)
+        LoopStart = 20
+      case (401:800)
+        LoopStart = 17
+      case (801:1000)
+        LoopStart = 17
+      case (1001:1500)
+        LoopStart = 15
+      case (1501:2000)
+        LoopStart = 13
+      case (2001:3000)
+        LoopStart = 10
+      case (3001:4000)
+        LoopStart = 6
+      case (4001:5000)
+        LoopStart = 3
+      case (5001:)
+        LoopStart = 1
+    end select
 
 ! Assumed that LoopIndex(:,1) are the numbers of cores for each phase step, LoopIndex):,2) are the core lengths
 do i=LoopStart,nGlobalLoop
