@@ -269,18 +269,9 @@ LoopIndex(25,1)=4
 !          is the same code as InternalParentPhaseElim subroutine
 ! LoopStart indicates which is the first loop the algorithm should treat. The bigger the number of
 ! SNPs, the more the loops to be considered
-if(nSnp<=50) return
-if(nSnp>50) LoopStart=24
-if(nSnp>100) LoopStart=21
-if(nSnp>200) LoopStart=20
-if(nSnp>400) LoopStart=17
-if(nSnp>800) LoopStart=17
-if(nSnp>1000) LoopStart=15
-if(nSnp>1500) LoopStart=13
-if(nSnp>2000) LoopStart=10
-if(nSnp>3000) LoopStart=6
-if(nSnp>4000) LoopStart=3
-if(nSnp>5000) LoopStart=1
+
+LoopStart = getLoopStart(nSnp)
+if (LoopStart == 0) return
 
 ! Assumed that LoopIndex(:,1) are the numbers of cores for each phase step, LoopIndex):,2) are the core lengths
 do i=1,nGlobalLoop
@@ -461,6 +452,7 @@ subroutine InternalHapLibImputation
 ! This subroutine corresponds to Major sub-step 6 from Hickey et al., 2012 (Appendix A)
 
 use Global
+use HaplotypeBits
 implicit none
 
 integer :: f,e,h,g,i,j,k,l,nCore,nHap,nGlobalLoop,CoreLength,CoreStart,CoreEnd,InLib,NotHere,CompPhase,Count0,Count1,Work(nSnp,2)
@@ -470,68 +462,56 @@ integer :: LoopStart,OffSet
 integer,allocatable,dimension (:,:) :: CoreI,HapLib,LoopIndex,HapElim
 integer(kind=1),allocatable,dimension (:,:,:,:) :: Temp
 
-! WARNING: This should go in a function since it is the same code as InternalParentPhaseElim subroutine
-nGlobalLoop=25
-
 ! LoopeIndex is a matrix with two columns that will serve to define:
 !   * 1.- nCores
 !   * 2.- Core lengths
-allocate(LoopIndex(nGlobalLoop,2))
+    type(BitSection) :: Section
+    integer :: numSections, overhang, curSection, curPos
+    integer :: BitGeno
 
-LoopIndex(1,1)=400
-LoopIndex(2,1)=300
-LoopIndex(3,1)=250
-LoopIndex(4,1)=200
-LoopIndex(5,1)=175
-LoopIndex(6,1)=150
-LoopIndex(7,1)=125
-LoopIndex(8,1)=115
-LoopIndex(9,1)=100
-LoopIndex(10,1)=80
-LoopIndex(11,1)=70
-LoopIndex(12,1)=60
-LoopIndex(13,1)=50
-LoopIndex(14,1)=40
-LoopIndex(15,1)=35
-LoopIndex(16,1)=30
-LoopIndex(17,1)=25
-LoopIndex(18,1)=20
-LoopIndex(19,1)=15
-LoopIndex(20,1)=12
-LoopIndex(21,1)=10
-LoopIndex(22,1)=8
-LoopIndex(23,1)=6
-LoopIndex(24,1)=5
-LoopIndex(25,1)=4
+    ! WARNING: This should go in a function since it is the same code as InternalParentPhaseElim subroutine
+    nGlobalLoop=25
 
-! LoopStart indicates which is the first loop the algorithm should treat. The bigger the number of 
-! SNPs, the more the loops to be considered
-    select case (nSnp)
-      case (:50)
-        return
-      case (51:100)
-        LoopStart = 24
-      case (101:200)
-        LoopStart = 21
-      case (201:400)
-        LoopStart = 20
-      case (401:800)
-        LoopStart = 17
-      case (801:1000)
-        LoopStart = 17
-      case (1001:1500)
-        LoopStart = 15
-      case (1501:2000)
-        LoopStart = 13
-      case (2001:3000)
-        LoopStart = 10
-      case (3001:4000)
-        LoopStart = 6
-      case (4001:5000)
-        LoopStart = 3
-      case (5001:)
-        LoopStart = 1
-    end select
+    ! LoopeIndex is a matrix with two columns that will serve to define:
+    !   * 1.- nCores
+    !   * 2.- Core lengths
+    allocate(LoopIndex(nGlobalLoop,2))
+
+    LoopIndex(1,1)=400
+    LoopIndex(2,1)=300
+    LoopIndex(3,1)=250
+    LoopIndex(4,1)=200
+    LoopIndex(5,1)=175
+    LoopIndex(6,1)=150
+    LoopIndex(7,1)=125
+    LoopIndex(8,1)=115
+    LoopIndex(9,1)=100
+    LoopIndex(10,1)=80
+    LoopIndex(11,1)=70
+    LoopIndex(12,1)=60
+    LoopIndex(13,1)=50
+    LoopIndex(14,1)=40
+    LoopIndex(15,1)=35
+    LoopIndex(16,1)=30
+    LoopIndex(17,1)=25
+    LoopIndex(18,1)=20
+    LoopIndex(19,1)=15
+    LoopIndex(20,1)=12
+    LoopIndex(21,1)=10
+    LoopIndex(22,1)=8
+    LoopIndex(23,1)=6
+    LoopIndex(24,1)=5
+    LoopIndex(25,1)=4
+
+    ! LoopStart indicates which is the first loop the algorithm should treat. The bigger the number of 
+    ! SNPs, the more the loops to be considered
+    LoopStart = getLoopStart(nSnp)
+    if (LoopStart == 0) return
+
+    ! Assumed that LoopIndex(:,1) are the numbers of cores for each phase step, LoopIndex):,2) are the core lengths
+    do i=LoopStart,nGlobalLoop
+        LoopIndex(i,2)=int(float(nSnp)/LoopIndex(i,1))  
+    enddo
 
 ! Assumed that LoopIndex(:,1) are the numbers of cores for each phase step, LoopIndex):,2) are the core lengths
 do i=LoopStart,nGlobalLoop
@@ -2291,5 +2271,37 @@ end subroutine GeneProbPhase
   call GeneralFillIn
 
   end subroutine ManageWorkLeftRight
+
+  function getLoopStart(snps) Result(LoopStart)
+    integer, intent(in) :: snps
+    integer :: LoopStart
+
+      select case (snps)
+      case (:50)
+        LoopStart = 0
+      case (51:100)
+        LoopStart = 24
+      case (101:200)
+        LoopStart = 21
+      case (201:400)
+        LoopStart = 20
+      case (401:800)
+        LoopStart = 17
+      case (801:1000)
+        LoopStart = 17
+      case (1001:1500)
+        LoopStart = 15
+      case (1501:2000)
+        LoopStart = 13
+      case (2001:3000)
+        LoopStart = 10
+      case (3001:4000)
+        LoopStart = 6
+      case (4001:5000)
+        LoopStart = 3
+      case (5001:)
+        LoopStart = 1
+    end select
+  end function getLoopStart
 
 END MODULE Imputation
