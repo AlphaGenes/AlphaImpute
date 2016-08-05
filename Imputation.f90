@@ -517,36 +517,36 @@ end subroutine InternalParentPhaseElim
 
 !#############################################################################################################################################################################################################################
 
-subroutine InternalHapLibImputation
-! Internal candidate haplotype library imputation of alleles.q
-! Haplotype libraries are internally built using the information that has been previously imputed.
-! Several different core lengths are used to define the length of the haplotypes and to ensure to
-! prevent the use of phasing errors that originate from LRPHLI. For each core, all haplotypes that
-! have been found and stored in the haplotype library are initially considered to be candidates for
-! the true haplotype that an individual carries on its gametes. Within the core, all alleles that
-! are known are compared to corresponding alleles in each of the haplotypes in the library.
-! Haplotypes that have a number of disagreements greater than a small error threshold have their
-! candidacy rejected. At the end of this loop, the surviving candidate haplotypes are checked for
-! locations that have unanimous agreement about a particular allele. For alleles with complete
-! agreement, a count of the suggested allele is incremented. Alleles are imputed if, at the end of
-! passing across each core and each round of the LRPHLI algorithm, the count of whether the alleles
-! are 0 or 1 is above a threshold in one direction and below a threshold in the other.
-! This subroutine corresponds to Major sub-step 6 from Hickey et al., 2012 (Appendix A)
+  subroutine InternalHapLibImputation
+  ! Internal candidate haplotype library imputation of alleles.q
+  ! Haplotype libraries are internally built using the information that has been previously imputed.
+  ! Several different core lengths are used to define the length of the haplotypes and to ensure to
+  ! prevent the use of phasing errors that originate from LRPHLI. For each core, all haplotypes that
+  ! have been found and stored in the haplotype library are initially considered to be candidates for
+  ! the true haplotype that an individual carries on its gametes. Within the core, all alleles that
+  ! are known are compared to corresponding alleles in each of the haplotypes in the library.
+  ! Haplotypes that have a number of disagreements greater than a small error threshold have their
+  ! candidacy rejected. At the end of this loop, the surviving candidate haplotypes are checked for
+  ! locations that have unanimous agreement about a particular allele. For alleles with complete
+  ! agreement, a count of the suggested allele is incremented. Alleles are imputed if, at the end of
+  ! passing across each core and each round of the LRPHLI algorithm, the count of whether the alleles
+  ! are 0 or 1 is above a threshold in one direction and below a threshold in the other.
+  ! This subroutine corresponds to Major sub-step 6 from Hickey et al., 2012 (Appendix A)
 
-use Global
-use HaplotypeBits
-implicit none
+    use Global
+    use HaplotypeBits
+    implicit none
 
-integer :: f,e,h,g,i,j,k,l,nCore,nHap,nGlobalLoop,CoreLength,CoreStart,CoreEnd,InLib,NotHere,CompPhase,Count0,Count1,Work(nSnp,2)
-integer :: Counter,BanBoth(2),Ban(2),AnimalOn(nAnisP,2)
-integer :: LoopStart,OffSet
+    integer :: f,e,h,g,i,j,k,l,nCore,nHap,nGlobalLoop,CoreLength,CoreStart,CoreEnd,InLib,Count0,Count1
+    integer :: Counter,BanBoth(2),Ban(2),AnimalOn(nAnisP,2)
+    integer :: LoopStart,OffSet
 
-integer,allocatable,dimension (:,:) :: CoreI,HapLib,LoopIndex,HapElim
-integer(kind=1),allocatable,dimension (:,:,:,:) :: Temp
+    integer,allocatable,dimension (:,:) :: CoreI,HapLib,LoopIndex,HapElim
+    integer(kind=1),allocatable,dimension (:,:,:,:) :: Temp
 
-! LoopeIndex is a matrix with two columns that will serve to define:
-!   * 1.- nCores
-!   * 2.- Core lengths
+    integer(kind=8), allocatable, dimension(:,:) :: BitHapLib, MissHapLib, BitWork, MissWork
+    integer(kind=8), allocatable, dimension(:,:,:) :: BitImputePhase, MissImputePhase
+
     type(BitSection) :: Section
     integer :: numSections, overhang, curSection, curPos
     integer :: BitGeno
@@ -592,216 +592,289 @@ integer(kind=1),allocatable,dimension (:,:,:,:) :: Temp
 
     ! Assumed that LoopIndex(:,1) are the numbers of cores for each phase step, LoopIndex):,2) are the core lengths
     do i=LoopStart,nGlobalLoop
-        LoopIndex(i,2)=int(float(nSnp)/LoopIndex(i,1))  
+        LoopIndex(i,2)=int(float(nSnp)/LoopIndex(i,1))
     enddo
 
-! Assumed that LoopIndex(:,1) are the numbers of cores for each phase step, LoopIndex):,2) are the core lengths
-do i=LoopStart,nGlobalLoop
-    LoopIndex(i,2)=int(float(nSnp)/LoopIndex(i,1))  
-enddo
+    allocate(Temp(nAnisP,nSnp,2,2))
+    Temp=0
+    AnimalOn=0
 
-allocate(Temp(nAnisP,nSnp,2,2))
-Temp=0
-AnimalOn=0
-
-! SIMULATE PHASING
-! f is a variable to simulate shift or no-shift phasing
-do f=1,2
-    ! Allocate the Internal Haplotype Library
-    allocate(HapLib(nAnisP*2,nSnp))
-    do l=LoopStart,nGlobalLoop
+    ! SIMULATE PHASING
+    ! f is a variable to simulate shift or no-shift phasing
+    do f=1,2
+      ! Allocate the Internal Haplotype Library
+      allocate(HapLib(nAnisP*2,nSnp))
+      do l=LoopStart,nGlobalLoop
 
         ! Simulate phase without shift
         if (f==1) then
-            nCore=nSnp/LoopIndex(l,2) 
-            CoreStart=1
-            CoreEnd=LoopIndex(l,2)
-
-        ! Simulate phase with shift
-        else
-            OffSet=int(float(LoopIndex(l,2))/2)
-            nCore=(nSnp-(2*OffSet))/LoopIndex(l,2)
-            CoreStart=1+Offset
-            CoreEnd=LoopIndex(l,2)+Offset
+          nCore=nSnp/LoopIndex(l,2)
+          CoreStart=1
+          CoreEnd=LoopIndex(l,2)
+        else ! Simulate phase with shift
+          OffSet=int(float(LoopIndex(l,2))/2)
+          nCore=(nSnp-(2*OffSet))/LoopIndex(l,2)
+          CoreStart=1+Offset
+          CoreEnd=LoopIndex(l,2)+Offset
         endif    
 
         do g=1,nCore
-            ! Make sure that cores ends correctly
-            if ((f==1).and.(g==nCore)) CoreEnd=nSnp
-            if ((f==2).and.(g==nCore)) CoreEnd=nSnp-OffSet
+          ! Make sure that cores ends correctly
+          if ((f==1).and.(g==nCore)) CoreEnd=nSnp
+          if ((f==2).and.(g==nCore)) CoreEnd=nSnp-OffSet
 
-            ! Exit if the corelength is too small
-            CoreLength=(CoreEnd-CoreStart)+1
-            if (CoreLength<10) exit
+          ! Exit if the corelength is too small
+          CoreLength=(CoreEnd-CoreStart)+1
+          if (CoreLength<10) exit
 
-            nHap=0
-            HapLib=9
-            
-            ! THE FIRST PARALLELIZATION BEGINS: POPULATE THE INTERNAL HAPLOTYPE LIBRARY
-            !# PARALLEL DO SHARED (nAnisP,ImputePhase,CoreStart,CoreEnd,nHap,HapLib) private(i,e,CompPhase,InLib,h,NotHere,j)
-            do i=1,nAnisP
-                do e=1,2
-                    ! WARNING: If GeneProbPhase has been executed, that is, if not considering the Sex Chromosome, then MSTermInfo={0,1}.
-                    !          Else, if Sex Chromosome, then MSTermInfo is 0 always
-                    !          So, if a Conservative imputation of haplotypes is selected, this DO statement will do nothing
-                    if ((ConservativeHapLibImputation==1).and.(MSTermInfo(i,e)==0)) cycle
+          nHap=0
+          HapLib=9
 
-                    ! Check if the haplotype for this core is completely phased 
-                    CompPhase=1
-                    if (count(ImputePhase(i,CoreStart:CoreEnd,e)==9)>0) CompPhase=0
+          Section = BitSection((CoreEnd - CoreStart + 1), 64)
+          numSections = Section%numSections
 
-                    ! If haplotype is completely phased, populate HapLib
-                    ! NOTE: Since there is code in order to populate the Haplotype Library in 
-                    !       in AlphaPhase, it can be convenient to create a share procedure in
-                    !       AlphaHouse
-                    if (CompPhase==1) then
-                        if (nHap==0) then       ! The first haplotype in the library
-                            HapLib(1,CoreStart:CoreEnd)=ImputePhase(i,CoreStart:CoreEnd,e)
-                            nHap=1
-                        else
-                            InLib=0
-                            do h=1,nHap
-                                NotHere=1
-                                ! Check if haplotype is in the Library
-                                do j=CoreStart,CoreEnd
-                                    if(ImputePhase(i,j,e)/=HapLib(h,j)) then
-                                        NotHere=0   
-                                        exit
-                                    endif
-                                enddo
-                                ! If haplotype in the library, do nothing
-                                if (NotHere==1) then
-                                    InLib=1
-                                    exit                
-                                endif
-                            enddo
-                            ! If haplotype is not in the library, then
-                            ! a new haplotype has been found, then populate the library
-                            if (InLib==0) then
-                                nHap=nHap+1             
-                                HapLib(nHap,CoreStart:CoreEnd)=ImputePhase(i,CoreStart:CoreEnd,e)           
-                            endif
-                        endif
-                    endif
-                enddo
-            enddo
-            !# END PARALLEL DO 
-            
-            ! THE SECOND PARALLELIZATION BEGINS
-            !# PARALLEL DO SHARED (nAnisP,ImputePhase,CoreStart,CoreEnd,CoreLength,nHap,HapLib,ImputeGenos,AnimalOn,Temp) private(i,HapElim,Work,BanBoth,e,h,j,Counter,Count0,Count1,Ban)
+          if (allocated(BitHapLib)) then
+            deallocate(BitHapLib)
+            deallocate(MissHapLib)
+            deallocate(BitImputePhase)
+            deallocate(MissImputePhase)
+          end if
 
-            ! WARNING: This code does not match the corresponding code of the subroutine ImputeFromHDLibrary
-            !          In ImputeFromHDLibrary, there are two steps, counting agreements and impute 
-            !          across candidate haplotypes, and counting agreements and impute across cores
-            !          and phasing steps. 
-            do i=1,nAnisP
-                allocate(HapElim(nAnisP*2,2))
-                HapElim=1
-                Work=9
-                BanBoth=0
-                do e=1,2
-                    ! WARNING: If GeneProbPhase has been executed, that is, if not considering the Sex Chromosome, then MSTermInfo={0,1}.
-                    !          Else, if Sex Chromosome, then MSTermInfo is 0 always
-                    !          So, if a Conservative imputation of haplotypes is selected, this DO statement will do nothing
-                    if ((ConservativeHapLibImputation==1).and.(MSTermInfo(i,e)==0)) cycle
+          allocate(BitHapLib(nAnisP*2,numSections))
+          allocate(MissHapLib(nAnisP*2,numSections))
+          allocate(BitImputePhase(0:nAnisP,numSections,2))
+          allocate(MissImputePhase(0:nAnisP,numSections,2))
 
-                    ! If haplotype is partially phased
-                    if ((count(ImputePhase(i,CoreStart:CoreEnd,e)==9)/=CoreLength)&
-                            .and.(count(ImputePhase(i,CoreStart:CoreEnd,e)/=9)/=CoreLength)) then
+          BitHapLib = 0
+          MissHapLib = 0
+          BitImputePhase = 0
+          MissImputePhase = 0
 
-                        ! Identify and reject the candidate haplotypes if it does not explain the whole haplotype
-                        do h=1,nHap
-                            do j=CoreStart,CoreEnd
-                                if ((ImputePhase(i,j,e)/=9)&
-                                        .and.(ImputePhase(i,j,e)/=HapLib(h,j))) then
-                                    HapElim(h,e)=0
-                                    exit    
-                                endif
-                            enddo
-                        enddo
+          curSection = 1
+          curPos = 1
+          do j = CoreStart, CoreEnd
+            do e = 1, 2
+              do i = 1, nAnisP
+                select case (ImputePhase(i, j, e))
+                  case (1)
+                    BitImputePhase(i, curSection, e) = ibset(BitImputePhase(i, curSection, e), curPos)
+                  case (9)
+                    MissImputePhase(i, curSection, e) = ibset(MissImputePhase(i, curSection, e), curPos)
+                end select
+             end do
+            end do
 
-                        ! If the number of candidate haplotypes is less than the 25% of the Library,
-                        ! then impute if all alleles have been phased the same way
-                        Counter=count(HapElim(1:nHap,e)==1)
-                        if (float(Counter)<(float(nHap)*0.25)) then
-                            ! Ban this haplotype will be phased here and nowhere else
-                            BanBoth(e)=1
-                            do j=CoreStart,CoreEnd
-                                ! How many haplotypes has been phased as 0 or 1 in this particular allele?
-                                Count0=0
-                                Count1=0
+            do i = 1, nAnisP*2
+              MissHapLib(i, curSection) = IBSET(MissHapLib(i, curSection), curPos)
+            end do
 
-                                ! Count the occurrences in phasing of alleles across candidate haplotypes
-                                do h=1,nHap
-                                    if (HapElim(h,e)==1) then
-                                        if (HapLib(h,j)==0) Count0=Count0+1
-                                        if (HapLib(h,j)==1) Count1=Count1+1
-                                        if ((Count0>0).and.(Count1>0)) exit
-                                    endif                       
-                                enddo
+            curPos = curPos + 1
+            if (curPos == 65) then
+              curPos = 1
+              curSection = curSection + 1
+            end if
+          end do
 
-                                ! If all alleles across the candidate haplotypes have been phased the same way, impute
-                                if (Count0>0) then
-                                    if (Count1==0) Work(j,e)=0
-                                else
-                                    if (Count1>0) Work(j,e)=1
-                                endif
-                            enddo
-                        endif
-                    endif
-                enddo
+          ! THE FIRST PARALLELIZATION BEGINS: POPULATE THE INTERNAL HAPLOTYPE LIBRARY
+          !# PARALLEL DO SHARED (nAnisP,ImputePhase,CoreStart,CoreEnd,nHap,HapLib) private(i,e,CompPhase,InLib,h,NotHere,j)
+          do i=1,nAnisP
+            do e=1,2
+              ! If GeneProbPhase has been executed, that is, if not considering the Sex Chromosome, then MSTermInfo={0,1}.
+              ! Else, if Sex Chromosome, then MSTermInfo is 0 always
+              ! So, if a Conservative imputation of haplotypes is selected, this DO statement will do nothing
+              if ((ConservativeHapLibImputation==1).and.(MSTermInfo(i,e)==0)) cycle
 
-                ! Has any haplotype been previously banned/phased?
-                Ban=0
-                if (BanBoth(1)==1) Ban(1)=1
-                if (BanBoth(2)==1) Ban(2)=1
-                ! If both gametes have been previously banned/phased, and
-                ! if allele phases disagree with the genotype, then unban haplotypes 
-                if (sum(BanBoth(:))==2) then
-                    do j=CoreStart,CoreEnd
-                        if (ImputeGenos(i,j)/=9) then
-                            if ((Work(j,1)/=9).and.(Work(j,2)/=9)) then
-                                if (ImputeGenos(i,j)/=(Work(j,1)+Work(j,2))) then
-                                    Ban=0
-                                    exit
-                                endif
-                            endif
-                        endif
-                    enddo 
+              ! Check if the haplotype for this core is completely phased and populate HapLib
+              if ( BitCompletePhased(MissImputePhase(i,:,e), numSections) ) then
+                if (nHap==0) then       ! The first haplotype in the library
+                  HapLib(1,CoreStart:CoreEnd)=ImputePhase(i,CoreStart:CoreEnd,e)
+                  BitHapLib(1,:) = BitImputePhase(i,:,e)
+                  MissHapLib(1,:) = MissImputePhase(i,:,e)
+                  nHap=1
+                else
+                  InLib=0
+                  do h=1,nHap
+                    if (compareHaplotypeAllowMissing(BitHapLib(h,:), BitImputePhase(i,:,e), &
+                      MissHapLib(h,:), MissImputePhase(i,:,e), numSections)) then
+                      InLib = 1
+                      exit
+                    end if
+                  enddo
+
+                  ! If haplotype is not in the library,
+                  ! a new haplotype has been found, then populate the library
+                  if (InLib==0) then
+                    nHap=nHap+1
+                    HapLib(nHap,CoreStart:CoreEnd)=ImputePhase(i,CoreStart:CoreEnd,e)
+                    BitHapLib(nHap,:) = BitImputePhase(i,:,e)
+                    MissHapLib(nHap,:) = MissImputePhase(i,:,e)
+                  endif
                 endif
-
-                ! Count the number of occurrences a particular phase is impute in a particular
-                ! allele across the cores and across the internal phasing steps
-                ! This implies occurrences across all the haplotype libraries of the different internal phasing steps
-                do e=1,2
-                    if ((ConservativeHapLibImputation==1).and.(MSTermInfo(i,e)==0)) cycle 
-                    if (Ban(e)==1) then
-                        AnimalOn(i,e)=1
-                        do j=CoreStart,CoreEnd
-                            if (Work(j,e)==0) Temp(i,j,e,1)=Temp(i,j,e,1)+1
-                            if (Work(j,e)==1) Temp(i,j,e,2)=Temp(i,j,e,2)+1
-                        enddo
-                    endif
-                enddo   
-                deallocate(HapElim)
+              endif
             enddo
-            !# END PARALLEL DO
+          enddo
+          !# END PARALLEL DO
             
-            ! Prepare the core for the next cycle 
-            CoreStart=CoreStart+LoopIndex(l,2)
-            CoreEnd=CoreEnd+LoopIndex(l,2)
-            if ((f==2).and.(g==nCore)) exit
+          ! THE SECOND PARALLELIZATION BEGINS
+          !# PARALLEL DO SHARED (nAnisP,ImputePhase,CoreStart,CoreEnd,CoreLength,nHap,HapLib,ImputeGenos,AnimalOn,Temp) private(i,HapElim,BanBoth,e,h,j,Counter,Count0,Count1,Ban)
+
+          ! WARNING: This code does not match the corresponding code of the subroutine ImputeFromHDLibrary
+          !          In ImputeFromHDLibrary, there are two steps, counting agreements and impute
+          !          across candidate haplotypes, and counting agreements and impute across cores
+          !          and phasing steps.
+
+          allocate(BitWork(numSections,2))
+          allocate(MissWork(numSections,2))
+          do i=1,nAnisP
+            allocate(HapElim(nAnisP*2,2))
+            HapElim=1
+            BanBoth=0
+            BitWork = 0
+            MissWork = 0
+            do e=1,2
+              ! If GeneProbPhase has been executed, that is, if not considering the Sex Chromosome, then MSTermInfo={0,1}.
+              ! Else, if Sex Chromosome, then MSTermInfo is 0 always
+              ! So, if a Conservative imputation of haplotypes is selected, this DO statement will do nothing
+              if ((ConservativeHapLibImputation==1).and.(MSTermInfo(i,e)==0)) cycle
+
+              ! If haplotype is partially phased
+              if ( (BitCompletePhased(MissImputePhase(i,:,e), numSections) == .FALSE.) .AND. &
+                   (BitCompleteMissing(MissImputePhase(i,:,e), numSections) == .FALSE.) ) then
+
+                ! Identify and reject the candidate haplotypes if it does not explain the whole haplotype
+                do h=1,nHap
+                  if ( .NOT. compareHaplotypeAllowMissing(BitHapLib(h,:), BitImputePhase(i,:,e), &
+                    MissHapLib(h,:), MissImputePhase(i,:,e), numSections)) then
+                    HapElim(h,e)=0
+                  end if
+                enddo
+
+                ! If the number of candidate haplotypes is less than the 25% of the Library,
+                ! then impute if all alleles have been phased the same way
+                Counter=count(HapElim(1:nHap,e)==1)
+                if (float(Counter)<(float(nHap)*0.25)) then
+                  ! Ban this haplotype will be phased here and nowhere else
+                  BanBoth(e)=1
+                  curPos = 1
+                  curSection = 1
+
+                  do j=CoreStart,CoreEnd
+                    ! How many haplotypes has been phased as 0 or 1 in this particular allele?
+                    Count0=0
+                    Count1=0
+
+                    ! Count the occurrences in phasing of alleles across candidate haplotypes
+                    do h=1,nHap
+                      if (HapElim(h,e)==1) then
+                        if (BTEST(BitHapLib(h,curSection), curPos) == .FALSE. .AND. &
+                            BTEST(MissHapLib(h,curSection), curPos) == .FALSE.) then
+                          Count0=Count0+1
+                        end if
+                        if (BTEST(BitHapLib(h,curSection), curPos) == .TRUE.) then
+                          Count1=Count1+1
+                        end if
+                        if ((Count0>0).and.(Count1>0)) exit
+                      endif
+                    enddo
+
+                    ! If all alleles across the candidate haplotypes have been phased the same way, impute
+                    if (Count0 == 0 .AND. Count1 > 0) then
+                      BitWork(curSection, e) = IBSET(BitWork(curSection, e),curPos)
+                    else if (Count0 > 0 .AND. Count1 == 0) then
+                      BitWork(curSection, e) = IBCLR(BitWork(curSection, e),curPos)
+                    else
+                      MissWork(curSection, e) = IBSET(MissWork(curSection, e),curPos)
+                    end if
+
+                    curPos = curPos + 1
+                    if (curPos == 65) then
+                      curPos = 1
+                      curSection = curSection + 1
+                    end if
+                  enddo
+                endif
+              endif
+            enddo
+
+            ! Has any haplotype been previously banned/phased?
+            Ban=0
+            if (BanBoth(1)==1) Ban(1)=1
+            if (BanBoth(2)==1) Ban(2)=1
+            ! If both gametes have been previously banned/phased, and
+            ! if allele phases disagree with the genotype, then unban haplotypes
+            if (sum(BanBoth(:))==2) then
+              curPos = 1
+              curSection = 1
+              do j=CoreStart,CoreEnd
+                  ! If Working genotype is the same as the imputed one
+                  if (ImputeGenos(i,j)/=9) then
+                    if ( BTEST(MissWork(curSection,1), curPos) == .FALSE. .AND. &
+                         BTEST(MissWork(curSection,2), curPos) == .FALSE. ) then
+                      BitGeno = 0
+                      if (BTEST(BitWork(curSection,1), curPos)) BitGeno = BitGeno + 1
+                      if (BTEST(BitWork(curSection,2), curPos)) BitGeno = BitGeno + 1
+                      if (ImputeGenos(i,j)/=BitGeno) then
+                        Ban=0
+                        exit
+                      end if
+                    endif
+                  end if
+                  curPos = curPos + 1
+                  if (curPos == 65) then
+                    curPos = 1
+                    curSection = curSection + 1
+                  end if
+              enddo
+            endif
+
+            ! Count the number of occurrences a particular phase is impute in a particular
+            ! allele across the cores and across the internal phasing steps
+            ! This implies occurrences across all the haplotype libraries of the different internal phasing steps
+            do e=1,2
+              if ((ConservativeHapLibImputation==1).and.(MSTermInfo(i,e)==0)) cycle
+              if (Ban(e)==1) then
+                AnimalOn(i,e)=1
+                curPos = 1
+                curSection = 1
+                do j=CoreStart,CoreEnd
+                  if (BTEST(BitWork(curSection,e), curPos) == .FALSE. .AND. &
+                      BTEST(MissWork(curSection,e), curPos) == .FALSE.) then
+                    Temp(i,j,e,1)=Temp(i,j,e,1)+1
+                  end if
+                  if (BTEST(BitWork(curSection,e), curPos) == .TRUE.) then
+                    Temp(i,j,e,2)=Temp(i,j,e,2)+1
+                  end if
+
+                  curPos = curPos + 1
+                  if (curPos == 65) then
+                    curPos = 1
+                    curSection = curSection + 1
+                  end if
+                enddo
+              endif
+            enddo
+            deallocate(HapElim)
+          enddo
+          !# END PARALLEL DO
+
+          deallocate(BitWork)
+          deallocate(MissWork)
+
+          ! Prepare the core for the next cycle
+          CoreStart=CoreStart+LoopIndex(l,2)
+          CoreEnd=CoreEnd+LoopIndex(l,2)
+          if ((f==2).and.(g==nCore)) exit
         enddo
+      enddo
+      deallocate(HapLib)
     enddo
-    deallocate(HapLib)
-enddo
 
     do e=1,2
       do j=1,nSnp
         do i=1,nAnisP
-          ! WARNING: If GeneProbPhase has been executed, that is, if not considering the Sex Chromosome, then MSTermInfo={0,1}.
-          !          Else, if Sex Chromosome, then MSTermInfo is 0 always
-          !          So, if a Conservative imputation of haplotypes is selected, this DO statement will do nothing
+          ! If GeneProbPhase has been executed, that is, if not considering the Sex Chromosome, then MSTermInfo={0,1}.
+          ! Else, if Sex Chromosome, then MSTermInfo is 0 always
+          ! So, if a Conservative imputation of haplotypes is selected, this DO statement will do nothing
           if ((ConservativeHapLibImputation==1).and.(MSTermInfo(i,e)==0)) cycle
 
           ! If all alleles across the cores and across the internal phasing steps have been phased the same way, impute
@@ -819,12 +892,12 @@ enddo
       enddo
     enddo
 
-deallocate(Temp)
+    deallocate(Temp)
 
-ImputePhase(0,:,:)=9
-ImputeGenos(0,:)=9
+    ImputePhase(0,:,:)=9
+    ImputeGenos(0,:)=9
 
-END SUBROUTINE InternalHapLibImputation
+  END SUBROUTINE InternalHapLibImputation
 
 !#############################################################################################################################################################################################################################
 
