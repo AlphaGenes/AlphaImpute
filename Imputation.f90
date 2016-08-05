@@ -233,6 +233,7 @@ CONTAINS
 
 
 ! use Global
+use HaplotypeBits
 implicit none
 
 integer :: m,f,e,h,g,i,j,k,l,nCore,nHap,nGlobalLoop,CoreLength,CoreStart,CoreEnd,InLib,NotHere,CompPhase,Count0
@@ -241,6 +242,12 @@ integer :: Count1,Work(nSnp,2),Ban,CompPhasePar,GamA,GamB
 
 integer,allocatable,dimension (:,:) :: CoreI,HapLib,LoopIndex,HapElim
 integer(kind=1),allocatable,dimension (:,:,:,:) :: Temp
+
+integer(kind=8), allocatable, dimension(:,:,:) :: BitImputePhase, MissImputePhase
+
+type(BitSection) :: Section
+integer :: numSections, overhang, curSection, curPos
+integer :: BitGeno
 
 ! WARNING: This should go in a function since it is the same code as InternalParentPhaseElim subroutine
 nGlobalLoop=25
@@ -321,6 +328,45 @@ do m=1,2
             CoreLength=(CoreEnd-CoreStart)+1
             if (CoreLength<10) exit
 
+
+
+          Section = BitSection((CoreEnd - CoreStart + 1), 64)
+          numSections = Section%numSections
+
+          if (allocated(BitImputePhase)) then
+            deallocate(BitImputePhase)
+            deallocate(MissImputePhase)
+          end if
+
+          allocate(BitImputePhase(numSections,2,0:nAnisP))
+          allocate(MissImputePhase(numSections,2,0:nAnisP))
+
+          BitImputePhase = 0
+          MissImputePhase = 0
+
+          do i = 1, nAnisP
+            do e = 1, 2
+              curSection = 1
+              curPos = 1
+              do j = CoreStart, CoreEnd
+                select case (ImputePhase(i, j, e))
+                  case (1)
+                    BitImputePhase(curSection, e, i) = ibset(BitImputePhase(curSection, e, i), curPos)
+                  case (9)
+                    MissImputePhase(curSection, e, i) = ibset(MissImputePhase(curSection, e, i), curPos)
+                end select
+
+                curPos = curPos + 1
+                if (curPos == 65) then
+                  curPos = 1
+                  curSection = curSection + 1
+                end if
+              end do
+            end do
+          end do
+
+
+
             ! PARALLELIZATION BEGINS
             !# PARALLEL DO SHARED (nAnisP,RecPed,ImputePhase,CoreStart,CoreEnd,AnimalOn,Temp) private(i,e,CompPhase,GamA,j,GamB)
             do i=1,nAnisP
@@ -332,32 +378,23 @@ do m=1,2
                     if (RecPed(i,e+1)>0) then
                         CompPhase=1
                         ! If the haplotype for this core is not completely phased
-                        if (count(ImputePhase(i,CoreStart:CoreEnd,e)==9)>0) CompPhase=0
-                        if (CompPhase==0) then
+                        if (BitCompletePhased(MissImputePhase(:,e,i), numSections) == .FALSE.) then
 
                             ! Check is this haplotype is the very same that the paternal haplotype
                             ! of the parent of the individual
                             GamA=1
-                            do j=CoreStart,CoreEnd
-                                if ((ImputePhase(i,j,e)/=9).and.&
-                                    (ImputePhase(RecPed(i,e+1),j,1)/=ImputePhase(i,j,e)).and.&
-                                    (ImputePhase(RecPed(i,e+1),j,1)/=9)) then       
-                                        GamA=0
-                                        exit
-                                endif
-                            enddo
+                            if (.NOT. compareHaplotype(BitImputePhase(:,1,RecPed(i,e+1)), BitImputePhase(:,e,i), &
+                                  MissImputePhase(:,1,RecPed(i,e+1)), MissImputePhase(:,e,i), numSections) ) then
+                                  GamA = 0
+                            end if
 
                             ! Check is this haplotype is the very same that the maternal haplotype
                             ! of the parent of the individual
                             GamB=1
-                            do j=CoreStart,CoreEnd
-                                if ((ImputePhase(i,j,e)/=9).and.&
-                                    (ImputePhase(RecPed(i,e+1),j,2)/=ImputePhase(i,j,e)).and.&
-                                    (ImputePhase(RecPed(i,e+1),j,2)/=9)) then       
-                                        GamB=0
-                                        exit
-                                endif
-                            enddo
+                            if (.NOT. compareHaplotype(BitImputePhase(:,2,RecPed(i,e+1)), BitImputePhase(:,e,i), &
+                                  MissImputePhase(:,2,RecPed(i,e+1)), MissImputePhase(:,e,i), numSections) ) then
+                                  GamB = 0
+                            end if
 
                             ! This haplotype is the paternal haplotype of the individual's parent
                             ! Then count the number of occurrences a particular phase is impute in a
@@ -366,13 +403,29 @@ do m=1,2
                             !          DO statement. Look in InternalHapLibImputation for an example
                             if ((GamA==1).and.(GamB==0)) then
                                 AnimalOn(i,e)=1
+                                curPos = 1
+                                curSection = 1
                                 do j=CoreStart,CoreEnd
-                                    if (ImputePhase(i,j,e)==9) then
-                                        if (ImputePhase(RecPed(i,e+1),j,1)==0)&
-                                            Temp(i,j,e,1)=Temp(i,j,e,1)+1
-                                        if (ImputePhase(RecPed(i,e+1),j,1)==1)&
-                                            Temp(i,j,e,2)=Temp(i,j,e,2)+1
-                                    endif
+!                                    if (ImputePhase(i,j,e)==9) then
+!                                        if (ImputePhase(RecPed(i,e+1),j,1)==0) Temp(i,j,e,1)=Temp(i,j,e,1)+1
+!                                        if (ImputePhase(RecPed(i,e+1),j,1)==1) Temp(i,j,e,2)=Temp(i,j,e,2)+1
+!                                    endif
+
+                                    if ( BTEST(MissImputePhase(curSection,e,i), curPos) == .TRUE. ) then
+                                      if ( BTEST(BitImputePhase(curSection,1,RecPed(i,e+1)), curPos) == .FALSE. .AND. &
+                                           BTEST(MissImputePhase(curSection,1,RecPed(i,e+1)), curPos)  == .FALSE. ) then
+                                        Temp(i,j,e,1)=Temp(i,j,e,1)+1
+                                      end if
+                                      if ( BTEST(BitImputePhase(curSection,1,RecPed(i,e+1)), curPos) == .TRUE. ) then
+                                        Temp(i,j,e,2)=Temp(i,j,e,2)+1
+                                      end if
+                                    end if
+                                  curPos = curPos + 1
+                                  if (curPos == 65) then
+                                    curPos = 1
+                                    curSection = curSection + 1
+                                  end if
+
                                 enddo
                             endif
 
@@ -383,13 +436,28 @@ do m=1,2
                             !          DO statement. Look in InternalHapLibImputation for an example
                             if ((GamA==0).and.(GamB==1)) then
                                 AnimalOn(i,e)=1
+                                curPos = 1
+                                curSection = 1
                                 do j=CoreStart,CoreEnd
-                                    if (ImputePhase(i,j,e)==9) then
-                                        if (ImputePhase(RecPed(i,e+1),j,2)==0)&
-                                            Temp(i,j,e,1)=Temp(i,j,e,1)+1
-                                        if (ImputePhase(RecPed(i,e+1),j,2)==1)&
-                                            Temp(i,j,e,2)=Temp(i,j,e,2)+1
-                                    endif
+!                                    if (ImputePhase(i,j,e)==9) then
+!                                        if (ImputePhase(RecPed(i,e+1),j,2)==0) Temp(i,j,e,1)=Temp(i,j,e,1)+1
+!                                        if (ImputePhase(RecPed(i,e+1),j,2)==1) Temp(i,j,e,2)=Temp(i,j,e,2)+1
+!                                    endif
+
+                                    if ( BTEST(MissImputePhase(curSection,e,i), curPos) == .TRUE. ) then
+                                      if ( BTEST(BitImputePhase(curSection,2,RecPed(i,e+1)), curPos) == .FALSE. .AND. &
+                                           BTEST(MissImputePhase(curSection,2,RecPed(i,e+1)), curPos) == .FALSE. ) then
+                                        Temp(i,j,e,1)=Temp(i,j,e,1)+1
+                                      end if
+                                      if ( BTEST(BitImputePhase(curSection,2,RecPed(i,e+1)), curPos) == .TRUE. ) then
+                                        Temp(i,j,e,2)=Temp(i,j,e,2)+1
+                                      end if
+                                    end if
+                                  curPos = curPos + 1
+                                  if (curPos == 65) then
+                                    curPos = 1
+                                    curSection = curSection + 1
+                                  end if
                                 enddo
                             endif
                         endif
@@ -407,36 +475,39 @@ do m=1,2
 enddo
 
 ! If all alleles across the cores and across the internal phasing steps have been phased the same way, impute
-do i=1,nAnisP
     ! The individual has two haplotypes
     do e=1,2
+      do j=1,nSnp
+        do i=1,nAnisP
+          if (AnimalOn(i,e)==1) then
+              if ((SexOpt==0).or.(RecGender(i)==HomGameticStatus)) then
 
-        if (AnimalOn(i,e)==1) then
-            if ((SexOpt==0).or.(RecGender(i)==HomGameticStatus)) then
-                do j=1,nSnp
-                    if (ImputePhase(i,j,e)==9) then
-                        if ((Temp(i,j,e,1)>nAgreeInternalHapLibElim).and.(Temp(i,j,e,2)==0)) ImputePhase(i,j,e)=0
-                        if ((Temp(i,j,e,1)==0).and.(Temp(i,j,e,2)>nAgreeInternalHapLibElim)) ImputePhase(i,j,e)=1
-                    endif
-                enddo
-            endif
-        endif
+                if (ImputePhase(i,j,e)==9) then
+                    if ((Temp(i,j,e,1)>nAgreeInternalHapLibElim).and.(Temp(i,j,e,2)==0)) ImputePhase(i,j,e)=0
+                    if ((Temp(i,j,e,1)==0).and.(Temp(i,j,e,2)>nAgreeInternalHapLibElim)) ImputePhase(i,j,e)=1
+                endif
+              end if
+          endif
+        end do
+      enddo
     enddo
 
     ! The individual is has one haplotype: In Sex Chromosome, the heterogametic case
-    if ((SexOpt==1).and.(RecGender(i)==HetGameticStatus)) then
-        if (AnimalOn(i,HomGameticStatus)==1) then
-            do j=1,nSnp
-                if (ImputePhase(i,j,HomGameticStatus)==9) then
-                    if ((Temp(i,j,HomGameticStatus,1)>nAgreeInternalHapLibElim).and.(Temp(i,j,HomGameticStatus,2)==0))&
-                        ImputePhase(i,j,:)=0
-                    if ((Temp(i,j,HomGameticStatus,1)==0).and.(Temp(i,j,HomGameticStatus,2)>nAgreeInternalHapLibElim))&
-                        ImputePhase(i,j,:)=1
-                endif
-            enddo
-        endif
-    endif   
-enddo
+    do j=1,nSnp
+      do i =1, nAnisP
+        if ((SexOpt==1).and.(RecGender(i)==HetGameticStatus)) then
+          if (AnimalOn(i,HomGameticStatus)==1) then
+            if (ImputePhase(i,j,HomGameticStatus)==9) then
+                if ((Temp(i,j,HomGameticStatus,1)>nAgreeInternalHapLibElim).and.(Temp(i,j,HomGameticStatus,2)==0))&
+                    ImputePhase(i,j,:)=0
+                if ((Temp(i,j,HomGameticStatus,1)==0).and.(Temp(i,j,HomGameticStatus,2)>nAgreeInternalHapLibElim))&
+                    ImputePhase(i,j,:)=1
+            endif
+          end if
+        end if
+      end do
+    enddo
+
 deallocate(Temp)
 
 ImputePhase(0,:,:)=9
