@@ -256,32 +256,7 @@ nGlobalLoop=25
 !   * 1.- nCores
 !   * 2.- Core lengths
 allocate(LoopIndex(nGlobalLoop,2))
-
-LoopIndex(1,1)=400
-LoopIndex(2,1)=300
-LoopIndex(3,1)=250
-LoopIndex(4,1)=200
-LoopIndex(5,1)=175
-LoopIndex(6,1)=150
-LoopIndex(7,1)=125
-LoopIndex(8,1)=115
-LoopIndex(9,1)=100
-LoopIndex(10,1)=80
-LoopIndex(11,1)=70
-LoopIndex(12,1)=60
-LoopIndex(13,1)=50
-LoopIndex(14,1)=40
-LoopIndex(15,1)=35
-LoopIndex(16,1)=30
-LoopIndex(17,1)=25
-LoopIndex(18,1)=20
-LoopIndex(19,1)=15
-LoopIndex(20,1)=12
-LoopIndex(21,1)=10
-LoopIndex(22,1)=8
-LoopIndex(23,1)=6
-LoopIndex(24,1)=5
-LoopIndex(25,1)=4
+call setLoopIndex(LoopIndex)
 
 ! WARNING: This can be better arrange with a ELSEIF statement and should go in a function since it
 !          is the same code as InternalParentPhaseElim subroutine
@@ -558,32 +533,7 @@ end subroutine InternalParentPhaseElim
     !   * 1.- nCores
     !   * 2.- Core lengths
     allocate(LoopIndex(nGlobalLoop,2))
-
-    LoopIndex(1,1)=400
-    LoopIndex(2,1)=300
-    LoopIndex(3,1)=250
-    LoopIndex(4,1)=200
-    LoopIndex(5,1)=175
-    LoopIndex(6,1)=150
-    LoopIndex(7,1)=125
-    LoopIndex(8,1)=115
-    LoopIndex(9,1)=100
-    LoopIndex(10,1)=80
-    LoopIndex(11,1)=70
-    LoopIndex(12,1)=60
-    LoopIndex(13,1)=50
-    LoopIndex(14,1)=40
-    LoopIndex(15,1)=35
-    LoopIndex(16,1)=30
-    LoopIndex(17,1)=25
-    LoopIndex(18,1)=20
-    LoopIndex(19,1)=15
-    LoopIndex(20,1)=12
-    LoopIndex(21,1)=10
-    LoopIndex(22,1)=8
-    LoopIndex(23,1)=6
-    LoopIndex(24,1)=5
-    LoopIndex(25,1)=4
+    call setLoopIndex(LoopIndex)
 
     ! LoopStart indicates which is the first loop the algorithm should treat. The bigger the number of 
     ! SNPs, the more the loops to be considered
@@ -2460,5 +2410,35 @@ end subroutine GeneProbPhase
         LoopStart = 1
     end select
   end function getLoopStart
+
+  subroutine setLoopIndex(LoopIndex)
+    integer, dimension(:,:), intent(out) :: LoopIndex
+
+    LoopIndex(1,1)=400
+    LoopIndex(2,1)=300
+    LoopIndex(3,1)=250
+    LoopIndex(4,1)=200
+    LoopIndex(5,1)=175
+    LoopIndex(6,1)=150
+    LoopIndex(7,1)=125
+    LoopIndex(8,1)=115
+    LoopIndex(9,1)=100
+    LoopIndex(10,1)=80
+    LoopIndex(11,1)=70
+    LoopIndex(12,1)=60
+    LoopIndex(13,1)=50
+    LoopIndex(14,1)=40
+    LoopIndex(15,1)=35
+    LoopIndex(16,1)=30
+    LoopIndex(17,1)=25
+    LoopIndex(18,1)=20
+    LoopIndex(19,1)=15
+    LoopIndex(20,1)=12
+    LoopIndex(21,1)=10
+    LoopIndex(22,1)=8
+    LoopIndex(23,1)=6
+    LoopIndex(24,1)=5
+    LoopIndex(25,1)=4
+  end subroutine setLoopIndex
 
 END MODULE Imputation
