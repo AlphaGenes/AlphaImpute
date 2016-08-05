@@ -952,8 +952,8 @@ END SUBROUTINE InternalHapLibImputation
           PosHDInd=PosHD(RecPed(i,1))         ! Index of the individual in the HD phase information
 
           ! If there is one allele phased at least
-          if ((BitCountAlleleImputed(MissImputePhase(i,:,1), numSections) + &
-               BitCountAlleleImputed(MissImputePhase(i,:,2), numSections)) > 0 .AND. PosHDInd>0) then
+          if ((BitCountAllelesImputed(MissImputePhase(i,:,1), numSections) + &
+               BitCountAllelesImputed(MissImputePhase(i,:,2), numSections)) > 0 .AND. PosHDInd>0) then
             ! If at least one locus is heterozygous
               if (.NOT. compareHaplotype(BitImputePhase(i,:,1), BitImputePhase(i,:,2), &
                   MissImputePhase(i,:,1), MissImputePhase(i,:,2), numSections)) then
