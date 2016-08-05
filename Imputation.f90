@@ -725,27 +725,28 @@ do f=1,2
     deallocate(HapLib)
 enddo
 
-
-do i=1,nAnisP
     do e=1,2
-        ! WARNING: If GeneProbPhase has been executed, that is, if not considering the Sex Chromosome, then MSTermInfo={0,1}.
-        !          Else, if Sex Chromosome, then MSTermInfo is 0 always
-        !          So, if a Conservative imputation of haplotypes is selected, this DO statement will do nothing
-        if ((ConservativeHapLibImputation==1).and.(MSTermInfo(i,e)==0)) cycle 
+      do j=1,nSnp
+        do i=1,nAnisP
+          ! WARNING: If GeneProbPhase has been executed, that is, if not considering the Sex Chromosome, then MSTermInfo={0,1}.
+          !          Else, if Sex Chromosome, then MSTermInfo is 0 always
+          !          So, if a Conservative imputation of haplotypes is selected, this DO statement will do nothing
+          if ((ConservativeHapLibImputation==1).and.(MSTermInfo(i,e)==0)) cycle
 
-        ! If all alleles across the cores and across the internal phasing steps have been phased the same way, impute
-        if (AnimalOn(i,e)==1) then
-            do j=1,nSnp
-                if (ImputePhase(i,j,e)==9) then
-                    if ((Temp(i,j,e,1)>nAgreeInternalHapLibElim).and.(Temp(i,j,e,2)==0))&
-                        ImputePhase(i,j,e)=0
-                    if ((Temp(i,j,e,1)==0).and.(Temp(i,j,e,2)>nAgreeInternalHapLibElim))&
-                        ImputePhase(i,j,e)=1
-                endif
-            enddo
-        endif   
+          ! If all alleles across the cores and across the internal phasing steps have been phased the same way, impute
+          if (AnimalOn(i,e)==1) then
+            if (ImputePhase(i,j,e)==9) then
+              if ((Temp(i,j,e,1)>nAgreeInternalHapLibElim).and.(Temp(i,j,e,2)==0)) then
+                ImputePhase(i,j,e)=0
+              end if
+              if ((Temp(i,j,e,1)==0).and.(Temp(i,j,e,2)>nAgreeInternalHapLibElim)) then
+                ImputePhase(i,j,e)=1
+              end if
+            endif
+          end if
+        enddo
+      enddo
     enddo
-enddo
 
 deallocate(Temp)
 
@@ -1153,13 +1154,11 @@ END SUBROUTINE InternalHapLibImputation
       enddo
     enddo
 
-    do i=1,nAnisP
-    ! WARNING: this loop should be implemented in a different way by first asking about the Sex Chromosome,
-    !          in order to avoid the 'do e=1,2' loop. This second loop consume time unnecessarily.
-      do e=1,2
-        if (AnimalOn(i,e)==1) then
-          if ((SexOpt==0).or.(RecGender(i)==HomGameticStatus)) then
-            do j=1,nSnp
+    do e=1,2
+      do j=1,nSnp
+        do i=1,nAnisP
+          if (AnimalOn(i,e)==1) then
+            if ((SexOpt==0).or.(RecGender(i)==HomGameticStatus)) then
               if (ImputePhase(i,j,e)==9) then
                 ! Impute phase allele with the most significant code for that allele across haplotypes
                 ! only if the other codification never happens
@@ -1169,15 +1168,18 @@ END SUBROUTINE InternalHapLibImputation
                 if ((Temp(i,j,e,1)==0).and.(Temp(i,j,e,2)>nAgreeInternalHapLibElim)) then
                   ImputePhase(i,j,e)=1
                 end if
-              endif
-            enddo
-          endif
-        endif
-      enddo
+              end if
+            end if
+          end if
+        end do
+      end do
+    end do
 
-      if ((SexOpt==1).and.(RecGender(i)==HetGameticStatus)) then
-        if (AnimalOn(i,HomGameticStatus)==1) then
-          do j=1,nSnp
+    do j=1,nSnp
+      do i = 1, nAnisP
+        if ((SexOpt==1).and.(RecGender(i)==HetGameticStatus)) then
+          if (AnimalOn(i,HomGameticStatus)==1) then
+
             if (ImputePhase(i,j,HomGameticStatus)==9) then
               ! Impute phase allele with the most significant code for that allele across haplotypes
               ! only if the other codification never happens
@@ -1190,9 +1192,9 @@ END SUBROUTINE InternalHapLibImputation
                     ImputePhase(i,j,:)=1
               end if
             endif
-          enddo
-        endif
-      endif
+          end if
+        end if
+      enddo
     enddo
     deallocate(Temp)
 
