@@ -29,7 +29,7 @@ ifeq ($(OS), Windows_NT)
 	DEL:= del
 else
 	OSFLAG := "OS_UNIX"
-	FFLAGS:= $(FFLAGS) -openmp -static-intel -fpp -openmp-link=static  -D $(OSFLAG) -D CLUSTER=$(CLUSTER)
+	FFLAGS:= $(FFLAGS) -qopenmp -static-intel -fpp -qopenmp-link=static  -D $(OSFLAG) -D CLUSTER=$(CLUSTER)
 
 	obj:= .o
 	exe:= 
@@ -45,7 +45,7 @@ GPFFLAGS:=-O3 -m64 -static-intel
 
 all: executable
 
-debug: FFLAGS = -DDEBUG=${DEBUG} -g -O0 -openmp -check bounds -fpp -static-intel -openmp-link=static -traceback -D $(OSFLAG)
+debug: FFLAGS = -DDEBUG=${DEBUG} -g -O0 -qopenmp -check bounds -fpp -static-intel -qopenmp-link=static -traceback -D $(OSFLAG)
 #debug: FFLAGS =  -DDEBUG=${DEBUG} -g -ffree-line-length-0 -O0 -fopenmp
 debug: executable
 

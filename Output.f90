@@ -80,41 +80,50 @@ end subroutine WriteProbabilitiesGeneProb
 
 
 
-subroutine ReReadIterateGeneProbs(GenosProbs)
+subroutine ReReadIterateGeneProbs(GenosProbs, IterGeneProb, nAnis, markers)
 ! Read genotype probabilities from files and phase allele based in these probabilities. 
 ! This files should have been already created during previous calls to AlphaImpute (RestartOption<3)
-! Phasing information is store in the variable GlobalWorkPhase
+! The subroutine outputs the genotype probabilities of the homozygous genotype of the reference allele,
+! G00, and the heterozygous genotype, Gh = G10 + G01. The homozygous genotype for the alternative allele can be inferred
+! from the these two as G11 = 1 - G00 - Gh
 use Global
 
 implicit none
 
-double precision, intent(OUT) :: GenosProbs(nAnisP,nSnpIterate,2)
+logical, intent(IN) :: IterGeneProb
+integer, intent(IN) :: markers
+integer, intent(IN) :: nAnis
+!double precision, dimension(:,:,:), intent(INOUT) :: GenosProbs(nAnis,markers,2)
+double precision, dimension(:,:,:), intent(INOUT) :: GenosProbs
 
 ! Local variables
 integer :: h,i,j,dum,StSnp,EnSnp
 double precision, allocatable :: GeneProbWork(:,:)
 character(len=300) :: inFile
 
-!if (OutOpt==0) nSnpIterate=nSnp
-!if (OutOpt==1) nSnpIterate=nSnpRaw
-
-allocate(GeneProbWork(nSnpIterate,4))
+!allocate(GeneProbWork(markers,4))
 GeneProbWork=9
 
 do h=1,nProcessors
-    write (inFile,'("IterateGeneProb/GeneProb"i0,"/GeneProbs.txt")')h          !here
+    if (IterGeneProb) then
+      write (inFile,'("IterateGeneProb/GeneProb"i0,"/GeneProbs.txt")')h          !here
+    else
+      write (inFile,'("GeneProb/GeneProb"i0,"/GeneProbs.txt")')h          !here
+    end if
+
     open (unit=110,file=trim(inFile),status="unknown")
     StSnp=GpIndex(h,1)          ! Where SNPs start
     EnSnp=GpIndex(h,2)          ! Where SNPs end
-    do i=1,nAnisP                                           ! The number of lines of GeneProbs.txt files is = nAnisP x 4
+    allocate(GeneProbWork(EnSnp-StSnp+1,4))
+    do i=1,nAnis                                           ! The number of lines of GeneProbs.txt files is = nAnisP x 4
         do j=1,4                                            ! where 4 stands for the two paternal and the two maternal haplotypes
-            read (110,*) dum,GeneProbWork(StSnp:EnSnp,j)
+            read (110,*) dum,GeneProbWork(:,j)
         enddo
 
-        GenosProbs(i,StSnp:EnSnp,1) = GeneProbWork(StSnp:EnSnp,1)
-        GenosProbs(i,StSnp:EnSnp,2) = GeneProbWork(StSnp:EnSnp,2) + GeneProbWork(StSnp:EnSnp,3)
-
+        GenosProbs(i,StSnp:EnSnp,1) = GeneProbWork(:,1)
+        GenosProbs(i,StSnp:EnSnp,2) = GeneProbWork(:,2) + GeneProbWork(:,3)
     enddo
+    deallocate(GeneProbWork)
     close(110)
 enddo
 

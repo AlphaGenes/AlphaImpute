@@ -6,9 +6,11 @@
 *.i90
 *.dwarf
 AlphaImpute
+AlphaImpute_*
 AlphaImpute1*
 AlphaImpute*v*
 GeneProbForAlphaImpute
 proj*
 penmp
 hmmErrors.f90
+nbproject

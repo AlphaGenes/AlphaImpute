@@ -45,10 +45,41 @@ program AlphaImpute
 !                           Genotype Probabilities have to be edited by hand
 !   * RestartOption=4 =>
 use Global
+use GlobalPedigree
 use GlobalVariablesHmmMaCH
+use Output
 implicit none
 
-integer :: i,j
+integer :: i,j, markers
+double precision, allocatable :: GenosProbs(:,:,:)
+
+
+INTERFACE WriteProbabilities
+  SUBROUTINE WriteProbabilitiesHMM(outFile, nExtraAnims, Ids, nAnisP, nSnps)
+    use GlobalVariablesHmmMaCH
+    character(len=*), intent(IN) :: outFile
+    integer, intent(IN) :: nExtraAnims, nAnisP, nSnps
+    character*(20), intent(IN) :: Ids(nAnisP)
+  END SUBROUTINE WriteProbabilitiesHMM
+
+  SUBROUTINE WriteProbabilitiesGeneProb(outFile, GenosProbs, Ids, nExtraAnims, nAnisP, nSnps)
+    character(len=*), intent(IN) :: outFile
+    integer, intent(IN) :: nExtraAnims, nAnisP, nSnps
+    double precision, intent(IN) :: GenosProbs(nAnisP,nSnps,2)
+    character*(20), intent(IN) :: Ids(nAnisP)
+  END SUBROUTINE WriteProbabilitiesGeneProb
+END INTERFACE
+
+INTERFACE
+  SUBROUTINE ReReadIterateGeneProbs(GenosProbs, IterGeneProb, nAnis, markers)
+    use Global
+!    double precision, intent(OUT) :: GenosProbs(nAnisP,markers,2)
+    double precision, dimension(:,:,:), intent(INOUT) :: GenosProbs
+    logical, intent(IN) :: IterGeneProb
+    integer, intent(IN) :: nAnis
+    integer, intent(IN) :: markers
+  END SUBROUTINE ReReadIterateGeneProbs
+END INTERFACE
 
 call Titles
 call ReadInParameterFile
@@ -106,7 +137,9 @@ else
     write(6,*) " ","Data editing completed"
 
     if (SexOpt==0) then
-        if (BypassGeneProb==0) then
+      select case (BypassGeneProb)
+!        if (BypassGeneProb==0) then
+        case (0)
 
 #ifdef DEBUG
             write(0,*) 'DEBUG: Calculate Genotype Probabilites'
@@ -128,6 +161,15 @@ else
 
             endif
 
+            markers = nSnp
+            if (OutOpt==1) then
+              markers = nSnpRaw
+            end if
+            allocate(GenosProbs(GlobalExtraAnimals + nAnisP, markers, 2))
+            call ReReadIterateGeneProbs(GenosProbs, .FALSE., nAnisP, markers)
+            call WriteProbabilities("./Results/GenotypeProbabilities.txt", GenosProbs, Id, GlobalExtraAnimals, nAnisP, nSnp)
+            deallocate(GenosProbs)
+
             if (RestartOption==OPT_RESTART_GENEPROB) then
 #if CLUSTER==1
                 write(6,*) "Restart option 1 stops program before Geneprobs jobs have finished"
@@ -138,7 +180,19 @@ else
             endif
             write(6,*) " "
             write(6,*) " ","Genotype probabilities calculated"
-        endif
+!        endif
+        case (2)
+          markers = nSnp
+          if (OutOpt==1) then
+            markers = nSnpRaw
+          end if
+          allocate(GenosProbs(GlobalExtraAnimals + nAnisP, markers, 2))
+          call ReReadIterateGeneProbs(GenosProbs, .FALSE., nAnisP, markers)
+          call WriteProbabilities("./Results/GenotypeProbabilities.txt", GenosProbs, Id, GlobalExtraAnimals, nAnisP, nSnp)
+          deallocate(GenosProbs)
+          write(6,*) "Restart option 1 stops program after genotype probabilities have been outputted"
+          stop
+      end select
     endif
 
 
@@ -796,6 +850,9 @@ endif
 if (trim(CharBypassGeneProb)=="Yes") then
     BypassGeneProb=1
 endif
+if (trim(CharBypassGeneProb)=="Probabilities") then
+    BypassGeneProb=2
+end if
 if (BypassGeneProb==-1) then
     print*, "BypassGeneProb not correctly specified"
     stop
@@ -1626,9 +1683,13 @@ INTERFACE WriteProbabilities
 END INTERFACE
 
 INTERFACE
-  SUBROUTINE ReReadIterateGeneProbs(GenosProbs)
+  SUBROUTINE ReReadIterateGeneProbs(GenosProbs, IterGeneProb, nAnis, markers)
     use Global
-    double precision, intent(OUT) :: GenosProbs(nAnisP,nSnpIterate,2)
+    logical, intent(IN) :: IterGeneProb
+    integer, intent(IN) :: markers
+    integer, intent(IN) :: nAnis
+!    double precision, intent(OUT) :: GenosProbs(nAnisP,markers,2)
+    double precision, dimension(:,:,:), intent(INOUT) :: GenosProbs
   END SUBROUTINE ReReadIterateGeneProbs
 END INTERFACE
 
@@ -1978,7 +2039,7 @@ else
     else
         if (BypassGeneProb==0) then
             allocate(GenosProbs(nAnisP,nSnpIterate,2))
-            call ReReadIterateGeneProbs(GenosProbs)
+            call ReReadIterateGeneProbs(GenosProbs, .TRUE., nAnisP, nSnpIterate)
             call WriteProbabilities("./Results/GenotypeProbabilities.txt", GenosProbs, Id, GlobalExtraAnimals, nAnisP, nSnp)
         endif
     endif
