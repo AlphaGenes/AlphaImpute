@@ -1216,48 +1216,16 @@ end subroutine InternalParentPhaseElim
               PosHDInd=PosHD(RecPed(i,PedId))   ! Index of the individual in the HD phase information
 
               ! If there is one allele phased at least
-!              if ((count(ImputePhase(i,StartSnp:EndSnp,e)==9)/=0).and.(PosHDInd>0)) then
               if ((BitCountAllelesImputed(MissImputePhase(i,:,1), numSections) + &
                    BitCountAllelesImputed(MissImputePhase(i,:,2), numSections)) > 0 .AND. PosHDInd>0) then
 
                 GamA=1
                 GamB=1
-!                TempCount=0
-!                do j=StartSnp,EndSnp
-!                  if (ImputePhase(i,j,e)/=9) then
-!                    ! Count the number of times that alleles are not coincident with HD phase of
-!                    ! the paternal haplotype
-!                    if (ImputePhase(i,j,e)/=PhaseHD(PosHDInd,j,1)) then
-!                      TempCount=TempCount+1
-!                      ! If haplotypes differ, then exit
-!                      if (ImputeFromParentCountThresh==TempCount) then
-!                        GamA=0
-!                        exit
-!                      endif
-!                    endif
-!                  endif
-!                enddo
 
                 if (.NOT. compareHaplotypeAllowMissing(BitPhaseHD(PosHDInd,:,1), BitImputePhase(i,:,e), &
                     MissPhaseHD(PosHDInd,:,1), MissImputePhase(i,:,e), numSections, ImputeFromParentCountThresh)) then
                   GamA = 0
                 end if
-
-!                TempCount=0
-!                do j=StartSnp,EndSnp
-!                  if (ImputePhase(i,j,e)/=9) then
-!                    ! Count the number of times that alleles are not coincident with HD phase of
-!                    ! the maternal haplotype
-!                    if (ImputePhase(i,j,e)/=PhaseHD(PosHDInd,j,2)) then
-!                      TempCount=TempCount+1
-!                      ! If haplotypes differ, then exit
-!                      if (ImputeFromParentCountThresh==TempCount) then
-!                        GamB=0
-!                        exit
-!                      endif
-!                    endif
-!                  endif
-!                enddo
 
                 if (.NOT. compareHaplotypeAllowMissing(BitPhaseHD(PosHDInd,:,2), BitImputePhase(i,:,e), &
                     MissPhaseHD(PosHDInd,:,2), MissImputePhase(i,:,e), numSections, ImputeFromHDPhaseThresh)) then
