@@ -1386,7 +1386,7 @@ end subroutine InternalParentPhaseElim
     use Global
     use PhaseRounds
     use Utils
-
+    use HaplotypeBits
     implicit none
 
     integer :: l,i,j,k,h,e,f,g,nCore,dum,CoreLength,nHap,CountAB(nSnp,0:1),Work(nSnp,2),TempCount
@@ -1394,9 +1394,15 @@ end subroutine InternalParentPhaseElim
     integer,allocatable,dimension (:,:,:,:) :: Temp
     integer(kind=1),allocatable,dimension (:,:) :: HapLib,HapCand
 
+    integer(kind=8), allocatable, dimension(:,:,:) :: BitImputePhase, MissImputePhase
+    integer(kind=8), allocatable, dimension(:,:) :: BitHapLib, MissHapLib
+
     integer :: UHLib
     character(len=1000) :: FileName,dumC
     type(CoreIndex) :: CoreI
+
+    type(BitSection) :: Section
+    integer :: numSections, overhang, curSection, curPos
 
     ! Temp(nAnisP, nSNPs, PatHap, Phase)
     allocate(Temp(0:nAnisP,nSnp,2,2))
@@ -1422,6 +1428,36 @@ end subroutine InternalParentPhaseElim
         EndSnp=CoreI%EndSnp(g)
 
         CoreLength=(EndSnp-StartSnp)+1
+        Section = BitSection(CoreLength, 64)
+        numSections = Section%numSections
+
+        allocate(BitImputePhase(0:nAnisP,numSections,2))
+        allocate(MissImputePhase(0:nAnisP,numSections,2))
+
+        BitImputePhase = 0
+        MissImputePhase = 0
+
+        do e=1,2
+          curSection = 1
+          curPos = 1
+          do j = StartSnp, EndSnp
+            do i = 1, nAnisP
+              select case (ImputePhase(i, j, e))
+                case (1)
+                  BitImputePhase(i, curSection, e) = ibset(BitImputePhase(i, curSection, e), curPos)
+                case (9)
+                  MissImputePhase(i, curSection, e) = ibset(MissImputePhase(i, curSection, e), curPos)
+              end select
+           end do
+
+            curPos = curPos + 1
+            if (curPos == 65) then
+              curPos = 1
+              curSection = curSection + 1
+            end if
+          end do
+        end do
+
         if (ManagePhaseOn1Off0==0) then
           FileName = getFileNameHapLib(trim(PhasePath),h,g)
         else
@@ -1434,11 +1470,36 @@ end subroutine InternalParentPhaseElim
 
         if(nHap/=0) then
           ! Allocate the Haplotype Library and read it from file
-          allocate(HapLib(nHap,CoreLength))
+          allocate(HapLib(nHap, CoreLength))
           do l=1,nHap
             read(UHLib) HapLib(l,:)
           enddo
           close (UHLib)
+
+          allocate(BitHapLib(nHap,numSections))
+          allocate(MissHapLib(nHap,numSections))
+
+          BitHapLib = 0
+          MissHapLib = 0
+
+          curSection = 1
+          curPos = 1
+          do j = 1, CoreLength
+            do i = 1, nHap
+              select case (HapLib(i, j))
+                case (1)
+                  BitHapLib(i, curSection) = ibset(BitHapLib(i, curSection), curPos)
+                case (9)
+                  MissHapLib(i, curSection) = ibset(MissHapLib(i, curSection), curPos)
+              end select
+           end do
+
+            curPos = curPos + 1
+            if (curPos == 65) then
+              curPos = 1
+              curSection = curSection + 1
+            end if
+          end do
 
           ! PARALLELIZATION BEGINS
           !$OMP PARALLEL DO SHARED (nAnisP,ImputePhase,StartSnp,EndSnp,CoreLength,nHap,HapLib) private(i,e,f,j,k,TempCount,CountAB,Counter,PatMatDone,Work,BanBoth,Ban,HapCand)
@@ -1448,8 +1509,13 @@ end subroutine InternalParentPhaseElim
             allocate(HapCand(nHap,2))
 
             PatMatDone=0
-            if (count(ImputePhase(i,StartSnp:EndSnp,1)==9)/=CoreLength) PatMatDone(1)=1
-            if (count(ImputePhase(i,StartSnp:EndSnp,2)==9)/=CoreLength) PatMatDone(2)=1
+            if ( BitCompleteMissing(MissImputePhase(i,:,1), numSections) == .FALSE. ) then
+              PatMatDone(1) = 1
+            end if
+            if ( BitCompleteMissing(MissImputePhase(i,:,2), numSections) == .FALSE. ) then
+              PatMatDone(2) = 1
+            end if
+
             HapCand=1
             Work=9
             BanBoth=0
@@ -1465,24 +1531,13 @@ end subroutine InternalParentPhaseElim
 
               ! If haplotype is partially phased
               if ((PatMatDone(e)==1).and.&
-                  (count(ImputePhase(i,StartSnp:EndSnp,e)/=9)/=CoreLength)) then
-                  ! Identify and reject the candidate haplotypes within the HapLib given a maximum
-                  ! number of disagreements (ImputeFromHDLibraryCountThresh)
-                    do f=1,nHap
-                      k=0
-                      TempCount=0
+                  BitCompletePhased(MissImputePhase(i,:,e), numSections) == .FALSE.) then
 
-                      ! Count disagreements
-                      do j=StartSnp,EndSnp
-                        k=k+1   ! This is the index for the alleles in the haplotypes within the HapLib
-                        if ((ImputePhase(i,j,e)/=9).and.(ImputePhase(i,j,e)/=HapLib(f,k))) then
-                          TempCount=TempCount+1
-                          if (ImputeFromHDLibraryCountThresh==TempCount) then
-                            HapCand(f,e)=0
-                            exit
-                          endif
-                        endif
-                      enddo
+                    do f=1,nHap
+                      if ( .NOT. compareHaplotypeAllowMissing(BitHapLib(f,:), BitImputePhase(i,:,e), &
+                        MissHapLib(f,:), MissImputePhase(i,:,e), numSections)) then
+                        HapCand(f,e)=0
+                      end if
                     enddo
 
                     ! CountAB(nSNPs,0:1) matrix indicating how many haplotypes has been phased as 0
@@ -1569,23 +1624,27 @@ end subroutine InternalParentPhaseElim
           enddo
           !$OMP END PARALLEL DO 
           deallocate(HapLib)
+          deallocate(BitHapLib)
+          deallocate(MissHapLib)
         endif
+        deallocate(BitImputePhase)
+        deallocate(MissImputePhase)
       enddo
     enddo
 
-    do i=1,nAnisP
-      do e=1,2
-        ! WARNING: If GeneProbPhase has been executed, that is, if not considering the Sex
-        !          Chromosome, then MSTermInfo={0,1}.
-        !          Else, if Sex Chromosome, then MSTermInfo is 0 always
-        !          So, if a Conservative imputation of haplotypes is selected, this DO statement
-        !          will do nothing
-        if ((ConservativeHapLibImputation==1).and.(MSTermInfo(i,e)==0)) cycle 
+    do e=1,2
+      do j=1,nSnp
+        do i=1,nAnisP
+          ! If GeneProbPhase has been executed, that is, if not considering the Sex
+          ! Chromosome, then MSTermInfo={0,1}.
+          ! Else, if Sex Chromosome, then MSTermInfo is 0 always
+          ! So, if a Conservative imputation of haplotypes is selected, this DO statement
+          ! will do nothing
+          if ((ConservativeHapLibImputation==1).and.(MSTermInfo(i,e)==0)) cycle
 
-        ! If all alleles across the cores across the internal phasing steps have been phased the
-        ! same way, impute
-        if (AnimalOn(i,e)==1) then
-          do j=1,nSnp
+          ! If all alleles across the cores across the internal phasing steps have been phased the
+          ! same way, impute
+          if (AnimalOn(i,e)==1) then
             if (ImputePhase(i,j,e)==9) then
               if ((Temp(i,j,e,1)>nAgreeInternalHapLibElim).and.(Temp(i,j,e,2)==0)) then
                 ImputePhase(i,j,e)=0
@@ -1594,8 +1653,8 @@ end subroutine InternalParentPhaseElim
                 ImputePhase(i,j,e)=1
               end if
             endif
-          enddo
-        endif
+          end if
+        end do
       enddo
     enddo
     deallocate(Temp)
