@@ -880,7 +880,6 @@ end subroutine InternalParentPhaseElim
     integer(kind=8), allocatable, dimension(:,:,:) :: BitPhaseHD, BitImputePhase, MissPhaseHD, MissImputePhase
     integer(kind=1),allocatable,dimension (:,:,:,:) :: Temp
 
-    integer :: UPhased
     character(len=1000) :: FileName,FileNamePhase,dumC
     type(CoreIndex) :: CoreI
     type(BitSection) :: Section
@@ -1106,6 +1105,7 @@ end subroutine InternalParentPhaseElim
     use Global
     use GlobalPedigree
     use PhaseRounds
+    use HaplotypeBits
     use Utils
     implicit none
 
@@ -1115,9 +1115,12 @@ end subroutine InternalParentPhaseElim
     integer,allocatable,dimension (:,:,:) :: PhaseHD
     integer(kind=1),allocatable,dimension (:,:,:,:) :: Temp
 
-    integer :: UPhased
+    integer(kind=8), allocatable, dimension(:,:,:) :: BitPhaseHD, BitImputePhase, MissPhaseHD, MissImputePhase
+
     character(len=1000) :: FileName,FileNamePhase,dumC
     type(CoreIndex) :: CoreI
+    type(BitSection) :: Section
+    integer :: numSections, overhang, curSection, curPos
 
     nAnisHD=(count(Setter(:)==1))
 
@@ -1150,6 +1153,51 @@ end subroutine InternalParentPhaseElim
         StartSnp=CoreI%StartSnp(g)
         EndSnp=CoreI%EndSnp(g)
         
+        Section = BitSection((EndSnp - StartSnp + 1), 64)
+        numSections = Section%numSections
+
+        allocate(BitPhaseHD(nAnisHD,numSections,2))
+        allocate(BitImputePhase(0:nAnisP,numSections,2))
+        allocate(MissPhaseHD(nAnisHD,numSections,2))
+        allocate(MissImputePhase(0:nAnisP,numSections,2))
+
+        BitPhaseHD = 0
+        MissPhaseHD = 0
+        BitImputePhase = 0
+        MissImputePhase = 0
+
+        do e=1,2
+          curSection = 1
+          curPos = 1
+
+          do j = StartSnp, EndSnp
+
+            do i = 1, nAnisHD
+              select case (PhaseHD(i, j, e))
+                case (1)
+                  BitPhaseHD(i, curSection, e) = ibset(BitPhaseHD(i, curSection, e), curPos)
+                case (9)
+                  MissPhaseHD(i, curSection, e) = ibset(MissPhaseHD(i, curSection, e), curPos)
+              end select
+            end do
+
+            do i = 1, nAnisP
+              select case (ImputePhase(i, j, e))
+                case (1)
+                  BitImputePhase(i, curSection, e) = ibset(BitImputePhase(i, curSection, e), curPos)
+                case (9)
+                  MissImputePhase(i, curSection, e) = ibset(MissImputePhase(i, curSection, e), curPos)
+              end select
+           end do
+
+            curPos = curPos + 1
+            if (curPos == 65) then
+              curPos = 1
+              curSection = curSection + 1
+            end if
+          end do
+        end do
+
         ! PARALLELIZATION BEGINS
         !# PARALLEL DO SHARED (RecPed,PosHD,ImputePhase,StartSnp,EndSnp,PhaseHD,AnimalOn,Temp) private(i,e,PedId,PosHDInd,GamA,GamB,TempCount,j)
         do i=1,nAnisP
@@ -1168,39 +1216,54 @@ end subroutine InternalParentPhaseElim
               PosHDInd=PosHD(RecPed(i,PedId))   ! Index of the individual in the HD phase information
 
               ! If there is one allele phased at least
-              if ((count(ImputePhase(i,StartSnp:EndSnp,e)==9)/=0).and.(PosHDInd>0)) then
+!              if ((count(ImputePhase(i,StartSnp:EndSnp,e)==9)/=0).and.(PosHDInd>0)) then
+              if ((BitCountAllelesImputed(MissImputePhase(i,:,1), numSections) + &
+                   BitCountAllelesImputed(MissImputePhase(i,:,2), numSections)) > 0 .AND. PosHDInd>0) then
+
                 GamA=1
                 GamB=1
-                TempCount=0
-                do j=StartSnp,EndSnp
-                  if (ImputePhase(i,j,e)/=9) then
-                    ! Count the number of times that alleles are not coincident with HD phase of
-                    ! the paternal haplotype
-                    if (ImputePhase(i,j,e)/=PhaseHD(PosHDInd,j,1)) then
-                      TempCount=TempCount+1
-                      ! If haplotypes differ, then exit
-                      if (ImputeFromParentCountThresh==TempCount) then
-                        GamA=0
-                        exit
-                      endif
-                    endif
-                  endif
-                enddo
-                TempCount=0
-                do j=StartSnp,EndSnp
-                  if (ImputePhase(i,j,e)/=9) then
-                    ! Count the number of times that alleles are not coincident with HD phase of
-                    ! the maternal haplotype
-                    if (ImputePhase(i,j,e)/=PhaseHD(PosHDInd,j,2)) then
-                      TempCount=TempCount+1
-                      ! If haplotypes differ, then exit
-                      if (ImputeFromParentCountThresh==TempCount) then
-                        GamB=0
-                        exit
-                      endif
-                    endif
-                  endif
-                enddo
+!                TempCount=0
+!                do j=StartSnp,EndSnp
+!                  if (ImputePhase(i,j,e)/=9) then
+!                    ! Count the number of times that alleles are not coincident with HD phase of
+!                    ! the paternal haplotype
+!                    if (ImputePhase(i,j,e)/=PhaseHD(PosHDInd,j,1)) then
+!                      TempCount=TempCount+1
+!                      ! If haplotypes differ, then exit
+!                      if (ImputeFromParentCountThresh==TempCount) then
+!                        GamA=0
+!                        exit
+!                      endif
+!                    endif
+!                  endif
+!                enddo
+
+                if (.NOT. compareHaplotypeAllowMissing(BitPhaseHD(PosHDInd,:,1), BitImputePhase(i,:,e), &
+                    MissPhaseHD(PosHDInd,:,1), MissImputePhase(i,:,e), numSections, ImputeFromParentCountThresh)) then
+                  GamA = 0
+                end if
+
+!                TempCount=0
+!                do j=StartSnp,EndSnp
+!                  if (ImputePhase(i,j,e)/=9) then
+!                    ! Count the number of times that alleles are not coincident with HD phase of
+!                    ! the maternal haplotype
+!                    if (ImputePhase(i,j,e)/=PhaseHD(PosHDInd,j,2)) then
+!                      TempCount=TempCount+1
+!                      ! If haplotypes differ, then exit
+!                      if (ImputeFromParentCountThresh==TempCount) then
+!                        GamB=0
+!                        exit
+!                      endif
+!                    endif
+!                  endif
+!                enddo
+
+                if (.NOT. compareHaplotypeAllowMissing(BitPhaseHD(PosHDInd,:,2), BitImputePhase(i,:,e), &
+                    MissPhaseHD(PosHDInd,:,2), MissImputePhase(i,:,e), numSections, ImputeFromHDPhaseThresh)) then
+                  GamB = 0
+                end if
+
 
                 ! NOTE: [..."and the candidate haplotypes for each individual's gametes are restricted
                 !       to the two haplotypes that have been identified for each of its parents..."]
@@ -1245,6 +1308,12 @@ end subroutine InternalParentPhaseElim
           enddo
         enddo
         !# END PARALLEL DO
+
+        deallocate(BitPhaseHD)
+        deallocate(BitImputePhase)
+        deallocate(MissPhaseHD)
+        deallocate(MissImputePhase)
+
       enddo
     enddo
 
@@ -1325,7 +1394,7 @@ end subroutine InternalParentPhaseElim
     integer,allocatable,dimension (:,:,:,:) :: Temp
     integer(kind=1),allocatable,dimension (:,:) :: HapLib,HapCand
 
-    integer :: UPhased
+    integer :: UHLib
     character(len=1000) :: FileName,dumC
     type(CoreIndex) :: CoreI
 
@@ -1358,18 +1427,18 @@ end subroutine InternalParentPhaseElim
         else
           FileName = getFileNameHapLib(h,g)
         end if
-        open (unit=2001,file=trim(FileName),status="old",form="unformatted")
+        open (unit=UHLib,file=trim(FileName),status="old",form="unformatted")
 
         ! Read the number of Hap in the library and how long they are
-        read(2001) nHap,CoreLength
+        read(UHLib) nHap,CoreLength
 
         if(nHap/=0) then
           ! Allocate the Haplotype Library and read it from file
           allocate(HapLib(nHap,CoreLength))
           do l=1,nHap
-                  read(2001) HapLib(l,:)
+            read(UHLib) HapLib(l,:)
           enddo
-          close (2001)
+          close (UHLib)
 
           ! PARALLELIZATION BEGINS
           !$OMP PARALLEL DO SHARED (nAnisP,ImputePhase,StartSnp,EndSnp,CoreLength,nHap,HapLib) private(i,e,f,j,k,TempCount,CountAB,Counter,PatMatDone,Work,BanBoth,Ban,HapCand)
@@ -1563,7 +1632,6 @@ end subroutine InternalParentPhaseElim
     integer,allocatable,dimension (:,:) :: AnimRecomb
     integer,allocatable,dimension (:,:,:,:) :: PhaseHD
 
-    integer :: UPhased
     character(len=1000) :: FileName,dumC
     type(CoreIndex) :: CoreIA, CoreIB
 
