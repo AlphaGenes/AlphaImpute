@@ -15,7 +15,8 @@ CONTAINS
   SUBROUTINE ImputationManagement
 
     integer :: i,j,k,loop,dum
-    INTEGER(kind=8) :: tt, tt1, tt2, count_rate, count_max
+!    INTEGER(kind=8) :: tt, tt1, tt2, count_rate, count_max
+    real :: tt, tt1, tt2
 
     allocate(SireDam(0:nAnisP,2))
     SireDam=0
@@ -119,9 +120,10 @@ CONTAINS
           if (HMMOption==RUN_HMM_PREPHASE) Then
             call MaCHController(HMMOption)
           else
-            count_max = 0
-            count_max = HUGE(count_max)
-            CALL SYSTEM_CLOCK(tt1, count_rate, count_max)
+!            count_max = 0
+!            count_max = HUGE(count_max)
+!            CALL SYSTEM_CLOCK(tt1, count_rate, count_max)
+            CALL CPU_TIME(tt1)
 
             print*, " "
             print*, " ","Imputation of base animals completed"
@@ -190,10 +192,12 @@ CONTAINS
               print*, " ","Internal haplotype library imputation completed"
             enddo
 
-            CALL SYSTEM_CLOCK(tt2, count_rate, count_max)
+!            CALL SYSTEM_CLOCK(tt2, count_rate, count_max)
+            CALL CPU_TIME(tt2)
 
             tt = tt2 - tt1
-            WRITE(*,*) "system_clock:", tt
+!            WRITE(*,*) "system_clock:", tt
+            WRITE(*,*) "CPU TIME:", tt
 
             call ManageWorkLeftRight
 
