@@ -28,7 +28,9 @@
 !
 !-----------------------------------------------------------------------------------------------------------------------
 MODULE HaplotypeBits
+  USE, INTRINSIC :: ISO_FORTRAN_ENV
   implicit none
+
   PRIVATE
 
   PUBLIC compareHaplotype, compareHaplotypeAllowMissing, compareHaplotypeAllowSimultaneousMissing
@@ -60,8 +62,43 @@ MODULE HaplotypeBits
     MODULE PROCEDURE newBitSection
   END INTERFACE BitSection
 
+  TYPE, PUBLIC :: HaplotypeBit
+    integer :: numSections
+    integer(kind = int64), allocatable, dimension(:,:) :: alt
+    integer(kind = int64), allocatable, dimension(:,:) :: missing
+  END TYPE
+
+  INTERFACE HaplotypeBit
+    MODULE PROCEDURE newHaplotypeBit
+  END INTERFACE HaplotypeBit
 
 CONTAINS
+
+!---------------------------------------------------------------------------
+! DESCRIPTION:
+!> @brief      Initialise new Bit Haplotype
+!
+!> @details    Initialise new Bit Haplotype
+!
+!> @author     Roberto Antolin, roberto.antolin@roslin.ed.ac.uk
+!
+!> @date       August 09, 2016
+!
+! PARAMETERS:
+!> @param[inout]  this  HaplotypeBit
+!---------------------------------------------------------------------------
+  FUNCTION newHaplotypeBit(nsecs, ids) result(this)
+    integer, intent(in) :: nsecs, ids
+    type(HaplotypeBit)    :: this
+
+    this%numSections = nsecs
+    allocate(this%alt(nsecs,ids))
+    allocate(this%missing(nsecs,ids))
+
+    this%alt = 0
+    this%missing = 0
+
+  END FUNCTION newHaplotypeBit
 
 !---------------------------------------------------------------------------
 ! DESCRIPTION:
