@@ -2072,17 +2072,17 @@ end subroutine GeneralFillIn
 
     integer :: i,j
 
-    do i=1,nAnisP
-      if (RecGender(i)==HetGameticStatus) then
-        do j=1,nSnp
+    do j=1,nSnp
+      do i=1,nAnisP
+        if (RecGender(i)==HetGameticStatus) then
           if ((ImputePhase(i,j,1)==9).and.(ImputePhase(i,j,2)/=9)) then
             ImputePhase(i,j,1)=ImputePhase(i,j,2)
           end if
           if ((ImputePhase(i,j,2)==9).and.(ImputePhase(i,j,1)/=9)) then
             ImputePhase(i,j,2)=ImputePhase(i,j,1)
           end if
-        enddo
-      endif
+        end if
+      enddo
     enddo
 
   END SUBROUTINE EnsureHetGametic
