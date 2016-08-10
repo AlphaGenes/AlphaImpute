@@ -13,10 +13,10 @@ MODULE Imputation
 CONTAINS
 
   SUBROUTINE ImputationManagement
+    use omp_lib
 
     integer :: i,j,k,loop,dum
-!    INTEGER(kind=8) :: tt, tt1, tt2, count_rate, count_max
-    real :: tt, tt1, tt2
+    real(8) :: tt, tt1, tt2, startt, endt
 
     allocate(SireDam(0:nAnisP,2))
     SireDam=0
@@ -124,6 +124,7 @@ CONTAINS
 !            count_max = HUGE(count_max)
 !            CALL SYSTEM_CLOCK(tt1, count_rate, count_max)
             CALL CPU_TIME(tt1)
+            startt = OMP_get_wtime()
 
             print*, " "
             print*, " ","Imputation of base animals completed"
@@ -194,10 +195,12 @@ CONTAINS
 
 !            CALL SYSTEM_CLOCK(tt2, count_rate, count_max)
             CALL CPU_TIME(tt2)
+            endt = OMP_get_wtime()
 
             tt = tt2 - tt1
 !            WRITE(*,*) "system_clock:", tt
             WRITE(*,*) "CPU TIME:", tt
+            write(*,*) "WALLCLOCK TIME:", endt-startt, endt, startt
 
             call ManageWorkLeftRight
 
@@ -347,7 +350,9 @@ do m=1,2
 
 
             ! PARALLELIZATION BEGINS
-            !# PARALLEL DO SHARED (nAnisP,RecPed,ImputePhase,CoreStart,CoreEnd,AnimalOn,Temp) private(i,e,CompPhase,GamA,j,GamB)
+            !$OMP PARALLEL DO &
+            !$OMP DEFAULT(SHARED) &
+            !$OMP PRIVATE(i,j,e,CompPhase,GamA,GamB,curPos,curSection)
             do i=1,nAnisP
                 do e=1,2
                     ! Skip if, in the case of sex chromosome, me and my parent are heterogametic
@@ -393,9 +398,11 @@ do m=1,2
                                     if ( BTEST(MissImputePhase(curSection,e,i), curPos) == .TRUE. ) then
                                       if ( BTEST(BitImputePhase(curSection,1,RecPed(i,e+1)), curPos) == .FALSE. .AND. &
                                            BTEST(MissImputePhase(curSection,1,RecPed(i,e+1)), curPos)  == .FALSE. ) then
+                                        !$OMP ATOMIC
                                         Temp(i,j,e,1)=Temp(i,j,e,1)+1
                                       end if
                                       if ( BTEST(BitImputePhase(curSection,1,RecPed(i,e+1)), curPos) == .TRUE. ) then
+                                        !$OMP ATOMIC
                                         Temp(i,j,e,2)=Temp(i,j,e,2)+1
                                       end if
                                     end if
@@ -426,9 +433,11 @@ do m=1,2
                                     if ( BTEST(MissImputePhase(curSection,e,i), curPos) == .TRUE. ) then
                                       if ( BTEST(BitImputePhase(curSection,2,RecPed(i,e+1)), curPos) == .FALSE. .AND. &
                                            BTEST(MissImputePhase(curSection,2,RecPed(i,e+1)), curPos) == .FALSE. ) then
+                                        !$OMP ATOMIC
                                         Temp(i,j,e,1)=Temp(i,j,e,1)+1
                                       end if
                                       if ( BTEST(BitImputePhase(curSection,2,RecPed(i,e+1)), curPos) == .TRUE. ) then
+                                        !$OMP ATOMIC
                                         Temp(i,j,e,2)=Temp(i,j,e,2)+1
                                       end if
                                     end if
@@ -443,8 +452,8 @@ do m=1,2
                     endif
                 enddo
             enddo
-            !# END PARALLEL DO 
-            
+            !$OMP END PARALLEL DO
+
             ! Prepare the core for the next cycle
             CoreStart=CoreStart+LoopIndex(l,2)
             CoreEnd=CoreEnd+LoopIndex(l,2)
@@ -630,7 +639,9 @@ end subroutine InternalParentPhaseElim
           end do
 
           ! THE FIRST PARALLELIZATION BEGINS: POPULATE THE INTERNAL HAPLOTYPE LIBRARY
-          !# PARALLEL DO SHARED (nAnisP,ImputePhase,CoreStart,CoreEnd,nHap,HapLib) private(i,e,CompPhase,InLib,h,NotHere,j)
+          !$!OMP PARALLEL DO ORDERED&
+          !$!OMP DEFAULT(SHARED) &
+          !$!OMP PRIVATE(i,j,e,h,InLib)
           do i=1,nAnisP
             do e=1,2
               ! If GeneProbPhase has been executed, that is, if not considering the Sex Chromosome, then MSTermInfo={0,1}.
@@ -640,6 +651,7 @@ end subroutine InternalParentPhaseElim
 
               ! Check if the haplotype for this core is completely phased and populate HapLib
               if ( BitCompletePhased(MissImputePhase(i,:,e), numSections) ) then
+                !$OMP ORDERED
                 if (nHap==0) then       ! The first haplotype in the library
                   HapLib(1,CoreStart:CoreEnd)=ImputePhase(i,CoreStart:CoreEnd,e)
                   BitHapLib(1,:) = BitImputePhase(i,:,e)
@@ -658,28 +670,31 @@ end subroutine InternalParentPhaseElim
                   ! If haplotype is not in the library,
                   ! a new haplotype has been found, then populate the library
                   if (InLib==0) then
+                    !$!OMP ATOMIC
                     nHap=nHap+1
                     HapLib(nHap,CoreStart:CoreEnd)=ImputePhase(i,CoreStart:CoreEnd,e)
                     BitHapLib(nHap,:) = BitImputePhase(i,:,e)
                     MissHapLib(nHap,:) = MissImputePhase(i,:,e)
                   endif
                 endif
+                !$OMP END ORDERED
               endif
             enddo
           enddo
-          !# END PARALLEL DO
-            
-          ! THE SECOND PARALLELIZATION BEGINS
-          !# PARALLEL DO SHARED (nAnisP,ImputePhase,CoreStart,CoreEnd,CoreLength,nHap,HapLib,ImputeGenos,AnimalOn,Temp) private(i,HapElim,BanBoth,e,h,j,Counter,Count0,Count1,Ban)
+          !$!OMP END PARALLEL DO ORDERED
 
           ! WARNING: This code does not match the corresponding code of the subroutine ImputeFromHDLibrary
           !          In ImputeFromHDLibrary, there are two steps, counting agreements and impute
           !          across candidate haplotypes, and counting agreements and impute across cores
           !          and phasing steps.
 
-          allocate(BitWork(numSections,2))
-          allocate(MissWork(numSections,2))
+          ! THE SECOND PARALLELIZATION BEGINS
+          !$OMP PARALLEL DO &
+          !$OMP DEFAULT(SHARED) &
+          !$OMP PRIVATE(i,j,e,h,HapElim,BanBoth,Counter,Count0,Count1,Ban,curPos,curSection,BitWork,MissWork,BitGeno)
           do i=1,nAnisP
+            allocate(BitWork(numSections,2))
+            allocate(MissWork(numSections,2))
             allocate(HapElim(nAnisP*2,2))
             HapElim=1
             BanBoth=0
@@ -793,9 +808,11 @@ end subroutine InternalParentPhaseElim
                 do j=CoreStart,CoreEnd
                   if (BTEST(BitWork(curSection,e), curPos) == .FALSE. .AND. &
                       BTEST(MissWork(curSection,e), curPos) == .FALSE.) then
+                    !$OMP ATOMIC
                     Temp(i,j,e,1)=Temp(i,j,e,1)+1
                   end if
                   if (BTEST(BitWork(curSection,e), curPos) == .TRUE.) then
+                    !$OMP ATOMIC
                     Temp(i,j,e,2)=Temp(i,j,e,2)+1
                   end if
 
@@ -808,11 +825,11 @@ end subroutine InternalParentPhaseElim
               endif
             enddo
             deallocate(HapElim)
+            deallocate(BitWork)
+            deallocate(MissWork)
           enddo
-          !# END PARALLEL DO
+          !$OMP END PARALLEL DO
 
-          deallocate(BitWork)
-          deallocate(MissWork)
 
           ! Prepare the core for the next cycle
           CoreStart=CoreStart+LoopIndex(l,2)
@@ -823,7 +840,9 @@ end subroutine InternalParentPhaseElim
       deallocate(HapLib)
     enddo
 
+    !$OMP PARALLEL DEFAULT(SHARED)
     do e=1,2
+      !$OMP DO PRIVATE(i,j)
       do j=1,nSnp
         do i=1,nAnisP
           ! If GeneProbPhase has been executed, that is, if not considering the Sex Chromosome, then MSTermInfo={0,1}.
@@ -844,7 +863,9 @@ end subroutine InternalParentPhaseElim
           end if
         enddo
       enddo
+      !$OMP END DO
     enddo
+    !$OMP END PARALLEL
 
     deallocate(Temp)
 
@@ -970,8 +991,9 @@ end subroutine InternalParentPhaseElim
           end do
         end do
 
-        !! PARALLELIZATION BEGINS
-        !$OMP PARALLEL DO SHARED (nAnisP,PosHD,RecPed,ImputePhase,StartSnp,EndSnp,PhaseHD,AnimalOn,Temp) private(i,PosHDInd,Gam1,Gam2,e,GamA,GamB,TempCount,j)
+        !$OMP PARALLEL DO &
+        !$OMP DEFAULT(SHARED) &
+        !$OMP PRIVATE(i,j,e,PosHDInd,Gam1,Gam2,GamA,GamB)
         do i=1,nAnisP
           ! Look for possible gametes through the Haplotype
           ! Library constructed during the phasing step
@@ -1023,10 +1045,12 @@ end subroutine InternalParentPhaseElim
                     ! Count the number of alleles coded with 0 and 1
                     if (ImputePhase(i,j,1)==9) then
                       if(PhaseHD(PosHDInd,j,Gam1)==0) then
-                         Temp(i,j,1,1)=Temp(i,j,1,1)+1
+                        !$OMP ATOMIC
+                        Temp(i,j,1,1)=Temp(i,j,1,1)+1
                       end if
                       if(PhaseHD(PosHDInd,j,Gam1)==1) then
-                       Temp(i,j,1,2)=Temp(i,j,1,2)+1
+                        !$OMP ATOMIC
+                        Temp(i,j,1,2)=Temp(i,j,1,2)+1
                       end if
                     endif
                   enddo
@@ -1038,9 +1062,11 @@ end subroutine InternalParentPhaseElim
                     ! Count the number of alleles coded with 0 and 1
                     if (ImputePhase(i,j,2)==9) then
                       if(PhaseHD(PosHDInd,j,Gam2)==0) then
+                        !$OMP ATOMIC
                         Temp(i,j,2,1)=Temp(i,j,2,1)+1
                       end if
                       if(PhaseHD(PosHDInd,j,Gam2)==1) then
+                        !$OMP ATOMIC
                         Temp(i,j,2,2)=Temp(i,j,2,2)+1
                       end if
                     endif
@@ -1064,10 +1090,10 @@ end subroutine InternalParentPhaseElim
       enddo
     enddo
 
-    do i=1,nAnisP
-      do e=1,2
-        if (AnimalOn(i,e)==1) then
-          do j=1,nSnp
+    do e=1,2
+      do j=1,nSnp
+        do i=1,nAnisP
+          if (AnimalOn(i,e)==1) then
             if (ImputePhase(i,j,e)==9) then
               ! Impute phase allele with the most significant code for that allele across haplotypes
               ! only if the other codification never happens
@@ -1078,8 +1104,8 @@ end subroutine InternalParentPhaseElim
                 ImputePhase(i,j,e)=1
               end if
             endif
-          enddo
-        endif
+          endif
+        enddo
       enddo
     enddo
     deallocate(Temp)
@@ -1203,7 +1229,9 @@ end subroutine InternalParentPhaseElim
         end do
 
         ! PARALLELIZATION BEGINS
-        !# PARALLEL DO SHARED (RecPed,PosHD,ImputePhase,StartSnp,EndSnp,PhaseHD,AnimalOn,Temp) private(i,e,PedId,PosHDInd,GamA,GamB,TempCount,j)
+        !$OMP PARALLEL DO &
+        !$OMP DEFAULT(SHARED) &
+        !$OMP PRIVATE(i,j,e,PedId,PosHDInd,GamA,GamB)
         do i=1,nAnisP
           do e=1,2
             PedId=e+1
@@ -1250,9 +1278,11 @@ end subroutine InternalParentPhaseElim
                     ! Count the number of alleles coded with 0 and 1
                     if (ImputePhase(i,j,e)==9) then
                       if(PhaseHD(PosHDInd,j,1)==0) then
+                        !$OMP ATOMIC
                         Temp(i,j,e,1)=Temp(i,j,e,1)+1
                       end if
                       if(PhaseHD(PosHDInd,j,1)==1) then
+                        !$OMP ATOMIC
                         Temp(i,j,e,2)=Temp(i,j,e,2)+1
                       end if
                     endif
@@ -1267,9 +1297,11 @@ end subroutine InternalParentPhaseElim
                     ! Count the number of alleles coded with 0 and 1
                     if (ImputePhase(i,j,e)==9) then
                       if(PhaseHD(PosHDInd,j,2)==0) then
+                        !$OMP ATOMIC
                         Temp(i,j,e,1)=Temp(i,j,e,1)+1
                       end if
                       if(PhaseHD(PosHDInd,j,2)==1) then
+                        !$OMP ATOMIC
                         Temp(i,j,e,2)=Temp(i,j,e,2)+1
                       end if
                     endif
@@ -1279,7 +1311,7 @@ end subroutine InternalParentPhaseElim
             endif
           enddo
         enddo
-        !# END PARALLEL DO
+        !$OMP END PARALLEL DO
 
         deallocate(BitPhaseHD)
         deallocate(BitImputePhase)
@@ -1474,7 +1506,9 @@ end subroutine InternalParentPhaseElim
           end do
 
           ! PARALLELIZATION BEGINS
-          !$OMP PARALLEL DO SHARED (nAnisP,ImputePhase,StartSnp,EndSnp,CoreLength,nHap,HapLib) private(i,e,f,j,k,TempCount,CountAB,Counter,PatMatDone,Work,BanBoth,Ban,HapCand)
+          !$OMP PARALLEL DO &
+          !$OMP DEFAULT(SHARED) &
+          !$OMP PRIVATE(i,e,f,j,k,TempCount,CountAB,Counter,PatMatDone,Work,BanBoth,Ban,HapCand)
           do i=1,nAnisP
             ! The number of candidate haplotypes is the total number of haps in the library times
             ! 2 (Paternal and maternal candidates)
