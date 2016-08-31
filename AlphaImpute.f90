@@ -84,7 +84,7 @@ END INTERFACE
 call Titles
 call ReadInParameterFile
 if (HMMOption /= RUN_HMM_NGS) then
-    if (RestartOption<OPT_RESTART_PHASING) call MakeDirectories(RUN_HMM_NULL)
+    if (RestartOption<OPT_RESTART_PHASING .AND. BypassGeneProb==0) call MakeDirectories(RUN_HMM_NULL)
     call CountInData
     call ReadInData
     call SnpCallRate
@@ -160,15 +160,6 @@ else
 #endif
 
             endif
-
-            markers = nSnp
-            if (OutOpt==1) then
-              markers = nSnpRaw
-            end if
-            allocate(GenosProbs(GlobalExtraAnimals + nAnisP, markers, 2))
-            call ReReadIterateGeneProbs(GenosProbs, .FALSE., nAnisP, markers)
-            call WriteProbabilities("./Results/GenotypeProbabilities.txt", GenosProbs, Id, GlobalExtraAnimals, nAnisP, nSnp)
-            deallocate(GenosProbs)
 
             if (RestartOption==OPT_RESTART_GENEPROB) then
 #if CLUSTER==1
