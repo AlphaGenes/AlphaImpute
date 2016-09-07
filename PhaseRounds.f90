@@ -326,7 +326,7 @@ CONTAINS
     integer, intent(in)                     :: nAnis
     integer, intent(in)                     :: nAnisPed
     character(len=*), intent(in)            :: FileName
-    character*(20), intent(in)              :: Ids(nAnisPed)
+    character*(20), intent(in)              :: Ids(0:nAnisPed)
     integer, dimension (:), intent(out)     :: PosHD
     integer, dimension (:,:,:), intent(out) :: PhaseHD
 
