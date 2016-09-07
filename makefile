@@ -4,7 +4,8 @@ VERSION:=$(shell git rev-parse --short HEAD)
 MASTERVERSION:=$(shell git describe --tag)
 # SUBVERSION:=2.0
 # PROGRAM:=${NAME}${VERSION}.${SUBVERSION}
-PROGRAM:=$(NAME)$(MASTERVERSION)
+#PROGRAM:=$(NAME)$(MASTERVERSION)
+PROGRAM:=$(NAME)
 GP:=GeneProbForAlphaImpute
 
 # Compiler
@@ -47,9 +48,10 @@ all: executable
 
 debug: FFLAGS = -DDEBUG=${DEBUG} -g -O0 -qopenmp -check bounds -fpp -static-intel -qopenmp-link=static -traceback -D $(OSFLAG)
 #debug: FFLAGS =  -DDEBUG=${DEBUG} -g -ffree-line-length-0 -O0 -fopenmp
+debug: PROGRAM:=$(NAME)_debug
 debug: executable
 
-OBJS:=global$(obj) par_zig_mod$(obj) random$(obj) hmmvariables$(obj) Output$(obj) hmmHaplotype$(obj) utils$(obj) recombination$(obj) hmm$(obj)
+OBJS:=global$(obj) par_zig_mod$(obj) random$(obj) hmmvariables$(obj) Output$(obj) hmmHaplotype$(obj) utils$(obj) recombination$(obj) hmm$(obj) PhaseRounds$(obj) HaplotypeBits$(obj) Imputation$(obj)
 
 ifeq ($(OS), Windows_NT)
 	 OBJS:= $(OBJS) manageWindows.obj
