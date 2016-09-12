@@ -150,6 +150,7 @@ CONTAINS
     CoreI = newCoreIndex(CountLines(FileName))
 
     ! Get core information from file
+    UInputs = 111
     open (unit=UInputs,file=trim(FileName),status="old")
     do i=1,CoreI%nCores
         read (UInputs,*) dum, CoreI%StartSnp(i), CoreI%EndSnp(i)
@@ -335,6 +336,7 @@ CONTAINS
     character(len=300) :: dumC
 
   ! Get phase information from file
+    Uphased = 111
     open (unit=UPhased,file=trim(FileName),status="old")
     do i=1,nAnis
         read (UPhased,*) dumC,PhaseHD(i,:,1)

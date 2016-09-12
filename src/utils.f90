@@ -18,6 +18,9 @@ CONTAINS
   !> @return     Number of lines in the file
   !---------------------------------------------------------------------------
   FUNCTION CountLines(FileName) result(nLines)
+    use ISO_Fortran_Env
+    implicit none
+
     character(len=*), intent(in) :: FileName
     integer                         :: nLines
 
@@ -25,6 +28,7 @@ CONTAINS
     character(len=300) :: dumC
 
     nLines=0
+    UInputs = 111
     open (unit=UInputs,file=trim(FileName),status="old")
     do
       read (UInputs,*,iostat=f) dumC
