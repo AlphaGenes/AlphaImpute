@@ -39,6 +39,9 @@ integer :: TrueGenos1None0,nSnpRaw,nObsDataRaw,nAgreePhaseElim,nAgreeGrandParent
 integer :: nSnpIterate,NoPhasing,AlphaPhasePresent,GeneProbPresent,PrePhased,UserDefinedHD,PedFreePhasing,PhaseTheDataOnly,RestartOption
 integer :: nSnpChips
 
+integer :: PhaseSubsetSize, PhaseNIterations
+character (len=300) :: LargeDatasets
+
 logical :: PreProcess
 
 real :: PercGenoForHD,PercSnpMiss,SecondPercGenoForHD,GenotypeErrorPhase,WellPhasedThresh

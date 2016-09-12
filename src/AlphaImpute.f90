@@ -325,7 +325,7 @@ do
 enddo
 rewind(1)
 
-if (nLines/=41) then
+if (nLines/=42) then
     print*, "   ","There are some lines missing from AlphaImputeSpec.txt"
     print*, "   ","HINT - maybe you are using the Spec file from the beta version which is out of date"
     stop
@@ -550,6 +550,20 @@ endif
 ! Get the number of processors to be used
 ! NumberOfProcessorsAvailable
 read (1,*) dumC,nProcessors
+
+PhaseSubsetSize = 200
+PhaseNIterations = 1
+read (1,*), dumC, LargeDatasets
+LargeDatasets = trim(LargeDatasets)
+if (trim(largeDatasets) == 'Yes') then
+  rewind (1)
+  do i=1,21
+    read (1,*) dumC
+  enddo
+  read (1,*) dumC, LargeDatasets, PhaseSubsetSize, PhaseNIterations
+end if
+
+!print *, LargeDatasets, PhaseSubsetSize, PhaseNIterations
 
 ! print *, nProcessors
 
@@ -1828,7 +1842,7 @@ else
 #ifdef DEBUG
     write(0,*) 'DEBUG: Write phase, genotypes and probabilities into files [WriteOutResults]'
 #endif
-    
+
     call CheckImputationInconsistencies(ImputeGenos, ImputePhase, nAnisP, nSnp)
     do i=GlobalExtraAnimals+1,nAnisP
          write (53,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') Id(i),ImputePhase(i,:,1)
@@ -3367,28 +3381,41 @@ do i=1,nPhaseInternal           ! Phasing is done in parallel
         if (SexOpt==1) write (106,*) 'PedigreeFile                      ,"NoPedigree"'
 #ifdef OS_UNIX
         write (106,'(a100)') &
-                'GenotypeFile                       ,"../../InputFiles/AlphaPhaseInputGenotypes.txt",GenotypeFormat'
+                'GenotypeFile                   ,"../../InputFiles/AlphaPhaseInputGenotypes.txt",GenotypeFormat'
 #else
         write (106,'(a100)') &
-                'GenotypeFile                       ,"..\..\InputFiles\AlphaPhaseInputGenotypes.txt",GenotypeFormat'
+                'GenotypeFile                   ,"..\..\InputFiles\AlphaPhaseInputGenotypes.txt",GenotypeFormat'
 #endif
 
         write (106,*) 'NumberOfSnp                      ,',nSnp
-        write (106,*) 'GeneralCoreAndTailLength     ,',TempCplusT(i)
+        write (106,*) 'GeneralCoreAndTailLength         ,',TempCplusT(i)
         if(i<=nPhaseInternal/2) then
-            write (106,*) 'GeneralCoreLength        ,',TempCore(i),',Offset'
+            write (106,*) 'GeneralCoreLength            ,',TempCore(i),',Offset'
         else
-            write (106,*) 'GeneralCoreLength        ,',TempCore(i),',NotOffset'
+            write (106,*) 'GeneralCoreLength            ,',TempCore(i),',NotOffset'
         endif
-        write (106,*) 'UseThisNumberOfSurrogates    ,',10
-        write (106,*) 'PercentageSurrDisagree       ,',10.00
-        write (106,*) 'PercentageGenoHaploDisagree  ,',GenotypeErrorPhase
+        write (106,*) 'UseThisNumberOfSurrogates        ,',10
+        write (106,*) 'PercentageSurrDisagree           ,',10.00
+        write (106,*) 'PercentageGenoHaploDisagree      ,',GenotypeErrorPhase
         write (106,*) 'GenotypeMissingErrorPercentage   ,',0.00
         write (106,*) 'NrmThresh                        ,',0.00
-        write (106,*) 'FullOutput                   ,0'
-        write (106,*) 'Graphics             ,0'
-        write (106,*) 'Simulation           ,0'
-        write (106,*) 'TruePhaseFile            ,None'
+        write (106,*) 'FullOutput                       ,0'
+        write (106,*) 'Graphics                         ,0'
+        write (106,*) 'Simulation                       ,0'
+        write (106,*) 'TruePhaseFile                    ,None'
+        write (106,*) 'CoreAtTime                       ,0'
+        if (trim(LargeDatasets) == 'Yes') then
+          write (106,*) 'IterateMethod                    ,RandomOrder'
+        else
+          write (106,*) 'IterateMethod                    ,Off'
+        end if
+        write (106,*) 'IterateSubsetSize                ,',PhaseSubsetSize
+        write (106,*) 'IterateIterations                ,',PhaseNIterations
+        write (106,*) 'Cores                            ,1,Combine'
+        write (106,*) 'MinHapFreq                       ,1'
+        write (106,*) 'Library                          ,None'
+
+
         ! if (MultiHD==0) then
         !     write (106,*) 'MultipleHDPanels         ,',0
         !     write (106,*) 'NumberSnpxChip           ,',0
