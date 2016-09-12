@@ -6,7 +6,7 @@
 !
 !> @file        PhaseRounds.f90
 !
-! DESCRIPTION: 
+! DESCRIPTION:
 !> @brief       Module to define and read phasing rounds and their cores
 !>
 !> @details     This MODULE includes routines to read the information contain in the different phasing rounds located
@@ -74,8 +74,8 @@ MODULE PhaseRounds
   END INTERFACE CoreIndex
 
 CONTAINS
-!---------------------------------------------------------------------------  
-! DESCRIPTION: 
+!---------------------------------------------------------------------------
+! DESCRIPTION:
 !> @brief      Initialise new core index
 !
 !> @details    Initialise new core index
@@ -86,7 +86,7 @@ CONTAINS
 !
 ! PARAMETERS:
 !> @param[inout]  CoreI  CoreIndex
-!---------------------------------------------------------------------------  
+!---------------------------------------------------------------------------
   FUNCTION newCoreIndex(nCores) result(this)
     integer, intent(in) :: nCores
     type(CoreIndex)     :: this
@@ -99,8 +99,8 @@ CONTAINS
 
   END FUNCTION newCoreIndex
 
-!---------------------------------------------------------------------------  
-! DESCRIPTION: 
+!---------------------------------------------------------------------------
+! DESCRIPTION:
 !> @brief      Deallocate core information
 !
 !> @details    Deallocate core information
@@ -111,7 +111,7 @@ CONTAINS
 !
 ! PARAMETERS:
 !> @param[out] definition Core
-!---------------------------------------------------------------------------  
+!---------------------------------------------------------------------------
   SUBROUTINE destroy_CoreIndex(this)
     type(CoreIndex) :: this
 
@@ -123,8 +123,8 @@ CONTAINS
     end if
   end SUBROUTINE destroy_CoreIndex
 
-!---------------------------------------------------------------------------  
-! DESCRIPTION: 
+!---------------------------------------------------------------------------
+! DESCRIPTION:
 !> @brief      Read core information
 !
 !> @details    Read the start and end snp for each core in the phasing round
@@ -136,7 +136,7 @@ CONTAINS
 ! PARAMETERS:
 !> @param[in]  FileName  File containing the cores information
 !> @param[out] CoreI     Core information (start snp, end snp)
-!---------------------------------------------------------------------------  
+!---------------------------------------------------------------------------
   FUNCTION ReadCores(FileName) result(CoreI)
     use Utils
 
@@ -158,11 +158,11 @@ CONTAINS
     close(UInputs)
   END FUNCTION ReadCores
 
-!---------------------------------------------------------------------------  
-! DESCRIPTION: 
+!---------------------------------------------------------------------------
+! DESCRIPTION:
 !> @brief      Return file of Core indexes
 !
-!> @details    Return the correct path of the file containing the core indexes 
+!> @details    Return the correct path of the file containing the core indexes
 !>             of a given intenal phase if a folder with phased data is provided
 !
 !> @author     Roberto Antolin, roberto.antolin@roslin.ed.ac.uk
@@ -173,7 +173,7 @@ CONTAINS
 !> @param[in] PhasePath       Path of phased data
 !> @param[in] phaseInternal   Number of a internal phase
 !> @return    File name
-!---------------------------------------------------------------------------  
+!---------------------------------------------------------------------------
   FUNCTION getFileNameCoreIndex_Path(PhasePath, phaseInternal) result(FileName)
     integer, intent(in)             :: phaseInternal
     character(len=300), intent(in)  :: PhasePath
@@ -186,11 +186,11 @@ CONTAINS
 #endif
   END FUNCTION getFileNameCoreIndex_Path
 
- !---------------------------------------------------------------------------  
- ! DESCRIPTION: 
+ !---------------------------------------------------------------------------
+ ! DESCRIPTION:
  !> @brief      Return file of Core indexes
  !
- !> @details    Return the correct path of the file containing the core indexes 
+ !> @details    Return the correct path of the file containing the core indexes
  !>             of a given intenal phase
  !
  !> @author     Roberto Antolin, roberto.antolin@roslin.ed.ac.uk
@@ -200,7 +200,7 @@ CONTAINS
  ! PARAMETERS:
  !> @param[in] phaseInternal   Number of a internal phase
  !> @return    File name
- !---------------------------------------------------------------------------  
+ !---------------------------------------------------------------------------
   FUNCTION getFileNameCoreIndex_NoPath(phaseInternal) result(FileName)
     integer, intent(in) :: phaseInternal
     character(len=1000) :: FileName
@@ -212,11 +212,11 @@ CONTAINS
 #endif
   END FUNCTION getFileNameCoreIndex_NoPath
 
-!---------------------------------------------------------------------------  
-! DESCRIPTION: 
+!---------------------------------------------------------------------------
+! DESCRIPTION:
 !> @brief      Return file of the final phase of a internal phasing
 !
-!> @details    Return the correct path of the file containing the final phase 
+!> @details    Return the correct path of the file containing the final phase
 !>             of a given intenal phase if a folder with phased data is provided
 !
 !> @author     Roberto Antolin, roberto.antolin@roslin.ed.ac.uk
@@ -227,7 +227,7 @@ CONTAINS
 !> @param[in] PhasePath       Path of phased data
 !> @param[in] phaseInternal   Number of a internal phase
 !> @return    File name
-!---------------------------------------------------------------------------  
+!---------------------------------------------------------------------------
   FUNCTION getFileNameFinalPhase_Path(PhasePath, phaseInternal) result(FileName)
     integer, intent(in)             :: phaseInternal
     character(len=300), intent(in)  :: PhasePath
@@ -244,7 +244,7 @@ CONTAINS
 ! DESCRIPTION:
 !> @brief      Return file of the final phase of a internal phasing
 !
-!> @details    Return the correct path of the file containing the final phase 
+!> @details    Return the correct path of the file containing the final phase
  !>             of a given intenal phase
 !
 !> @author     Roberto Antolin, roberto.antolin@roslin.ed.ac.uk
