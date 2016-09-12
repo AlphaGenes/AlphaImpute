@@ -51,7 +51,7 @@ else
 	MAKEDIR := @mkdir -p
 	DEL := rm -rf
 
-	DEBUG_FLAGS:= -traceback -g -qopenmp -check bounds -check format -check output_conversion -check pointers -check uninit
+	DEBUG_FLAGS:= -traceback -g -qopenmp -check bounds -check format -check output_conversion -check pointers -check uninit -DDEBUG=${DEBUG}
 endif
 
 # THIS_DIR :=$(shell pwd)/
