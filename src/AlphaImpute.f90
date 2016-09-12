@@ -1516,6 +1516,15 @@ INTERFACE
   END SUBROUTINE ReReadIterateGeneProbs
 END INTERFACE
 
+INTERFACE
+  SUBROUTINE CheckImputationInconsistencies(ImpGenos, ImpPhase, n, m)
+    integer, intent(in) :: n, m
+    integer(kind=1), dimension (:,:), intent(inout) :: ImpGenos
+    integer(kind=1), dimension (:,:,:), intent(inout) :: ImpPhase
+  END SUBROUTINE CheckImputationInconsistencies
+END INTERFACE
+
+
 #ifdef DEBUG
     write(0,*) 'DEBUG: WriteOutResults'
 #endif
@@ -1564,16 +1573,7 @@ if (OutOpt==0) then
 
     if (SexOpt==0) then
 
-        do i=1,nAnisP
-            do j=1,nSnp
-                if (ImputePhase(i,j,1)<0) ImputePhase(i,j,1)=9
-                if (ImputePhase(i,j,1)>1) ImputePhase(i,j,1)=9
-                if (ImputePhase(i,j,2)<0) ImputePhase(i,j,2)=9
-                if (ImputePhase(i,j,2)>1) ImputePhase(i,j,2)=9
-                if (ImputeGenos(i,j)>2) ImputeGenos(i,j)=9
-                if (ImputeGenos(i,j)<0) ImputeGenos(i,j)=9
-            enddo
-        enddo
+        call CheckImputationInconsistencies(ImputeGenos, ImputePhase, nAnisP, nSnp)
 
         ! open (unit=39,file="IterateGeneProb/IterateGeneProbInput.txt")
         open (unit=39, file="IterateGeneProb" // DASH // "IterateGeneProbInput.txt")
@@ -1590,20 +1590,12 @@ if (OutOpt==0) then
         endif
     else
 
-        do i=1,nAnisP
-            do j=1,nSnp
-                if (ImputePhase(i,j,1)<0) ImputePhase(i,j,1)=9
-                if (ImputePhase(i,j,1)>1) ImputePhase(i,j,1)=9
-                if (ImputePhase(i,j,2)<0) ImputePhase(i,j,2)=9
-                if (ImputePhase(i,j,2)>1) ImputePhase(i,j,2)=9
-                if (ImputeGenos(i,j)>2) ImputeGenos(i,j)=9
-                if (ImputeGenos(i,j)<0) ImputeGenos(i,j)=9
-            enddo
-        enddo
-
+        call CheckImputationInconsistencies(ImputeGenos, ImputePhase, nAnisP, nSnp)
 
         call IterateInsteadOfGeneProbs
     endif
+
+    call CheckImputationInconsistencies(ImputeGenos, ImputePhase, nAnisP, nSnp)
 
     do i=GlobalExtraAnimals+1,nAnisP
          !write (33,'(a,'//cm//'(1x,i1))') Id(i),ImputePhase(i,:,1)
@@ -1663,6 +1655,7 @@ if (OutOpt==0) then
         write (51,'(i10,20000f7.2)') j,float(((nAnisP-(GlobalExtraAnimals+1))+1)-count(ImputeGenos(GlobalExtraAnimals+1:nAnisP,j)==9))/((nAnisP-(GlobalExtraAnimals+1))+1)
     enddo
 
+    call CheckImputationInconsistencies(ImputeGenos, ImputePhase, nAnisP, nSnp)
     WellPhasedThresh=WellPhasedThresh/100
     do i=GlobalExtraAnimals+1,nAnisP
         if (ImputationQuality(i,5)>=WellPhasedThresh) then
@@ -1677,17 +1670,7 @@ else
     write(0,*) 'DEBUG: Unphase wrong alleles [WriteOutResults]'
 #endif
 
-    do i=1,nAnisP
-        do j=1,nSnp
-            if (ImputePhase(i,j,1)<0) ImputePhase(i,j,1)=9
-            if (ImputePhase(i,j,1)>1) ImputePhase(i,j,1)=9
-            if (ImputePhase(i,j,2)<0) ImputePhase(i,j,2)=9
-            if (ImputePhase(i,j,2)>1) ImputePhase(i,j,2)=9
-            if (ImputeGenos(i,j)>2) ImputeGenos(i,j)=9
-            if (ImputeGenos(i,j)<0) ImputeGenos(i,j)=9
-        enddo
-    enddo
-
+    call CheckImputationInconsistencies(ImputeGenos, ImputePhase, nAnisP, nSnp)
 
     open (unit=42,file=trim(GenotypeFile),status='old')
     allocate(TmpGenos(0:nAnisP,nSnpRaw))
@@ -1730,6 +1713,7 @@ else
     enddo
     close(42)
 
+    call CheckImputationInconsistencies(TmpGenos, TmpPhase, nAnisP, nSnp)
     do i=GlobalExtraAnimals+1,nAnisP
          write (33,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') Id(i),TmpPhase(i,:,1)
          write (33,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') Id(i),TmpPhase(i,:,2)
@@ -1844,7 +1828,8 @@ else
 #ifdef DEBUG
     write(0,*) 'DEBUG: Write phase, genotypes and probabilities into files [WriteOutResults]'
 #endif
-
+    
+    call CheckImputationInconsistencies(ImputeGenos, ImputePhase, nAnisP, nSnp)
     do i=GlobalExtraAnimals+1,nAnisP
          write (53,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') Id(i),ImputePhase(i,:,1)
          write (53,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') Id(i),ImputePhase(i,:,2)
@@ -1921,6 +1906,7 @@ else
         write (51,'(i10,20000f7.2)') j,float(((nAnisP-(GlobalExtraAnimals+1))+1)-count(ImputeGenos(GlobalExtraAnimals+1:nAnisP,j)==9))/((nAnisP-(GlobalExtraAnimals+1))+1)
     enddo
 
+    call CheckImputationInconsistencies(TmpGenos, TmpPhase, nAnisP, nSnp)
     WellPhasedThresh=WellPhasedThresh/100
     do i=GlobalExtraAnimals+1,nAnisP
         if (ImputationQuality(i,5)>=WellPhasedThresh) then
@@ -6242,3 +6228,36 @@ close(UOutputs)
 !     write(*,fmt) i, CountMiss/real(nAnisG)
 ! end do
 END SUBROUTINE SnpCallRate
+
+!#############################################################################################################################################################################################################################
+SUBROUTINE CheckImputationInconsistencies(ImpGenos, ImpPhase, n, m)
+implicit none
+
+integer, intent(in) :: n, m
+integer(kind=1), dimension (:,:), intent(inout) :: ImpGenos
+integer(kind=1), dimension (:,:,:), intent(inout) :: ImpPhase
+
+integer :: i, j, k
+
+do j = 1, m
+  do i = 1, n
+    do k = 1, 2
+      if (ImpPhase(i, j, k) < 0) then
+        ImpPhase(i, j, k) = 9
+        ImpGenos(i, j) = 9
+      end if
+      if (ImpPhase(i, j, k) > 1) then
+        ImpPhase(i, j, k) = 9
+        ImpGenos(i, j) = 9
+      end if
+    enddo
+    if (ImpGenos(i, j) < 0) then
+      ImpGenos(i, j) = 9
+    end if
+    if (ImpGenos(i, j) > 2) then
+      ImpGenos(i, j) = 9
+    end if
+  enddo
+enddo
+
+END SUBROUTINE CheckImputationInconsistencies
