@@ -81,7 +81,7 @@ end subroutine WriteProbabilitiesGeneProb
 
 
 subroutine ReReadIterateGeneProbs(GenosProbs, IterGeneProb, nAnis, markers)
-! Read genotype probabilities from files and phase allele based in these probabilities. 
+! Read genotype probabilities from files and phase allele based in these probabilities.
 ! This files should have been already created during previous calls to AlphaImpute (RestartOption<3)
 ! The subroutine outputs the genotype probabilities of the homozygous genotype of the reference allele,
 ! G00, and the heterozygous genotype, Gh = G10 + G01. The homozygous genotype for the alternative allele can be inferred
@@ -101,9 +101,6 @@ integer :: h,i,j,dum,StSnp,EnSnp
 double precision, allocatable :: GeneProbWork(:,:)
 character(len=300) :: inFile
 
-!allocate(GeneProbWork(markers,4))
-GeneProbWork=9
-
 do h=1,nProcessors
     if (IterGeneProb) then
       write (inFile,'("IterateGeneProb/GeneProb"i0,"/GeneProbs.txt")')h          !here
@@ -115,6 +112,7 @@ do h=1,nProcessors
     StSnp=GpIndex(h,1)          ! Where SNPs start
     EnSnp=GpIndex(h,2)          ! Where SNPs end
     allocate(GeneProbWork(EnSnp-StSnp+1,4))
+    GeneProbWork=9
     do i=1,nAnis                                           ! The number of lines of GeneProbs.txt files is = nAnisP x 4
         do j=1,4                                            ! where 4 stands for the two paternal and the two maternal haplotypes
             read (110,*) dum,GeneProbWork(:,j)
