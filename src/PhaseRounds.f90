@@ -61,8 +61,8 @@ MODULE PhaseRounds
 
   TYPE, PUBLIC :: CoreIndex
     ! PUBLIC
-    integer(kind = 2), allocatable, dimension(:) :: StartSnp
-    integer(kind = 2), allocatable, dimension(:) :: EndSnp
+    integer(kind = 4), allocatable, dimension(:) :: StartSnp
+    integer(kind = 4), allocatable, dimension(:) :: EndSnp
     integer(kind = 2)                            :: nCores
   CONTAINS
     ! PRIVATE
