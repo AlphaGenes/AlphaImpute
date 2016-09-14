@@ -9,7 +9,7 @@ GP:=GeneProbForAlphaImpute
 
 # Set the default compiler to iFort
 FC:=ifort
-FFLAGS:=-O3 -DVERS=""commit-$(VERSION)""
+FFLAGS:=-O3 -DCOMMIT=" $(VERSION)"
 
 # Set precompilation options by default
 CLUSTER?=0

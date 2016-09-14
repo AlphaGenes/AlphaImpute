@@ -6223,7 +6223,7 @@ END SUBROUTINE CheckImputationInconsistencies
 
 subroutine Titles
 
-call Version
+call PrintVersion
 print *, ""
 print *, ""
 print *, ""
@@ -6248,14 +6248,14 @@ end subroutine Header
 
 !#############################################################################################################################################################################################################################
 
-subroutine Version
+subroutine PrintVersion
 
 call Header
 print *, ""
-print *, "                              VERSION:"//TOSTRING(VERS),"                     "
+print *, "                              Commit:   "//TOSTRING(COMMIT),"                     "
 print *, "                              Compiled: "//__DATE__//", "//__TIME__
 
-end subroutine Version
+end subroutine PrintVersion
 
 !#############################################################################################################################################################################################################################
 
