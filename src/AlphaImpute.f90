@@ -5986,77 +5986,6 @@ end subroutine Cleaner
 
 !#############################################################################################################################################################################################################################
 
-subroutine Titles
-
-print*, ""
-print*, "                              ***********************                         "
-print*, "                              *                     *                         "
-print*, "                              *     AlphaImpute     *                         "
-! print*, "                              *      Beta 1.21      *                         "
-print*, "                              *                     *                         "
-print*, "                              ***********************                         "
-print*, "                              VERSION:"//TOSTRING(VERS),"                     "
-print*, "                                                                              "
-print*, "                    Software For Phasing and Imputing Genotypes               "
-print*, ""
-print*, "  Written by John Hickey, Matt Cleveland, Andreas Kranis, and Brian Kinghorn  "
-print*, ""
-print*, ""
-print*, ""
-print*, ""
-
-end subroutine Titles
-
-!#############################################################################################################################################################################################################################
-
-subroutine PrintTimerTitles
-use Global
-implicit none
-
-real :: etime          ! Declare the type of etime()
-real :: elapsed(2)     ! For receiving user and system time
-real :: total,Minutes,Hours,Seconds
-
-print*, ""
-print*, ""
-print*, ""
-print*, ""
-print*, "                              ***********************                         "
-print*, "                              *                     *                         "
-print*, "                              *     AlphaImpute     *                         "
-print*, "                              *                     *                         "
-print*, "                              ***********************                         "
-print*, "                              VERSION:"//TOSTRING(VERS),"                     "
-print*, "                                                                              "
-print*, "                    Software For Phasing and Imputing Genotypes               "
-print*, ""
-print*, "  Written by John Hickey, Matt Cleveland, Andreas Kranis, and Brian Kinghorn  "
-print*, ""
-print*, "                                  No Liability"
-print*, "                          Bugs to John.Hickey@roslin.ed.ac.uk"
-print*, ""
-print*, "                Analysis Finished                         "
-
-total=etime(elapsed)
-Minutes=total/60
-Seconds=Total-(INT(Minutes)*60)
-Hours=Minutes/60
-Minutes=INT(Minutes)-(INT(Hours)*60)
-print '(A107,A7,I3,A9,I3,A9,F6.2)', "Time Elapsed","Hours", INT(Hours),"Minutes",INT(Minutes),"Seconds",Seconds
-
-! if (WindowsLinux==1) then
-!         open (unit=32,file=".\Miscellaneous\Timer.txt",status="unknown")
-! else
-!         open (unit=32,file="./Miscellaneous/Timer.txt",status="unknown")
-! endif
-open (unit=32,file="." // DASH // "Miscellaneous" // DASH // "Timer.txt",status="unknown")
-
-write(32,'(A27,A7,I3,A9,I3,A9,F6.2)') "Time Elapsed","Hours", INT(Hours),"Minutes",INT(Minutes),"Seconds",Seconds
-
-end subroutine PrintTimerTitles
-
-!#############################################################################################################################################################################################################################
-
 subroutine READINJUNK
 
 use Global
@@ -6288,3 +6217,72 @@ do j = 1, m
 enddo
 
 END SUBROUTINE CheckImputationInconsistencies
+
+!#############################################################################################################################################################################################################################
+
+subroutine Titles
+
+call Version
+print *, ""
+print *, ""
+print *, ""
+print *, ""
+
+end subroutine Titles
+
+!#############################################################################################################################################################################################################################
+
+subroutine Header
+
+print *, ""
+print *, "                              ***********************                         "
+print *, "                              *                     *                         "
+print *, "                              *     AlphaImpute     *                         "
+print *, "                              *                     *                         "
+print *, "                              ***********************                         "
+print *, "                                                                              "
+print *, "                    Software For Phasing and Imputing Genotypes               "
+
+end subroutine Header
+
+!#############################################################################################################################################################################################################################
+
+subroutine Version
+
+call Header
+print *, ""
+print *, "                              VERSION:"//TOSTRING(VERS),"                     "
+print *, "                              Compiled: "//__DATE__//", "//__TIME__
+
+end subroutine Version
+
+!#############################################################################################################################################################################################################################
+
+subroutine PrintTimerTitles
+use Global
+implicit none
+
+real :: etime          ! Declare the type of etime()
+real :: elapsed(2)     ! For receiving user and system time
+real :: total,Minutes,Hours,Seconds
+
+print *, ""
+print *, ""
+call Header
+print*, ""
+print*, "                                  No Liability"
+print*, ""
+print*, "                Analysis Finished                         "
+
+total=etime(elapsed)
+Minutes=total/60
+Seconds=Total-(INT(Minutes)*60)
+Hours=Minutes/60
+Minutes=INT(Minutes)-(INT(Hours)*60)
+print '(A107,A7,I3,A9,I3,A9,F6.2)', "Time Elapsed","Hours", INT(Hours),"Minutes",INT(Minutes),"Seconds",Seconds
+
+open (unit=32,file="." // DASH // "Miscellaneous" // DASH // "Timer.txt",status="unknown")
+
+write(32,'(A27,A7,I3,A9,I3,A9,F6.2)') "Time Elapsed","Hours", INT(Hours),"Minutes",INT(Minutes),"Seconds",Seconds
+
+end subroutine PrintTimerTitles
