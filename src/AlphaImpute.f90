@@ -54,6 +54,7 @@ implicit none
 integer :: i,j, markers
 double precision, allocatable :: GenosProbs(:,:,:)
 
+character(len=4096) :: cmd
 
 INTERFACE WriteProbabilities
   SUBROUTINE WriteProbabilitiesHMM(outFile, nExtraAnims, Ids, nAnisP, nSnps)
@@ -81,6 +82,15 @@ INTERFACE
     integer, intent(IN) :: markers
   END SUBROUTINE ReReadIterateGeneProbs
 END INTERFACE
+
+if (Command_Argument_Count() > 0) then
+  call get_command_argument(1,cmd)
+  if (cmd(1:2) .eq. "-v") then
+    call PrintVersion
+    call exit(0)
+  end if
+end if
+
 
 call Titles
 call ReadInParameterFile
@@ -6227,7 +6237,6 @@ call PrintVersion
 print *, ""
 print *, ""
 print *, ""
-print *, ""
 
 end subroutine Titles
 
@@ -6254,6 +6263,7 @@ call Header
 print *, ""
 print *, "                              Commit:   "//TOSTRING(COMMIT),"                     "
 print *, "                              Compiled: "//__DATE__//", "//__TIME__
+print *, ""
 
 end subroutine PrintVersion
 
