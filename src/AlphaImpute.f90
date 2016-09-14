@@ -54,6 +54,7 @@ implicit none
 integer :: i,j, markers
 double precision, allocatable :: GenosProbs(:,:,:)
 
+character(len=4096) :: cmd, SpecFile
 
 INTERFACE WriteProbabilities
   SUBROUTINE WriteProbabilitiesHMM(outFile, nExtraAnims, Ids, nAnisP, nSnps)
@@ -82,8 +83,23 @@ INTERFACE
   END SUBROUTINE ReReadIterateGeneProbs
 END INTERFACE
 
+if (Command_Argument_Count() > 0) then
+  call get_command_argument(1,cmd)
+  if (cmd(1:2) .eq. "-v") then
+    call PrintVersion
+    call exit(0)
+  end if
+end if
+
+if (Command_Argument_Count() > 0) then
+  call Get_Command_Argument(1,SpecFile)
+else
+  specfile="AlphaPhaseSpec.txt"
+end if
+
+
 call Titles
-call ReadInParameterFile
+call ReadInParameterFile(SpecFile)
 if (HMMOption /= RUN_HMM_NGS) then
     if (RestartOption<OPT_RESTART_PHASING .AND. BypassGeneProb==0) call MakeDirectories(RUN_HMM_NULL)
     call CountInData
@@ -290,19 +306,22 @@ end subroutine FromHMM2ImputePhase
 
 !#############################################################################################################################################################################################################################
 
-subroutine ReadInParameterFile
+subroutine ReadInParameterFile(SpecFile)
 use Global
 use GlobalPedigree
 use GlobalVariablesHmmMaCH
 
 implicit none
+
+character(len=4096), intent(in) :: SpecFile
+
 integer :: k,i,resid,Changer,nLines
 character (len=300) :: dumC,IntEdit,PhaseDone,OutputOptions,PreProcessOptions,TempOpt,TempHetGameticStatus
 character (len=300) :: UserDefinedHDAnimalsFile,PrePhasedAnimalFile,PedigreeFreePhasing,PhasingOnlyOptions
 character (len=300) :: UseGeneProb,ConservHapLibImp,CharBypassGeneProb,TmpHmmOption
 integer :: MultipleHDpanels
 
-open (unit=1,file="AlphaImputeSpec.txt",status="old")
+open (unit=1, file=SpecFile, status="old")
 
 ! Check if the Spec file is correct
 nLines=0
@@ -316,9 +335,10 @@ do
 enddo
 rewind(1)
 
-if (nLines/=41) then
+if (nLines/=42) then
     print*, "   ","There are some lines missing from AlphaImputeSpec.txt"
-    print*, "   ","HINT - maybe you are using the Spec file from the beta version which is out of date"
+    print*, "   ","HINT - maybe you are using the Spec file from the beta version"
+    print*, "   ","       which is out of date"
     stop
 endif
 
@@ -541,6 +561,20 @@ endif
 ! Get the number of processors to be used
 ! NumberOfProcessorsAvailable
 read (1,*) dumC,nProcessors
+
+PhaseSubsetSize = 200
+PhaseNIterations = 1
+read (1,*), dumC, LargeDatasets
+LargeDatasets = trim(LargeDatasets)
+if (trim(largeDatasets) == 'Yes') then
+  rewind (1)
+  do i=1,21
+    read (1,*) dumC
+  enddo
+  read (1,*) dumC, LargeDatasets, PhaseSubsetSize, PhaseNIterations
+end if
+
+!print *, LargeDatasets, PhaseSubsetSize, PhaseNIterations
 
 ! print *, nProcessors
 
@@ -1507,6 +1541,15 @@ INTERFACE
   END SUBROUTINE ReReadIterateGeneProbs
 END INTERFACE
 
+INTERFACE
+  SUBROUTINE CheckImputationInconsistencies(ImpGenos, ImpPhase, n, m)
+    integer, intent(in) :: n, m
+    integer(kind=1), dimension (:,:), intent(inout) :: ImpGenos
+    integer(kind=1), dimension (:,:,:), intent(inout) :: ImpPhase
+  END SUBROUTINE CheckImputationInconsistencies
+END INTERFACE
+
+
 #ifdef DEBUG
     write(0,*) 'DEBUG: WriteOutResults'
 #endif
@@ -1555,16 +1598,7 @@ if (OutOpt==0) then
 
     if (SexOpt==0) then
 
-        do i=1,nAnisP
-            do j=1,nSnp
-                if (ImputePhase(i,j,1)<0) ImputePhase(i,j,1)=9
-                if (ImputePhase(i,j,1)>1) ImputePhase(i,j,1)=9
-                if (ImputePhase(i,j,2)<0) ImputePhase(i,j,2)=9
-                if (ImputePhase(i,j,2)>1) ImputePhase(i,j,2)=9
-                if (ImputeGenos(i,j)>2) ImputeGenos(i,j)=9
-                if (ImputeGenos(i,j)<0) ImputeGenos(i,j)=9
-            enddo
-        enddo
+        call CheckImputationInconsistencies(ImputeGenos, ImputePhase, nAnisP, nSnp)
 
         ! open (unit=39,file="IterateGeneProb/IterateGeneProbInput.txt")
         open (unit=39, file="IterateGeneProb" // DASH // "IterateGeneProbInput.txt")
@@ -1581,20 +1615,12 @@ if (OutOpt==0) then
         endif
     else
 
-        do i=1,nAnisP
-            do j=1,nSnp
-                if (ImputePhase(i,j,1)<0) ImputePhase(i,j,1)=9
-                if (ImputePhase(i,j,1)>1) ImputePhase(i,j,1)=9
-                if (ImputePhase(i,j,2)<0) ImputePhase(i,j,2)=9
-                if (ImputePhase(i,j,2)>1) ImputePhase(i,j,2)=9
-                if (ImputeGenos(i,j)>2) ImputeGenos(i,j)=9
-                if (ImputeGenos(i,j)<0) ImputeGenos(i,j)=9
-            enddo
-        enddo
-
+        call CheckImputationInconsistencies(ImputeGenos, ImputePhase, nAnisP, nSnp)
 
         call IterateInsteadOfGeneProbs
     endif
+
+    call CheckImputationInconsistencies(ImputeGenos, ImputePhase, nAnisP, nSnp)
 
     do i=GlobalExtraAnimals+1,nAnisP
          !write (33,'(a,'//cm//'(1x,i1))') Id(i),ImputePhase(i,:,1)
@@ -1654,6 +1680,7 @@ if (OutOpt==0) then
         write (51,'(i10,20000f7.2)') j,float(((nAnisP-(GlobalExtraAnimals+1))+1)-count(ImputeGenos(GlobalExtraAnimals+1:nAnisP,j)==9))/((nAnisP-(GlobalExtraAnimals+1))+1)
     enddo
 
+    call CheckImputationInconsistencies(ImputeGenos, ImputePhase, nAnisP, nSnp)
     WellPhasedThresh=WellPhasedThresh/100
     do i=GlobalExtraAnimals+1,nAnisP
         if (ImputationQuality(i,5)>=WellPhasedThresh) then
@@ -1668,17 +1695,7 @@ else
     write(0,*) 'DEBUG: Unphase wrong alleles [WriteOutResults]'
 #endif
 
-    do i=1,nAnisP
-        do j=1,nSnp
-            if (ImputePhase(i,j,1)<0) ImputePhase(i,j,1)=9
-            if (ImputePhase(i,j,1)>1) ImputePhase(i,j,1)=9
-            if (ImputePhase(i,j,2)<0) ImputePhase(i,j,2)=9
-            if (ImputePhase(i,j,2)>1) ImputePhase(i,j,2)=9
-            if (ImputeGenos(i,j)>2) ImputeGenos(i,j)=9
-            if (ImputeGenos(i,j)<0) ImputeGenos(i,j)=9
-        enddo
-    enddo
-
+    call CheckImputationInconsistencies(ImputeGenos, ImputePhase, nAnisP, nSnp)
 
     open (unit=42,file=trim(GenotypeFile),status='old')
     allocate(TmpGenos(0:nAnisP,nSnpRaw))
@@ -1721,6 +1738,7 @@ else
     enddo
     close(42)
 
+    call CheckImputationInconsistencies(TmpGenos, TmpPhase, nAnisP, nSnp)
     do i=GlobalExtraAnimals+1,nAnisP
          write (33,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') Id(i),TmpPhase(i,:,1)
          write (33,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') Id(i),TmpPhase(i,:,2)
@@ -1836,6 +1854,7 @@ else
     write(0,*) 'DEBUG: Write phase, genotypes and probabilities into files [WriteOutResults]'
 #endif
 
+    call CheckImputationInconsistencies(ImputeGenos, ImputePhase, nAnisP, nSnp)
     do i=GlobalExtraAnimals+1,nAnisP
          write (53,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') Id(i),ImputePhase(i,:,1)
          write (53,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') Id(i),ImputePhase(i,:,2)
@@ -1912,6 +1931,7 @@ else
         write (51,'(i10,20000f7.2)') j,float(((nAnisP-(GlobalExtraAnimals+1))+1)-count(ImputeGenos(GlobalExtraAnimals+1:nAnisP,j)==9))/((nAnisP-(GlobalExtraAnimals+1))+1)
     enddo
 
+    call CheckImputationInconsistencies(TmpGenos, TmpPhase, nAnisP, nSnp)
     WellPhasedThresh=WellPhasedThresh/100
     do i=GlobalExtraAnimals+1,nAnisP
         if (ImputationQuality(i,5)>=WellPhasedThresh) then
@@ -3372,28 +3392,41 @@ do i=1,nPhaseInternal           ! Phasing is done in parallel
         if (SexOpt==1) write (106,*) 'PedigreeFile                      ,"NoPedigree"'
 #ifdef OS_UNIX
         write (106,'(a100)') &
-                'GenotypeFile                       ,"../../InputFiles/AlphaPhaseInputGenotypes.txt",GenotypeFormat'
+                'GenotypeFile                   ,"../../InputFiles/AlphaPhaseInputGenotypes.txt",GenotypeFormat'
 #else
         write (106,'(a100)') &
-                'GenotypeFile                       ,"..\..\InputFiles\AlphaPhaseInputGenotypes.txt",GenotypeFormat'
+                'GenotypeFile                   ,"..\..\InputFiles\AlphaPhaseInputGenotypes.txt",GenotypeFormat'
 #endif
 
         write (106,*) 'NumberOfSnp                      ,',nSnp
-        write (106,*) 'GeneralCoreAndTailLength     ,',TempCplusT(i)
+        write (106,*) 'GeneralCoreAndTailLength         ,',TempCplusT(i)
         if(i<=nPhaseInternal/2) then
-            write (106,*) 'GeneralCoreLength        ,',TempCore(i),',Offset'
+            write (106,*) 'GeneralCoreLength            ,',TempCore(i),',Offset'
         else
-            write (106,*) 'GeneralCoreLength        ,',TempCore(i),',NotOffset'
+            write (106,*) 'GeneralCoreLength            ,',TempCore(i),',NotOffset'
         endif
-        write (106,*) 'UseThisNumberOfSurrogates    ,',10
-        write (106,*) 'PercentageSurrDisagree       ,',10.00
-        write (106,*) 'PercentageGenoHaploDisagree  ,',GenotypeErrorPhase
+        write (106,*) 'UseThisNumberOfSurrogates        ,',10
+        write (106,*) 'PercentageSurrDisagree           ,',10.00
+        write (106,*) 'PercentageGenoHaploDisagree      ,',GenotypeErrorPhase
         write (106,*) 'GenotypeMissingErrorPercentage   ,',0.00
         write (106,*) 'NrmThresh                        ,',0.00
-        write (106,*) 'FullOutput                   ,0'
-        write (106,*) 'Graphics             ,0'
-        write (106,*) 'Simulation           ,0'
-        write (106,*) 'TruePhaseFile            ,None'
+        write (106,*) 'FullOutput                       ,0'
+        write (106,*) 'Graphics                         ,0'
+        write (106,*) 'Simulation                       ,0'
+        write (106,*) 'TruePhaseFile                    ,None'
+        write (106,*) 'CoreAtTime                       ,0'
+        if (trim(LargeDatasets) == 'Yes') then
+          write (106,*) 'IterateMethod                    ,RandomOrder'
+        else
+          write (106,*) 'IterateMethod                    ,Off'
+        end if
+        write (106,*) 'IterateSubsetSize                ,',PhaseSubsetSize
+        write (106,*) 'IterateIterations                ,',PhaseNIterations
+        write (106,*) 'Cores                            ,1,Combine'
+        write (106,*) 'MinHapFreq                       ,1'
+        write (106,*) 'Library                          ,None'
+
+
         ! if (MultiHD==0) then
         !     write (106,*) 'MultipleHDPanels         ,',0
         !     write (106,*) 'NumberSnpxChip           ,',0
@@ -5964,77 +5997,6 @@ end subroutine Cleaner
 
 !#############################################################################################################################################################################################################################
 
-subroutine Titles
-
-print*, ""
-print*, "                              ***********************                         "
-print*, "                              *                     *                         "
-print*, "                              *     AlphaImpute     *                         "
-! print*, "                              *      Beta 1.21      *                         "
-print*, "                              *                     *                         "
-print*, "                              ***********************                         "
-print*, "                              VERSION:"//TOSTRING(VERS),"                     "
-print*, "                                                                              "
-print*, "                    Software For Phasing and Imputing Genotypes               "
-print*, ""
-print*, "  Written by John Hickey, Matt Cleveland, Andreas Kranis, and Brian Kinghorn  "
-print*, ""
-print*, ""
-print*, ""
-print*, ""
-
-end subroutine Titles
-
-!#############################################################################################################################################################################################################################
-
-subroutine PrintTimerTitles
-use Global
-implicit none
-
-real :: etime          ! Declare the type of etime()
-real :: elapsed(2)     ! For receiving user and system time
-real :: total,Minutes,Hours,Seconds
-
-print*, ""
-print*, ""
-print*, ""
-print*, ""
-print*, "                              ***********************                         "
-print*, "                              *                     *                         "
-print*, "                              *     AlphaImpute     *                         "
-print*, "                              *                     *                         "
-print*, "                              ***********************                         "
-print*, "                              VERSION:"//TOSTRING(VERS),"                     "
-print*, "                                                                              "
-print*, "                    Software For Phasing and Imputing Genotypes               "
-print*, ""
-print*, "  Written by John Hickey, Matt Cleveland, Andreas Kranis, and Brian Kinghorn  "
-print*, ""
-print*, "                                  No Liability"
-print*, "                          Bugs to John.Hickey@roslin.ed.ac.uk"
-print*, ""
-print*, "                Analysis Finished                         "
-
-total=etime(elapsed)
-Minutes=total/60
-Seconds=Total-(INT(Minutes)*60)
-Hours=Minutes/60
-Minutes=INT(Minutes)-(INT(Hours)*60)
-print '(A107,A7,I3,A9,I3,A9,F6.2)', "Time Elapsed","Hours", INT(Hours),"Minutes",INT(Minutes),"Seconds",Seconds
-
-! if (WindowsLinux==1) then
-!         open (unit=32,file=".\Miscellaneous\Timer.txt",status="unknown")
-! else
-!         open (unit=32,file="./Miscellaneous/Timer.txt",status="unknown")
-! endif
-open (unit=32,file="." // DASH // "Miscellaneous" // DASH // "Timer.txt",status="unknown")
-
-write(32,'(A27,A7,I3,A9,I3,A9,F6.2)') "Time Elapsed","Hours", INT(Hours),"Minutes",INT(Minutes),"Seconds",Seconds
-
-end subroutine PrintTimerTitles
-
-!#############################################################################################################################################################################################################################
-
 subroutine READINJUNK
 
 use Global
@@ -6233,3 +6195,105 @@ close(UOutputs)
 !     write(*,fmt) i, CountMiss/real(nAnisG)
 ! end do
 END SUBROUTINE SnpCallRate
+
+!#############################################################################################################################################################################################################################
+SUBROUTINE CheckImputationInconsistencies(ImpGenos, ImpPhase, n, m)
+implicit none
+
+integer, intent(in) :: n, m
+integer(kind=1), dimension (:,:), intent(inout) :: ImpGenos
+integer(kind=1), dimension (:,:,:), intent(inout) :: ImpPhase
+
+integer :: i, j, k
+
+do j = 1, m
+  do i = 1, n
+    do k = 1, 2
+      if (ImpPhase(i, j, k) < 0) then
+        ImpPhase(i, j, k) = 9
+        ImpGenos(i, j) = 9
+      end if
+      if (ImpPhase(i, j, k) > 1) then
+        ImpPhase(i, j, k) = 9
+        ImpGenos(i, j) = 9
+      end if
+    enddo
+    if (ImpGenos(i, j) < 0) then
+      ImpGenos(i, j) = 9
+    end if
+    if (ImpGenos(i, j) > 2) then
+      ImpGenos(i, j) = 9
+    end if
+  enddo
+enddo
+
+END SUBROUTINE CheckImputationInconsistencies
+
+!#############################################################################################################################################################################################################################
+
+subroutine Titles
+
+call PrintVersion
+print *, ""
+print *, ""
+print *, ""
+
+end subroutine Titles
+
+!#############################################################################################################################################################################################################################
+
+subroutine Header
+
+print *, ""
+print *, "                              ***********************                         "
+print *, "                              *                     *                         "
+print *, "                              *     AlphaImpute     *                         "
+print *, "                              *                     *                         "
+print *, "                              ***********************                         "
+print *, "                                                                              "
+print *, "                    Software For Phasing and Imputing Genotypes               "
+
+end subroutine Header
+
+!#############################################################################################################################################################################################################################
+
+subroutine PrintVersion
+
+call Header
+print *, ""
+print *, "                              Commit:   "//TOSTRING(COMMIT),"                     "
+print *, "                              Compiled: "//__DATE__//", "//__TIME__
+print *, ""
+
+end subroutine PrintVersion
+
+!#############################################################################################################################################################################################################################
+
+subroutine PrintTimerTitles
+use Global
+implicit none
+
+real :: etime          ! Declare the type of etime()
+real :: elapsed(2)     ! For receiving user and system time
+real :: total,Minutes,Hours,Seconds
+
+print *, ""
+print *, ""
+call Header
+print*, ""
+print*, "                                  No Liability"
+print*, ""
+print*, "                Analysis Finished                         "
+
+total=etime(elapsed)
+Minutes=total/60
+Seconds=Total-(INT(Minutes)*60)
+Hours=Minutes/60
+Minutes=INT(Minutes)-(INT(Hours)*60)
+print '(A107,A7,I3,A9,I3,A9,F6.2)', "Time Elapsed","Hours", INT(Hours),"Minutes",INT(Minutes),"Seconds",Seconds
+
+open (unit=32,file="." // DASH // "Miscellaneous" // DASH // "Timer.txt",status="unknown")
+
+write(32,'(A27,A7,I3,A9,I3,A9,F6.2)') "Time Elapsed","Hours", INT(Hours),"Minutes",INT(Minutes),"Seconds",Seconds
+
+end subroutine PrintTimerTitles
