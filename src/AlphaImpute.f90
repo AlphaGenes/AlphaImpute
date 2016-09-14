@@ -327,7 +327,8 @@ rewind(1)
 
 if (nLines/=42) then
     print*, "   ","There are some lines missing from AlphaImputeSpec.txt"
-    print*, "   ","HINT - maybe you are using the Spec file from the beta version which is out of date"
+    print*, "   ","HINT - maybe you are using the Spec file from the beta version"
+    print*, "   ","       which is out of date"
     stop
 endif
 
