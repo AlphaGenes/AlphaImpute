@@ -54,7 +54,7 @@ implicit none
 integer :: i,j, markers
 double precision, allocatable :: GenosProbs(:,:,:)
 
-character(len=4096) :: cmd
+character(len=4096) :: cmd, SpecFile
 
 INTERFACE WriteProbabilities
   SUBROUTINE WriteProbabilitiesHMM(outFile, nExtraAnims, Ids, nAnisP, nSnps)
@@ -91,9 +91,15 @@ if (Command_Argument_Count() > 0) then
   end if
 end if
 
+if (Command_Argument_Count() > 0) then
+  call Get_Command_Argument(1,SpecFile)
+else
+  specfile="AlphaPhaseSpec.txt"
+end if
+
 
 call Titles
-call ReadInParameterFile
+call ReadInParameterFile(SpecFile)
 if (HMMOption /= RUN_HMM_NGS) then
     if (RestartOption<OPT_RESTART_PHASING) call MakeDirectories(RUN_HMM_NULL)
     call CountInData
@@ -309,19 +315,22 @@ end subroutine FromHMM2ImputePhase
 
 !#############################################################################################################################################################################################################################
 
-subroutine ReadInParameterFile
+subroutine ReadInParameterFile(SpecFile)
 use Global
 use GlobalPedigree
 use GlobalVariablesHmmMaCH
 
 implicit none
+
+character(len=4096), intent(in) :: SpecFile
+
 integer :: k,i,resid,Changer,nLines
 character (len=300) :: dumC,IntEdit,PhaseDone,OutputOptions,PreProcessOptions,TempOpt,TempHetGameticStatus
 character (len=300) :: UserDefinedHDAnimalsFile,PrePhasedAnimalFile,PedigreeFreePhasing,PhasingOnlyOptions
 character (len=300) :: UseGeneProb,ConservHapLibImp,CharBypassGeneProb,TmpHmmOption
 integer :: MultipleHDpanels
 
-open (unit=1,file="AlphaImputeSpec.txt",status="old")
+open (unit=1, file=SpecFile, status="old")
 
 ! Check if the Spec file is correct
 nLines=0
