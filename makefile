@@ -18,8 +18,8 @@ DEBUG?=0
 ifeq ($(OS), Windows_NT)
 	# MS Windows
 	SRCDIR      := src/
-	BUILDDIR    :=
-	TARGETDIR   :=
+	BUILDDIR    := objs/
+	TARGETDIR   := bin/
 	PFUNIT :=
 	TESTDIR :=
 	OSFLAG := "OS_WIN"
@@ -33,7 +33,7 @@ ifeq ($(OS), Windows_NT)
 	CC := cl
 	CFLAGS := /EHsc
 
-	DEL := del
+	RM := del
 else
 	# Linux or Mac OSX
 	SRCDIR      :=src/
@@ -49,7 +49,7 @@ else
 	GPFFLAGS := $(FFLAGS) -m64 $(ABOPT) -module $(BUILDDIR)
 	uname := $(shell uname)
 	MAKEDIR := @mkdir -p
-	DEL := rm -rf
+	RM := rm -rf
 
 	DEBUG_FLAGS:= -traceback -g -qopenmp -check bounds -check format -check output_conversion -check pointers -check uninit -DDEBUG=${DEBUG}
 endif
@@ -83,6 +83,7 @@ OBJS:= global$(obj) par_zig_mod$(obj) random$(obj) hmmvariables$(obj) Output$(ob
 
 ifeq ($(OS), Windows_NT)
 	 OBJS:= $(OBJS) manageWindows.obj
+	 FILES:= $(FILES) $(THIS_DIR)$(SRCDIR)manageWindows.f90
 endif
 
 # all: files preprocess_test clean
@@ -113,8 +114,8 @@ clean:
 	$(RM) $(BUILDDIR)testSuites.inc
 
 files: $(FILES)
-	$(FC) -o $(TARGETDIR)$(PROGRAM) $^ $(FFLAGS)
-	$(FC) -o $(TARGETDIR)$(GP) $(GPFFLAGS) $(THIS_DIR)$(SRCDIR)GeneProbForAlphaImpute.f90
+	$(FC) -o $(TARGETDIR)$(PROGRAM)$(exe) $^ $(FFLAGS)
+	$(FC) -o $(TARGETDIR)$(GP)$(exe) $(GPFFLAGS) $(THIS_DIR)$(SRCDIR)GeneProbForAlphaImpute.f90
 
 files_debug: $(FILES)
 	$(FC) -o $(TARGETDIR)$(PROGRAM) $^ $(FFLAGS) $(DEBUG_FLAGS)
