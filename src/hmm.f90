@@ -45,7 +45,7 @@ allocate(GlobalHmmPhasedInd(nIndHmmMaCH,2))
 !          logical: GlobalHmmHDInd=.false.
 GlobalHmmHDInd=0
 
-! Allocate a matrix to store probabilities of genotypes and 
+! Allocate a matrix to store probabilities of genotypes and
 ! alleles for each animal
 allocate(ProbImputeGenosHmm(nIndHmmMaCH,nSnp))
 allocate(ProbImputePhaseHmm(nIndHmmMaCH,nSnp,2))
@@ -191,7 +191,7 @@ do GlobalRoundHmm=1,nRoundsHmm
         write(0,*) 'DEBUG: Begin paralellisation [MaCHController]'
 #endif
     !$OMP PARALLEL DO DEFAULT(shared)
-    !$!OMP DO 
+    !$!OMP DO
     do i=1,nIndHmmMaCH
         call MaCHForInd(i, HMM)
     enddo
@@ -254,7 +254,7 @@ integer :: i
 
 
 ! do i=1,nAnisP
-!     ImputeGenos(i,:) = 
+!     ImputeGenos(i,:) =
 ! enddo
 
 end subroutine GenosToImputeGenos
@@ -314,20 +314,23 @@ end subroutine ParseMaCHDataNGS
 subroutine ParseMaCHDataGenos
 ! subroutine ParseMaCHData
 use Global
+use GlobalPedigree
 use GlobalVariablesHmmMaCH
 use Utils
 
 implicit none
-integer :: i,j,k
+integer :: i,j,k, NoGenosUnit
 integer :: maxHaps      ! Maximum number of haplotypes possible
 
 #ifdef DEBUG
     write(0,*) 'DEBUG: [ParseMaCHDataGenos] ...'
 #endif
 
+NoGenosUnit = 111
+open(unit=NoGenosUnit, file='Miscellaneous/NotGenotypedAnimals.txt', status="replace")
+
 GlobalHmmPhasedInd=.FALSE.
 k=0
-
 
 ! Read both the phased information of AlphaImpute and high-denisty genotypes,
 ! store it in PhaseHmmMaCH and GenosHmmMaCH, and keep track of  which
@@ -335,7 +338,6 @@ k=0
 ! genotyped animal (GlobalHmmHDInd)
 
 do i=1,nAnisP
-
     ! Check if individual is in the genotype file
     if (IndivIsGenotyped(i)==1) then
         k=k+1
@@ -372,8 +374,14 @@ do i=1,nAnisP
         if ((GlobalHmmPhasedInd(k,1)==.TRUE.).AND.(GlobalHmmPhasedInd(k,2)==.TRUE.)) Then
             nAnimPhased=nAnimPhased+1
         endif
+    else
+        if (i > GlobalExtraAnimals) then
+            write(NoGenosUnit,*) Id(i)
+        end if
     endif
 enddo
+
+close(NoGenosUnit)
 
 ! Count the number of phased gametes
 nGametesPhased=0
@@ -383,8 +391,12 @@ maxHaps = 2*sum(GlobalHmmHDInd(:))
 
 ! Check if the number of genotyped animals is correct
 if (k/=nAnisG) then
-    print*, "Error in ParseMaCHDataGenos"
-    stop
+    ! print*, "Error in ParseMaCHDataGenos"
+    ! stop
+    write (6,*) '   ','WARNING: There are individuals in the genotype file that have'
+    write (6,*) '   ','         not been genotyped'
+    write (6,*) '   ','         For a list of these individuals look into the file'
+    write (6,*) '   ','         Miscellaneous/NotGenotypedAnimals.txt'
 endif
 
 ! Check if the number of Haplotypes the user has considered in the
@@ -1610,7 +1622,7 @@ do j=1,nSnpHmm      ! For each SNP
     ! endif
 
     ! frequency = DBLE(mac) / DBLE(alleles)
-    
+
 
     readObs = 0
     alleles = 0
@@ -1630,7 +1642,7 @@ do j=1,nSnpHmm      ! For each SNP
          ! readObs = GenosHmmMaCH(i,j)
          readObs = AlterAllele(i,j)*MAX_READS_COUNT+ReferAllele(i,j)
         RefAll = ReferAllele(i,j)
-        AltAll = AlterAllele(i,j)         
+        AltAll = AlterAllele(i,j)
 
          if (readObs==0) exit
 
@@ -1725,7 +1737,7 @@ end subroutine UpdateThetas
 !######################################################################
 subroutine UpdateErrorRate(rate)
 ! Group markers into those with low error rates, which are estimated
-! as a group, and those with high error rates, which are estimated 
+! as a group, and those with high error rates, which are estimated
 ! individually
 
 use GlobalVariablesHmmMaCH
@@ -1773,9 +1785,9 @@ Penetrance(marker,0,2)=Err**2
 Penetrance(marker,1,0)=(1.0-Err)*Err
 Penetrance(marker,1,1)=((1.0-Err)**2)+(Err**2)
 Penetrance(marker,1,2)=(1.0-Err)*Err
-Penetrance(marker,2,0)=Err**2   
+Penetrance(marker,2,0)=Err**2
 Penetrance(marker,2,1)=2.0*(1.0-Err)*Err
-Penetrance(marker,2,2)=(1.0-Err)**2   
+Penetrance(marker,2,2)=(1.0-Err)**2
 
 end subroutine SetPenetrance
 
@@ -2050,7 +2062,7 @@ enddo
 ! do i=3,33
 !     binomial(i,1) = 1
 !     binomial(i,i) = 1
-!     do j=2,i 
+!     do j=2,i
 !         binomial(i,j) = binomial(i-1,j) + binomial(i-1,j-1)
 !     enddo
 ! enddo
@@ -2139,13 +2151,13 @@ elseif (copied1 /= copied2) then
     call GetErrorRatebyMarker(CurrentMarker, rate)
 
     if (par_uni(Thread) < rate*rate / ((rate*rate) + (1-rate)*(1-rate))) then
-        if (copied1 == 1) then 
+        if (copied1 == 1) then
             copied1 = 0
         else
             copied1 = 1
         endif
 
-        if (copied2 == 1) then 
+        if (copied2 == 1) then
             copied2 = 0
         else
             copied2 = 1
@@ -2158,7 +2170,7 @@ else
     if (par_uni(Thread)<0.5) then
         FullH(CurrentInd,CurrentMarker,1) = 0
         FullH(CurrentInd,CurrentMarker,2) = 1
-    else 
+    else
         FullH(CurrentInd,CurrentMarker,1) = 1
         FullH(CurrentInd,CurrentMarker,2) = 0
     endif
