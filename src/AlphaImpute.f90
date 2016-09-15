@@ -94,7 +94,7 @@ end if
 if (Command_Argument_Count() > 0) then
   call Get_Command_Argument(1,SpecFile)
 else
-  specfile="AlphaPhaseSpec.txt"
+  specfile="AlphaImputeSpec.txt"
 end if
 
 
