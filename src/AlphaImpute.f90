@@ -1012,8 +1012,8 @@ print*, " ","       Performing the phasing of the data"
         ProcUsed=ProcUsed+1
         write (infile,'("cd Phasing/Phase"i0)')i
         write (107,*) trim(infile)
-        if (AlphaPhasePresent==0) write (107,*) "nohup sh -c ""AlphaPhase1.1 > out 2>&1"" >/dev/null &"
-        if (AlphaPhasePresent==1) write (107,*) "nohup sh -c ""./AlphaPhase1.1 > out 2>&1"" >/dev/null &"
+        if (AlphaPhasePresent==0) write (107,*) "nohup sh -c ""AlphaPhase > out 2>&1"" >/dev/null &"
+        if (AlphaPhasePresent==1) write (107,*) "nohup sh -c ""./AlphaPhase > out 2>&1"" >/dev/null &"
         write (107,*) "cd ../.."
         JobsStarted(i)=1
         if (ProcUsed==nPhaseInternal) exit
@@ -1046,8 +1046,8 @@ print*, " ","       Performing the phasing of the data"
                     open (unit=107,file=trim(filout),status="unknown")
                     write (infile,'("cd Phasing/Phase"i0)')Tmp
                     write (107,*) trim(infile)
-                    if (AlphaPhasePresent==0) write (107,*) "nohup sh -c ""AlphaPhase1.1 > out 2>&1"" >/dev/null &"
-                    if (AlphaPhasePresent==1) write (107,*) "nohup sh -c ""./AlphaPhase1.1 > out 2>&1"" >/dev/null &"
+                    if (AlphaPhasePresent==0) write (107,*) "nohup sh -c ""AlphaPhase > out 2>&1"" >/dev/null &"
+                    if (AlphaPhasePresent==1) write (107,*) "nohup sh -c ""./AlphaPhase > out 2>&1"" >/dev/null &"
                     close(107)
                     call system("chmod +x TempPhase*.sh")
                     call system("./" // filout)
@@ -3339,9 +3339,9 @@ endif
 
 ! Check whether AlphaPhase is present
 #ifdef OS_UNIX
-    write (FileCheck,'("AlphaPhase1.1")')
+    write (FileCheck,'("AlphaPhase")')
 #else
-    write (FileCheck,'("AlphaPhase1.1.exe")')
+    write (FileCheck,'("AlphaPhase.exe")')
 #endif
 inquire(file=trim(FileCheck),exist=FileExists)
 if (FileExists .eqv. .true.) then
@@ -3349,7 +3349,7 @@ if (FileExists .eqv. .true.) then
 else
     AlphaPhasePresent=0
     print*, " "
-    print*, " ","AlphaPhase1.1 not present and copied, version in the bin directory used"
+    print*, " ","AlphaPhase not present and copied, version in the bin directory used"
     ! WARNING: What if there is any version of this software in the bin either?
 endif
 
@@ -3439,8 +3439,8 @@ do i=1,nPhaseInternal           ! Phasing is done in parallel
         call flush(106)
         close(106)
         write (filout,'("Phase"i0)')i
-        ! if (AlphaPhasePresent==1) call system ("cp AlphaPhase1.1 Phasing/" // filout)
-        if (AlphaPhasePresent==1) call system (COPY // " AlphaPhase1.1" // EXE // " Phasing" // DASH // filout // NULL)
+        ! if (AlphaPhasePresent==1) call system ("cp AlphaPhase Phasing/" // filout)
+        if (AlphaPhasePresent==1) call system (COPY // " AlphaPhase" // EXE // " Phasing" // DASH // filout // NULL)
     endif
 enddo
 
@@ -3611,7 +3611,7 @@ else                                ! User has specified HD individuals
     enddo
     CountHD=count(Setter(:)==1)
     print*, " "
-    print*, " ",CountHD," valid indiviudals in the user specified AlphaPhase1.1 file"
+    print*, " ",CountHD," valid indiviudals in the user specified AlphaPhase file"
 endif
 
 open (unit=102,file="." // DASH // "Miscellaneous" // DASH // "EditingSnpSummary.txt",status="unknown")
@@ -3729,7 +3729,7 @@ close(112)
 
 print*, " "
 print*, " "
-print*, " ",CountHD," indiviudals passed to AlphaPhase1.1"
+print*, " ",CountHD," indiviudals passed to AlphaPhase"
 print*, " ",nSnp," snp remain after editing"
 
 end subroutine InternalEdit
