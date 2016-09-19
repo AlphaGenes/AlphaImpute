@@ -6214,11 +6214,11 @@ do j = 1, m
     do k = 1, 2
       if (ImpPhase(i, j, k) < 0) then
         ImpPhase(i, j, k) = 9
-        ImpGenos(i, j) = 9
+        ! ImpGenos(i, j) = 9
       end if
       if (ImpPhase(i, j, k) > 1) then
         ImpPhase(i, j, k) = 9
-        ImpGenos(i, j) = 9
+        ! ImpGenos(i, j) = 9
       end if
     enddo
     if (ImpGenos(i, j) < 0) then
