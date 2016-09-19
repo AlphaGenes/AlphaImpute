@@ -283,6 +283,10 @@ if (HMMOption/=RUN_HMM_NGS) then
 endif
 call PrintTimerTitles
 
+if (RestartOption > OPT_RESTART_IMPUTATION) then
+    call system(RM // " Tmp2345678.txt")
+end if
+
 end program AlphaImpute
 
 !#############################################################################################################################################################################################################################
@@ -2305,8 +2309,6 @@ if (RestartOption==4) then
         read (209,*) ImputeGenos(i,:)
     enddo
     close (209)
-    ! call system("rm Tmp2345678.txt")
-    call system(RM // " Tmp2345678.txt")
 endif
 
 counter=0
