@@ -1803,9 +1803,9 @@ else
             if (SnpIncluded(j)==1) then
                 l=l+1
                 do i=1,nAnisG
-                    ProbImputeGenos(GlobalHmmID(i),l)=ProbImputeGenosHmm(i,l)
-                    ProbImputePhase(GlobalHmmID(i),l,1)=FullH(i,l,1)
-                    ProbImputePhase(GlobalHmmID(i),l,2)=FullH(i,l,2)
+                    ProbImputeGenos(GlobalHmmID(i),l)   = ProbImputeGenosHmm(i,l)
+                    ProbImputePhase(GlobalHmmID(i),l,1) = ProbImputePhaseHmm(i,l,1)
+                    ProbImputePhase(GlobalHmmID(i),l,2) = ProbImputePhaseHmm(i,l,2)
                 enddo
             endif
         enddo
@@ -1821,7 +1821,7 @@ else
         !enddo
 
 #ifdef DEBUG
-        write(0,*) 'DEBUG: Impute genotypes based on HMM genotypes probabilites [WriteOutResults]'
+        write(0,*) 'DEBUG: Impute genotypes and alleles based on HMM genotypes probabilites [WriteOutResults]'
 #endif
 
         ! Impute the most likely genotypes. (Most frequent genotype)
@@ -1831,29 +1831,21 @@ else
                 n1 = GenosCounts(i,j,1)                           ! Heterozygous
                 n0 = (nRoundsHmm-HmmBurnInRound) - n1 - n2      ! Homozygous: 0 case
                 if ((n0>n1).and.(n0>n2)) then
-                    ImputeGenos(GlobalHmmID(i),j)=0
+                    ImputeGenos(GlobalHmmID(i),j)   = 0
+                    ImputePhase(GlobalHmmID(i),j,:) = 0
                 elseif (n1>n2) then
                     ImputeGenos(GlobalHmmID(i),j)=1
-                else
-                    ImputeGenos(GlobalHmmID(i),j)=2
-                endif
-            enddo
-        enddo
-
-#ifdef DEBUG
-        write(0,*) 'DEBUG: Impute alleles based on HMM phase probabilites [WriteOutResults]'
-#endif
-
-        ! Impute the most likely genotypes. (Most frequent genotype)
-        do i=1,nAnisG
-            do j=1,nSnpIterate
-                do l=1,2
-                    if (ProbImputePhaseHmm(i,j,l)>0.5) then
-                        ImputePhase(i,j,l)=1
+                    if (ProbImputePhaseHmm(GlobalHmmID(i),j,1)>0.5) then
+                        ImputePhase(GlobalHmmID(i),j,1) = 1
+                        ImputePhase(GlobalHmmID(i),j,2) = 0
                     else
-                        ImputePhase(i,j,l)=0
+                        ImputePhase(GlobalHmmID(i),j,1) = 0
+                        ImputePhase(GlobalHmmID(i),j,2) = 1
                     endif
-                enddo
+                else
+                    ImputeGenos(GlobalHmmID(i),j)   = 2
+                    ImputePhase(GlobalHmmID(i),j,:) = 1
+                endif
             enddo
         enddo
 
@@ -1863,7 +1855,7 @@ else
     write(0,*) 'DEBUG: Write phase, genotypes and probabilities into files [WriteOutResults]'
 #endif
 
-    call CheckImputationInconsistencies(ImputeGenos, ImputePhase, nAnisP, nSnp)
+    ! call CheckImputationInconsistencies(ImputeGenos, ImputePhase, nAnisP, nSnp)
     do i=GlobalExtraAnimals+1,nAnisP
          write (53,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') Id(i),ImputePhase(i,:,1)
          write (53,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') Id(i),ImputePhase(i,:,2)
