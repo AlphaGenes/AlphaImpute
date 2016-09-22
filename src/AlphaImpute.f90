@@ -821,37 +821,6 @@ end subroutine ReadInPrePhasedData
 
 !#############################################################################################################################################################################################################################
 
-! subroutine ManageWorkLeftRight
-! ! Major sub-step 8 is iterated a number of times with increasingly relaxed
-! ! restrictions. After each iteration, the minor sub-steps are also carried out.
-! use Global
-
-! implicit none
-
-! MaxLeftRightSwitch=4; MinSpan=200
-! call WorkLeftRight
-! if (SexOpt==1) call EnsureHetGametic
-! call GeneralFillIn
-
-! MaxLeftRightSwitch=3; MinSpan=200
-! call WorkLeftRight
-! if (SexOpt==1) call EnsureHetGametic
-! call GeneralFillIn
-
-! MaxLeftRightSwitch=4; MinSpan=100
-! call WorkLeftRight
-! if (SexOpt==1) call EnsureHetGametic
-! call GeneralFillIn
-
-! MaxLeftRightSwitch=4; MinSpan=50
-! call WorkLeftRight
-! if (SexOpt==1) call EnsureHetGametic
-! call GeneralFillIn
-
-! end subroutine ManageWorkLeftRight
-
-!#############################################################################################################################################################################################################################
-
 subroutine GeneProbManagement
 use Global
 implicit none
@@ -879,18 +848,6 @@ print*, " ","       Calculating genotype probabilities"
     call system("rm TempGeneProb.sh")
     ! Check that every process has finished before going on
     if (RestartOption/=OPT_RESTART_GENEPROB) call CheckGeneProbFinished(nProcessors)
-
-!#elif CLUSTER==2
-!! Use user specific script to run Genetoype Probabilities processes
-!    inquire(file="input.txt", exist=FileExists)   ! file_exists will be TRUE if the file
-!                                                  ! exists and FALSE otherwise
-!    if (FileExists) Then
-!        call system("./runGeneProb.sh")
-!    else
-!        write(0,*) "'runGeneProb.sh' does not exist. Please, provide a valid script."
-!    endif
-!    ! Check that every process has finished before going on
-!    if (RestartOption/=OPT_RESTART_GENEPROB) call CheckGeneProbFinished(nProcessors)
 
 #else
 ! Create bash script for run GeneProb subprocesses
@@ -987,35 +944,6 @@ print*, " ","       Performing the phasing of the data"
             if (sum(JobsDone(:))==nPhaseInternal) exit
         enddo
     endif
-
-!else
-
-!#elif CLUSTER==2
-!    ! Use user specific script to run Genetoype Probabilities processes
-!    inquire(file="input.txt", exist=FileExists)   ! file_exists will be TRUE if the file
-!                                                  ! exists and FALSE otherwise
-!    if (FileExists) Then
-!        call system("./runPhase.sh")
-!    else
-!        write(0,*) "'runPhase.sh' does not exists. Please, provide a valid script."
-!    endif
-!
-!    ! Check that every process has finished before AlphaImpute goes on with imputation
-!    if (RestartOption/=OPT_RESTART_PHASING) Then
-!        JobsDone(:)=0
-!        do
-!            do i=1,nPhaseInternal
-!                write (filout,'("./Phasing/Phase"i0,"/PhasingResults/Timer.txt")')i
-!                inquire(file=trim(filout),exist=FileExists)
-!                if ((FileExists .eqv. .true.).and.(JobsDone(i)==0)) then
-!                    print*, " ","AlphaPhase job ",i," done"
-!                    JobsDone(i)=1
-!                endif
-!            enddo
-!            call sleep(SleepParameter)
-!            if (sum(JobsDone(:))==nPhaseInternal) exit
-!        enddo
-!    endif
 
 #else
     open (unit=107,file="TempPhase1.sh",status="unknown")
@@ -1579,17 +1507,6 @@ endif
 write(cm,'(I7)') nSnpRaw !for formatting
 cm = adjustl(cm)
 
-! open (unit=33,file="./Results/ImputePhase.txt",status="unknown")
-! open (unit=34,file="./Results/ImputeGenotypes.txt",status="unknown")
-! open (unit=40,file="./Results/ImputePhaseProbabilities.txt",status="unknown")
-! open (unit=41,file="./Results/ImputeGenotypeProbabilities.txt",status="unknown")
-! open (unit=50,file="./Results/ImputationQualityIndividual.txt",status="unknown")
-! open (unit=51,file="./Results/ImputationQualitySnp.txt",status="unknown")
-! open (unit=52,file="./Results/WellPhasedIndividuals.txt",status="unknown")
-
-! open (unit=53,file="./Results/ImputePhaseHMM.txt",status="unknown")
-! open (unit=54,file="./Results/ImputeGenotypesHMM.txt",status="unknown")
-
 open (unit=33,file="." // DASH// "Results" // DASH // "ImputePhase.txt",status="unknown")
 open (unit=34,file="." // DASH// "Results" // DASH // "ImputeGenotypes.txt",status="unknown")
 open (unit=40,file="." // DASH// "Results" // DASH // "ImputePhaseProbabilities.txt",status="unknown")
@@ -1636,9 +1553,6 @@ if (OutOpt==0) then
     call CheckImputationInconsistencies(ImputeGenos, ImputePhase, nAnisP, nSnp)
 
     do i=GlobalExtraAnimals+1,nAnisP
-         !write (33,'(a,'//cm//'(1x,i1))') Id(i),ImputePhase(i,:,1)
-         !write (33,'(a,'//cm//'(1x,i1))') Id(i),ImputePhase(i,:,2)
-         !write (34,'(a,'//cm//'(1x,i1))') Id(i),ImputeGenos(i,:)
          write (33,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') Id(i),ImputePhase(i,:,1)
          write (33,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') Id(i),ImputePhase(i,:,2)
          write (34,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') Id(i),ImputeGenos(i,:)
@@ -1661,11 +1575,6 @@ if (OutOpt==0) then
         do j=1,nSnp
             Maf(j)=sum(ProbImputeGenos(:,j))/(2*nAnisP)
         enddo
-        ! if (WindowsLinux==1) then
-        !     open (unit=111,file=".\Miscellaneous\MinorAlleleFrequency.txt",status="unknown")
-        ! else
-        !     open (unit=111,file="./Miscellaneous/MinorAlleleFrequency.txt",status="unknown")
-        ! endif
         open(unit=111,file="." // DASH // "Miscellaneous" // DASH // "MinorAlleleFrequency.txt", status="unknown")
 
         do j=1,nSnpRaw
@@ -1813,16 +1722,6 @@ else
                 enddo
             endif
         enddo
-
-        ! Assign Genotypes based on genotype probabilities
-        !do i=1,nAnisP
-        !    do j=1,nSnpIterate
-        !        if (ProbImputeGenos(i,j)==-9.0) ImputeGenos(i,j)=9
-        !        if (ProbImputeGenos(i,j)>1.999) ImputeGenos(i,j)=2
-        !        if (ProbImputeGenos(i,j)<0.0001) ImputeGenos(i,j)=0
-        !        if ((ProbImputeGenos(i,j)>0.999).and.(ProbImputeGenos(i,j)<1.00001)) ImputeGenos(i,j)=1
-        !    enddo
-        !enddo
 
 #ifdef DEBUG
         write(0,*) 'DEBUG: Impute genotypes and alleles based on HMM genotypes probabilites [WriteOutResults]'
@@ -1981,11 +1880,6 @@ character(len=7) :: cm
 write(cm,'(I7)') nSnpRaw !for formatting
 cm = adjustl(cm)
 
-! open (unit=42,file="Results/RecombinationInformation.txt",status="unknown")
-! open (unit=43,file="Results/RecombinationInformationNarrow.txt",status="unknown")
-! open (unit=44,file="Results/NumberRecombinations.txt",status="unknown")
-! open (unit=45,file="Results/RecombinationInformationR.txt",status="unknown")
-! open (unit=46,file="Results/RecombinationInformationNarrowR.txt",status="unknown")
 open (unit=42, file="Results" // DASH // "RecombinationInformation.txt")
 open (unit=43, file="Results" // DASH // "RecombinationInformationNarrow.txt")
 open (unit=44, file="Results" // DASH // "NumberRecombinations.txt")
@@ -2261,10 +2155,6 @@ do i=1,nAnisP
 
 enddo
 
-! open (unit=33,file="Results/ImputePhase.txt",status="unknown")
-! open (unit=34,file="Results/ImputeGenotypes.txt",status="unknown")
-! open (unit=40,file="Results/ImputePhaseProbabilities.txt",status="unknown")
-! open (unit=41,file="Results/ImputeGenotypeProbabilities.txt",status="unknown")
 open (unit=33,file="Results" // DASH // "ImputePhase.txt",status="unknown")
 open (unit=34,file="Results" // DASH // "ImputeGenotypes.txt",status="unknown")
 open (unit=40,file="Results" // DASH // "ImputePhaseProbabilities.txt",status="unknown")
@@ -2376,11 +2266,6 @@ do h=1,nProcessors
     close(222)
 enddo
 
-! if (WindowsLinux==1) then
-!         open (unit=111,file=".\Miscellaneous\MinorAlleleFrequency.txt",status="unknown")
-! else
-!         open (unit=111,file="./Miscellaneous/MinorAlleleFrequency.txt",status="unknown")
-! endif
 open(unit=111,file="." // DASH // "Miscellaneous" // "MinorAlleleFrequency.txt", status="unknown")
 
 
@@ -3297,15 +3182,6 @@ do i=1,nPhaseExternal
     if (TempCplusT(i+nPhaseExternal)>nSnp) TempCplusT(i+nPhaseExternal)=nSnp
 enddo
 
-! if (WindowsLinux==1) then
-!      open (unit=103,file=".\InputFiles\AlphaPhaseInputPedigree.txt",status="unknown")
-!      open (unit=104,file=".\InputFiles\RecodedGeneProbInput.txt",status="unknown")
-!      open (unit=105,file=".\InputFiles\AlphaPhaseInputGenotypes.txt",status="unknown")
-! else
-!      open (unit=103,file="./InputFiles/AlphaPhaseInputPedigree.txt",status="unknown")
-!      open (unit=104,file="./InputFiles/RecodedGeneProbInput.txt",status="unknown")
-!      open (unit=105,file="./InputFiles/AlphaPhaseInputGenotypes.txt",status="unknown")
-! endif
 open(unit=103,file="." // DASH // "InputFiles" // DASH // "AlphaPhaseInputPedigree.txt", status="unknown")
 open(unit=104,file="." // DASH // "InputFiles" // DASH // "RecodedGeneProbInput.txt", status="unknown")
 open(unit=105,file="." // DASH // "InputFiles" // DASH // "AlphaPhaseInputGenotypes.txt", status="unknown")
@@ -3429,16 +3305,6 @@ do i=1,nPhaseInternal           ! Phasing is done in parallel
         write (106,*) 'MinHapFreq                       ,1'
         write (106,*) 'Library                          ,None'
 
-
-        ! if (MultiHD==0) then
-        !     write (106,*) 'MultipleHDPanels         ,',0
-        !     write (106,*) 'NumberSnpxChip           ,',0
-        ! else
-        !     write(fmt,"(I1)"), MultiHD
-        !     fmt = trim("(A26," // trim(fmt) // "("","",I))")
-        !     write (106,*) 'MultipleHDPanels         ,',MultiHD
-        !     write (106,trim(fmt)) 'NumberSnpxChip           ',nSnpByChip
-        ! endif
         call flush(106)
         close(106)
         write (filout,'("Phase"i0)')i
@@ -3853,13 +3719,7 @@ integer,allocatable,dimension (:) :: Genotyped,Pruned
 logical,allocatable,dimension (:) :: IsParent
 integer :: nHomoParent, nBothHomo
 
-! if (WindowsLinux==1) then
-!     open (unit=101,file=".\Miscellaneous\PedigreeMistakes.txt",status="unknown")
-! else
-!     open (unit=101,file="./Miscellaneous/PedigreeMistakes.txt",status="unknown")
-! endif
 open (unit=101,file="." // DASH // "Miscellaneous" // DASH // "PedigreeMistakes.txt",status="unknown")
-
 
 GenoYesNo=0         ! Matrix (nAnisRawPedigree x 3).
                     ! It basically says which is the proband's genotype (GenoYesNo(:,1)) but also
@@ -3901,7 +3761,7 @@ do e=1,2                    ! Do whatever this does, first on males and then on 
         ! That is, avoid males and their sires (hetero=1), or females and their dams (hetero=2)
         if ((SexOpt==1).and.(GenderRaw(i)==HetGameticStatus).and.((ParPos-1)==HetGameticStatus)) TurnOn=0
 
-        ! Considere the Homogametic probands and the heterogametic proband with homogametic parent
+        ! Consider the Homogametic probands and the heterogametic proband with homogametic parent
         if ((IndId/=0).and.(ParId/=0).and.(TurnOn==1)) then
             CountBothGeno=0
             CountDisagree=0
@@ -3966,13 +3826,7 @@ enddo
 RecPed(1:nAnisP,2)=seqsire(1:nAnisP)
 RecPed(1:nAnisP,3)=seqdam(1:nAnisP)
 
-! if (WindowsLinux==1) then
-!         open (unit=101,file=".\Miscellaneous\InternalDataRecoding.txt",status="unknown")
-! else
-!         open (unit=101,file="./Miscellaneous/InternalDataRecoding.txt",status="unknown")
-! endif
 open (unit=101,file="." // DASH // "Miscellaneous" // DASH // "InternalDataRecoding.txt",status="unknown")
-
 
 do i=1,nAnisP
     write (101,'(3i20,a20)') RecPed(i,:),trim(Id(i))
@@ -6182,7 +6036,6 @@ use ISO_Fortran_Env
 implicit none
 
 integer :: i, CountMiss, UOutputs
-! character(len=11) :: fmt
 
 open(newunit=UOutputs, file="." // DASH // "Miscellaneous" // DASH // "SnpCallRateByAnimal.txt",status='unknown')
 
@@ -6192,11 +6045,6 @@ do i=1,nAnisG
 end do
 close(UOutputs)
 
-! fmt = '(i, ,6f5.3)'
-! do i=1,nSnp
-!     CountMiss=count(Genos(:,i)==9)
-!     write(*,fmt) i, CountMiss/real(nAnisG)
-! end do
 END SUBROUTINE SnpCallRate
 
 !#############################################################################################################################################################################################################################
