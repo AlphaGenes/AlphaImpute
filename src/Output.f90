@@ -6,15 +6,19 @@ implicit none
 ! contains
 end module Output
 
-subroutine WriteProbabilitiesHMM(outFile, nExtraAnims, Ids, nAnisP, nSnps)
+! subroutine WriteProbabilitiesHMM(outFile, Indexes, Ids, nAnims, nSnps)
+subroutine WriteProbabilitiesHMM(outFile, Indexes, nAnims, nSnps)
+use GlobalPedigree
 use GlobalVariablesHmmMaCH
 
 character(len=*), intent(IN) :: outFile
-integer, intent(IN) :: nExtraAnims, nAnisP, nSnps
-character*(20), intent(IN) :: Ids(nAnisP)
+integer, intent(IN) :: Indexes(nAnims)
+integer, intent(IN) :: nAnims, nSnps
+! character*(20), intent(IN) :: Ids(:)
+
 
 ! Local variables
-integer :: i,j,k, n0, n1, n2
+integer :: i,j, n0, n1, n2
 real :: d
 real, allocatable :: Probs0(:), Probs1(:)
 
@@ -28,19 +32,17 @@ n1=0
 n2=0
 d=0.0
 
-do i=nExtraAnims+1,nAnisP
-    k=i-nExtraAnims
+do i=1,nAnims
     do j=1,nSnps
-        ! call GetCounts(GenosCounts, n0, n1, n2, nAnisP, nSnps)
-        n1 = GenosCounts(k,j,1)                           ! Heterozygous
-        n2 = GenosCounts(k,j,2)                           ! Homozygous: 2 case
+        n1 = GenosCounts(i,j,1)                           ! Heterozygous
+        n2 = GenosCounts(i,j,2)                           ! Homozygous: 2 case
         n0 = (GlobalRoundHmm-HmmBurnInRound) - n1 - n2     ! Homozygous: 0 case
         d = n0 + n1 + n2
         Probs0(j)=n0/d
         Probs1(j)=n1/d
     enddo
-    write (55,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') Ids(i),Probs0(:)
-    write (55,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') Ids(i),Probs1(:)
+    write (55,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ID(Indexes(i)),Probs0(:)
+    write (55,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ID(Indexes(i)),Probs1(:)
     n0=0
     n1=0
     n2=0
@@ -69,9 +71,6 @@ open (unit=55,file=outFile,status="unknown")
 
 do i=nExtraAnims+1,nAnisP
     k=i-nExtraAnims
-    ! do j=1,nSnps
-    ! Probs0=GenosProbs(k,:,1)
-    ! Probs1=GenosProbs(k,:,2)
     write (55,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') Ids(i),GenosProbs(k,:,1)
     write (55,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') Ids(i),GenosProbs(k,:,2)
     ! enddo

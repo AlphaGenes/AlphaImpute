@@ -330,7 +330,7 @@ do while (marker>StartSnp)
         !    => Recombinant in second interval
             FromMarker=FromMarker+1
             if (PhaseHmmMaCH(CurrentInd,FromMarker,hap)==ALLELE_MISSING) then
-                FullH(CurrentInd,FromMarker,hap) = SubH(ToHap,FromMarker)
+                FullH(CurrentInd,FromMarker,hap) = SubH(Hapi,FromMarker)
             endif
             cycle
         endif

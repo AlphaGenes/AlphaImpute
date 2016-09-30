@@ -71,6 +71,7 @@ CONTAINS
 #endif
 
       call MaCHController(HMMOption)
+      call FromHMM2ImputePhase
 
 #ifdef DEBUG
       write(0,*) 'DEBUG: Mach Finished'

@@ -57,11 +57,10 @@ double precision, allocatable :: GenosProbs(:,:,:)
 character(len=4096) :: cmd, SpecFile
 
 INTERFACE WriteProbabilities
-  SUBROUTINE WriteProbabilitiesHMM(outFile, nExtraAnims, Ids, nAnisP, nSnps)
-    use GlobalVariablesHmmMaCH
+  SUBROUTINE WriteProbabilitiesHMM(outFile, Indexes, nAnisG, nSnps)
     character(len=*), intent(IN) :: outFile
-    integer, intent(IN) :: nExtraAnims, nAnisP, nSnps
-    character*(20), intent(IN) :: Ids(nAnisP)
+    integer, intent(IN) :: Indexes(nAnisG)
+    integer, intent(IN) :: nAnisG, nSnps
   END SUBROUTINE WriteProbabilitiesHMM
 
   SUBROUTINE WriteProbabilitiesGeneProb(outFile, GenosProbs, Ids, nExtraAnims, nAnisP, nSnps)
@@ -1515,11 +1514,10 @@ integer :: n0, n1, n2
 
 
 INTERFACE WriteProbabilities
-  SUBROUTINE WriteProbabilitiesHMM(outFile, nExtraAnims, Ids, nAnisP, nSnps)
-    use GlobalVariablesHmmMaCH
+  SUBROUTINE WriteProbabilitiesHMM(outFile, Indexes, nAnisG, nSnps)
     character(len=*), intent(IN) :: outFile
-    integer, intent(IN) :: nExtraAnims, nAnisP, nSnps
-    character*(20), intent(IN) :: Ids(nAnisP)
+    integer, intent(IN) :: Indexes(nAnisG)
+    integer, intent(IN) :: nAnisG, nSnps
   END SUBROUTINE WriteProbabilitiesHMM
 
   SUBROUTINE WriteProbabilitiesGeneProb(outFile, GenosProbs, Ids, nExtraAnims, nAnisP, nSnps)
@@ -1640,7 +1638,6 @@ if (OutOpt==0) then
          write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') Id(i),ProbImputePhase(i,:,2)
          write (41,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') Id(i),ProbImputeGenos(i,:)
          write (60,'(a20,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4)') Id(i),GPI(i,:)
-
     enddo
 
     if (SexOpt==1) then
@@ -1863,12 +1860,18 @@ else
          write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') Id(i),ProbImputePhase(i,:,1)
          write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') Id(i),ProbImputePhase(i,:,2)
          write (41,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') Id(i),ProbImputeGenos(i,:)
-         write (60,'(a20,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4)') Id(i),GPI(i,:)
-
     enddo
 
+    if (allocated(GPI)) then
+        do i=GlobalExtraAnimals+1,nAnisP
+          write (60,'(a20,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4)') Id(i),GPI(i,:)
+        end do
+        deallocate(GPI)
+    end if
+
     if (HMMOption/=RUN_HMM_NO) then
-        call WriteProbabilities("./Results/GenotypeProbabilities.txt", GlobalExtraAnimals, Id, nAnisP, nSnp)
+        ! call WriteProbabilities("./Results/GenotypeProbabilities.txt", GlobalHmmID, ID, nAnisG, nSnp)
+        call WriteProbabilities("./Results/GenotypeProbabilities.txt", GlobalHmmID, nAnisG, nSnp)
     else
         if (BypassGeneProb==0) then
             allocate(GenosProbs(nAnisP,nSnpIterate,2))
