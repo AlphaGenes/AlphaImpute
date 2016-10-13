@@ -1564,17 +1564,6 @@ endif
 write(cm,'(I7)') nSnpRaw !for formatting
 cm = adjustl(cm)
 
-! open (unit=33,file="./Results/ImputePhase.txt",status="unknown")
-! open (unit=34,file="./Results/ImputeGenotypes.txt",status="unknown")
-! open (unit=40,file="./Results/ImputePhaseProbabilities.txt",status="unknown")
-! open (unit=41,file="./Results/ImputeGenotypeProbabilities.txt",status="unknown")
-! open (unit=50,file="./Results/ImputationQualityIndividual.txt",status="unknown")
-! open (unit=51,file="./Results/ImputationQualitySnp.txt",status="unknown")
-! open (unit=52,file="./Results/WellPhasedIndividuals.txt",status="unknown")
-
-! open (unit=53,file="./Results/ImputePhaseHMM.txt",status="unknown")
-! open (unit=54,file="./Results/ImputeGenotypesHMM.txt",status="unknown")
-
 open (unit=33,file="." // DASH// "Results" // DASH // "ImputePhase.txt",status="unknown")
 open (unit=34,file="." // DASH// "Results" // DASH // "ImputeGenotypes.txt",status="unknown")
 open (unit=40,file="." // DASH// "Results" // DASH // "ImputePhaseProbabilities.txt",status="unknown")
@@ -1598,7 +1587,6 @@ if (OutOpt==0) then
 
         call CheckImputationInconsistencies(ImputeGenos, ImputePhase, nAnisP, nSnp)
 
-        ! open (unit=39,file="IterateGeneProb/IterateGeneProbInput.txt")
         open (unit=39, file="IterateGeneProb" // DASH // "IterateGeneProbInput.txt")
         do i=1,nAnisP
             write (39,'(3i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') RecPed(i,:),ImputeGenos(i,:)
@@ -1621,9 +1609,6 @@ if (OutOpt==0) then
     call CheckImputationInconsistencies(ImputeGenos, ImputePhase, nAnisP, nSnp)
 
     do i=GlobalExtraAnimals+1,nAnisP
-         !write (33,'(a,'//cm//'(1x,i1))') Id(i),ImputePhase(i,:,1)
-         !write (33,'(a,'//cm//'(1x,i1))') Id(i),ImputePhase(i,:,2)
-         !write (34,'(a,'//cm//'(1x,i1))') Id(i),ImputeGenos(i,:)
          write (33,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') Id(i),ImputePhase(i,:,1)
          write (33,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') Id(i),ImputePhase(i,:,2)
          write (34,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') Id(i),ImputeGenos(i,:)
@@ -1631,9 +1616,6 @@ if (OutOpt==0) then
     enddo
 
     do i=GlobalExtraAnimals+1,nAnisP
-         !write (40,'(a,'//cm//'(1x,f5.2))') Id(i),ProbImputePhase(i,:,1)
-         !write (40,'(a,'//cm//'(1x,f5.2))') Id(i),ProbImputePhase(i,:,2)
-         !write (41,'(a,'//cm//'(1x,f5.2))') Id(i),ProbImputeGenos(i,:)
          write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') Id(i),ProbImputePhase(i,:,1)
          write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') Id(i),ProbImputePhase(i,:,2)
          write (41,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') Id(i),ProbImputeGenos(i,:)
@@ -1645,11 +1627,6 @@ if (OutOpt==0) then
         do j=1,nSnp
             Maf(j)=sum(ProbImputeGenos(:,j))/(2*nAnisP)
         enddo
-        ! if (WindowsLinux==1) then
-        !     open (unit=111,file=".\Miscellaneous\MinorAlleleFrequency.txt",status="unknown")
-        ! else
-        !     open (unit=111,file="./Miscellaneous/MinorAlleleFrequency.txt",status="unknown")
-        ! endif
         open(unit=111,file="." // DASH // "Miscellaneous" // DASH // "MinorAlleleFrequency.txt", status="unknown")
 
         do j=1,nSnpRaw
@@ -1798,18 +1775,8 @@ else
             endif
         enddo
 
-        ! Assign Genotypes based on genotype probabilities
-        !do i=1,nAnisP
-        !    do j=1,nSnpIterate
-        !        if (ProbImputeGenos(i,j)==-9.0) ImputeGenos(i,j)=9
-        !        if (ProbImputeGenos(i,j)>1.999) ImputeGenos(i,j)=2
-        !        if (ProbImputeGenos(i,j)<0.0001) ImputeGenos(i,j)=0
-        !        if ((ProbImputeGenos(i,j)>0.999).and.(ProbImputeGenos(i,j)<1.00001)) ImputeGenos(i,j)=1
-        !    enddo
-        !enddo
-
 #ifdef DEBUG
-        write(0,*) 'DEBUG: Impute genotypes based on HMM genotypes probabilites [WriteOutResults]'
+        write(0,*) 'DEBUG: Impute genotypes based on HMM genotypes probabilities [WriteOutResults]'
 #endif
 
         ! Impute the most likely genotypes. (Most frequent genotype)
@@ -1829,7 +1796,7 @@ else
         enddo
 
 #ifdef DEBUG
-        write(0,*) 'DEBUG: Impute alleles based on HMM phase probabilites [WriteOutResults]'
+        write(0,*) 'DEBUG: Impute alleles based on HMM phase probabilities [WriteOutResults]'
 #endif
 
         ! Impute the most likely genotypes. (Most frequent genotype)
@@ -1893,11 +1860,6 @@ else
         do j=1,nSnpRaw
             Maf(j)=sum(ProbImputeGenos(:,j))/(2*nAnisP)
         enddo
-        ! if (WindowsLinux==1) then
-        !     open (unit=111,file=".\Miscellaneous\MinorAlleleFrequency.txt",status="unknown")
-        ! else
-        !     open (unit=111,file="./Miscellaneous/MinorAlleleFrequency.txt",status="unknown")
-        ! endif
         open(unit=111,file="." // DASH // "Miscellaneous" // DASH // "MinorAlleleFrequency.txt", status="unknown")
 
 
