@@ -57,11 +57,10 @@ double precision, allocatable :: GenosProbs(:,:,:)
 character(len=4096) :: cmd, SpecFile
 
 INTERFACE WriteProbabilities
-  SUBROUTINE WriteProbabilitiesHMM(outFile, nExtraAnims, Ids, nAnisP, nSnps)
-    use GlobalVariablesHmmMaCH
+  SUBROUTINE WriteProbabilitiesHMM(outFile, Indexes, nAnisG, nSnps)
     character(len=*), intent(IN) :: outFile
-    integer, intent(IN) :: nExtraAnims, nAnisP, nSnps
-    character*(20), intent(IN) :: Ids(nAnisP)
+    integer, intent(IN) :: Indexes(nAnisG)
+    integer, intent(IN) :: nAnisG, nSnps
   END SUBROUTINE WriteProbabilitiesHMM
 
   SUBROUTINE WriteProbabilitiesGeneProb(outFile, GenosProbs, Ids, nExtraAnims, nAnisP, nSnps)
@@ -1456,11 +1455,10 @@ integer :: n0, n1, n2
 
 
 INTERFACE WriteProbabilities
-  SUBROUTINE WriteProbabilitiesHMM(outFile, nExtraAnims, Ids, nAnisP, nSnps)
-    use GlobalVariablesHmmMaCH
+  SUBROUTINE WriteProbabilitiesHMM(outFile, Indexes, nAnisG, nSnps)
     character(len=*), intent(IN) :: outFile
-    integer, intent(IN) :: nExtraAnims, nAnisP, nSnps
-    character*(20), intent(IN) :: Ids(nAnisP)
+    integer, intent(IN) :: Indexes(nAnisG)
+    integer, intent(IN) :: nAnisG, nSnps
   END SUBROUTINE WriteProbabilitiesHMM
 
   SUBROUTINE WriteProbabilitiesGeneProb(outFile, GenosProbs, Ids, nExtraAnims, nAnisP, nSnps)
@@ -1530,7 +1528,6 @@ if (OutOpt==0) then
 
         call CheckImputationInconsistencies(ImputeGenos, ImputePhase, nAnisP, nSnp)
 
-        ! open (unit=39,file="IterateGeneProb/IterateGeneProbInput.txt")
         open (unit=39, file="IterateGeneProb" // DASH // "IterateGeneProbInput.txt")
         do i=1,nAnisP
             write (39,'(3i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') RecPed(i,:),ImputeGenos(i,:)
@@ -1560,14 +1557,10 @@ if (OutOpt==0) then
     enddo
 
     do i=GlobalExtraAnimals+1,nAnisP
-         !write (40,'(a,'//cm//'(1x,f5.2))') Id(i),ProbImputePhase(i,:,1)
-         !write (40,'(a,'//cm//'(1x,f5.2))') Id(i),ProbImputePhase(i,:,2)
-         !write (41,'(a,'//cm//'(1x,f5.2))') Id(i),ProbImputeGenos(i,:)
          write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') Id(i),ProbImputePhase(i,:,1)
          write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') Id(i),ProbImputePhase(i,:,2)
          write (41,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') Id(i),ProbImputeGenos(i,:)
          write (60,'(a20,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4)') Id(i),GPI(i,:)
-
     enddo
 
     if (SexOpt==1) then
@@ -1675,14 +1668,14 @@ else
         call flush(39)
     endif
 
-    deallocate(ImputePhase)
-    deallocate(ImputeGenos)
-    allocate(ImputeGenos(0:nAnisP,nSnpRaw))
-    allocate(ImputePhase(0:nAnisP,nSnpRaw,2))
-    ImputeGenos=TmpGenos
-    ImputePhase=TmpPhase
     !REMOVE THIS WHEN HMM IS FINALISED
     if (HMMOption==RUN_HMM_NO) then
+        deallocate(ImputePhase)
+        deallocate(ImputeGenos)
+        allocate(ImputeGenos(0:nAnisP,nSnpRaw))
+        allocate(ImputePhase(0:nAnisP,nSnpRaw,2))
+        ImputeGenos=TmpGenos
+        ImputePhase=TmpPhase
         if (SexOpt==0) then
             if (BypassGeneProb==0) then
                 call IterateGeneProbs
@@ -1693,6 +1686,8 @@ else
         if (SexOpt==1) call IterateInsteadOfGeneProbs
     endif
     !REMOVE THIS
+
+    call CheckImputationInconsistencies(ImputeGenos, ImputePhase, nAnisP, nSnp)
 
     !if (HMMOption==RUN_HMM_ONLY.or.HMMOption==RUN_HMM_PREPHASE) then
     if (HMMOption/=RUN_HMM_NO) then
@@ -1724,7 +1719,7 @@ else
         enddo
 
 #ifdef DEBUG
-        write(0,*) 'DEBUG: Impute genotypes and alleles based on HMM genotypes probabilites [WriteOutResults]'
+        write(0,*) 'DEBUG: Impute alleles and genotypes based on HMM genotypes probabilities [WriteOutResults]'
 #endif
 
         ! Impute the most likely genotypes. (Most frequent genotype)
@@ -1732,13 +1727,13 @@ else
             do j=1,nSnpIterate
                 n2 = GenosCounts(i,j,2)                           ! Homozygous: 2 case
                 n1 = GenosCounts(i,j,1)                           ! Heterozygous
-                n0 = (nRoundsHmm-HmmBurnInRound) - n1 - n2      ! Homozygous: 0 case
+                n0 = (nRoundsHmm-HmmBurnInRound) - n1 - n2        ! Homozygous: 0 case
                 if ((n0>n1).and.(n0>n2)) then
                     ImputeGenos(GlobalHmmID(i),j)   = 0
                     ImputePhase(GlobalHmmID(i),j,:) = 0
                 elseif (n1>n2) then
-                    ImputeGenos(GlobalHmmID(i),j)=1
-                    if (ProbImputePhaseHmm(GlobalHmmID(i),j,1)>0.5) then
+                    ImputeGenos(GlobalHmmID(i),j) = 1
+                    if (ProbImputePhaseHmm(GlobalHmmID(i),j,1) > ProbImputePhaseHmm(GlobalHmmID(i),j,2) ) then
                         ImputePhase(GlobalHmmID(i),j,1) = 1
                         ImputePhase(GlobalHmmID(i),j,2) = 0
                     else
@@ -1767,12 +1762,18 @@ else
          write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') Id(i),ProbImputePhase(i,:,1)
          write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') Id(i),ProbImputePhase(i,:,2)
          write (41,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') Id(i),ProbImputeGenos(i,:)
-         write (60,'(a20,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4)') Id(i),GPI(i,:)
-
     enddo
 
+    if (allocated(GPI)) then
+        do i=GlobalExtraAnimals+1,nAnisP
+          write (60,'(a20,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4)') Id(i),GPI(i,:)
+        end do
+        deallocate(GPI)
+    end if
+
     if (HMMOption/=RUN_HMM_NO) then
-        call WriteProbabilities("./Results/GenotypeProbabilities.txt", GlobalExtraAnimals, Id, nAnisP, nSnp)
+        ! call WriteProbabilities("./Results/GenotypeProbabilities.txt", GlobalHmmID, ID, nAnisG, nSnp)
+        call WriteProbabilities("./Results/GenotypeProbabilities.txt", GlobalHmmID, nAnisG, nSnp)
     else
         if (BypassGeneProb==0) then
             allocate(GenosProbs(nAnisP,nSnpIterate,2))
@@ -1794,11 +1795,6 @@ else
         do j=1,nSnpRaw
             Maf(j)=sum(ProbImputeGenos(:,j))/(2*nAnisP)
         enddo
-        ! if (WindowsLinux==1) then
-        !     open (unit=111,file=".\Miscellaneous\MinorAlleleFrequency.txt",status="unknown")
-        ! else
-        !     open (unit=111,file="./Miscellaneous/MinorAlleleFrequency.txt",status="unknown")
-        ! endif
         open(unit=111,file="." // DASH // "Miscellaneous" // DASH // "MinorAlleleFrequency.txt", status="unknown")
 
 
