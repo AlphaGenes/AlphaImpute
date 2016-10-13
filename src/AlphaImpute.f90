@@ -1727,14 +1727,14 @@ else
         call flush(39)
     endif
 
-    deallocate(ImputePhase)
-    deallocate(ImputeGenos)
-    allocate(ImputeGenos(0:nAnisP,nSnpRaw))
-    allocate(ImputePhase(0:nAnisP,nSnpRaw,2))
-    ImputeGenos=TmpGenos
-    ImputePhase=TmpPhase
     !REMOVE THIS WHEN HMM IS FINALISED
     if (HMMOption==RUN_HMM_NO) then
+        deallocate(ImputePhase)
+        deallocate(ImputeGenos)
+        allocate(ImputeGenos(0:nAnisP,nSnpRaw))
+        allocate(ImputePhase(0:nAnisP,nSnpRaw,2))
+        ImputeGenos=TmpGenos
+        ImputePhase=TmpPhase
         if (SexOpt==0) then
             if (BypassGeneProb==0) then
                 call IterateGeneProbs
@@ -1745,6 +1745,8 @@ else
         if (SexOpt==1) call IterateInsteadOfGeneProbs
     endif
     !REMOVE THIS
+
+    call CheckImputationInconsistencies(ImputeGenos, ImputePhase, nAnisP, nSnp)
 
     !if (HMMOption==RUN_HMM_ONLY.or.HMMOption==RUN_HMM_PREPHASE) then
     if (HMMOption/=RUN_HMM_NO) then
@@ -1769,14 +1771,14 @@ else
                 l=l+1
                 do i=1,nAnisG
                     ProbImputeGenos(GlobalHmmID(i),l)=ProbImputeGenosHmm(i,l)
-                    ProbImputePhase(GlobalHmmID(i),l,1)=FullH(i,l,1)
-                    ProbImputePhase(GlobalHmmID(i),l,2)=FullH(i,l,2)
+                    ProbImputePhase(GlobalHmmID(i),l,1)=ProbImputePhaseHmm(i,l,1)
+                    ProbImputePhase(GlobalHmmID(i),l,2)=ProbImputePhaseHmm(i,l,2)
                 enddo
             endif
         enddo
 
 #ifdef DEBUG
-        write(0,*) 'DEBUG: Impute genotypes based on HMM genotypes probabilities [WriteOutResults]'
+        write(0,*) 'DEBUG: Impute alleles and genotypes based on HMM genotypes probabilities [WriteOutResults]'
 #endif
 
         ! Impute the most likely genotypes. (Most frequent genotype)
@@ -1784,35 +1786,25 @@ else
             do j=1,nSnpIterate
                 n2 = GenosCounts(i,j,2)                           ! Homozygous: 2 case
                 n1 = GenosCounts(i,j,1)                           ! Heterozygous
-                n0 = (nRoundsHmm-HmmBurnInRound) - n1 - n2      ! Homozygous: 0 case
+                n0 = (nRoundsHmm-HmmBurnInRound) - n1 - n2        ! Homozygous: 0 case
                 if ((n0>n1).and.(n0>n2)) then
                     ImputeGenos(GlobalHmmID(i),j)=0
+                    ImputePhase(GlobalHmmID(i),j,:) = 0
                 elseif (n1>n2) then
                     ImputeGenos(GlobalHmmID(i),j)=1
+                    if (ProbImputePhaseHmm(GlobalHmmID(i),j,1) > ProbImputePhaseHmm(GlobalHmmID(i),j,2) ) then
+                        ImputePhase(GlobalHmmID(i),j,1) = 1
+                        ImputePhase(GlobalHmmID(i),j,2) = 0
+                    else
+                        ImputePhase(GlobalHmmID(i),j,1) = 0
+                        ImputePhase(GlobalHmmID(i),j,2) = 1
+                    end if
                 else
                     ImputeGenos(GlobalHmmID(i),j)=2
+                    ImputePhase(GlobalHmmID(i),j,:) = 1
                 endif
             enddo
         enddo
-
-#ifdef DEBUG
-        write(0,*) 'DEBUG: Impute alleles based on HMM phase probabilities [WriteOutResults]'
-#endif
-
-        ! Impute the most likely genotypes. (Most frequent genotype)
-        do i=1,nAnisG
-            do j=1,nSnpIterate
-                do l=1,2
-                    if (ProbImputePhaseHmm(i,j,l)>0.5) then
-                        ImputePhase(i,j,l)=1
-                    else
-                        ImputePhase(i,j,l)=0
-                    endif
-                enddo
-            enddo
-        enddo
-
-    endif
 
 #ifdef DEBUG
     write(0,*) 'DEBUG: Write phase, genotypes and probabilities into files [WriteOutResults]'
