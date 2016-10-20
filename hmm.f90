@@ -46,7 +46,7 @@ allocate(GlobalHmmPhasedInd(nIndHmmMaCH,2))
 !          logical: GlobalHmmHDInd=.false.
 GlobalHmmHDInd=0
 
-! Allocate a matrix to store probabilities of genotypes and 
+! Allocate a matrix to store probabilities of genotypes and
 ! alleles for each animal
 allocate(ProbImputeGenosHmm(nIndHmmMaCH,nSnp))
 allocate(ProbImputePhaseHmm(nIndHmmMaCH,nSnp,2))
@@ -125,26 +125,6 @@ end if
 
 call ParseMaCHData(HMM)
 
-! do i=1,nIndHmmMaCH
-!     do j=1,nSnp
-!         if (GenosHmmMaCH(i,j)==0) then
-!             PhaseHmmMaCH(i,j,:)=0
-!         elseif (GenosHmmMaCH(i,j)==2) then
-!             PhaseHmmMaCH(i,j,:)=1
-!         elseif (GenosHmmMaCH(i,j)==1) then
-!             if (ran1(idum)>=0.5) then
-!                 PhaseHmmMaCH(i,j,1)=0
-!                 PhaseHmmMaCH(i,j,2)=1
-!             else
-!                 PhaseHmmMaCH(i,j,1)=1
-!                 PhaseHmmMaCH(i,j,2)=0
-!             endif
-!         else
-!             PhaseHmmMaCH(i,j,:)=3
-!         endif
-!     enddo
-! enddo
-
 ! Initialization of HMM parameters
 Epsilon=EPSILON_ERROR
 Thetas=0.01
@@ -196,7 +176,7 @@ do GlobalRoundHmm=1,nRoundsHmm
         write(0,*) 'DEBUG: Begin paralellisation [MaCHController]'
 #endif
     !$OMP PARALLEL DO DEFAULT(shared)
-    !$!OMP DO 
+    !$!OMP DO
     do i=1,nIndHmmMaCH
         call MaCHForInd(i, HMM)
     enddo
@@ -216,53 +196,16 @@ do GlobalRoundHmm=1,nRoundsHmm
     call UpdateErrorRate(Theta)
 enddo
 
-
 #ifdef DEBUG
     write(0,*) 'DEBUG: End paralellisation'
 #endif
-
 
 ! Average genotype probability of the different hmm processes
 ProbImputeGenosHmm=ProbImputeGenosHmm/(nRoundsHmm-HmmBurnInRound)
 ProbImputePhaseHmm=ProbImputePhaseHmm/(nRoundsHmm-HmmBurnInRound)
 
-! Most likely genotype is the genotype that has been sampled most frequently
-!IndHmmMaCH
-!    do j=1,nSnpHmm
-!        n2 = GenosCounts(i,j,3)                           ! Homozygous: 2 case
-!        n1 = GenosCounts(i,j,2)                           ! Heterozygous
-!        n0 = (nRoundsHmm-HmmBurnInRound) - n1 - n2      ! Homozygous: 0 case
-!        if ((n0>n1).and.(n0>n2)) then
-!            ProbImputeGenosHmm(i,j)=0
-!        elseif (n1>n2) then
-!            ProbImputeGenosHmm(i,j)=1
-!        else
-!            ProbImputeGenosHmm(i,j)=2
-!        endif
-!    enddo
-!enddo
-
-!deallocate(GenosCounts)
-
 end subroutine MaCHController
-!######################################################################
-subroutine GenosToImputeGenos
-use Global
-use GlobalVariablesHmmMaCH
 
-implicit none
-integer :: i
-
-#ifdef DEBUG
-    write(0,*) 'DEBUG: [GenosToImputeGenos]'
-#endif
-
-
-! do i=1,nAnisP
-!     ImputeGenos(i,:) = 
-! enddo
-
-end subroutine GenosToImputeGenos
 !######################################################################
 subroutine ParseMaCHData(HMM)
 use Global
@@ -279,6 +222,7 @@ endif
 call ParseInbred
 
 end subroutine ParseMaCHData
+
 !######################################################################
 subroutine ParseInbred
 use Global
@@ -367,7 +311,7 @@ if (nHapInSubH>2*sum(GlobalHmmHDInd(:))) then
     ! stop
 endif
 
-! AlphaImpute does not phase sequence data, thus no individual has been phased. 
+! AlphaImpute does not phase sequence data, thus no individual has been phased.
 nGametesPhased=0
 
 end subroutine ParseMaCHDataNGS
@@ -519,10 +463,6 @@ else
         ! If the number of phased gametes with AlphaImpute is above
         ! a threshold, then template is populated with the phased data
         call ExtractTemplateByHaps(CurrentInd,Shuffle1,Shuffle2)
-        ! do i=1,nHapInSubH
-        !     print *, ''
-        !     print *,i, SubH(i,:)
-        ! enddo
     else
         ! Otherwise, the template is populated with haplotypes at random
         ! from all the HD animals
@@ -1317,9 +1257,6 @@ else
     Index=0
     if (HMMOption==RUN_HMM_NGS) then
         do i=0,2
-            ! cond_probs(i)=Penetrance(Marker,i,0)*shotgunErrorMatrix(0,nReads)&
-            !              +Penetrance(Marker,i,1)*shotgunErrorMatrix(1,nReads)&
-            !              +Penetrance(Marker,i,2)*shotgunErrorMatrix(2,nReads)
             cond_probs(i)=Penetrance(Marker,i,0)*shotgunErrorMatrix(0,RefAll,AltAll)&
                          +Penetrance(Marker,i,1)*shotgunErrorMatrix(1,RefAll,AltAll)&
                          +Penetrance(Marker,i,2)*shotgunErrorMatrix(2,RefAll,AltAll)
@@ -1594,30 +1531,8 @@ double precision :: prior_11, prior_12, prior_22
 double precision :: posterior_11, posterior_12, posterior_22
 double precision :: r, frequency, summ
 
-! ! Initialization of HMM parameters
-! Epsilon=0.00000001
-! Thetas=0.01
-
 !Initialise FullH
 do j=1,nSnpHmm      ! For each SNP
-    ! alleles = 0
-    ! mac = 0
-    ! do i=1,nIndHmmMaCH      ! For every Genotyped Individual
-    !     readObs = GenosHmmMaCH(i,j)
-    !     alleles = alleles + mod(readObs,MAX_READS_COUNT)
-    !     mac = mac + readObs/MAX_READS_COUNT
-    ! enddo
-    ! alleles = alleles + mac
-
-    ! if (alleles==0) then
-    !     do i=1,nIndHmmMaCH
-    !         FullH(i,j,:)=0
-    !     enddo
-    ! endif
-
-    ! frequency = DBLE(mac) / DBLE(alleles)
-    
-
     readObs = 0
     alleles = 0
 
@@ -1630,36 +1545,29 @@ do j=1,nSnpHmm      ! For each SNP
     prior_11 = (1.0 - frequency)**2
     prior_12 = 2.0 * (1.0 - frequency) * frequency
     prior_22 = frequency**2
-    ! print *, readObs, alleles, frequency, prior_11, prior_12, prior_22
 
     do i=1,nIndHmmMaCH
-         ! readObs = GenosHmmMaCH(i,j)
-         readObs = AlterAllele(i,j)*MAX_READS_COUNT+ReferAllele(i,j)
+        readObs = AlterAllele(i,j)*MAX_READS_COUNT+ReferAllele(i,j)
         RefAll = ReferAllele(i,j)
-        AltAll = AlterAllele(i,j)         
+        AltAll = AlterAllele(i,j)
 
-         if (readObs==0) exit
+        if (readObs==0) exit
 
-         ! posterior_11 = prior_11 * ShotgunErrorMatrix(0,readObs)
-         ! posterior_12 = prior_12 * ShotgunErrorMatrix(1,readObs)
-         ! posterior_22 = prior_22 * ShotgunErrorMatrix(2,readObs)
-         posterior_11 = prior_11 * ShotgunErrorMatrix(0,RefAll,AltAll)
-         posterior_12 = prior_12 * ShotgunErrorMatrix(1,RefAll,AltAll)
-         posterior_22 = prior_22 * ShotgunErrorMatrix(2,RefAll,AltAll)
-         summ = posterior_11 + posterior_12 + posterior_22
+        posterior_11 = prior_11 * ShotgunErrorMatrix(0,RefAll,AltAll)
+        posterior_12 = prior_12 * ShotgunErrorMatrix(1,RefAll,AltAll)
+        posterior_22 = prior_22 * ShotgunErrorMatrix(2,RefAll,AltAll)
+        summ = posterior_11 + posterior_12 + posterior_22
 
-         ! print *, summ, posterior_11, posterior_12, posterior_22
+        if (summ==0) write(0,*) 'There is a problem here!'
 
-         if (summ==0) write(0,*) 'There is a problem here!'
+        posterior_11 = posterior_11 / summ
+        posterior_12 = posterior_12 / summ
 
-         posterior_11 = posterior_11 / summ
-         posterior_12 = posterior_12 / summ
+        r = ran1(idum)
 
-         r = ran1(idum)
-
-         if (r < posterior_11) then
+        if (r < posterior_11) then
             FullH(i,j,:) = 0
-         elseif (r < posterior_11 + posterior_12) then
+        elseif (r < posterior_11 + posterior_12) then
             if (ran1(idum)<0.5) then
                 FullH(i,j,1) = 0
                 FullH(i,j,2) = 1
@@ -1673,13 +1581,10 @@ do j=1,nSnpHmm      ! For each SNP
     enddo
 enddo
 
-! call CalcPenetrance
-
 ErrorUncertainty(:)=0
 ErrorMatches(:)=0
 ErrorMismatches(:)=0
 Crossovers(:)=0
-!print*, Crossovers(:)
 
 end subroutine SetUpEquationsReads
 
@@ -1731,7 +1636,7 @@ end subroutine UpdateThetas
 !######################################################################
 subroutine UpdateErrorRate(rate)
 ! Group markers into those with low error rates, which are estimated
-! as a group, and those with high error rates, which are estimated 
+! as a group, and those with high error rates, which are estimated
 ! individually
 
 use GlobalVariablesHmmMaCH
@@ -1779,9 +1684,9 @@ Penetrance(marker,0,2)=Err**2
 Penetrance(marker,1,0)=(1.0-Err)*Err
 Penetrance(marker,1,1)=((1.0-Err)**2)+(Err**2)
 Penetrance(marker,1,2)=(1.0-Err)*Err
-Penetrance(marker,2,0)=Err**2   
+Penetrance(marker,2,0)=Err**2
 Penetrance(marker,2,1)=2.0*(1.0-Err)*Err
-Penetrance(marker,2,2)=(1.0-Err)**2   
+Penetrance(marker,2,2)=(1.0-Err)**2
 
 end subroutine SetPenetrance
 
@@ -2032,56 +1937,15 @@ double precision, intent(in) :: ErrorRate
 ! Local variables
 double precision :: DFactorialInLog, ProdFactTmp
 integer :: i,k,MaxReadCounts
-! integer :: binomial(33,33)
-
 
 do k=0,MAX_READS_COUNT-1
     do i=0,MAX_READS_COUNT-1
-    ! do i=1,MAX_READS_COUNT
         ProdFactTmp=DFactorialInLog(k+i)-(DFactorialInLog(i)+DFactorialInLog(k))
-
-        ! ShotgunErrorMatrix(0,k*MAX_READS_COUNT+i)=exp(ProdFactTmp+(dfloat(i)*log(ErrorRate))+(dfloat(k)*log(1.0-ErrorRate)))
-        ! ShotgunErrorMatrix(1,k*MAX_READS_COUNT+i)=exp(ProdFactTmp+(dfloat(k+i)*log(0.5)))
-        ! ShotgunErrorMatrix(2,k*MAX_READS_COUNT+i)=exp(ProdFactTmp+(dfloat(i)*log(1.0-ErrorRate))+(dfloat(k)*log(ErrorRate)))
         ShotgunErrorMatrix(0,k,i)=exp(ProdFactTmp+(dfloat(i)*log(ErrorRate))+(dfloat(k)*log(1.0-ErrorRate)))
         ShotgunErrorMatrix(1,k,i)=exp(ProdFactTmp+(dfloat(k+i)*log(0.5)))
         ShotgunErrorMatrix(2,k,i)=exp(ProdFactTmp+(dfloat(i)*log(1.0-ErrorRate))+(dfloat(k)*log(ErrorRate)))
     enddo
 enddo
-
-! binomial(1,1) = 1
-! binomial(2,1) = 1
-! binomial(2,2) = 1
-
-! do i=3,33
-!     binomial(i,1) = 1
-!     binomial(i,i) = 1
-!     do j=2,i 
-!         binomial(i,j) = binomial(i-1,j) + binomial(i-1,j-1)
-!     enddo
-! enddo
-
-! do i=1,16
-!     do j=1,16
-!         if (rate==0) then
-!             if (j==1) then
-!                 ShotgunErrorMatrix(0,j*16+i) = 1.0
-!             else
-!                 ShotgunErrorMatrix(0,j*16+i) = 0.0
-!             endif
-!             ShotgunErrorMatrix(1,j*16+i) = (0.5)**(i+j) * binomial(i+j,i)
-!             if (i==1) then
-!                 ShotgunErrorMatrix(2,j*16+i) = 1.0
-!             else
-!                 ShotgunErrorMatrix(2,j*16+i) = 0.0
-!             endif
-!         else
-!             ShotgunErrorMatrix(0,j*16+i) = (1-rate)**i * (rate)**j * binomial(i+j,i)
-!             ShotgunErrorMatrix(1,j*16+i) = (0.5)**(i+j) * binomial(i+j,i)
-!             ShotgunErrorMatrix(2,j*16+i) = (rate)**i * (1-rate)**j * binomial(i+j,i)
-!         endif
-!     enddo
-! enddo
 
 end subroutine SetShotgunError
 
@@ -2105,14 +1969,10 @@ Thread = omp_get_thread_num()
 copied1 = SubH(State1,CurrentMarker)
 copied2 = SubH(State2,CurrentMarker)
 
-! nReads = GenosHmmMaCH(CurrentInd,CurrentMarker)
 nReads = AlterAllele(CurrentInd,CurrentMarker)*MAX_READS_COUNT+ReferAllele(CurrentInd,CurrentMarker)
 RefAll = ReferAllele(CurrentInd,CurrentMarker)
 AltAll = AlterAllele(CurrentInd,CurrentMarker)
 
-! posterior_11 = Penetrance(CurrentMarker,copied1+copied2,0)*shotgunErrorMatrix(0,nReads)
-! posterior_12 = Penetrance(CurrentMarker,copied1+copied2,1)*shotgunErrorMatrix(1,nReads)
-! posterior_22 = Penetrance(CurrentMarker,copied1+copied2,2)*shotgunErrorMatrix(2,nReads)
 posterior_11 = Penetrance(CurrentMarker,copied1+copied2,0)*shotgunErrorMatrix(0,RefAll,AltAll)
 posterior_12 = Penetrance(CurrentMarker,copied1+copied2,1)*shotgunErrorMatrix(1,RefAll,AltAll)
 posterior_22 = Penetrance(CurrentMarker,copied1+copied2,2)*shotgunErrorMatrix(2,RefAll,AltAll)
@@ -2124,20 +1984,11 @@ posterior_22 = posterior_22 / summ
 
 random = par_uni(Thread)
 
-! if (RefAll+AltAll==0) then
-!     print *, "\n", summ, posterior_11 + posterior_22
-!     print *, posterior_11, shotgunErrorMatrix(0,RefAll,AltAll)!, Penetrance(CurrentMarker,copied1+copied2,0)
-!     print *, posterior_12/summ, shotgunErrorMatrix(1,RefAll,AltAll)!, Penetrance(CurrentMarker,copied1+copied2,1)
-!     print *, posterior_22, shotgunErrorMatrix(2,RefAll,AltAll)!, Penetrance(CurrentMarker,copied1+copied2,2)
-! endif
-
 if (random < posterior_11) then
-    ! print*, "posterior_11", random, posterior_11, AlterAllele(CurrentInd,CurrentMarker), ReferAllele(CurrentInd,CurrentMarker), nReads
     FullH(CurrentInd,CurrentMarker,1) = 0
     FullH(CurrentInd,CurrentMarker,2) = 0
 
 elseif (random < posterior_11 + posterior_22) then
-    ! print*, "posterior_11+posterior_22", random, posterior_11 + posterior_22, AlterAllele(CurrentInd,CurrentMarker), ReferAllele(CurrentInd,CurrentMarker), nReads
     FullH(CurrentInd,CurrentMarker,1) = 1
     FullH(CurrentInd,CurrentMarker,2) = 1
 
@@ -2145,13 +1996,13 @@ elseif (copied1 /= copied2) then
     call GetErrorRatebyMarker(CurrentMarker, rate)
 
     if (par_uni(Thread) < rate*rate / ((rate*rate) + (1-rate)*(1-rate))) then
-        if (copied1 == 1) then 
+        if (copied1 == 1) then
             copied1 = 0
         else
             copied1 = 1
         endif
 
-        if (copied2 == 1) then 
+        if (copied2 == 1) then
             copied2 = 0
         else
             copied2 = 1
@@ -2164,7 +2015,7 @@ else
     if (par_uni(Thread)<0.5) then
         FullH(CurrentInd,CurrentMarker,1) = 0
         FullH(CurrentInd,CurrentMarker,2) = 1
-    else 
+    else
         FullH(CurrentInd,CurrentMarker,1) = 1
         FullH(CurrentInd,CurrentMarker,2) = 0
     endif
@@ -2172,12 +2023,6 @@ endif
 
 imputed1 = FullH(CurrentInd,CurrentMarker,1)
 imputed2 = FullH(CurrentInd,CurrentMarker,2)
-
-! if (CurrentInd==1) then
-!     print *, FullH(CurrentInd,1:10,1)
-!     print *, FullH(CurrentInd,1:10,2)
-! endif
-
 
 Differences = abs(copied1 - imputed1) + abs(copied2 - imputed2)
 ! count the number of alleles matching
