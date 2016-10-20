@@ -477,19 +477,19 @@ StartSnp=1
 StopSnp=nSnpHmm
 if (HMM==RUN_HMM_ONLY .OR. HMM==RUN_HMM_NGS) then
 
-    if (GlobalInbredInd(currentInd)==.TRUE.) then
-        allocate(ForwardProbs(nHapInSubH,nSnpHmm))
-        call ForwardAlgorithmForSegmentHaplotype(currentInd,1,1,nSnpHmm)     ! Paternal haplotype
-        call SampleSegmentHaplotypeSource(CurrentInd,1,1,nSnpHmm)
-        deallocate(ForwardProbs)
-        allocate(ForwardProbs(nHapInSubH,nSnpHmm))
-        call ForwardAlgorithmForSegmentHaplotype(currentInd,2,1,nSnpHmm)     ! Paternal haplotype
-        call SampleSegmentHaplotypeSource(CurrentInd,2,1,nSnpHmm)
-    else
+    ! if (GlobalInbredInd(currentInd)==.TRUE.) then
+    !     allocate(ForwardProbs(nHapInSubH,nSnpHmm))
+    !     call ForwardAlgorithmForSegmentHaplotype(currentInd,1,1,nSnpHmm)     ! Paternal haplotype
+    !     call SampleSegmentHaplotypeSource(CurrentInd,1,1,nSnpHmm)
+    !     deallocate(ForwardProbs)
+    !     allocate(ForwardProbs(nHapInSubH,nSnpHmm))
+    !     call ForwardAlgorithmForSegmentHaplotype(currentInd,2,1,nSnpHmm)     ! Paternal haplotype
+    !     call SampleSegmentHaplotypeSource(CurrentInd,2,1,nSnpHmm)
+    ! else
         allocate(ForwardProbs(states,nSnpHmm))
         call ForwardAlgorithm(CurrentInd,StartSnp,StopSnp)
         call SampleChromosomes(CurrentInd,StartSnp,StopSnp)
-    end if
+    ! end if
 else
     if (nGametesPhased/float(2*nAnisP)>phasedThreshold/100.0) then
         if (GlobalHmmPhasedInd(CurrentInd,1)/=.TRUE. .AND. GlobalHmmPhasedInd(CurrentInd,2)/=.TRUE.) Then
