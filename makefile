@@ -28,7 +28,7 @@ ifeq ($(OS), Windows_NT)
 
 	obj := .obj
 
-	MAKEDIR :=
+	MAKEDIR := MD
 	exe := .exe
 	CC := cl
 	CFLAGS := /EHsc
@@ -99,7 +99,7 @@ endif
 # 	$(FC) -o tests.x $^ -I$(THIS_DIR)$(BUILDDIR) $(PFUNIT)/include/driver.f90 -I$(PFUNIT)/mod -I$(PFUNIT)/include -L$(PFUNIT)/lib -lpfunit -module $(BUILDDIR)
 # 	./tests.x
 
-all: files clean
+all: directories files clean
 
 all_git: files clean
 
@@ -131,7 +131,10 @@ git: $(FILES) $(PFTESTS)
 	$(FC) $(FFLAGS) -c -o $(BUILDDIR)$@ $<
 
 
-
+directories:
+	$(MAKEDIR) $(SRCDIR)
+	$(MAKEDIR) $(BUILDDIR)
+	$(MAKEDIR) $(TARGETDIR)
 
 
 
