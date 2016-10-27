@@ -1,10 +1,10 @@
 module GlobalVariablesHmmMaCH
 implicit none
 
-integer, parameter :: GENOTYPE_MISSING=3
+integer, parameter :: GENOTYPE_MISSING=9
 integer, parameter :: ALLELE_MISSING=3
 integer, parameter :: READ_MISSING=0
-integer            :: MISSING=3
+integer            :: MISSING=9
 
 double precision, parameter :: SEQUENCING_ERROR=0.01
 double precision, parameter :: EPSILON_ERROR=0.01
