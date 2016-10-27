@@ -1,9 +1,9 @@
 CMakeFiles/
+CMakeCache.txt
 cmake_install.cmake
 objs/
 bin/
 *.exe
-*.txt
 *.mod
 *.o
 *.obj
