@@ -8,6 +8,7 @@ MODULE Imputation
   use Global
   use GlobalPedigree
   use GlobalVariablesHmmMaCH
+  use GlobalFiles, only :GenotypeFile
   implicit none
 
 CONTAINS
@@ -861,6 +862,7 @@ end subroutine InternalParentPhaseElim
     use PhaseRounds
     use Utils
     use HaplotypeBits
+    use GlobalFiles, only : PhasePath
     implicit none
 
     integer :: e,g,h,i,j,nCore,CoreLength,dum,GamA,GamB,nAnisHD,PosHDInd
@@ -1099,6 +1101,7 @@ end subroutine InternalParentPhaseElim
     use PhaseRounds
     use HaplotypeBits
     use Utils
+    use GlobalFiles, only : PhasePath
     implicit none
 
     integer :: e,g,h,i,j,nCore,CoreLength,dum,PedId,GamA,GamB,nAnisHD,PosHDInd
@@ -1352,6 +1355,7 @@ end subroutine InternalParentPhaseElim
     use PhaseRounds
     use Utils
     use HaplotypeBits
+    use GlobalFiles, only : PhasePath
     implicit none
 
     integer :: l,i,j,k,h,e,f,g,nCore,dum,CoreLength,nHap,CountAB(nSnp,0:1),Work(nSnp,2),TempCount
@@ -1640,6 +1644,7 @@ end subroutine InternalParentPhaseElim
     use GlobalPedigree
     use PhaseRounds
     use Utils
+    use GlobalFiles, only : PhasePath
 
     implicit none
 

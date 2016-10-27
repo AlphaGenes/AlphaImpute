@@ -322,7 +322,7 @@ subroutine ReadInParameterFile(SpecFile)
 use Global
 use GlobalPedigree
 use GlobalVariablesHmmMaCH
-
+use GlobalFiles, only : PedigreeFile,GenotypeFile,TrueGenosFile, PhasePath,GenderFile
 implicit none
 
 character(len=4096), intent(in) :: SpecFile
@@ -1443,6 +1443,7 @@ subroutine WriteOutResults
 use Global
 use GlobalPedigree
 use GlobalVariablesHmmMaCH
+use GlobalFiles, only:  GenotypeFile
 implicit none
 
 character(len=7) :: cm !use for formatting output - allows for up to 1 million SNPs
@@ -3405,7 +3406,7 @@ end subroutine ClassifyAnimByChips
 subroutine InternalEdit
 use Global
 use GlobalPedigree
-
+use GlobalFiles, only:  PhasePath
 implicit none
 
 integer :: i,j,k,CountMiss,CountHD,nSnpR,dum,Counter(nSnp)
@@ -3981,6 +3982,7 @@ subroutine CountInData
 
 use Global
 use GlobalVariablesHmmMaCH
+use GlobalFiles, only : PedigreeFile
 implicit none
 
 integer :: k
@@ -4261,6 +4263,7 @@ end subroutine MakeDirectories
 subroutine PVseq(nObs,nAnisPedigree)
 
 USE GlobalPedigree
+use GlobalFiles, only : TrueGenosFile
 implicit none
 character (LEN=lengan), ALLOCATABLE :: holdsireid(:), holddamid(:)
 character (LEN=lengan), ALLOCATABLE :: holdid(:), SortedId(:), SortedSire(:), SortedDam(:)
@@ -4285,7 +4288,7 @@ do i=1,nobs
 end do
 
 nAnisPedigree=nObs
-path=".\"
+path=".\\"
 Verbose=1
 
 ! Initialize and standarize
@@ -4875,6 +4878,7 @@ subroutine Checker
 use Global
 use GlobalPedigree
 use Utils
+use GlobalFiles, only : TrueGenosFile,GenotypeFile
 implicit none
 
 integer :: h,i,j,k,l,f,nAnisTest,Work(nSnpRaw),WorkTmp(nSnpRaw),dum,GenoStratIndex(nAnisP),CountCatTest(6),CountCorr
@@ -5237,6 +5241,7 @@ subroutine FinalChecker
 use Global
 use GlobalPedigree
 use Utils
+use GlobalFiles, only : GenotypeFile,TrueGenosFile
 implicit none
 
 integer :: h,i,j,k,l,f,nAnisTest,Work(nSnpRaw),WorkTmp(nSnpRaw),dum,GenoStratIndex(nAnisP),CountCatTest(6),CountCorr
