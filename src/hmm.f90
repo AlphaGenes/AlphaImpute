@@ -319,7 +319,7 @@ use GlobalVariablesHmmMaCH
 use Utils
 
 implicit none
-integer :: i,j,k, NoGenosUnit
+integer :: i,j,k,NoGenosUnit,nIndvG
 integer :: maxHaps      ! Maximum number of haplotypes possible
 
 #ifdef DEBUG
@@ -337,49 +337,66 @@ k=0
 ! gamete is phased (GlobalHmmPhasedInd) and the high-denisity
 ! genotyped animal (GlobalHmmHDInd)
 
-do i=1,nAnisP
-    ! Check if individual is in the genotype file
-    if (IndivIsGenotyped(i)==1) then
-        k=k+1
-        GlobalHmmID(k)=i
+nIndvG = 0
+GlobalHmmID=0
 
-        ! Add animal's diploid to the Diploids Library
-        GenosHmmMaCH(k,:)=ImputeGenos(i,:)
+do j=1,nAnisG
+  do i=1,nAnisP
+    if (trim(GenotypeId(j)) == trim(Id(i))) then
+        GlobalHmmID(j) = i
+        exit
+    end if
+  end do
+end do
 
-        ! Take the phased information from AlphaImpute
-        PhaseHmmMaCH(k,:,1)=ImputePhase(i,:,1)
-        PhaseHmmMaCH(k,:,2)=ImputePhase(i,:,2)
-
-        ! Check if this animal is Highly Dense genotyped
-        if ((float(count(GenosHmmMaCH(k,:)==9))/nSnp)<0.10) then
-            GlobalHmmHDInd(k)=1
+!do i=1,nAnisP
+!    ! Check if individual is in the genotype file
+!    if (IndivIsGenotyped(i)==1) then
+!        nIndvG=nIndvG+1
+!    else
+!        if (i > GlobalExtraAnimals) then
+!            write(NoGenosUnit,*) Id(i)
+!        end if
+!    end if
+    do i = 1, nAnisG
+        if (IndivIsGenotyped(GlobalHmmID(i))==1) then
+            nIndvG = nIndvG+1
+            k = i
+    
+            ! Add animal's diploid to the Diploids Library
+            GenosHmmMaCH(k,:)=ImputeGenos(i,:)
+    
+            ! Take the phased information from AlphaImpute
+            PhaseHmmMaCH(k,:,1)=ImputePhase(i,:,1)
+            PhaseHmmMaCH(k,:,2)=ImputePhase(i,:,2)
+    
+            ! Check if this animal is Highly Dense genotyped
+            if ((float(count(GenosHmmMaCH(k,:)==9))/nSnp)<0.10) then
+                GlobalHmmHDInd(k)=1
+            endif
+    
+            ! Clean the genotypes and alleles from possible coding errors
+            do j=1,nSnp
+                if ((GenosHmmMaCH(k,j)<0).or.(GenosHmmMaCH(k,j)>2)) GenosHmmMaCH(k,j)=MISSING
+                if ((PhaseHmmMaCH(k,j,1)/=0) .AND. (PhaseHmmMaCH(k,j,1)/=1)) PhaseHmmMaCH(k,j,1)=3
+                if ((PhaseHmmMaCH(k,j,2)/=0) .AND. (PhaseHmmMaCH(k,j,2)/=1)) PhaseHmmMaCH(k,j,2)=3
+            enddo
+    
+            ! Check if this individual has its haplotypes phased
+            if (float(count(PhaseHmmMaCH(k,:,1)/=3))/nSnpHmm >= (imputedThreshold/100.0)) Then
+                GlobalHmmPhasedInd(k,1)=.TRUE.
+            endif
+            if (float(count(PhaseHmmMaCH(k,:,2)/=3))/nSnpHmm >= (imputedThreshold/100.0)) Then
+                GlobalHmmPhasedInd(k,2)=.TRUE.
+            endif
+    
+            ! Count the number of phased animals
+            if ((GlobalHmmPhasedInd(k,1)==.TRUE.).AND.(GlobalHmmPhasedInd(k,2)==.TRUE.)) Then
+                nAnimPhased=nAnimPhased+1
+            endif
         endif
-
-        ! Clean the genotypes and alleles from possible coding errors
-        do j=1,nSnp
-            if ((GenosHmmMaCH(k,j)<0).or.(GenosHmmMaCH(k,j)>2)) GenosHmmMaCH(k,j)=MISSING
-            if ((PhaseHmmMaCH(k,j,1)/=0) .AND. (PhaseHmmMaCH(k,j,1)/=1)) PhaseHmmMaCH(k,j,1)=3
-            if ((PhaseHmmMaCH(k,j,2)/=0) .AND. (PhaseHmmMaCH(k,j,2)/=1)) PhaseHmmMaCH(k,j,2)=3
-        enddo
-
-        ! Check if this individual has its haplotypes phased
-        if (float(count(PhaseHmmMaCH(k,:,1)/=3))/nSnpHmm >= (imputedThreshold/100.0)) Then
-            GlobalHmmPhasedInd(k,1)=.TRUE.
-        endif
-        if (float(count(PhaseHmmMaCH(k,:,2)/=3))/nSnpHmm >= (imputedThreshold/100.0)) Then
-            GlobalHmmPhasedInd(k,2)=.TRUE.
-        endif
-
-        ! Count the number of phased animals
-        if ((GlobalHmmPhasedInd(k,1)==.TRUE.).AND.(GlobalHmmPhasedInd(k,2)==.TRUE.)) Then
-            nAnimPhased=nAnimPhased+1
-        endif
-    else
-        if (i > GlobalExtraAnimals) then
-            write(NoGenosUnit,*) Id(i)
-        end if
-    endif
-enddo
+    end do
+!enddo
 
 close(NoGenosUnit)
 
@@ -387,10 +404,11 @@ close(NoGenosUnit)
 nGametesPhased=0
 nGametesPhased = CountPhasedGametes()
 
-maxHaps = 2*sum(GlobalHmmHDInd(:))
+!maxHaps = 2*sum(GlobalHmmHDInd(:))
+maxHaps = 2*nIndvG
 
 ! Check if the number of genotyped animals is correct
-if (k/=nAnisG) then
+if (nIndvG/=nAnisG) then
     ! print*, "Error in ParseMaCHDataGenos"
     ! stop
     write (6,*) '   ','WARNING: There are individuals in the genotype file that have'
