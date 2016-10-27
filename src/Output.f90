@@ -3,7 +3,15 @@ module Output
 
 implicit none
 
-! contains
+INTERFACE
+  SUBROUTINE ReReadIterateGeneProbs(GenosProbs, IterGeneProb, nAnis)
+    use Global
+    logical, intent(IN) :: IterGeneProb
+    integer, intent(IN) :: nAnis
+!    double precision, intent(OUT) :: GenosProbs(nAnisP,markers,2)
+    double precision, dimension(:,:,:), intent(INOUT) :: GenosProbs
+  END SUBROUTINE ReReadIterateGeneProbs
+END INTERFACE
 end module Output
 
 ! subroutine WriteProbabilitiesHMM(outFile, Indexes, Ids, nAnims, nSnps)
@@ -12,8 +20,9 @@ use GlobalPedigree
 use GlobalVariablesHmmMaCH
 
 character(len=*), intent(IN) :: outFile
-integer, intent(IN) :: Indexes(nAnims)
 integer, intent(IN) :: nAnims, nSnps
+integer, intent(IN) :: Indexes(nAnims)
+
 ! character*(20), intent(IN) :: Ids(:)
 
 
@@ -79,7 +88,7 @@ end subroutine WriteProbabilitiesGeneProb
 
 
 
-subroutine ReReadIterateGeneProbs(GenosProbs, IterGeneProb, nAnis, markers)
+subroutine ReReadIterateGeneProbs(GenosProbs, IterGeneProb, nAnis)
 ! Read genotype probabilities from files and phase allele based in these probabilities.
 ! This files should have been already created during previous calls to AlphaImpute (RestartOption<3)
 ! The subroutine outputs the genotype probabilities of the homozygous genotype of the reference allele,
@@ -90,7 +99,6 @@ use Global
 implicit none
 
 logical, intent(IN) :: IterGeneProb
-integer, intent(IN) :: markers
 integer, intent(IN) :: nAnis
 !double precision, dimension(:,:,:), intent(INOUT) :: GenosProbs(nAnis,markers,2)
 double precision, dimension(:,:,:), intent(INOUT) :: GenosProbs

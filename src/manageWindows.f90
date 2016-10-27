@@ -3,9 +3,8 @@ subroutine GeneProbManagementWindows
 use Global
 implicit none
 
-integer :: i,JobsDone(nProcessors)
-character(len=300) :: filout,f
-logical :: FileExists
+integer :: i
+character(len=300) :: filout
 
 open (unit=109,file="TempGeneProb.BAT",status="unknown")
 
@@ -36,8 +35,8 @@ subroutine PhasingManagementWindows
 use Global
 implicit none
 
-integer :: i,j,JobsDone(nPhaseInternal),StartJob,Tmp,StartNewJob,ProcUsed,JobsStarted(nPhaseInternal)
-character(len=300) :: filout,infile,f
+integer :: i,JobsDone(nPhaseInternal),StartJob,Tmp,ProcUsed,JobsStarted(nPhaseInternal)
+character(len=300) :: filout,infile
 logical :: FileExists
 
 print*, " "
