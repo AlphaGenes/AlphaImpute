@@ -17,15 +17,36 @@ integer, allocatable :: seed(:)
 integer :: grainsize, count, secs, seed0
 integer :: n0, n1, n2
 
+integer, allocatable, dimension(:,:) :: InbredHmmMaCH
+
+interface
+  subroutine ReadInbred(InbredFile, PhasedData, nInbred)
+    character (len=300), intent(in) :: InbredFile
+    integer, intent(out), allocatable, dimension(:,:) :: PhasedData
+    integer, intent(out) :: nInbred
+  end subroutine ReadInbred
+end interface
+
+! Number of SNPs and genotyped animals for the HMM algorithm
+nSnpHmm=nSnp
+
+! Read the phased individuals if HMM Only or Sequence data
+#ifdef DEBUG
+    write(0,*) 'DEBUG: [MaCHController]'
+#endif
+nAnisInbred = 0
+if ( (HMM==RUN_HMM_ONLY .OR. HMM==RUN_HMM_NGS) .AND. InbredAnimalsFile/="None") then
+    call ReadInbred(trim(InbredAnimalsFile), InbredHmmMaCH, nAnisInbred)
+end if
+
+! Number of animals in the HMM
+nIndHmmMaCH = nAnisG + nAnisInbred
+
+! ALLOCATE MEMORY
 #ifdef DEBUG
     write(0,*) 'DEBUG: [MaCHController] Allocate memory'
 #endif
 
-! Number of SNPs and genotyped animals for the HMM algorithm
-nSnpHmm=nSnp
-nIndHmmMaCH=nAnisG
-
-! ALLOCATE MEMORY
 ! Allocate a matrix to store the diploids of every Animal
 ! Template Diploids Library
 ! NOTE: GenosHmmMaCH can contain either genotype or reads information (if working with sequence data NGS)
@@ -81,9 +102,6 @@ allocate(ErrorMismatches(nSnpHmm))
 allocate(Crossovers(nSnpHmm-1))
 
 if (HMM==RUN_HMM_NGS) then
-    ! Set the value MISSING of reads
-    MISSING = READ_MISSING
-
     allocate(ShotgunErrorMatrix(0:2,0:MAX_READS_COUNT,0:MAX_READS_COUNT))
 endif
 
@@ -119,11 +137,11 @@ call par_zigset(useProcs, seed, grainsize)
     write(0,*) 'DEBUG: [ParseMaCHData] ...'
 #endif
 
-if (InbredAnimalsFile/="None") then
-    call ReadInbred(InbredAnimalsFile)
+! Populate genotype and phased data from input
+call ParseMaCHData(HMM, InbredHmmMaCH, nAnisG, nAnisInbred)
+if (nAnisInbred > 0) then
+  deallocate(InbredHmmMaCH)
 end if
-
-call ParseMaCHData(HMM)
 
 ! Initialization of HMM parameters
 Epsilon=EPSILON_ERROR
@@ -141,14 +159,8 @@ endif
     write(0,*) 'DEBUG: [SetUpEquations] ...'
 #endif
 
-if (HMM==RUN_HMM_NGS) then
-    call SetUpEquationsReads
-
-else if (HMM==RUN_HMM_ONLY) then
-    call SetUpEquationsGenotypesDiploid
-else
-    call SetUpEquationsGenotypesHaploid
-endif
+! Set up Reference haplotypes and HMM parameters
+call SetUpEquations(HMM, nAnisG, nAnisInbred)
 
 open (unit=6,form='formatted')
 
@@ -207,103 +219,32 @@ ProbImputePhaseHmm=ProbImputePhaseHmm/(nRoundsHmm-HmmBurnInRound)
 end subroutine MaCHController
 
 !######################################################################
-subroutine ParseMaCHData(HMM)
+subroutine ParseMaCHData(HMM, PhasedData, nGenotyped, nInbred)
 use Global
 use GlobalVariablesHmmMaCH
 
 implicit none
-integer, intent(in) :: HMM
+integer, intent(in) :: HMM, nGenotyped, nInbred
+integer, intent(in) :: PhasedData(nGenotyped+nInbred, nSnpHmm)
+
+integer :: maxHaps, i
+
+allocate(GlobalInbredInd(nGenotyped+nInbred))
+GlobalInbredInd=.FALSE.
 
 if (HMM == RUN_HMM_NGS) then
-    call ParseMaCHDataNGS
+    call ParseMaCHDataNGS(nGenotyped+nInbred)
 else
-    call ParseMaCHDataGenos
+    call ParseMaCHDataGenos(nGenotyped)
 endif
-call ParseInbred
-
-end subroutine ParseMaCHData
-
-!######################################################################
-subroutine ParseInbred
-use Global
-use GlobalVariablesHmmMaCH
-
-implicit none
-integer :: i,j
-allocate(GlobalInbredInd(nAnisG))
-GlobalInbredInd=.FALSE.
-do i=1,nAnisG
-    do j=1,nAnisInbred
-        if (GenotypeId(i)==AnimalsInbred(j)) then
-            GlobalInbredInd(i)=.TRUE.
-        end if
-    end do
-end do
-
-end subroutine ParseInbred
-
-!######################################################################
-subroutine ReadInbred(InbredFile)
-use ISO_Fortran_Env
-use Global
-use GlobalVariablesHmmMaCH
-
-implicit none
-
-character (len=300), intent(in) :: InbredFile
-
-integer :: i,k,dumC
-integer(kind=int32) :: UGenotypes
-
-open(newunit=UGenotypes, file=InbredFile, status='unknown')
-
-do
-    read (UGenotypes,*,iostat=k) dumC
-    nAnisInbred=nAnisInbred+1
-    if (k/=0) then
-        nAnisInbred=nAnisInbred-1
-        exit            ! This forces to exit if an error is found
-    endif
-enddo
-rewind(UGenotypes)
-
-allocate(AnimalsInbred(nAnisInbred))
-
-do i=1,nAnisInbred
-    read (UGenotypes,*) AnimalsInbred(i)
-end do
-close(UGenotypes)
-
-end subroutine ReadInbred
-
-
-!######################################################################
-subroutine ParseMaCHDataNGS
-use Global
-use GlobalVariablesHmmMaCH
-
-implicit none
-integer :: i
-
-#ifdef DEBUG
-    write(0,*) 'DEBUG: [ParseMaCHDataNGS]'
-#endif
-
-do i=1,nAnisG
-    ! Add animal's diploid to the Diploids Library
-    GenosHmmMaCH(i,:)=reads(i,:)
-    GlobalHmmID(i)=i
-    ! Find individuals sequenced with high coverage
-    if ((float(count(GenosHmmMaCH(i,:)/=MISSING))/nSnp)>0.90) then
-        ! WARNING: If this variable only stores 1 and 0, then its
-        !          type should logical: GlobalHmmHDInd=.true.
-        GlobalHmmHDInd(i)=1
-    endif
-enddo
+if (nInbred > 0) then
+    call ParseMaCHPhased(PhasedData, nGenotyped, nInbred)
+endif
 
 ! Check if the number of Haplotypes the user has considered in the
 ! Spec file, Sub H (MaCH paper: Li et al. 2010), is reached.
-if (nHapInSubH>2*sum(GlobalHmmHDInd(:))) then
+maxHaps = 2 * sum(GlobalHmmHDInd(1:nGenotyped)) + nInbred
+if (nHapInSubH > maxHaps) then
     print*, "WARNING! Number of individuals highly-covered is too small"
     print*, "         for the number of Haplotypes in Sub H specified."
     print*, "         Reference haplotypes will be taken from the whole population"
@@ -311,21 +252,110 @@ if (nHapInSubH>2*sum(GlobalHmmHDInd(:))) then
     ! stop
 endif
 
+end subroutine ParseMaCHData
+
+!######################################################################
+subroutine ParseMaCHPhased(PhasedData, nGenotyped, nInbred)
+use ISO_Fortran_Env
+use Global
+use GlobalVariablesHmmMaCH
+
+implicit none
+integer, intent(in) :: nGenotyped, nInbred
+integer, intent(in) :: PhasedData(nInbred,nSnpHmm)
+
+integer :: i,k,dumC
+
+do i = 1, nInbred
+    GenosHmmMaCH(nGenotyped+i,:) = 2 * PhasedData(i,:)
+    PhaseHmmMaCH(nGenotyped+i,:,1) = PhasedData(i,:)
+    PhaseHmmMaCH(nGenotyped+i,:,2) = PhasedData(i,:)
+enddo
+
+GlobalInbredInd(nGenotyped+1 : nGenotyped+nInbred) = .TRUE.
+GlobalHmmHDInd(nGenotyped+1 : nGenotyped+nInbred) = 1
+
+end subroutine ParseMaCHPhased
+
+
+!######################################################################
+subroutine ReadInbred(InbredFile, PhasedData, nInbred)
+use ISO_Fortran_Env
+use Global
+use GlobalVariablesHmmMaCH
+
+implicit none
+
+character (len=*), intent(in) :: InbredFile
+integer, intent(out), allocatable, dimension(:,:) :: PhasedData
+integer, intent(out) :: nInbred
+
+integer :: i,k,dumC
+integer(kind=int32) :: UGenotypes
+
+open(newunit=UGenotypes, file=InbredFile, status='unknown')
+
+nInbred = 0
+do
+    read (UGenotypes,*,iostat=k) dumC
+    nInbred=nInbred+1
+    if (k/=0) then
+        nInbred=nInbred-1
+        exit            ! This forces to exit if an error is found
+    endif
+enddo
+rewind(UGenotypes)
+
+allocate(AnimalsInbred(nInbred))
+allocate(PhasedData(nInbred,nSnpHmm))
+
+do i=1,nInbred
+    read (UGenotypes,*) AnimalsInbred(i), PhasedData(i,:)
+end do
+close(UGenotypes)
+
+end subroutine ReadInbred
+
+!######################################################################
+subroutine ParseMaCHDataNGS(nGenotyped)
+use Global
+use GlobalVariablesHmmMaCH
+
+implicit none
+integer, intent(in) :: nGenotyped
+integer :: i, maxHaps
+
+#ifdef DEBUG
+    write(0,*) 'DEBUG: [ParseMaCHDataNGS]'
+#endif
+
+do i=1,nGenotyped
+    ! Add animal's diploid to the Diploids Library
+    GlobalHmmID(i)=i
+    ! Find individuals sequenced with high coverage
+    if ((float(count(reads(i,:)/=READ_MISSING))/nSnp)>0.90) then
+        ! WARNING: If this variable only stores 1 and 0, then its
+        !          type should logical: GlobalHmmHDInd=.true.
+        GlobalHmmHDInd(i)=1
+    endif
+enddo
+
 ! AlphaImpute does not phase sequence data, thus no individual has been phased.
-nGametesPhased=0
+nGametesPhased = 0
 
 end subroutine ParseMaCHDataNGS
 
 !######################################################################
-subroutine ParseMaCHDataGenos
+subroutine ParseMaCHDataGenos(nGenotyped)
 ! subroutine ParseMaCHData
 use Global
 use GlobalVariablesHmmMaCH
 use Utils
 
 implicit none
+integer, intent(in) :: nGenotyped
+
 integer :: i,j,k
-integer :: maxHaps      ! Maximum number of haplotypes possible
 
 #ifdef DEBUG
     write(0,*) 'DEBUG: [ParseMaCHDataGenos] ...'
@@ -355,22 +385,22 @@ do i=1,nAnisP
         PhaseHmmMaCH(k,:,2)=ImputePhase(i,:,2)
 
         ! Check if this animal is Highly Dense genotyped
-        if ((float(count(GenosHmmMaCH(k,:)==9))/nSnp)<0.10) then
+        if ((float(count(GenosHmmMaCH(k,:)==MISSING))/nSnpHmm)<0.10) then
             GlobalHmmHDInd(k)=1
         endif
 
         ! Clean the genotypes and alleles from possible coding errors
         do j=1,nSnp
             if ((GenosHmmMaCH(k,j)<0).or.(GenosHmmMaCH(k,j)>2)) GenosHmmMaCH(k,j)=MISSING
-            if ((PhaseHmmMaCH(k,j,1)/=0) .AND. (PhaseHmmMaCH(k,j,1)/=1)) PhaseHmmMaCH(k,j,1)=3
-            if ((PhaseHmmMaCH(k,j,2)/=0) .AND. (PhaseHmmMaCH(k,j,2)/=1)) PhaseHmmMaCH(k,j,2)=3
+            if ((PhaseHmmMaCH(k,j,1)/=0) .AND. (PhaseHmmMaCH(k,j,1)/=1)) PhaseHmmMaCH(k,j,1)=ALLELE_MISSING
+            if ((PhaseHmmMaCH(k,j,2)/=0) .AND. (PhaseHmmMaCH(k,j,2)/=1)) PhaseHmmMaCH(k,j,2)=ALLELE_MISSING
         enddo
 
         ! Check if this individual has its haplotypes phased
-        if (float(count(PhaseHmmMaCH(k,:,1)/=3))/nSnpHmm >= (imputedThreshold/100.0)) Then
+        if (float(count(PhaseHmmMaCH(k,:,1)/=ALLELE_MISSING))/nSnpHmm >= (imputedThreshold/100.0)) Then
             GlobalHmmPhasedInd(k,1)=.TRUE.
         endif
-        if (float(count(PhaseHmmMaCH(k,:,2)/=3))/nSnpHmm >= (imputedThreshold/100.0)) Then
+        if (float(count(PhaseHmmMaCH(k,:,2)/=ALLELE_MISSING))/nSnpHmm >= (imputedThreshold/100.0)) Then
             GlobalHmmPhasedInd(k,2)=.TRUE.
         endif
 
@@ -382,21 +412,12 @@ do i=1,nAnisP
 enddo
 
 ! Count the number of phased gametes
-nGametesPhased=0
+nGametesPhased = 0
 nGametesPhased = CountPhasedGametes()
 
-maxHaps = 2*sum(GlobalHmmHDInd(:))
-
 ! Check if the number of genotyped animals is correct
-if (k/=nAnisG) then
+if (k/=nGenotyped) then
     print*, "Error in ParseMaCHDataGenos"
-    stop
-endif
-
-! Check if the number of Haplotypes the user has considered in the
-! Spec file, Sub H (MaCH paper: Li et al. 2010), is reached.
-if (nHapInSubH>maxHaps) then
-    print*, "Data set is too small for the number of Haplotypes in Sub H specified"
     stop
 endif
 
@@ -423,7 +444,7 @@ integer, intent(in) :: CurrentInd, HMM
 ! Local variables
 !integer :: HapCount, ShuffleInd1, ShuffleInd2, states, thread
 integer :: genotype, i, states, thread, dumb
-integer :: Shuffle1(nIndHmmMaCH), Shuffle2(nIndHmmMaCH)
+! integer :: Shuffle1(nIndHmmMaCH), Shuffle2(nIndHmmMaCH)
 integer :: StartSnp, StopSnp, nSegments, SegmentSize
 real :: WellPhased
 logical, allocatable :: SegmentImputeDiploidHMM(:)
@@ -436,60 +457,28 @@ logical, allocatable :: SegmentImputeDiploidHMM(:)
 ! ForwardPrbos(:,1) are the prior probabilities
 ! Allocate all possible state sequencies
 states = nHapInSubH*(nHapInSubH+1)/2
-! allocate(ForwardProbs(states,nSnpHmm))
 allocate(SubH(nHapInSubH,nSnpHmm))
 
-! Create vectors of random indexes
-! Serial
-!#ifdef DEBUG
-!    write(0,*) 'DEBUG: Shuffle Individuals [MaCHForInd]'
-!#endif
-!call RandomOrder(Shuffle1,nIndHmmMaCH,idum)
-!call RandomOrder(Shuffle2,nIndHmmMaCH,idum)
-
-#if DEBUG.EQ.1
-    write(0,*) "DEBUG: RandomOrderPar [MaCHForInd]"
-#endif
-! Parallel
-thread=omp_get_thread_num()
-call RandomOrderPar(Shuffle1,nIndHmmMaCH,thread)
-call RandomOrderPar(Shuffle2,nIndHmmMaCH,thread)
-
-! Extract haps template (SubH) ...
-if (HMM==RUN_HMM_ONLY) then
-    call ExtractTemplateHaps(CurrentInd,Shuffle1,Shuffle2)
-else
-    if (nGametesPhased/float(2*nAnisP)>phasedThreshold/100.0) then
-        ! If the number of phased gametes with AlphaImpute is above
-        ! a threshold, then template is populated with the phased data
-        call ExtractTemplateByHaps(CurrentInd,Shuffle1,Shuffle2)
-    else
-        ! Otherwise, the template is populated with haplotypes at random
-        ! from all the HD animals
-        call ExtractTemplateHaps(CurrentInd,Shuffle1,Shuffle2)
-    endif
-endif
-
-! ... selecting pairs of haplotypes at random
-!call ExtractTemplateHapsByAnimals(CurrentInd,Shuffle1)
+call ExtractTemplate(HMM, currentInd, nIndHmmMaCH)
 
 StartSnp=1
 StopSnp=nSnpHmm
 if (HMM==RUN_HMM_ONLY .OR. HMM==RUN_HMM_NGS) then
 
-    ! if (GlobalInbredInd(currentInd)==.TRUE.) then
-    !     allocate(ForwardProbs(nHapInSubH,nSnpHmm))
-    !     call ForwardAlgorithmForSegmentHaplotype(currentInd,1,1,nSnpHmm)     ! Paternal haplotype
-    !     call SampleSegmentHaplotypeSource(CurrentInd,1,1,nSnpHmm)
-    !     deallocate(ForwardProbs)
-    !     allocate(ForwardProbs(nHapInSubH,nSnpHmm))
-    !     call ForwardAlgorithmForSegmentHaplotype(currentInd,2,1,nSnpHmm)     ! Paternal haplotype
-    !     call SampleSegmentHaplotypeSource(CurrentInd,2,1,nSnpHmm)
-    ! else
+    if (GlobalInbredInd(CurrentInd)==.TRUE.) then
+        allocate(ForwardProbs(nHapInSubH,nSnpHmm))
+        call ForwardAlgorithmForSegmentHaplotype(CurrentInd,1,1,nSnpHmm)     ! Paternal haplotype
+        call SampleSegmentHaplotypeSource(CurrentInd,1,1,nSnpHmm)
+
+        deallocate(ForwardProbs)
+        allocate(ForwardProbs(nHapInSubH,nSnpHmm))
+        call ForwardAlgorithmForSegmentHaplotype(CurrentInd,2,1,nSnpHmm)     ! Maternal haplotype
+        call SampleSegmentHaplotypeSource(CurrentInd,2,1,nSnpHmm)
+    else
         allocate(ForwardProbs(states,nSnpHmm))
         call ForwardAlgorithm(CurrentInd,StartSnp,StopSnp)
         call SampleChromosomes(CurrentInd,StartSnp,StopSnp)
-    ! end if
+    end if
 else
     if (nGametesPhased/float(2*nAnisP)>phasedThreshold/100.0) then
         if (GlobalHmmPhasedInd(CurrentInd,1)/=.TRUE. .AND. GlobalHmmPhasedInd(CurrentInd,2)/=.TRUE.) Then
@@ -498,11 +487,11 @@ else
             call SampleChromosomes(CurrentInd,1,nSnpHmm)
         else
             allocate(ForwardProbs(nHapInSubH,nSnpHmm))
-            call ForwardAlgorithmForSegmentHaplotype(currentInd,1,1,nSnpHmm)     ! Paternal haplotype
+            call ForwardAlgorithmForSegmentHaplotype(CurrentInd,1,1,nSnpHmm)     ! Paternal haplotype
             call SampleSegmentHaplotypeSource(CurrentInd,1,1,nSnpHmm)
             deallocate(ForwardProbs)
             allocate(ForwardProbs(nHapInSubH,nSnpHmm))
-            call ForwardAlgorithmForSegmentHaplotype(currentInd,2,1,nSnpHmm)     ! Paternal haplotype
+            call ForwardAlgorithmForSegmentHaplotype(CurrentInd,2,1,nSnpHmm)     ! Paternal haplotype
             call SampleSegmentHaplotypeSource(CurrentInd,2,1,nSnpHmm)
         endif
     else
@@ -1231,23 +1220,20 @@ implicit none
 integer, intent(in) :: CurrentInd, Marker
 
 ! Local variables
-integer :: i, j, Index, genotype, nReads, RefAll, AltAll
+integer :: i, j, Index, genotype, RefAll, AltAll
 double precision :: Factors(0:1), cond_probs(0:2)
 
 ! We treat missing genotypes as uninformative about the mosaic's
 ! underlying state. If we were to allow for deletions and the like,
 ! that may no longer be true.
 ! NOTE: gentoype can be refer either to genotypes or reads if working with sequence data (NGS)
-
-if (HMMOption==RUN_HMM_NGS) then
-    nReads = AlterAllele(CurrentInd,Marker)*MAX_READS_COUNT+ReferAllele(CurrentInd,Marker)
+! GlobalInbredInd(CurrentInd)==.TRUE.
+if (HMMOption==RUN_HMM_NGS .AND. GlobalInbredInd(CurrentInd)==.FALSE.) then
     RefAll = ReferAllele(CurrentInd,Marker)
     AltAll = AlterAllele(CurrentInd,Marker)
 else
     genotype = GenosHmmMaCH(CurrentInd,Marker)
 endif
-
-
 
 if (genotype==MISSING) then
     return
@@ -1255,7 +1241,7 @@ else
     ! Index keeps track of the states already visited. The total number
     ! of states in this chunk of code is (nHapInSubH x (nHapInSubH-1)/2)
     Index=0
-    if (HMMOption==RUN_HMM_NGS) then
+    if (HMMOption==RUN_HMM_NGS .AND. GlobalInbredInd(CurrentInd)==.FALSE.) then
         do i=0,2
             cond_probs(i)=Penetrance(Marker,i,0)*shotgunErrorMatrix(0,RefAll,AltAll)&
                          +Penetrance(Marker,i,1)*shotgunErrorMatrix(1,RefAll,AltAll)&
@@ -1264,7 +1250,7 @@ else
     endif
 
     do i=1,nHapInSubH
-        if (HMMOption /= RUN_HMM_NGS) then
+        if (HMMOption /= RUN_HMM_NGS .OR. GlobalInbredInd(CurrentInd)==.TRUE.) then
             ! Probability to observe genotype SubH(i) being the true
             ! genotype GenosHmmMaCH in locus Marker
             Factors(0) = Penetrance(Marker,SubH(i,Marker),genotype)
@@ -1363,7 +1349,47 @@ enddo
 end subroutine SetUpPrior
 
 !######################################################################
-subroutine SetUpEquationsGenotypesHaploid
+subroutine SetUpEquations(HMM, nGenotyped, nInbred)
+  use Global
+  use GlobalVariablesHmmMaCH
+  implicit none
+
+  integer, intent(in) :: HMM, nGenotyped, nInbred
+  integer :: i,j
+
+  if (HMM==RUN_HMM_NGS) then
+    call SetUpEquationsReads(nGenotyped)
+  else if (HMM==RUN_HMM_ONLY) then
+    call SetUpEquationsGenotypesHaploid(nGenotyped)
+  endif
+  if (nInbred > 0) then
+    call SetUpEquationsPhaseHaploid(nGenotyped,nInbred)
+  end if
+
+  ErrorUncertainty(:)=0
+  ErrorMatches(:)=0
+  ErrorMismatches(:)=0
+  Crossovers(:)=0
+end subroutine SetUpEquations
+
+!######################################################################
+subroutine SetUpEquationsPhaseHaploid(nGenotyped,nInbred)
+  use Global
+  use GlobalVariablesHmmMaCH
+  use random
+  implicit none
+  integer, intent(in) :: nGenotyped, nInbred
+
+  integer :: i,j
+
+  do i = 1, nInbred
+    FullH(i+nGenotyped,:,1) = PhaseHmmMaCH(i+nGenotyped,:,1)
+    FullH(i+nGenotyped,:,2) = PhaseHmmMaCH(i+nGenotyped,:,2)
+  end do
+end subroutine SetUpEquationsPhaseHaploid
+
+!######################################################################
+subroutine SetUpEquationsGenotypesHaploid(nGenotyped)
 ! Initialize the variables and parameters of the HMM model described in
 ! Li et al. 2010, Appendix
 
@@ -1372,6 +1398,8 @@ use GlobalVariablesHmmMaCH
 use random
 implicit none
 
+integer, intent(in) :: nGenotyped
+
 integer :: i,j,p
 
 !Initialise FullH
@@ -1379,7 +1407,7 @@ integer :: i,j,p
 ! If the number of phased gametes from AlphaImpute is above a threshold, then
 ! haploytpes produced from AlphaImpute are used in the model (FullH)
 if (nGametesPhased/float(2*nAnisP)>phasedThreshold/100.0) then
-    do i=1,nIndHmmMaCH
+    do i=1,nGenotyped
         FullH(i,:,:)=PhaseHmmMaCH(i,:,:)
 
         ! Missing alleles (and individuals that are not phased) are called at random
@@ -1409,14 +1437,14 @@ else
     ! haplotypes of genotyped animals are used otherwise.
 
     ! Initialise FullH with the Genotype information
-    call SetUpEquationsGenotypesDiploid
+    call SetUpEquationsGenotypesDiploid(nGenotyped)
 
     ! Overwrite haplotypes to use phased data in case phased haplotypes from
     ! AlphaImpute are available
 
 ! if (nGametesPhased/float(2*nAnisP)>phasedThreshold/100.0) then
 
-    do i=1,nIndHmmMaCH      ! For every Individual in the Genotype file
+    do i=1,nGenotyped      ! For every Individual in the Genotype file
         if (GlobalHmmPhasedInd(i,1)==.TRUE.) then
             FullH(i,:,1)=PhaseHmmMaCH(i,:,1)
             !  If there is missing information in the phased data, called allele at random
@@ -1448,16 +1476,10 @@ else
 
     enddo
 endif
-
-ErrorUncertainty(:)=0
-ErrorMatches(:)=0
-ErrorMismatches(:)=0
-Crossovers(:)=0
-
 end subroutine SetUpEquationsGenotypesHaploid
 
 !######################################################################
-subroutine SetUpEquationsGenotypesDiploid
+subroutine SetUpEquationsGenotypesDiploid(nGenotyped)
 ! Initialize the variables and parameters of the HMM model described in
 ! Li et al. 2010, Appendix
 
@@ -1466,10 +1488,12 @@ use GlobalVariablesHmmMaCH
 use random
 implicit none
 
+integer, intent(in) :: nGenotyped
+
 integer :: i,j,p
 
 !Initialise FullH
-do i=1,nIndHmmMaCH      ! For every Individual in the Genotype file
+do i=1,nGenotyped      ! For every Individual in the Genotype file
     do j=1,nSnpHmm      ! For each SNP
 
         ! Phase homozygose locus
@@ -1507,24 +1531,20 @@ do i=1,nIndHmmMaCH      ! For every Individual in the Genotype file
         endif
     enddo
 enddo
-
-ErrorUncertainty(:)=0
-ErrorMatches(:)=0
-ErrorMismatches(:)=0
-Crossovers(:)=0
-
 end subroutine SetUpEquationsGenotypesDiploid
 
-
 !######################################################################
-subroutine SetUpEquationsReads
+subroutine SetUpEquationsReads(nGenotyped)
 ! Initialize the variables and parameters of the HMM model described in
 ! Li et al. 2010, Appendix
 
 use Global
+use GlobalPedigree
 use GlobalVariablesHmmMaCH
 use random
 implicit none
+
+integer, intent(in) :: nGenotyped
 
 integer :: i,j,p, alleles, mac, readObs, RefAll, AltAll
 double precision :: prior_11, prior_12, prior_22
@@ -1537,7 +1557,8 @@ do j=1,nSnpHmm      ! For each SNP
     alleles = 0
 
     do i=1,nIndHmmMaCH
-        readObs = readObs + GenosHmmMaCH(i,j)
+        ! readObs = readObs + GenosHmmMaCH(i,j)
+        readObs = readObs + reads(i,j)
         alleles = alleles + AlterAllele(i,j)
     enddo
     frequency =  dble(alleles) / dble(readObs)
@@ -1546,28 +1567,27 @@ do j=1,nSnpHmm      ! For each SNP
     prior_12 = 2.0 * (1.0 - frequency) * frequency
     prior_22 = frequency**2
 
-    do i=1,nIndHmmMaCH
-        readObs = AlterAllele(i,j)*MAX_READS_COUNT+ReferAllele(i,j)
+    do i=1,nGenotyped
+        readObs = reads(i,j)
         RefAll = ReferAllele(i,j)
         AltAll = AlterAllele(i,j)
-
-        if (readObs==0) exit
 
         posterior_11 = prior_11 * ShotgunErrorMatrix(0,RefAll,AltAll)
         posterior_12 = prior_12 * ShotgunErrorMatrix(1,RefAll,AltAll)
         posterior_22 = prior_22 * ShotgunErrorMatrix(2,RefAll,AltAll)
-        summ = posterior_11 + posterior_12 + posterior_22
 
+        summ = posterior_11 + posterior_12 + posterior_22
         if (summ==0) write(0,*) 'There is a problem here!'
 
         posterior_11 = posterior_11 / summ
         posterior_12 = posterior_12 / summ
+        posterior_22 = posterior_22 / summ
 
-        r = ran1(idum)
-
-        if (r < posterior_11) then
+        if (posterior_11 > 0.9999) then
+            GenosHmmMaCH(i,j) = 0
             FullH(i,j,:) = 0
-        elseif (r < posterior_11 + posterior_12) then
+        else if (posterior_12 > 0.9999) then
+            GenosHmmMaCH(i,j) = 1
             if (ran1(idum)<0.5) then
                 FullH(i,j,1) = 0
                 FullH(i,j,2) = 1
@@ -1575,16 +1595,41 @@ do j=1,nSnpHmm      ! For each SNP
                 FullH(i,j,1) = 1
                 FullH(i,j,2) = 0
             endif
+        else if (posterior_22 > 0.9999) then
+            GenosHmmMaCH(i,j) = 2
+            FullH(i,j,:) = 0
         else
-            FullH(i,j,:)=1
-        endif
+            if (reads(i,j) == 0) then
+                GenosHmmMaCH(i,j) = MISSING
+            end if
+            if (r < posterior_11) then
+                FullH(i,j,:) = 0
+            else if (r < posterior_11 + posterior_12) then
+                if (ran1(idum)<0.5) then
+                    FullH(i,j,1) = 0
+                    FullH(i,j,2) = 1
+                else
+                    FullH(i,j,1) = 1
+                    FullH(i,j,2) = 0
+                endif
+            else
+                FullH(i,j,:)=1
+            endif
+        end if
+
+        if (GlobalInbredInd(i) == .TRUE.) then
+            if (GenosHmmMaCH(i,j) == 0) then
+                PhaseHmmMaCH(i,j,:) = 0
+            end if
+            if (GenosHmmMaCH(i,j) == 2) then
+                PhaseHmmMaCH(i,j,:) = 1
+            end if
+            if (GenosHmmMaCH(i,j) == MISSING) then
+                PhaseHmmMaCH(i,j,:) = ALLELE_MISSING
+            end if
+        end if
     enddo
 enddo
-
-ErrorUncertainty(:)=0
-ErrorMatches(:)=0
-ErrorMismatches(:)=0
-Crossovers(:)=0
 
 end subroutine SetUpEquationsReads
 
@@ -1794,6 +1839,47 @@ mean = mean / nSnpHmm
 end subroutine GetErrorRate
 
 !######################################################################
+subroutine ExtractTemplate(HMM, forWhom, nGenotyped)
+  use Global
+  use GlobalVariablesHmmMaCH
+  use omp_lib
+  use random
+  use Par_Zig_mod
+
+  implicit none
+  integer, intent(in) :: HMM, forWhom, nGenotyped
+
+  integer :: Shuffle1(nGenotyped), Shuffle2(nGenotyped)
+  integer :: thread
+
+  ! Create vectors of random indexes
+#if DEBUG.EQ.1
+    write(0,*) "DEBUG: Suffle individuals: RandomOrderPar [MaCHForInd]"
+#endif
+  thread=omp_get_thread_num()
+  call RandomOrderPar(Shuffle1,nGenotyped,thread)
+  call RandomOrderPar(Shuffle2,nGenotyped,thread)
+
+  ! Extract haps template (SubH) ...
+  if (HMM==RUN_HMM_ONLY) then
+      call ExtractTemplateHaps(forWhom,Shuffle1,Shuffle2)
+  else
+      if (nGametesPhased/float(2*nAnisP)>phasedThreshold/100.0) then
+          ! If the number of phased gametes with AlphaImpute is above
+          ! a threshold, then template is populated with the phased data
+          call ExtractTemplateByHaps(forWhom,Shuffle1,Shuffle2)
+      else
+          ! Otherwise, the template is populated with haplotypes at random
+          ! from all the HD animals
+          call ExtractTemplateHaps(forWhom,Shuffle1,Shuffle2)
+      endif
+  endif
+
+  ! ... selecting pairs of haplotypes at random
+  !call ExtractTemplateHapsByAnimals(CurrentInd,Shuffle1)
+end subroutine ExtractTemplate
+
+!######################################################################
 subroutine ExtractTemplateHaps(forWhom,Shuffle1,Shuffle2)
 ! Set the Template of Haplotypes used in the HMM model.
 ! It takes the haplotypes from HD animals
@@ -1961,7 +2047,7 @@ implicit none
 integer, intent(in) :: CurrentInd, CurrentMarker, State1, State2
 
 ! Local variables
-integer :: copied1, copied2, nReads, Thread, bin, imputed1, imputed2, Differences, RefAll, AltAll
+integer :: copied1, copied2, Thread, bin, imputed1, imputed2, Differences, RefAll, AltAll
 double precision :: posterior_11, posterior_12, posterior_22, summ, random, rate
 
 Thread = omp_get_thread_num()
@@ -1969,7 +2055,6 @@ Thread = omp_get_thread_num()
 copied1 = SubH(State1,CurrentMarker)
 copied2 = SubH(State2,CurrentMarker)
 
-nReads = AlterAllele(CurrentInd,CurrentMarker)*MAX_READS_COUNT+ReferAllele(CurrentInd,CurrentMarker)
 RefAll = ReferAllele(CurrentInd,CurrentMarker)
 AltAll = AlterAllele(CurrentInd,CurrentMarker)
 
