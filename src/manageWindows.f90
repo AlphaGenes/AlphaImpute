@@ -99,7 +99,7 @@ do
                 if (AlphaPhasePresent==0) write (107,*) "start /b AlphaPhase1.1.exe > out 2>&1"
                 if (AlphaPhasePresent==1) write (107,*) "start /b .\AlphaPhase1.1.exe > out 2>&1"
                 close(107)
-                call system("start """" .\" // filout)
+                call system("start """" .\\" // filout)
             endif
         endif
     enddo
