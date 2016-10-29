@@ -319,7 +319,7 @@ use GlobalVariablesHmmMaCH
 use Utils
 
 implicit none
-integer :: i,j,k, NoGenosUnit
+integer :: i,j,k, NoGenosUnit, nIndvG
 integer :: maxHaps      ! Maximum number of haplotypes possible
 
 #ifdef DEBUG
@@ -331,17 +331,29 @@ open(unit=NoGenosUnit, file='Miscellaneous/NotGenotypedAnimals.txt', status="rep
 
 GlobalHmmPhasedInd=.FALSE.
 k=0
-
+nIndvG=0
 ! Read both the phased information of AlphaImpute and high-denisty genotypes,
 ! store it in PhaseHmmMaCH and GenosHmmMaCH, and keep track of  which
 ! gamete is phased (GlobalHmmPhasedInd) and the high-denisity
 ! genotyped animal (GlobalHmmHDInd)
 
-do i=1,nAnisP
+do j = 1, nAnisG
+    do i = 1, nAnisP
+        if (trim(Id(i)) == trim(GenotypeID(j))) then
+            GlobalHmmID(j) = i
+        end if
+    end do
+    write(0,*) j, GenotypeID(j), GlobalHmmID(j)
+end do
+
+
+do i=1,nAnisG
     ! Check if individual is in the genotype file
-    if (IndivIsGenotyped(i)==1) then
-        k=k+1
-        GlobalHmmID(k)=i
+    if (IndivIsGenotyped(GlobalHmmID(i))==1) then
+        ! k=k+1
+        nIndvG=nIndvG+1
+        k=i
+        ! GlobalHmmID(k)=i
 
         ! Add animal's diploid to the Diploids Library
         GenosHmmMaCH(k,:)=ImputeGenos(i,:)
@@ -390,7 +402,7 @@ nGametesPhased = CountPhasedGametes()
 maxHaps = 2*sum(GlobalHmmHDInd(:))
 
 ! Check if the number of genotyped animals is correct
-if (k/=nAnisG) then
+if (nIndvG/=nAnisG) then
     ! print*, "Error in ParseMaCHDataGenos"
     ! stop
     write (6,*) '   ','WARNING: There are individuals in the genotype file that have'

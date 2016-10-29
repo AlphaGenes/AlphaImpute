@@ -1733,7 +1733,7 @@ else
                     ImputePhase(GlobalHmmID(i),j,:) = 0
                 elseif (n1>n2) then
                     ImputeGenos(GlobalHmmID(i),j) = 1
-                    if (ProbImputePhaseHmm(GlobalHmmID(i),j,1) > ProbImputePhaseHmm(GlobalHmmID(i),j,2) ) then
+                    if (ProbImputePhaseHmm(i,j,1) > ProbImputePhaseHmm(i,j,2) ) then
                         ImputePhase(GlobalHmmID(i),j,1) = 1
                         ImputePhase(GlobalHmmID(i),j,2) = 0
                     else
