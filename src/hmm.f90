@@ -16,9 +16,9 @@ double precision :: Theta
 integer, allocatable :: seed(:)
 integer :: grainsize, count, secs, seed0
 
-#ifdef DEBUG
-    write(0,*) 'DEBUG: [MaCHController] Allocate memory'
-#endif
+! #ifdef DEBUG
+!     write(0,*) 'DEBUG: [MaCHController] Allocate memory'
+! #endif
 
 ! Number of SNPs and genotyped animals for the HMM algorithm
 nSnpHmm=nSnp
