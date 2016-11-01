@@ -233,7 +233,7 @@ allocate(GlobalInbredInd(nGenotyped+nInbred))
 GlobalInbredInd=.FALSE.
 
 if (HMM == RUN_HMM_NGS) then
-    call ParseMaCHDataNGS(nGenotyped+nInbred)
+    call ParseMaCHDataNGS(nGenotyped)
 else
     call ParseMaCHDataGenos(nGenotyped)
 endif
@@ -1556,7 +1556,7 @@ do j=1,nSnpHmm      ! For each SNP
     readObs = 0
     alleles = 0
 
-    do i=1,nIndHmmMaCH
+    do i=1,nGenotyped
         ! readObs = readObs + GenosHmmMaCH(i,j)
         readObs = readObs + reads(i,j)
         alleles = alleles + AlterAllele(i,j)
