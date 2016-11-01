@@ -1011,7 +1011,7 @@ implicit none
 
 integer :: i,j,k,tmp,JobsDone(nProcessors)
 real,allocatable :: PatAlleleProb(:,:),MatAlleleProb(:,:),HetProb(:),GeneProbWork(:,:)
-character(len=300) :: filout
+character(len=300) :: filout,f
 logical :: FileExists
 
 if (OutOpt==0) nSnpIterate=nSnp

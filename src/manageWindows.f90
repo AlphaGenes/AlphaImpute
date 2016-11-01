@@ -36,7 +36,7 @@ use Global
 implicit none
 
 integer :: i,JobsDone(nPhaseInternal),StartJob,Tmp,ProcUsed,JobsStarted(nPhaseInternal)
-character(len=300) :: filout,infile
+character(len=300) :: filout,infile,f
 logical :: FileExists
 
 print*, " "
