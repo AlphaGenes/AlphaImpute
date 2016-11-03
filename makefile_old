@@ -1,3 +1,4 @@
+
 .PHONY: git make clean veryclean all
 # General variables
 NAME:=AlphaImpute
@@ -23,7 +24,7 @@ ifeq ($(OS), Windows_NT)
 	PFUNIT :=
 	TESTDIR :=
 	OSFLAG := "OS_WIN"
-	FFLAGS := $(FFLAGS) /static /i8 /fpp /D $(OSFLAG) -D CLUSTER=0 /Qopenmp /libs:static
+	FFLAGS := $(FFLAGS) /static /i8 /fpp /D $(OSFLAG) -D CLUSTER=0 /Qopenmp /Qopenmp-link:static /libs:static
 	GPFFLAGS := -O3 /static /i8 /libs:static
 
 	obj := .obj
@@ -99,7 +100,7 @@ endif
 # 	$(FC) -o tests.x $^ -I$(THIS_DIR)$(BUILDDIR) $(PFUNIT)/include/driver.f90 -I$(PFUNIT)/mod -I$(PFUNIT)/include -L$(PFUNIT)/lib -lpfunit -module $(BUILDDIR)
 # 	./tests.x
 
-all: directories files clean
+all: files clean
 
 all_git: files clean
 
