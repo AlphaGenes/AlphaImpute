@@ -14,9 +14,13 @@ OPTION(RUN_TESTS "Run and compile tests"
 OPTION(USE_HDF5 "Use hdf"
        OFF)
 
+set(CLUSTER 0 CACHE STRING "cluster size")
 # Add our local modlues to the module path
 SET(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules")
 set(CMAKE_MACOSX_RPATH 0)
+
+
+add_definitions(-DCLUSTER=${CLUSTER})
 
 ############################################################
 # Define the actual files and folders that make up the build

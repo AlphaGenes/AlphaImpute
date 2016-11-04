@@ -65,9 +65,10 @@ if (WIN32)
 else()
     add_definitions(-DOS_UNIX) 
 endif()
+
 SET_COMPILE_FLAG(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS}"
-                 Fortran "-static"        # Intel
-                         "/static"      # Intel Windows
+                 Fortran "-static-intel"        # Intel
+                         "/static:libs"      # Intel Windows
                 )
 SET_COMPILE_FLAG(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS}"
                  Fortran "-xHost"        # Intel
@@ -86,17 +87,18 @@ SET_COMPILE_FLAG(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS}"
 #                 )
 
 SET_COMPILE_FLAG(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS}"
-                 Fortran "-static-intel" # Intel
-                         "-static-intel" # Intel Windows
-                )
-SET_COMPILE_FLAG(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS}"
                  Fortran "-I${MKL_INCLUDE_DIRS} -L${MKL_ROOT_LIB}" # Intel
                 )
 
+if (USE_OPENMP)
 message("flags here: ${OpenMP_Fortran_FLAGS}")
 SET_COMPILE_FLAG(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS}"
                  Fortran "${OpenMP_Fortran_FLAGS}" # Intel
                 )
+SET_COMPILE_FLAG(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS}"
+                 Fortran "-openmp-link=static" # Intel
+                )
+endif()
 ###################
 ### DEBUG FLAGS ###
 ###################
@@ -148,8 +150,10 @@ SET_COMPILE_FLAG(CMAKE_Fortran_FLAGS_TESTING "${CMAKE_Fortran_FLAGS_TESTING}"
 ### RELEASE FLAGS ###
 #####################
 
-# NOTE: agressive optimizations (-O3) are already turned on by default
-
+SET_COMPILE_FLAG(CMAKE_Fortran_FLAGS_TESTING "${CMAKE_Fortran_FLAGS_TESTING}"
+                 Fortran REQUIRED "-O3" # All compilers not on Windows
+                                  "/O3" # Intel Windows
+                )
 # Unroll loops
 SET_COMPILE_FLAG(CMAKE_Fortran_FLAGS_RELEASE "${CMAKE_Fortran_FLAGS_RELEASE}"
                  Fortran "-funroll-loops" # GNU
