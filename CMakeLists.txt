@@ -31,7 +31,7 @@ SET(ALPHAIMPUTEEXE AlphaImpute${VERSION})
 SET(GENEPROBEXE GeneProbForAlphaImpute)
 # Define the library name
 SET(AHLIB alphahouse)
-SET(MACSLIB macs)
+
 # Define some directories
 SET(SRC ${CMAKE_SOURCE_DIR}/src)
 SET(LIB ${CMAKE_SOURCE_DIR}/objs)
