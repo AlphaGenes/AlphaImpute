@@ -60,6 +60,15 @@ ELSE()
     SET(GNUNATIVE "-march=native")
 ENDIF()
 # Optimize for the host's architecture
+if (WIN32)
+    add_definitions(-DOS_WIN)
+else()
+    add_definitions(-DOS_UNIX) 
+endif()
+SET_COMPILE_FLAG(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS}"
+                 Fortran "-static"        # Intel
+                         "/static"      # Intel Windows
+                )
 SET_COMPILE_FLAG(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS}"
                  Fortran "-xHost"        # Intel
                          "/QxHost"       # Intel Windows
@@ -71,10 +80,10 @@ SET_COMPILE_FLAG(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS}"
                          "-fpp" # Intel Windows
                 )
 
-SET_COMPILE_FLAG(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS}"
-                 Fortran "-DOS_UNIX"  # Intel
-                         "-DOS_WIN" # Intel Windows
-                )
+# SET_COMPILE_FLAG(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS}"
+#                  Fortran "-DOS_UNIX"  # Intel
+#                          "-DOS_WIN" # Intel Windows
+#                 )
 
 SET_COMPILE_FLAG(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS}"
                  Fortran "-static-intel" # Intel
