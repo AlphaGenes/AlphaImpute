@@ -62,6 +62,12 @@ ENDIF()
 # Optimize for the host's architecture
 if (WIN32)
     add_definitions(-DOS_WIN)
+     SET_COMPILE_FLAG(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS}"              
+                Fortran "/libs:static"
+ )
+    SET_COMPILE_FLAG(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS}"
+                 Fortran "/static"
+                )
 else()
     add_definitions(-DOS_UNIX) 
 endif()
@@ -70,12 +76,8 @@ SET_COMPILE_FLAG(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS}"
                  Fortran "-static-intel"        # Intel
                          "/static:libs"      # Intel Windows
                 )
- SET_COMPILE_FLAG(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS}"              
-                Fortran "/libs:static"
- )
-SET_COMPILE_FLAG(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS}"
-                 Fortran "/static"
-                )
+
+
 SET_COMPILE_FLAG(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS}"
                  Fortran "-xHost"        # Intel
                          "/QxHost"       # Intel Windows

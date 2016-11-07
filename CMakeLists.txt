@@ -71,7 +71,6 @@ endif(${USE_HDF5})
 # are to your liking.
 INCLUDE(${CMAKE_MODULE_PATH}/SetFortranFlags.cmake)
 SET(SRCAH ../alphahouse/src/)
-SET(SRCMACS ../alphahouse/Macs/src/)
 
 # Have the .mod files placed in the lib folder
 SET(CMAKE_Fortran_MODULE_DIRECTORY ${LIB})
@@ -79,7 +78,6 @@ SET(CMAKE_Fortran_MODULE_DIRECTORY ${LIB})
 # The source for the BAR library and have it placed in the lib folder
 ADD_SUBDIRECTORY(${SRCAH} ${LIB}/AH)
 
-ADD_SUBDIRECTORY(${SRCMACS} ${LIB}/MACS)
 
 # TODO add tests to correct location
 ADD_SUBDIRECTORY(${SRCALPHAIMPUTE} ${BIN})
