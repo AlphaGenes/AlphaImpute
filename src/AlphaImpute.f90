@@ -316,6 +316,115 @@ enddo
 end subroutine FromHMM2ImputePhase
 
 !#############################################################################################################################################################################################################################
+subroutine ReadInParameterFile(SpecFile, output)
+
+    use AlphaHouseMod, only: parseToFirstWhitespace,splitLineIntoTwoParts
+    integer :: unit,IOStatus,MultipleHDpanels
+
+    open(newunit=unit, file=SpecFile, action="read", status="old")
+
+    READFILE: do while (IOStatus==0)
+        read(MacsSpecFileID,"(A)", IOStat=IOStatus)  line
+        if (len_trim(line)==0) then
+            CYCLE
+        end if
+
+        call splitLineIntoTwoParts(trim(line), first, second)
+        tag = parseToFirstWhitespace(first)
+        if (first(1:1)=="=" .or. len(trim(line))==0) then
+          cycle
+        else
+            select case(trim(tag))
+
+                ! box 1 inputs
+            case("pedigreefile")
+                if (.not. allocated(second)) then
+                    write(*, "(A,A)") "No pedigree file specified. Using default filename: ", input%PedigreeFile
+                else
+                    write(input%PedigreeFile, "(A)") second(1)
+                end if
+            case("genotypefile")
+                 if (.not. allocated(second)) then
+                    write(*, "(A,A)") "No genotype file specified. Using default filename: ", input%Genotypefile
+                else
+                    write(input%Genotypefile, "(A)") second(1)
+                endif
+            case("truegenotypefile")
+                 if (.not. allocated(second)) then
+                    write(*, "(A,A)") "No true genotype file specified. Using default filename: ", input%TrueGenotypeFile
+                else
+                    write(input%TrueGenotypeFile, "(A)") second(1)
+                    if (input%TrueGenotypeFile=="None") then
+                        TrueGenos1None0=0
+                    else
+                        TrueGenos1None0=1
+                    endif
+                endif
+
+                ! box 2 inputs
+            case("sexchrom")
+                input%SexOpt=9
+                input%HetGameticStatus=9
+                input%HomGameticStatus=9
+                if (trim(second(1))=="Yes") then
+                    backspace(1)
+                    this%genderFile = second(2)
+                    input%HetGameticStatus=9
+                    if (trim(second(3))=="Male") then        ! Species  with heterogametic males
+                        input%HetGameticStatus=1                              ! My father is heterogametic
+                        input%HomGameticStatus=2                              ! My mother is homogametic
+                    endif
+                    if (trim(second(3))=="Female") then      ! Species with heterogametic females
+                        input%HetGameticStatus=2                              ! My mother is heterogametic
+                        input%HomGameticStatus=1                              ! My father is homogametic
+                    endif
+                    if (input%HetGameticStatus==9) then
+                        print*, "Warning - heterogametic status is misspecified"
+                        stop
+                    endif
+                    input%SexOpt=1
+                endif
+
+                ! Not sex chrom
+                if (trim(second(1))=="No") then
+                    input%SexOpt=0
+                endif
+                if (input%SexOpt==9) then
+                    print*, "Warning - Sex chromosome status is misspecified"
+                    stop
+                endif
+
+                ! box 3 inputs
+
+            case("numbersnp")
+                nSnp = int(second(1))
+                if (nSnp>240000) then
+                    print*, "Contact John Hickey if you want to do more than 240,000 SNP"
+                    stop
+                endif
+
+            case("multiplehdpanels")
+                ! Get the information of Multiple HD chips
+                ! MultipleHDpanels
+                MultipleHDpanels = second(1)
+                if (MultipleHDpanels/=0) MultiHD=MultipleHDpanels
+                ! if ((trim(MultipleHDpanels)/='Yes').and.(trim(MultipleHDpanels)/='No')) then
+                !     write (*,*) "Please, provide a valid option,"
+                !     write (*,*) "MultipleHDpanels only acepts 'No' or 'Yes'"
+                !     stop
+                ! endif
+                ! Snps of the multiple HD panels
+                allocate(nSnpByChip(MultipleHDpanels))
+                
+            case("numbersnpxchip")
+                do i=1,MultipleHDpanels
+                    nSnpByChip(i) = second(i)
+                enddo
+            case("hdanimalthreshold")
+                PercGenoForHD = second(1)
+
+
+!#############################################################################################################################################################################################################################
 
 subroutine ReadInParameterFile(SpecFile)
 use Global
