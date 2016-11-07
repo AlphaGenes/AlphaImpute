@@ -3,6 +3,7 @@
 module Global
 implicit none
 
+! TODO params only used in read in params, but where to put them? 
 integer, parameter :: OPT_RESTART_ALL=0
 integer, parameter :: OPT_RESTART_GENEPROB=1
 integer, parameter :: OPT_RESTART_PHASING=2
@@ -30,19 +31,17 @@ integer,parameter :: ImputeFromHDLibraryCountThresh=1,ImputeFromHDPhaseThresh=1
 integer,parameter :: ImputeFromParentCountThresh=1,ImputeFromGrandParentCountThresh=1
 real,parameter :: DisagreeThreshold=0.05,GeneProbThresh=0.99
 
-integer :: nAnisG,nAnisRawPedigree,nSnp,nAnisP,IntEditStat,nPhaseInternal,nPhaseExternal,OutOpt,SexOpt,HetGameticStatus,HomGameticStatus,MultiHD
-integer :: nProcessors,nProcessGeneProb,nProcessAlphaPhase,ManagePhaseOn1Off0,CountRawGenos,InternalIterations,nAnisInGenderFile
-integer :: nAgreeImputeHDLib,nAgreeParentPhaseElim,nAgreeInternalHapLibElim,MaxLeftRightSwitch,MinSpan,ConservativeHapLibImputation
-integer :: TrueGenos1None0,nSnpRaw,nObsDataRaw,nAgreePhaseElim,nAgreeGrandParentPhaseElim,UseGP,BypassGeneProb,HMMOption
-integer :: nSnpIterate,NoPhasing,AlphaPhasePresent,GeneProbPresent,PrePhased,UserDefinedHD,PedFreePhasing,PhaseTheDataOnly,RestartOption
+integer :: nAnisG,nAnisRawPedigree,nSnp,nAnisP,nPhaseInternal,nPhaseExternal,SexOpt,HetGameticStatus,HomGameticStatus,MultiHD
+integer :: nProcessors,nProcessGeneProb,nProcessAlphaPhase,ManagePhaseOn1Off0,CountRawGenos,nAnisInGenderFile
+integer :: nAgreeImputeHDLib,nAgreeParentPhaseElim,nAgreeInternalHapLibElim,MaxLeftRightSwitch,MinSpan
+integer :: TrueGenos1None0,nSnpRaw,nObsDataRaw,nAgreePhaseElim,nAgreeGrandParentPhaseElim,UseGP
+integer :: nSnpIterate,NoPhasing,AlphaPhasePresent,GeneProbPresent,UserDefinedHD,PedFreePhasing
 integer :: nSnpChips
 
 integer :: PhaseSubsetSize, PhaseNIterations
 character (len=300) :: LargeDatasets
 
-logical :: PreProcess
-
-real :: PercGenoForHD,PercSnpMiss,SecondPercGenoForHD,GenotypeErrorPhase,WellPhasedThresh
+real :: GenotypeErrorPhase
 
 integer,allocatable,dimension (:,:) :: Reads,ReferAllele,AlterAllele
 integer(kind=1),allocatable,dimension (:) :: SnpIncluded,RecIdHDIndex,GenderRaw,RecGender,IndivIsGenotyped

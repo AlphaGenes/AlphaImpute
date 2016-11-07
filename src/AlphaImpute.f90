@@ -407,22 +407,180 @@ subroutine ReadInParameterFile(SpecFile, output)
                 ! Get the information of Multiple HD chips
                 ! MultipleHDpanels
                 MultipleHDpanels = second(1)
-                if (MultipleHDpanels/=0) MultiHD=MultipleHDpanels
+                if (MultipleHDpanels/=0) input%MultiHD=MultipleHDpanels
                 ! if ((trim(MultipleHDpanels)/='Yes').and.(trim(MultipleHDpanels)/='No')) then
                 !     write (*,*) "Please, provide a valid option,"
                 !     write (*,*) "MultipleHDpanels only acepts 'No' or 'Yes'"
                 !     stop
                 ! endif
                 ! Snps of the multiple HD panels
-                allocate(nSnpByChip(MultipleHDpanels))
+                allocate(input%nSnpByChip(input%MultipleHDpanels))
                 
             case("numbersnpxchip")
-                do i=1,MultipleHDpanels
-                    nSnpByChip(i) = second(i)
+                do i=1,input%MultipleHDpanels
+                    input%nSnpByChip(i) = second(i)
                 enddo
-            case("hdanimalthreshold")
-                PercGenoForHD = second(1)
+            case("hdanimalsthreshold")
+                input%PercGenoForHD = second(1)
 
+                ! box 4
+            case("internaledit")
+                if (tlc(trim(second(1))) == "yes") input%inteditstat = 1
+                else if (tlc(trim(second(1))) == "no") input%inteditstat = 0
+                else
+                    write(error_unit,"error: internaledit is incorrectly defined in the spec file")
+                    stop
+                endif
+                if (input%IntEditStat==1 .AND. input%MultiHD/=0) then
+                    write(error_unit,*) "IntEditStat and MultipleHDpanels are incompatible,"
+                    write(error_unit,*) "Please, considere to use only one HD panel or to disable internal editing"
+                    stop
+                endif
+            
+            case("editingparameters")
+                input%OutOpt=9
+                if (input%IntEditStat==1) then
+                    if (size(second<4)) then
+                        goto 4000
+                    endif
+                    input%PercGenoForHD = second(1)
+                    input%PercSnpMiss = second(2)
+                    input%SecondPercGenoForHD = second(3)
+                    if (second(4)=="AllSnpOut") input%OutOpt=1
+                    if (second(4)=="EditedSnpOut") input%OutOpt=0
+                    if (input%OutOpt==9) then
+                        goto 4000
+                    endif
+                else
+                    ! In case no editing is set and there is a single HD panel, a threshold to determine HD individuals is needed
+                    if (input%MultiHD==0) input%PercGenoForHD=90.0
+                    input%OutOpt=1
+                endif
+                input%PercGenoForHD=input%PercGenoForHD/100
+                input%PercSnpMiss=input%PercSnpMiss/100
+                input%SecondPercGenoForHD=input%SecondPercGenoForHD/100
+                cycle
+                4000 print*, "Output options incorrectly specified"
+                        print*, "Beware!!!!! AlphaImpute is case sensitive"
+                        stop
+
+
+                ! box 5
+            case("numberphasingruns")
+            case("coreandtaillengths")
+            case("corelengths")
+            case("pedigreefreephasing")
+            case("genotypeerror")
+            case("largedatasets")
+
+
+
+
+                ! box 6
+            case("internaliterations")
+                input%InternalIterations = second(1)
+            case("ConservativeHaplotypeLibraryUse")
+                if(tlc(trim(ConservHapLibImp)) == "no") then
+                    input%ConservativeHapLibImputation = 0
+                else if (tlc(trim(ConservHapLibImp)) == "yes") 
+                    input%ConservativeHapLibImputation = 1
+                else
+                    write (error_unit, *) "ConservativeHaplotypeLibraryUse not correctly set"
+                    stop
+            case("wellphasedthreshold")
+                this%WellPhasedThresh = second(1)
+
+
+            case("hmmoption")
+                input%HMMOption=RUN_HMM_NULL
+                if (trim(second(1))=='No') input%HMMOption=RUN_HMM_NO
+                if (trim(second(1))=='Yes') input%HMMOption=RUN_HMM_YES
+                if (trim(second(1))=='Only') input%HMMOption=RUN_HMM_ONLY
+                if (trim(second(1))=='Prephase') input%HMMOption=RUN_HMM_PREPHASE
+                if (trim(second(1))=="NGS") input%HMMOption=RUN_HMM_NGS
+                if (input%HMMOption==RUN_HMM_NULL) then
+                    write(error_unit,*), "HMMOption not correctly specified"
+                    stop
+                endif
+
+            case("templatehaplotypes")
+                if (.not. allocated(second)) then
+                    write(error_unit,*) "templatehaplotypes not set correctly"
+                    stop
+                endif
+                input%nHapInSubH = second(1)
+            case("burninrounds")
+                input%HmmBurnInRound = second(1)
+            case("rounds")
+                input%nRoundsHMM = second(1)
+            case("parallelprocessors")
+                input%useProcs = second(1)
+            case("seed")
+                input%idum = second(1)
+            case("thresholdmissingalles")
+                input%phasedThreshold = second(1)
+            case("thresholdimputed")
+                input%imputedThreshold = second(1)
+
+                !  box 8
+
+            case("preprocessdataonly")
+                if (second(1)=="No") then
+                    input%PreProcess=.FALSE.
+                else
+                    if (second(1)=="Yes") then
+                        input%PreProcess=.TRUE.
+                    else
+                        write(error_unit,*) "Stop - Preprocess of data option incorrectly specified"
+                        stop
+                    endif
+                endif
+
+            case("phasingonly")
+                if (second(1)=="No") then
+                    input%PhaseTheDataOnly=0
+                else
+                    if (second(1)=="Yes") then
+                        input%PhaseTheDataOnly=1
+                    else
+                        write(error_unit,*) "Stop - Phasing only option incorrectly specified"
+                        stop
+                    endif
+                endif
+            case("userdefinedalphaphaseanimalsfile")
+                input%UserDefinedHD=0
+                if (second(1)/="None") then
+                    input%UserDefinedHD=1
+                    open (newunit=AnimalFileUnit,file=trim(second(1)),status="old")
+                endif
+
+            case("prephasedfile")
+                if (second(1)=="None") then
+                    input%PrePhased=0
+                else
+                    input%PrePhased=1
+                    open (newunit=prePhasedFileUnit,file=trim(second(1)),status="old")
+                endif
+            case("bypassgeneprob")
+                if (trim(second(1))=="No") then
+                    input%BBypassGeneProb=0             
+                else if (trim(second(1))=="Yes") then
+                    input%BBypassGeneProb=1
+                else if (trim(second(1))=="Probabilities") then
+                    input%BypassGeneProb=2
+                else
+                    write(error_unit,*) "BypassGeneProb not correctly specified"
+                    stop
+                endif
+            case("restartoption")
+                input%RestartOption = second(1)
+
+            case default
+                write(*,"(A,A)") trim(tag), "is not a valid input for macs"
+                cycle
+            end select
+        end if
+    end do READFILE
 
 !#############################################################################################################################################################################################################################
 
