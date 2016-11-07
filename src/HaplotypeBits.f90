@@ -152,7 +152,7 @@ CONTAINS
 !> @return     .TRUE. if haplotypes are the same, .FALSE. otherwise 
 !---------------------------------------------------------------------------  
   FUNCTION compareHaplotypeThreshold(hap1, hap2, miss1, miss2, nSecs, thres) result(same)
-    integer(kind=8), dimension(:), intent(in) :: hap1, hap2, miss1, miss2
+    integer(kind=int64), dimension(:), intent(in) :: hap1, hap2, miss1, miss2
     integer, intent(in) :: nSecs, thres
     logical :: same
 
@@ -161,6 +161,8 @@ CONTAINS
     c = 0
     same = .TRUE.
     do i = 1, nSecs
+      ! either hap(1) OR hap(2) (not both) and not miss(1) | miss(2)
+      ! count the occurences of this
       c = c + POPCNT( IAND(IEOR(hap1(i), hap2(i)),&
                            NOT(IOR(miss1(i), miss2(i)))))
       if ( c >= thres ) then
@@ -193,7 +195,7 @@ CONTAINS
 !> @return     .TRUE. if haplotypes are the extrictly the same, .FALSE. otherwise 
 !---------------------------------------------------------------------------  
   FUNCTION compareHaplotypeExtrict(hap1, hap2, miss1, miss2, nSecs) result(same)
-    integer(kind=8), dimension(:), intent(in) :: hap1, hap2, miss1, miss2
+    integer(kind=int64), dimension(:), intent(in) :: hap1, hap2, miss1, miss2
     integer, intent(in) :: nSecs
     logical :: same
 
@@ -224,7 +226,7 @@ CONTAINS
 !> @return     .TRUE. if haplotypes are the extrictly the same, .FALSE. otherwise 
 !---------------------------------------------------------------------------  
   FUNCTION compareHaplotypeAllowMissingExtrict(hap1, hap2, miss1, miss2, nSecs) result(same)
-    integer(kind=8), dimension(:), intent(in) :: hap1, hap2, miss1, miss2
+    integer(kind=int64), dimension(:), intent(in) :: hap1, hap2, miss1, miss2
     integer, intent(in) :: nSecs
     logical :: same
 
@@ -256,7 +258,7 @@ CONTAINS
 !> @return     .TRUE. if haplotypes are the same, .FALSE. otherwise 
 !---------------------------------------------------------------------------  
   FUNCTION compareHaplotypeAllowMissingThreshold(hap1, hap2, miss1, miss2, nSecs, thres) result(same)
-    integer(kind=8), dimension(:), intent(in) :: hap1, hap2, miss1, miss2
+    integer(kind=int64), dimension(:), intent(in) :: hap1, hap2, miss1, miss2
     integer, intent(in) :: nSecs, thres
     logical :: same
 
@@ -301,7 +303,7 @@ CONTAINS
 !> @return     .TRUE. if haplotypes are the same, .FALSE. otherwise
 !---------------------------------------------------------------------------
   FUNCTION compareHaplotype2Threshold(hap1, hap2, miss, nSecs, thres) result(same)
-    integer(kind=8), dimension(:), intent(in) :: hap1, hap2, miss
+    integer(kind=int64), dimension(:), intent(in) :: hap1, hap2, miss
     integer, intent(in) :: nSecs, thres
     logical :: same
 
@@ -341,7 +343,7 @@ CONTAINS
 !> @return     .TRUE. if haplotypes are extrictly the same, .FALSE. otherwise
 !---------------------------------------------------------------------------
   FUNCTION compareHaplotype2Extrict(hap1, hap2, miss, nSecs) result(same)
-    integer(kind=8), dimension(:), intent(in) :: hap1, hap2, miss
+    integer(kind=int64), dimension(:), intent(in) :: hap1, hap2, miss
     integer, intent(in) :: nSecs
     logical :: same
 
@@ -374,7 +376,7 @@ CONTAINS
 !> @return     .TRUE. if haplotypes are the same, .FALSE. otherwise
 !---------------------------------------------------------------------------
   FUNCTION compareHaplotypeAllowSimultaneousMissingThreshold(hap1, hap2, miss1, miss2, nSecs, thres) result(same)
-    integer(kind=8), dimension(:), intent(in) :: hap1, hap2, miss1, miss2
+    integer(kind=int64), dimension(:), intent(in) :: hap1, hap2, miss1, miss2
     integer, intent(in) :: nSecs, thres
     logical :: same
 
@@ -416,7 +418,7 @@ CONTAINS
 !> @return     .TRUE. if haplotypes are the extrictly the same, .FALSE. otherwise
 !---------------------------------------------------------------------------
   FUNCTION compareHaplotypeAllowSimultaneousMissingExtrict(hap1, hap2, miss1, miss2, nSecs) result(same)
-    integer(kind=8), dimension(:), intent(in) :: hap1, hap2, miss1, miss2
+    integer(kind=int64), dimension(:), intent(in) :: hap1, hap2, miss1, miss2
     integer, intent(in) :: nSecs
     logical :: same
 
@@ -444,7 +446,7 @@ CONTAINS
 !> @return     Number of markers phased
 !---------------------------------------------------------------------------
   FUNCTION BitCountAllelesPhased(miss1, miss2, nSecs) result(c)
-    integer(kind=8), dimension(:), intent(in) :: miss1, miss2
+    integer(kind=int64), dimension(:), intent(in) :: miss1, miss2
     integer, intent(in) :: nSecs
     integer :: c
 
@@ -473,7 +475,7 @@ CONTAINS
 !> @return     Number of alleles imputed
 !---------------------------------------------------------------------------
   FUNCTION BitCountAllelesImputed(miss, nSecs) result(c)
-    integer(kind=8), dimension(:), intent(in) :: miss
+    integer(kind=int64), dimension(:), intent(in) :: miss
     integer, intent(in) :: nSecs
     integer :: c
 
@@ -502,7 +504,7 @@ CONTAINS
 !> @return     Number of alleles missing
 !---------------------------------------------------------------------------
   FUNCTION BitCountAllelesMissing(miss, nSecs) result(c)
-    integer(kind=8), dimension(:), intent(in) :: miss
+    integer(kind=int64), dimension(:), intent(in) :: miss
     integer, intent(in) :: nSecs
     integer :: c
 
@@ -531,7 +533,7 @@ CONTAINS
 !> @return     .TRUE. if haplotype is phased, .FALSE. otherwise
 !---------------------------------------------------------------------------
   FUNCTION BitCompletePhased(miss, nSecs) result(phased)
-    integer(kind=8), dimension(:), intent(in) :: miss
+    integer(kind=int64), dimension(:), intent(in) :: miss
     integer, intent(in) :: nSecs
     logical :: phased
 
@@ -563,7 +565,7 @@ CONTAINS
 !> @return     .TRUE. if haplotype is phased, .FALSE. otherwise
 !---------------------------------------------------------------------------
   FUNCTION BitCompleteMissing(miss, nSecs) result(phased)
-    integer(kind=8), dimension(:), intent(in) :: miss
+    integer(kind=int64), dimension(:), intent(in) :: miss
     integer, intent(in) :: nSecs
     logical :: phased
 
@@ -597,7 +599,7 @@ CONTAINS
 !> @return     Number of reference alleles
 !---------------------------------------------------------------------------
   FUNCTION BitCountRefAlleles(hap, miss, nSecs) result(RefA)
-    integer(kind=8), dimension(:), intent(in) :: hap, miss
+    integer(kind=int64), dimension(:), intent(in) :: hap, miss
     integer, intent(in) :: nSecs
     integer :: RefA
 
@@ -626,7 +628,7 @@ CONTAINS
 !> @return     Number of reference alleles
 !---------------------------------------------------------------------------
   FUNCTION BitCountAltAlleles(hap, nSecs) result(AltA)
-    integer(kind=8), dimension(:), intent(in) :: hap
+    integer(kind=int64), dimension(:), intent(in) :: hap
     integer, intent(in) :: nSecs
     integer :: AltA
 

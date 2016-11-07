@@ -51,7 +51,7 @@ use Output
 use Imputation
 implicit none
 
-integer :: i,j, markers
+integer :: markers
 double precision, allocatable :: GenosProbs(:,:,:)
 
 character(len=4096) :: cmd, SpecFile
@@ -59,8 +59,8 @@ character(len=4096) :: cmd, SpecFile
 INTERFACE WriteProbabilities
   SUBROUTINE WriteProbabilitiesHMM(outFile, Indexes, nAnisG, nSnps)
     character(len=*), intent(IN) :: outFile
-    integer, intent(IN) :: Indexes(nAnisG)
     integer, intent(IN) :: nAnisG, nSnps
+    integer, intent(IN) :: Indexes(nAnisG)  
   END SUBROUTINE WriteProbabilitiesHMM
 
   SUBROUTINE WriteProbabilitiesGeneProb(outFile, GenosProbs, Ids, nExtraAnims, nAnisP, nSnps)
@@ -71,16 +71,15 @@ INTERFACE WriteProbabilities
   END SUBROUTINE WriteProbabilitiesGeneProb
 END INTERFACE
 
-INTERFACE
-  SUBROUTINE ReReadIterateGeneProbs(GenosProbs, IterGeneProb, nAnis, markers)
-    use Global
-!    double precision, intent(OUT) :: GenosProbs(nAnisP,markers,2)
-    double precision, dimension(:,:,:), intent(INOUT) :: GenosProbs
-    logical, intent(IN) :: IterGeneProb
-    integer, intent(IN) :: nAnis
-    integer, intent(IN) :: markers
-  END SUBROUTINE ReReadIterateGeneProbs
-END INTERFACE
+! INTERFACE
+!   SUBROUTINE ReReadIterateGeneProbs(GenosProbs, IterGeneProb, nAnis)
+!     use Global
+! !    double precision, intent(OUT) :: GenosProbs(nAnisP,markers,2)
+!     double precision, dimension(:,:,:), intent(INOUT) :: GenosProbs
+!     logical, intent(IN) :: IterGeneProb
+!     integer, intent(IN) :: nAnis
+!   END SUBROUTINE ReReadIterateGeneProbs
+! END INTERFACE
 
 if (Command_Argument_Count() > 0) then
   call get_command_argument(1,cmd)
@@ -100,7 +99,7 @@ end if
 call Titles
 call ReadInParameterFile(SpecFile)
 if (HMMOption /= RUN_HMM_NGS) then
-    if (RestartOption<OPT_RESTART_PHASING .AND. BypassGeneProb==0) call MakeDirectories(RUN_HMM_NULL)
+    if (RestartOption<OPT_RESTART_PHASING) call MakeDirectories(RUN_HMM_NULL)
     call CountInData
     call ReadInData
     call SnpCallRate
@@ -177,6 +176,15 @@ else
 
             endif
 
+            markers = nSnp
+            if (OutOpt==1) then
+              markers = nSnpRaw
+            end if
+            allocate(GenosProbs(GlobalExtraAnimals + nAnisP, markers, 2))
+            call ReReadIterateGeneProbs(GenosProbs, .FALSE., nAnisP)
+            call WriteProbabilities("./Results/GenotypeProbabilities.txt", GenosProbs, Id, GlobalExtraAnimals, nAnisP, nSnp)
+            deallocate(GenosProbs)
+
             if (RestartOption==OPT_RESTART_GENEPROB) then
 #if CLUSTER==1
                 write(6,*) "Restart option 1 stops program before Geneprobs jobs have finished"
@@ -194,7 +202,7 @@ else
             markers = nSnpRaw
           end if
           allocate(GenosProbs(GlobalExtraAnimals + nAnisP, markers, 2))
-          call ReReadIterateGeneProbs(GenosProbs, .FALSE., nAnisP, markers)
+          call ReReadIterateGeneProbs(GenosProbs, .FALSE., nAnisP)
           call WriteProbabilities("./Results/GenotypeProbabilities.txt", GenosProbs, Id, GlobalExtraAnimals, nAnisP, nSnp)
           deallocate(GenosProbs)
           write(6,*) "Restart option 1 stops program after genotype probabilities have been outputted"
@@ -273,6 +281,10 @@ if (HMMOption/=RUN_HMM_NGS) then
 endif
 call PrintTimerTitles
 
+if (RestartOption > OPT_RESTART_IMPUTATION) then
+    call system(RM // " Tmp2345678.txt")
+end if
+
 end program AlphaImpute
 
 !#############################################################################################################################################################################################################################
@@ -309,15 +321,15 @@ subroutine ReadInParameterFile(SpecFile)
 use Global
 use GlobalPedigree
 use GlobalVariablesHmmMaCH
-
+use GlobalFiles, only : PedigreeFile,GenotypeFile,TrueGenosFile, PhasePath,GenderFile
 implicit none
 
 character(len=4096), intent(in) :: SpecFile
 
-integer :: k,i,resid,Changer,nLines
+integer :: k,i,nLines
 character (len=300) :: dumC,IntEdit,PhaseDone,OutputOptions,PreProcessOptions,TempOpt,TempHetGameticStatus
 character (len=300) :: UserDefinedHDAnimalsFile,PrePhasedAnimalFile,PedigreeFreePhasing,PhasingOnlyOptions
-character (len=300) :: UseGeneProb,ConservHapLibImp,CharBypassGeneProb,TmpHmmOption
+character (len=300) :: ConservHapLibImp,CharBypassGeneProb,TmpHmmOption
 integer :: MultipleHDpanels
 
 open (unit=1, file=SpecFile, status="old")
@@ -807,44 +819,12 @@ end subroutine ReadInPrePhasedData
 
 !#############################################################################################################################################################################################################################
 
-! subroutine ManageWorkLeftRight
-! ! Major sub-step 8 is iterated a number of times with increasingly relaxed
-! ! restrictions. After each iteration, the minor sub-steps are also carried out.
-! use Global
-
-! implicit none
-
-! MaxLeftRightSwitch=4; MinSpan=200
-! call WorkLeftRight
-! if (SexOpt==1) call EnsureHetGametic
-! call GeneralFillIn
-
-! MaxLeftRightSwitch=3; MinSpan=200
-! call WorkLeftRight
-! if (SexOpt==1) call EnsureHetGametic
-! call GeneralFillIn
-
-! MaxLeftRightSwitch=4; MinSpan=100
-! call WorkLeftRight
-! if (SexOpt==1) call EnsureHetGametic
-! call GeneralFillIn
-
-! MaxLeftRightSwitch=4; MinSpan=50
-! call WorkLeftRight
-! if (SexOpt==1) call EnsureHetGametic
-! call GeneralFillIn
-
-! end subroutine ManageWorkLeftRight
-
-!#############################################################################################################################################################################################################################
-
 subroutine GeneProbManagement
 use Global
 implicit none
 
-integer :: i,JobsDone(nProcessors)
-character(len=300) :: filout,f
-logical :: FileExists
+integer :: i
+character(len=300) :: filout
 
 open (unit=109,file="TempGeneProb.sh",status="unknown")
 
@@ -865,18 +845,6 @@ print*, " ","       Calculating genotype probabilities"
     call system("rm TempGeneProb.sh")
     ! Check that every process has finished before going on
     if (RestartOption/=OPT_RESTART_GENEPROB) call CheckGeneProbFinished(nProcessors)
-
-!#elif CLUSTER==2
-!! Use user specific script to run Genetoype Probabilities processes
-!    inquire(file="input.txt", exist=FileExists)   ! file_exists will be TRUE if the file
-!                                                  ! exists and FALSE otherwise
-!    if (FileExists) Then
-!        call system("./runGeneProb.sh")
-!    else
-!        write(0,*) "'runGeneProb.sh' does not exist. Please, provide a valid script."
-!    endif
-!    ! Check that every process has finished before going on
-!    if (RestartOption/=OPT_RESTART_GENEPROB) call CheckGeneProbFinished(nProcessors)
 
 #else
 ! Create bash script for run GeneProb subprocesses
@@ -936,8 +904,8 @@ subroutine PhasingManagement
 use Global
 implicit none
 
-integer :: i,j,JobsDone(nPhaseInternal),StartJob,Tmp,StartNewJob,ProcUsed,JobsStarted(nPhaseInternal)
-character(len=300) :: filout,infile,f
+integer :: i,JobsDone(nPhaseInternal),StartJob,Tmp,ProcUsed,JobsStarted(nPhaseInternal)
+character(len=300) :: filout,infile
 logical :: FileExists
 
 print*, " "
@@ -973,35 +941,6 @@ print*, " ","       Performing the phasing of the data"
             if (sum(JobsDone(:))==nPhaseInternal) exit
         enddo
     endif
-
-!else
-
-!#elif CLUSTER==2
-!    ! Use user specific script to run Genetoype Probabilities processes
-!    inquire(file="input.txt", exist=FileExists)   ! file_exists will be TRUE if the file
-!                                                  ! exists and FALSE otherwise
-!    if (FileExists) Then
-!        call system("./runPhase.sh")
-!    else
-!        write(0,*) "'runPhase.sh' does not exists. Please, provide a valid script."
-!    endif
-!
-!    ! Check that every process has finished before AlphaImpute goes on with imputation
-!    if (RestartOption/=OPT_RESTART_PHASING) Then
-!        JobsDone(:)=0
-!        do
-!            do i=1,nPhaseInternal
-!                write (filout,'("./Phasing/Phase"i0,"/PhasingResults/Timer.txt")')i
-!                inquire(file=trim(filout),exist=FileExists)
-!                if ((FileExists .eqv. .true.).and.(JobsDone(i)==0)) then
-!                    print*, " ","AlphaPhase job ",i," done"
-!                    JobsDone(i)=1
-!                endif
-!            enddo
-!            call sleep(SleepParameter)
-!            if (sum(JobsDone(:))==nPhaseInternal) exit
-!        enddo
-!    endif
 
 #else
     open (unit=107,file="TempPhase1.sh",status="unknown")
@@ -1070,7 +1009,7 @@ use Imputation
 
 implicit none
 
-integer :: h,i,j,k,dum,tmp,JobsDone(nProcessors),JDone(nProcessors),StSnp,EnSnp,OnOff
+integer :: i,j,k,tmp,JobsDone(nProcessors)
 real,allocatable :: PatAlleleProb(:,:),MatAlleleProb(:,:),HetProb(:),GeneProbWork(:,:)
 character(len=300) :: filout,f
 logical :: FileExists
@@ -1502,6 +1441,8 @@ subroutine WriteOutResults
 use Global
 use GlobalPedigree
 use GlobalVariablesHmmMaCH
+use GlobalFiles, only:  GenotypeFile
+use output
 implicit none
 
 character(len=7) :: cm !use for formatting output - allows for up to 1 million SNPs
@@ -1516,8 +1457,9 @@ integer :: n0, n1, n2
 INTERFACE WriteProbabilities
   SUBROUTINE WriteProbabilitiesHMM(outFile, Indexes, nAnisG, nSnps)
     character(len=*), intent(IN) :: outFile
+    integer, intent(IN) :: nSnps,nAnisG
     integer, intent(IN) :: Indexes(nAnisG)
-    integer, intent(IN) :: nAnisG, nSnps
+    
   END SUBROUTINE WriteProbabilitiesHMM
 
   SUBROUTINE WriteProbabilitiesGeneProb(outFile, GenosProbs, Ids, nExtraAnims, nAnisP, nSnps)
@@ -1528,16 +1470,7 @@ INTERFACE WriteProbabilities
   END SUBROUTINE WriteProbabilitiesGeneProb
 END INTERFACE
 
-INTERFACE
-  SUBROUTINE ReReadIterateGeneProbs(GenosProbs, IterGeneProb, nAnis, markers)
-    use Global
-    logical, intent(IN) :: IterGeneProb
-    integer, intent(IN) :: markers
-    integer, intent(IN) :: nAnis
-!    double precision, intent(OUT) :: GenosProbs(nAnisP,markers,2)
-    double precision, dimension(:,:,:), intent(INOUT) :: GenosProbs
-  END SUBROUTINE ReReadIterateGeneProbs
-END INTERFACE
+
 
 INTERFACE
   SUBROUTINE CheckImputationInconsistencies(ImpGenos, ImpPhase, n, m)
@@ -1564,17 +1497,6 @@ endif
 write(cm,'(I7)') nSnpRaw !for formatting
 cm = adjustl(cm)
 
-! open (unit=33,file="./Results/ImputePhase.txt",status="unknown")
-! open (unit=34,file="./Results/ImputeGenotypes.txt",status="unknown")
-! open (unit=40,file="./Results/ImputePhaseProbabilities.txt",status="unknown")
-! open (unit=41,file="./Results/ImputeGenotypeProbabilities.txt",status="unknown")
-! open (unit=50,file="./Results/ImputationQualityIndividual.txt",status="unknown")
-! open (unit=51,file="./Results/ImputationQualitySnp.txt",status="unknown")
-! open (unit=52,file="./Results/WellPhasedIndividuals.txt",status="unknown")
-
-! open (unit=53,file="./Results/ImputePhaseHMM.txt",status="unknown")
-! open (unit=54,file="./Results/ImputeGenotypesHMM.txt",status="unknown")
-
 open (unit=33,file="." // DASH// "Results" // DASH // "ImputePhase.txt",status="unknown")
 open (unit=34,file="." // DASH// "Results" // DASH // "ImputeGenotypes.txt",status="unknown")
 open (unit=40,file="." // DASH// "Results" // DASH // "ImputePhaseProbabilities.txt",status="unknown")
@@ -1598,7 +1520,6 @@ if (OutOpt==0) then
 
         call CheckImputationInconsistencies(ImputeGenos, ImputePhase, nAnisP, nSnp)
 
-        ! open (unit=39,file="IterateGeneProb/IterateGeneProbInput.txt")
         open (unit=39, file="IterateGeneProb" // DASH // "IterateGeneProbInput.txt")
         do i=1,nAnisP
             write (39,'(3i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') RecPed(i,:),ImputeGenos(i,:)
@@ -1621,9 +1542,6 @@ if (OutOpt==0) then
     call CheckImputationInconsistencies(ImputeGenos, ImputePhase, nAnisP, nSnp)
 
     do i=GlobalExtraAnimals+1,nAnisP
-         !write (33,'(a,'//cm//'(1x,i1))') Id(i),ImputePhase(i,:,1)
-         !write (33,'(a,'//cm//'(1x,i1))') Id(i),ImputePhase(i,:,2)
-         !write (34,'(a,'//cm//'(1x,i1))') Id(i),ImputeGenos(i,:)
          write (33,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') Id(i),ImputePhase(i,:,1)
          write (33,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') Id(i),ImputePhase(i,:,2)
          write (34,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') Id(i),ImputeGenos(i,:)
@@ -1631,9 +1549,6 @@ if (OutOpt==0) then
     enddo
 
     do i=GlobalExtraAnimals+1,nAnisP
-         !write (40,'(a,'//cm//'(1x,f5.2))') Id(i),ProbImputePhase(i,:,1)
-         !write (40,'(a,'//cm//'(1x,f5.2))') Id(i),ProbImputePhase(i,:,2)
-         !write (41,'(a,'//cm//'(1x,f5.2))') Id(i),ProbImputeGenos(i,:)
          write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') Id(i),ProbImputePhase(i,:,1)
          write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') Id(i),ProbImputePhase(i,:,2)
          write (41,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') Id(i),ProbImputeGenos(i,:)
@@ -1645,11 +1560,6 @@ if (OutOpt==0) then
         do j=1,nSnp
             Maf(j)=sum(ProbImputeGenos(:,j))/(2*nAnisP)
         enddo
-        ! if (WindowsLinux==1) then
-        !     open (unit=111,file=".\Miscellaneous\MinorAlleleFrequency.txt",status="unknown")
-        ! else
-        !     open (unit=111,file="./Miscellaneous/MinorAlleleFrequency.txt",status="unknown")
-        ! endif
         open(unit=111,file="." // DASH // "Miscellaneous" // DASH // "MinorAlleleFrequency.txt", status="unknown")
 
         do j=1,nSnpRaw
@@ -1750,14 +1660,14 @@ else
         call flush(39)
     endif
 
-    deallocate(ImputePhase)
-    deallocate(ImputeGenos)
-    allocate(ImputeGenos(0:nAnisP,nSnpRaw))
-    allocate(ImputePhase(0:nAnisP,nSnpRaw,2))
-    ImputeGenos=TmpGenos
-    ImputePhase=TmpPhase
     !REMOVE THIS WHEN HMM IS FINALISED
     if (HMMOption==RUN_HMM_NO) then
+        deallocate(ImputePhase)
+        deallocate(ImputeGenos)
+        allocate(ImputeGenos(0:nAnisP,nSnpRaw))
+        allocate(ImputePhase(0:nAnisP,nSnpRaw,2))
+        ImputeGenos=TmpGenos
+        ImputePhase=TmpPhase
         if (SexOpt==0) then
             if (BypassGeneProb==0) then
                 call IterateGeneProbs
@@ -1768,6 +1678,8 @@ else
         if (SexOpt==1) call IterateInsteadOfGeneProbs
     endif
     !REMOVE THIS
+
+    call CheckImputationInconsistencies(ImputeGenos, ImputePhase, nAnisP, nSnp)
 
     !if (HMMOption==RUN_HMM_ONLY.or.HMMOption==RUN_HMM_PREPHASE) then
     if (HMMOption/=RUN_HMM_NO) then
@@ -1791,25 +1703,15 @@ else
             if (SnpIncluded(j)==1) then
                 l=l+1
                 do i=1,nAnisG
-                    ProbImputeGenos(GlobalHmmID(i),l)=ProbImputeGenosHmm(i,l)
-                    ProbImputePhase(GlobalHmmID(i),l,1)=FullH(i,l,1)
-                    ProbImputePhase(GlobalHmmID(i),l,2)=FullH(i,l,2)
+                    ProbImputeGenos(GlobalHmmID(i),l)   = ProbImputeGenosHmm(i,l)
+                    ProbImputePhase(GlobalHmmID(i),l,1) = ProbImputePhaseHmm(i,l,1)
+                    ProbImputePhase(GlobalHmmID(i),l,2) = ProbImputePhaseHmm(i,l,2)
                 enddo
             endif
         enddo
 
-        ! Assign Genotypes based on genotype probabilities
-        !do i=1,nAnisP
-        !    do j=1,nSnpIterate
-        !        if (ProbImputeGenos(i,j)==-9.0) ImputeGenos(i,j)=9
-        !        if (ProbImputeGenos(i,j)>1.999) ImputeGenos(i,j)=2
-        !        if (ProbImputeGenos(i,j)<0.0001) ImputeGenos(i,j)=0
-        !        if ((ProbImputeGenos(i,j)>0.999).and.(ProbImputeGenos(i,j)<1.00001)) ImputeGenos(i,j)=1
-        !    enddo
-        !enddo
-
 #ifdef DEBUG
-        write(0,*) 'DEBUG: Impute genotypes based on HMM genotypes probabilites [WriteOutResults]'
+        write(0,*) 'DEBUG: Impute alleles and genotypes based on HMM genotypes probabilities [WriteOutResults]'
 #endif
 
         ! Impute the most likely genotypes. (Most frequent genotype)
@@ -1817,31 +1719,23 @@ else
             do j=1,nSnpIterate
                 n2 = GenosCounts(i,j,2)                           ! Homozygous: 2 case
                 n1 = GenosCounts(i,j,1)                           ! Heterozygous
-                n0 = (nRoundsHmm-HmmBurnInRound) - n1 - n2      ! Homozygous: 0 case
+                n0 = (nRoundsHmm-HmmBurnInRound) - n1 - n2        ! Homozygous: 0 case
                 if ((n0>n1).and.(n0>n2)) then
-                    ImputeGenos(GlobalHmmID(i),j)=0
+                    ImputeGenos(GlobalHmmID(i),j)   = 0
+                    ImputePhase(GlobalHmmID(i),j,:) = 0
                 elseif (n1>n2) then
-                    ImputeGenos(GlobalHmmID(i),j)=1
-                else
-                    ImputeGenos(GlobalHmmID(i),j)=2
-                endif
-            enddo
-        enddo
-
-#ifdef DEBUG
-        write(0,*) 'DEBUG: Impute alleles based on HMM phase probabilites [WriteOutResults]'
-#endif
-
-        ! Impute the most likely genotypes. (Most frequent genotype)
-        do i=1,nAnisG
-            do j=1,nSnpIterate
-                do l=1,2
-                    if (ProbImputePhaseHmm(i,j,l)>0.5) then
-                        ImputePhase(i,j,l)=1
+                    ImputeGenos(GlobalHmmID(i),j) = 1
+                    if (ProbImputePhaseHmm(i,j,1) > ProbImputePhaseHmm(i,j,2) ) then
+                        ImputePhase(GlobalHmmID(i),j,1) = 1
+                        ImputePhase(GlobalHmmID(i),j,2) = 0
                     else
-                        ImputePhase(i,j,l)=0
+                        ImputePhase(GlobalHmmID(i),j,1) = 0
+                        ImputePhase(GlobalHmmID(i),j,2) = 1
                     endif
-                enddo
+                else
+                    ImputeGenos(GlobalHmmID(i),j)   = 2
+                    ImputePhase(GlobalHmmID(i),j,:) = 1
+                endif
             enddo
         enddo
 
@@ -1851,7 +1745,7 @@ else
     write(0,*) 'DEBUG: Write phase, genotypes and probabilities into files [WriteOutResults]'
 #endif
 
-    call CheckImputationInconsistencies(ImputeGenos, ImputePhase, nAnisP, nSnp)
+    ! call CheckImputationInconsistencies(ImputeGenos, ImputePhase, nAnisP, nSnp)
     do i=GlobalExtraAnimals+1,nAnisP
          write (53,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') Id(i),ImputePhase(i,:,1)
          write (53,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') Id(i),ImputePhase(i,:,2)
@@ -1875,7 +1769,7 @@ else
     else
         if (BypassGeneProb==0) then
             allocate(GenosProbs(nAnisP,nSnpIterate,2))
-            call ReReadIterateGeneProbs(GenosProbs, .TRUE., nAnisP, nSnpIterate)
+            call ReReadIterateGeneProbs(GenosProbs, .TRUE., nAnisP)
             call WriteProbabilities("./Results/GenotypeProbabilities.txt", GenosProbs, Id, GlobalExtraAnimals, nAnisP, nSnp)
         endif
     endif
@@ -1893,11 +1787,6 @@ else
         do j=1,nSnpRaw
             Maf(j)=sum(ProbImputeGenos(:,j))/(2*nAnisP)
         enddo
-        ! if (WindowsLinux==1) then
-        !     open (unit=111,file=".\Miscellaneous\MinorAlleleFrequency.txt",status="unknown")
-        ! else
-        !     open (unit=111,file="./Miscellaneous/MinorAlleleFrequency.txt",status="unknown")
-        ! endif
         open(unit=111,file="." // DASH // "Miscellaneous" // DASH // "MinorAlleleFrequency.txt", status="unknown")
 
 
@@ -1965,25 +1854,18 @@ use Global
 use GlobalPedigree
 implicit none
 
-integer :: e,i,j,h,k,l,SuperJ,StartDisFound,EndDisFound,HetEnd,HetStart,RSide,LSide,PatMat,SireDamRL,nSnpFinal,StSnp,EnSnp,Counter
+integer :: e,i,j,k,l,SuperJ,StartDisFound,EndDisFound,HetEnd,HetStart,RSide,LSide,PatMat,SireDamRL,nSnpFinal,Counter
 integer :: StartDisPrev,EndDisPrev,RecombOnOff
 integer :: GamA,GamB,Tmp,StartDisOld,StartDisTmp
-integer :: CountRightSwitch,CountLeftSwitch,StartPt,EndPt,PedId,StartDis,EndDis,dum,StartJ,nRec
+integer :: CountRightSwitch,CountLeftSwitch,PedId,StartDis,EndDis,StartJ,nRec
 integer(kind=1),allocatable,dimension(:,:,:) :: WorkPhase,TempWork
 integer,allocatable,dimension(:) :: WorkLeft,WorkRight,TempVec,StR,EnR,StRNarrow,EnRNarrow
 real,allocatable,dimension(:) :: LengthVec
 real,allocatable,dimension(:,:) :: PatAlleleProb,MatAlleleProb,GeneProbWork
-real :: Val
-character(len=300) :: filout
 character(len=7) :: cm
 write(cm,'(I7)') nSnpRaw !for formatting
 cm = adjustl(cm)
 
-! open (unit=42,file="Results/RecombinationInformation.txt",status="unknown")
-! open (unit=43,file="Results/RecombinationInformationNarrow.txt",status="unknown")
-! open (unit=44,file="Results/NumberRecombinations.txt",status="unknown")
-! open (unit=45,file="Results/RecombinationInformationR.txt",status="unknown")
-! open (unit=46,file="Results/RecombinationInformationNarrowR.txt",status="unknown")
 open (unit=42, file="Results" // DASH // "RecombinationInformation.txt")
 open (unit=43, file="Results" // DASH // "RecombinationInformationNarrow.txt")
 open (unit=44, file="Results" // DASH // "NumberRecombinations.txt")
@@ -2259,10 +2141,6 @@ do i=1,nAnisP
 
 enddo
 
-! open (unit=33,file="Results/ImputePhase.txt",status="unknown")
-! open (unit=34,file="Results/ImputeGenotypes.txt",status="unknown")
-! open (unit=40,file="Results/ImputePhaseProbabilities.txt",status="unknown")
-! open (unit=41,file="Results/ImputeGenotypeProbabilities.txt",status="unknown")
 open (unit=33,file="Results" // DASH // "ImputePhase.txt",status="unknown")
 open (unit=34,file="Results" // DASH // "ImputeGenotypes.txt",status="unknown")
 open (unit=40,file="Results" // DASH // "ImputePhaseProbabilities.txt",status="unknown")
@@ -2307,8 +2185,6 @@ if (RestartOption==4) then
         read (209,*) ImputeGenos(i,:)
     enddo
     close (209)
-    ! call system("rm Tmp2345678.txt")
-    call system(RM // " Tmp2345678.txt")
 endif
 
 counter=0
@@ -2376,11 +2252,6 @@ do h=1,nProcessors
     close(222)
 enddo
 
-! if (WindowsLinux==1) then
-!         open (unit=111,file=".\Miscellaneous\MinorAlleleFrequency.txt",status="unknown")
-! else
-!         open (unit=111,file="./Miscellaneous/MinorAlleleFrequency.txt",status="unknown")
-! endif
 open(unit=111,file="." // DASH // "Miscellaneous" // "MinorAlleleFrequency.txt", status="unknown")
 
 
@@ -2445,7 +2316,7 @@ subroutine IterateParentHomoFill
 use Global
 implicit none
 
-integer :: e,i,j,PedLoc,PatMat
+integer :: e,i,j,PedLoc
 
 if (SexOpt==0) then
     do i=1,nAnisP
@@ -2497,7 +2368,7 @@ use Global
 implicit none
 
 integer :: h,i,j,dum,StSnp,EnSnp
-real :: PatAlleleProb(nSnp,2),MatAlleleProb(nSnp,2),HetProb(nSnp),GeneProbWork(nSnp,4)
+real :: PatAlleleProb(nSnp,2),MatAlleleProb(nSnp,2),GeneProbWork(nSnp,4)
 character(len=300) :: filout
 
 GlobalWorkPhase=9
@@ -2689,7 +2560,7 @@ implicit none
 integer :: e,i,j,HetEnd,HetStart,WorkRight(nSnp),WorkLeft(nSnp),RSide,LSide,PatMat,SireDamRL
 integer :: CountRightSwitch,CountLeftSwitch,StartPt,EndPt,PedId
 
-integer :: StartDis,EndDis,dum,StartJ,k
+integer :: StartDis,EndDis,StartJ,k
 integer,allocatable,dimension(:) :: TempVec
 real,allocatable,dimension(:) :: LengthVec
 
@@ -2977,7 +2848,7 @@ implicit none
 integer :: e,i,j,HetEnd,HetStart,WorkRight(nSnp),WorkLeft(nSnp),RSide,LSide,PatMat,SireDamRL
 integer :: CountRightSwitch,CountLeftSwitch,StartPt,EndPt,PedId
 
-integer :: StartDis,EndDis,dum,StartJ,k
+integer :: StartDis,EndDis,StartJ,k
 integer,allocatable,dimension(:) :: TempVec
 real,allocatable,dimension(:) :: LengthVec
 
@@ -3243,7 +3114,7 @@ subroutine CurrentYield
 use Global
 implicit none
 
-integer :: i,CountPatAl,CountMatAl,CountGeno
+integer :: CountPatAl,CountMatAl,CountGeno
 real :: PropPatAl,PropMatAl,PropGeno,NotKnownStart,NotKnownEnd
 
 
@@ -3273,10 +3144,10 @@ use GlobalPedigree
 
 implicit none
 
-integer :: i,j,TempCore(nPhaseInternal),TempCplusT(nPhaseInternal)
+integer :: i,TempCore(nPhaseInternal),TempCplusT(nPhaseInternal)
 integer :: Tmp
 character(len=7) :: cm
-character(len=300) :: filout,FileCheck,fmt
+character(len=300) :: filout,FileCheck
 logical :: FileExists
 
 allocate(GpIndex(nProcessors,2))
@@ -3297,15 +3168,6 @@ do i=1,nPhaseExternal
     if (TempCplusT(i+nPhaseExternal)>nSnp) TempCplusT(i+nPhaseExternal)=nSnp
 enddo
 
-! if (WindowsLinux==1) then
-!      open (unit=103,file=".\InputFiles\AlphaPhaseInputPedigree.txt",status="unknown")
-!      open (unit=104,file=".\InputFiles\RecodedGeneProbInput.txt",status="unknown")
-!      open (unit=105,file=".\InputFiles\AlphaPhaseInputGenotypes.txt",status="unknown")
-! else
-!      open (unit=103,file="./InputFiles/AlphaPhaseInputPedigree.txt",status="unknown")
-!      open (unit=104,file="./InputFiles/RecodedGeneProbInput.txt",status="unknown")
-!      open (unit=105,file="./InputFiles/AlphaPhaseInputGenotypes.txt",status="unknown")
-! endif
 open(unit=103,file="." // DASH // "InputFiles" // DASH // "AlphaPhaseInputPedigree.txt", status="unknown")
 open(unit=104,file="." // DASH // "InputFiles" // DASH // "RecodedGeneProbInput.txt", status="unknown")
 open(unit=105,file="." // DASH // "InputFiles" // DASH // "AlphaPhaseInputGenotypes.txt", status="unknown")
@@ -3429,16 +3291,6 @@ do i=1,nPhaseInternal           ! Phasing is done in parallel
         write (106,*) 'MinHapFreq                       ,1'
         write (106,*) 'Library                          ,None'
 
-
-        ! if (MultiHD==0) then
-        !     write (106,*) 'MultipleHDPanels         ,',0
-        !     write (106,*) 'NumberSnpxChip           ,',0
-        ! else
-        !     write(fmt,"(I1)"), MultiHD
-        !     fmt = trim("(A26," // trim(fmt) // "("","",I))")
-        !     write (106,*) 'MultipleHDPanels         ,',MultiHD
-        !     write (106,trim(fmt)) 'NumberSnpxChip           ',nSnpByChip
-        ! endif
         call flush(106)
         close(106)
         write (filout,'("Phase"i0)')i
@@ -3543,7 +3395,7 @@ end subroutine ClassifyAnimByChips
 subroutine InternalEdit
 use Global
 use GlobalPedigree
-
+use GlobalFiles, only:  PhasePath
 implicit none
 
 integer :: i,j,k,CountMiss,CountHD,nSnpR,dum,Counter(nSnp)
@@ -3853,13 +3705,7 @@ integer,allocatable,dimension (:) :: Genotyped,Pruned
 logical,allocatable,dimension (:) :: IsParent
 integer :: nHomoParent, nBothHomo
 
-! if (WindowsLinux==1) then
-!     open (unit=101,file=".\Miscellaneous\PedigreeMistakes.txt",status="unknown")
-! else
-!     open (unit=101,file="./Miscellaneous/PedigreeMistakes.txt",status="unknown")
-! endif
 open (unit=101,file="." // DASH // "Miscellaneous" // DASH // "PedigreeMistakes.txt",status="unknown")
-
 
 GenoYesNo=0         ! Matrix (nAnisRawPedigree x 3).
                     ! It basically says which is the proband's genotype (GenoYesNo(:,1)) but also
@@ -3901,7 +3747,7 @@ do e=1,2                    ! Do whatever this does, first on males and then on 
         ! That is, avoid males and their sires (hetero=1), or females and their dams (hetero=2)
         if ((SexOpt==1).and.(GenderRaw(i)==HetGameticStatus).and.((ParPos-1)==HetGameticStatus)) TurnOn=0
 
-        ! Considere the Homogametic probands and the heterogametic proband with homogametic parent
+        ! Consider the Homogametic probands and the heterogametic proband with homogametic parent
         if ((IndId/=0).and.(ParId/=0).and.(TurnOn==1)) then
             CountBothGeno=0
             CountDisagree=0
@@ -3966,13 +3812,7 @@ enddo
 RecPed(1:nAnisP,2)=seqsire(1:nAnisP)
 RecPed(1:nAnisP,3)=seqdam(1:nAnisP)
 
-! if (WindowsLinux==1) then
-!         open (unit=101,file=".\Miscellaneous\InternalDataRecoding.txt",status="unknown")
-! else
-!         open (unit=101,file="./Miscellaneous/InternalDataRecoding.txt",status="unknown")
-! endif
 open (unit=101,file="." // DASH // "Miscellaneous" // DASH // "InternalDataRecoding.txt",status="unknown")
-
 
 do i=1,nAnisP
     write (101,'(3i20,a20)') RecPed(i,:),trim(Id(i))
@@ -4131,6 +3971,7 @@ subroutine CountInData
 
 use Global
 use GlobalVariablesHmmMaCH
+use GlobalFiles, only : PedigreeFile
 implicit none
 
 integer :: k
@@ -4260,7 +4101,7 @@ use Global
 implicit none
 
 character(len=300), intent(in) :: readsFileName
-integer :: i,j,SeqLine(nSnp)
+integer :: i,j
 integer, allocatable,dimension (:) :: ReferAlleleLine, AlterAlleleLine
 
 allocate(ReferAllele(0:nAnisG,nSnp))
@@ -4418,9 +4259,9 @@ character (LEN=lengan)              :: IDhold
 integer, ALLOCATABLE                :: SortedIdIndex(:), SortedSireIndex(:), SortedDamIndex(:)
 integer, ALLOCATABLE                :: OldN(:), NewN(:), holdsire(:), holddam(:)
 INTEGER :: mode    ! mode=1 to generate dummy ids where one parent known.  Geneprob->1  Matesel->0
-INTEGER :: i, j, k, kk, newid, itth, itho, ihun, iten, iunit
+INTEGER :: i, j, newid, itth, itho, ihun, iten, iunit
 integer :: nsires, ndams, newsires, newdams, nbisexuals, flag
-INTEGER :: ns, nd, iextra, oldnobs, kn, kb, oldkn, ks, kd
+INTEGER :: iextra, oldnobs, kn, kb, oldkn, ks, kd
 INTEGER :: Noffset, Limit, Switch, ihold, ipoint
 integer :: nObs,nAnisPedigree,verbose
 character (LEN=lengan) :: path
@@ -4435,7 +4276,7 @@ do i=1,nobs
 end do
 
 nAnisPedigree=nObs
-path=".\"
+path=".\\"
 Verbose=1
 
 ! Initialize and standarize
@@ -5025,16 +4866,17 @@ subroutine Checker
 use Global
 use GlobalPedigree
 use Utils
+use GlobalFiles, only : TrueGenosFile,GenotypeFile
 implicit none
 
-integer :: h,i,j,k,l,f,nAnisTest,Work(nSnpRaw),WorkTmp(nSnpRaw),dum,GenoStratIndex(nAnisP),CountCatTest(6),CountCorr
+integer :: h,i,j,k,l,nAnisTest,Work(nSnpRaw),WorkTmp(nSnpRaw),GenoStratIndex(nAnisP),CountCatTest(6)
 integer :: SummaryStats(3,6),Div,CountLen,Counter
 real :: SummaryProps(3,6),SumPat(6),SumMat(6)
 character(len=300) :: Names(6),FileName,dumC
 integer,allocatable,dimension(:) :: RecTestId,FinalSetter
 integer,allocatable,dimension(:,:) :: TrueGenos,RawGenos,TestMat
 real,allocatable,dimension(:) :: Correlations
-real,allocatable,dimension(:,:) :: AnisSummary,WorkVec,RealTestGenos
+real,allocatable,dimension(:,:) :: AnisSummary,RealTestGenos
 character(len=lengan),allocatable,dimension(:) :: TrueGenosId
 
 FileName=trim(TrueGenosFile)
@@ -5387,9 +5229,10 @@ subroutine FinalChecker
 use Global
 use GlobalPedigree
 use Utils
+use GlobalFiles, only : GenotypeFile,TrueGenosFile
 implicit none
 
-integer :: h,i,j,k,l,f,nAnisTest,Work(nSnpRaw),WorkTmp(nSnpRaw),dum,GenoStratIndex(nAnisP),CountCatTest(6),CountCorr
+integer :: h,i,j,k,l,nAnisTest,Work(nSnpRaw),WorkTmp(nSnpRaw),GenoStratIndex(nAnisP),CountCatTest(6)
 integer :: SummaryStats(3,6),Div,CountLen,Counter,Top1,Top2,Top3,Top4,Bot,ContSnpCor,CountValAnim(6)
 double precision :: SummaryProps(3,6),SumPat(6),SumMat(6),MeanCorPerInd(6),StdDevPerGrp(6),AveCategoryInformativeness(6,6)
 double precision :: Tmpave,Tmpadev,Tmpvar,Tmpskew,Tmpcurt
@@ -5899,7 +5742,7 @@ integer n
 double precision :: prob,r,z,x(n),y(n),TINY
 parameter (tiny=1.e-20)
 integer j
-double precision :: ax,ay,df,sxx,sxy,syy,t,xt,betai,yt
+double precision :: ax,ay,df,sxx,sxy,syy,t,xt,yt
 
 ax=0.0
 ay=0.0
@@ -6004,7 +5847,7 @@ subroutine READINJUNK
 
 use Global
 
-integer :: i,dum
+integer :: i,dum,j
 
 
 open (3001,file="fort.2008",status="old")
@@ -6182,7 +6025,6 @@ use ISO_Fortran_Env
 implicit none
 
 integer :: i, CountMiss, UOutputs
-! character(len=11) :: fmt
 
 open(newunit=UOutputs, file="." // DASH // "Miscellaneous" // DASH // "SnpCallRateByAnimal.txt",status='unknown')
 
@@ -6192,11 +6034,6 @@ do i=1,nAnisG
 end do
 close(UOutputs)
 
-! fmt = '(i, ,6f5.3)'
-! do i=1,nSnp
-!     CountMiss=count(Genos(:,i)==9)
-!     write(*,fmt) i, CountMiss/real(nAnisG)
-! end do
 END SUBROUTINE SnpCallRate
 
 !#############################################################################################################################################################################################################################
@@ -6214,11 +6051,11 @@ do j = 1, m
     do k = 1, 2
       if (ImpPhase(i, j, k) < 0) then
         ImpPhase(i, j, k) = 9
-        ImpGenos(i, j) = 9
+        ! ImpGenos(i, j) = 9
       end if
       if (ImpPhase(i, j, k) > 1) then
         ImpPhase(i, j, k) = 9
-        ImpGenos(i, j) = 9
+        ! ImpGenos(i, j) = 9
       end if
     enddo
     if (ImpGenos(i, j) < 0) then

@@ -1,3 +1,4 @@
+
 .PHONY: git make clean veryclean all
 # General variables
 NAME:=AlphaImpute
@@ -23,12 +24,12 @@ ifeq ($(OS), Windows_NT)
 	PFUNIT :=
 	TESTDIR :=
 	OSFLAG := "OS_WIN"
-	FFLAGS := $(FFLAGS) /static /i8 /fpp /D $(OSFLAG) -D CLUSTER=0 /Qopenmp /libs:static
+	FFLAGS := $(FFLAGS) /static /i8 /fpp /D $(OSFLAG) -D CLUSTER=0 /Qopenmp /Qopenmp-link:static /libs:static
 	GPFFLAGS := -O3 /static /i8 /libs:static
 
 	obj := .obj
 
-	MAKEDIR :=
+	MAKEDIR := MD
 	exe := .exe
 	CC := cl
 	CFLAGS := /EHsc
@@ -131,7 +132,10 @@ git: $(FILES) $(PFTESTS)
 	$(FC) $(FFLAGS) -c -o $(BUILDDIR)$@ $<
 
 
-
+directories:
+	$(MAKEDIR) $(SRCDIR)
+	$(MAKEDIR) $(BUILDDIR)
+	$(MAKEDIR) $(TARGETDIR)
 
 
 

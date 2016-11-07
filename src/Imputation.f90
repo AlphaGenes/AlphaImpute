@@ -8,6 +8,7 @@ MODULE Imputation
   use Global
   use GlobalPedigree
   use GlobalVariablesHmmMaCH
+  use GlobalFiles, only :GenotypeFile
   implicit none
 
 CONTAINS
@@ -15,7 +16,7 @@ CONTAINS
   SUBROUTINE ImputationManagement
     use omp_lib
 
-    integer :: i,j,k,loop,dum
+    integer :: i,j,loop
 
     allocate(SireDam(0:nAnisP,2))
     SireDam=0
@@ -222,22 +223,22 @@ CONTAINS
   ! threshold in the other. This helps to prevent the use of phasing errors that originate from
   ! LRPHLI.
   ! This subroutine corresponds to Major sub-step 7 from Hickey et al., 2012 (Appendix A)
-
+    use, intrinsic :: ISO_Fortran_Env
     use HaplotypeBits
+
     implicit none
 
-    integer :: m,f,e,h,g,i,j,k,l,nCore,nHap,nGlobalLoop,CoreLength,CoreStart,CoreEnd,InLib,NotHere,CompPhase,Count0
+    integer :: m,e,g,i,j,nCore,nGlobalLoop,CoreLength,CoreStart,CoreEnd,CompPhase
     integer :: LoopStart,Offset,AnimalOn(nAnisP,2)
-    integer :: Count1,Work(nSnp,2),Ban,CompPhasePar,GamA,GamB
+    integer ::GamA,GamB
 
-    integer,allocatable,dimension (:,:) :: CoreI,HapLib,LoopIndex,HapElim
+    integer,allocatable,dimension (:,:) :: LoopIndex
     integer(kind=1),allocatable,dimension (:,:,:,:) :: Temp
 
-    integer(kind=8), allocatable, dimension(:,:,:) :: BitImputePhase, MissImputePhase
+    integer(kind=int64), allocatable, dimension(:,:,:) :: BitImputePhase, MissImputePhase
 
     type(BitSection) :: Section
-    integer :: numSections, overhang, curSection, curPos
-    integer :: BitGeno
+    integer :: numSections, curSection, curPos,l
 
     ! WARNING: This should go in a function since it is the same code as InternalParentPhaseElim subroutine
     nGlobalLoop=25
@@ -492,18 +493,18 @@ end subroutine InternalParentPhaseElim
     use HaplotypeBits
     implicit none
 
-    integer :: f,e,h,g,i,j,k,l,nCore,nHap,nGlobalLoop,CoreLength,CoreStart,CoreEnd,InLib,Count0,Count1
+    integer :: f,e,h,g,i,j,l,nCore,nHap,nGlobalLoop,CoreLength,CoreStart,CoreEnd,InLib,Count0,Count1
     integer :: Counter,BanBoth(2),Ban(2),AnimalOn(nAnisP,2)
     integer :: LoopStart,OffSet
 
-    integer,allocatable,dimension (:,:) :: CoreI,HapLib,LoopIndex,HapElim
+    integer,allocatable,dimension (:,:) :: HapLib,LoopIndex,HapElim
     integer(kind=1),allocatable,dimension (:,:,:,:) :: Temp
 
     integer(kind=8), allocatable, dimension(:,:) :: BitHapLib, MissHapLib, BitWork, MissWork
     integer(kind=8), allocatable, dimension(:,:,:) :: BitImputePhase, MissImputePhase
 
     type(BitSection) :: Section
-    integer :: numSections, overhang, curSection, curPos
+    integer :: numSections, curSection, curPos
     integer :: BitGeno
 
     ! WARNING: This should go in a function since it is the same code as InternalParentPhaseElim subroutine
@@ -861,20 +862,21 @@ end subroutine InternalParentPhaseElim
     use PhaseRounds
     use Utils
     use HaplotypeBits
+    use GlobalFiles, only : PhasePath
     implicit none
 
-    integer :: e,g,h,i,j,nCore,CoreLength,dum,GamA,GamB,nAnisHD,PosHDInd
-    integer :: StartSnp,EndSnp,Gam1,Gam2,TempCount,AnimalOn(nAnisP,2)
+    integer :: e,g,h,i,j,GamA,GamB,nAnisHD,PosHDInd
+    integer :: StartSnp,EndSnp,Gam1,Gam2,AnimalOn(nAnisP,2)
     integer,allocatable,dimension (:) :: PosHD
     integer,allocatable,dimension (:,:,:) :: PhaseHD
     integer(kind=8), allocatable, dimension(:,:,:) :: BitPhaseHD, BitImputePhase, MissPhaseHD, MissImputePhase
     integer(kind=1),allocatable,dimension (:,:,:,:) :: Temp
 
-    character(len=1000) :: FileName,FileNamePhase,dumC
+    character(len=1000) :: FileName,FileNamePhase
     type(CoreIndex) :: CoreI
     type(BitSection) :: Section
 
-    integer :: numSections, overhang, curSection, curPos
+    integer :: numSections, curSection, curPos
 
     ! Number of animals that have been HD phased
     nAnisHD=(count(Setter(:)==1))
@@ -1099,20 +1101,21 @@ end subroutine InternalParentPhaseElim
     use PhaseRounds
     use HaplotypeBits
     use Utils
+    use GlobalFiles, only : PhasePath
     implicit none
 
-    integer :: e,g,h,i,j,nCore,CoreLength,dum,PedId,GamA,GamB,nAnisHD,PosHDInd
-    integer :: StartSnp,EndSnp,TempCount,AnimalOn(nAnisP,2)
+    integer :: e,g,h,i,j,PedId,GamA,GamB,nAnisHD,PosHDInd
+    integer :: StartSnp,EndSnp,AnimalOn(nAnisP,2)
     integer,allocatable,dimension (:) :: PosHD
     integer,allocatable,dimension (:,:,:) :: PhaseHD
     integer(kind=1),allocatable,dimension (:,:,:,:) :: Temp
 
     integer(kind=8), allocatable, dimension(:,:,:) :: BitPhaseHD, BitImputePhase, MissPhaseHD, MissImputePhase
 
-    character(len=1000) :: FileName,FileNamePhase,dumC
+    character(len=1000) :: FileName,FileNamePhase
     type(CoreIndex) :: CoreI
     type(BitSection) :: Section
-    integer :: numSections, overhang, curSection, curPos
+    integer :: numSections, curSection, curPos
 
     nAnisHD=(count(Setter(:)==1))
 
@@ -1352,9 +1355,10 @@ end subroutine InternalParentPhaseElim
     use PhaseRounds
     use Utils
     use HaplotypeBits
+    use GlobalFiles, only : PhasePath
     implicit none
 
-    integer :: l,i,j,k,h,e,f,g,nCore,dum,CoreLength,nHap,CountAB(nSnp,0:1),Work(nSnp,2),TempCount
+    integer :: l,i,j,k,h,e,f,g,CoreLength,nHap,CountAB(nSnp,0:1),Work(nSnp,2),TempCount
     integer :: StartSnp,EndSnp,PatMatDone(2),Counter,BanBoth(2),Ban(2),AnimalOn(nAnisP,2)
     integer,allocatable,dimension (:,:,:,:) :: Temp
     integer(kind=1),allocatable,dimension (:,:) :: HapLib,HapCand
@@ -1363,11 +1367,11 @@ end subroutine InternalParentPhaseElim
     integer(kind=8), allocatable, dimension(:,:) :: BitHapLib, MissHapLib
 
     integer :: UHLib
-    character(len=1000) :: FileName,dumC
+    character(len=1000) :: FileName
     type(CoreIndex) :: CoreI
 
     type(BitSection) :: Section
-    integer :: numSections, overhang, curSection, curPos
+    integer :: numSections, curSection, curPos
 
     ! Temp(nAnisP, nSNPs, PatHap, Phase)
     allocate(Temp(0:nAnisP,nSnp,2,2))
@@ -1640,10 +1644,11 @@ end subroutine InternalParentPhaseElim
     use GlobalPedigree
     use PhaseRounds
     use Utils
+    use GlobalFiles, only : PhasePath
 
     implicit none
 
-    integer :: e,h,i,g,l,j,nCoreA,nCoreB,MiddlePhaseRun,dum,MiddleCoreA,MiddleCoreB,Ban,nHap,CoreLength,nAnisHD,PosHDInd,CountDisagree
+    integer :: e,h,i,g,j,MiddlePhaseRun,MiddleCoreA,MiddleCoreB,CoreLength,nAnisHD,CountDisagree
     integer :: CompPhaseRun,CompJump,StartSnp,EndSnp,UptoRightSnp,UptoLeftSnp,UpToCoreA,UpToCoreB,C1,C2,C3,C4,Recmb,CompLength,RL
     integer :: UpToSnp,StPt,EndPt,FillInSt,FillInEnd
     integer,allocatable,dimension (:) :: PosHD
@@ -2101,7 +2106,7 @@ endif
     use Global
     implicit none
 
-    integer :: e,i,j,PatMat,ParId
+    integer :: e,i,j,ParId
 
     do i=1,nAnisP
       if (SexOpt==0 .or. (SexOpt==1 .and. RecGender(i)/=HetGameticStatus) ) then     ! If individual is homogametic

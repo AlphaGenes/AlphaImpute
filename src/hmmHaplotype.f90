@@ -189,7 +189,7 @@ implicit none
 integer,intent(IN) :: CurrentInd, hap, StartSnp, StopSnp
 
 ! Local variables
-integer :: i, state, marker, Thread, Hapi, ToHap, sampleHap, FromMarker, tmpMarker
+integer :: i, state, marker, Thread, Hapi, sampleHap, FromMarker, tmpMarker
 
 ! double precision :: Probs(nHapInSubH*(nHapInSubH+1)/2)
 double precision :: Probs(nHapInSubH)
