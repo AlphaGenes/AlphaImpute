@@ -59,7 +59,6 @@ IF(APPLE)
 ELSE()
     SET(GNUNATIVE "-march=native")
 ENDIF()
-# Optimize for the host's architecture
 if (WIN32)
     add_definitions(-DOS_WIN)
      SET_COMPILE_FLAG(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS}"              
