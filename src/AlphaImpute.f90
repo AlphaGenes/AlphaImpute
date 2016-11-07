@@ -51,7 +51,7 @@ use Output
 use Imputation
 implicit none
 
-integer :: i,j, markers
+integer :: markers
 double precision, allocatable :: GenosProbs(:,:,:)
 
 character(len=4096) :: cmd, SpecFile
@@ -59,8 +59,8 @@ character(len=4096) :: cmd, SpecFile
 INTERFACE WriteProbabilities
   SUBROUTINE WriteProbabilitiesHMM(outFile, Indexes, nAnisG, nSnps)
     character(len=*), intent(IN) :: outFile
-    integer, intent(IN) :: Indexes(nAnisG)
     integer, intent(IN) :: nAnisG, nSnps
+    integer, intent(IN) :: Indexes(nAnisG)  
   END SUBROUTINE WriteProbabilitiesHMM
 
   SUBROUTINE WriteProbabilitiesGeneProb(outFile, GenosProbs, Ids, nExtraAnims, nAnisP, nSnps)
@@ -71,16 +71,15 @@ INTERFACE WriteProbabilities
   END SUBROUTINE WriteProbabilitiesGeneProb
 END INTERFACE
 
-INTERFACE
-  SUBROUTINE ReReadIterateGeneProbs(GenosProbs, IterGeneProb, nAnis, markers)
-    use Global
-!    double precision, intent(OUT) :: GenosProbs(nAnisP,markers,2)
-    double precision, dimension(:,:,:), intent(INOUT) :: GenosProbs
-    logical, intent(IN) :: IterGeneProb
-    integer, intent(IN) :: nAnis
-    integer, intent(IN) :: markers
-  END SUBROUTINE ReReadIterateGeneProbs
-END INTERFACE
+! INTERFACE
+!   SUBROUTINE ReReadIterateGeneProbs(GenosProbs, IterGeneProb, nAnis)
+!     use Global
+! !    double precision, intent(OUT) :: GenosProbs(nAnisP,markers,2)
+!     double precision, dimension(:,:,:), intent(INOUT) :: GenosProbs
+!     logical, intent(IN) :: IterGeneProb
+!     integer, intent(IN) :: nAnis
+!   END SUBROUTINE ReReadIterateGeneProbs
+! END INTERFACE
 
 if (Command_Argument_Count() > 0) then
   call get_command_argument(1,cmd)
@@ -182,7 +181,7 @@ else
               markers = nSnpRaw
             end if
             allocate(GenosProbs(GlobalExtraAnimals + nAnisP, markers, 2))
-            call ReReadIterateGeneProbs(GenosProbs, .FALSE., nAnisP, markers)
+            call ReReadIterateGeneProbs(GenosProbs, .FALSE., nAnisP)
             call WriteProbabilities("./Results/GenotypeProbabilities.txt", GenosProbs, Id, GlobalExtraAnimals, nAnisP, nSnp)
             deallocate(GenosProbs)
 
@@ -203,7 +202,7 @@ else
             markers = nSnpRaw
           end if
           allocate(GenosProbs(GlobalExtraAnimals + nAnisP, markers, 2))
-          call ReReadIterateGeneProbs(GenosProbs, .FALSE., nAnisP, markers)
+          call ReReadIterateGeneProbs(GenosProbs, .FALSE., nAnisP)
           call WriteProbabilities("./Results/GenotypeProbabilities.txt", GenosProbs, Id, GlobalExtraAnimals, nAnisP, nSnp)
           deallocate(GenosProbs)
           write(6,*) "Restart option 1 stops program after genotype probabilities have been outputted"
@@ -322,15 +321,15 @@ subroutine ReadInParameterFile(SpecFile)
 use Global
 use GlobalPedigree
 use GlobalVariablesHmmMaCH
-
+use GlobalFiles, only : PedigreeFile,GenotypeFile,TrueGenosFile, PhasePath,GenderFile
 implicit none
 
 character(len=4096), intent(in) :: SpecFile
 
-integer :: k,i,resid,Changer,nLines
+integer :: k,i,nLines
 character (len=300) :: dumC,IntEdit,PhaseDone,OutputOptions,PreProcessOptions,TempOpt,TempHetGameticStatus
 character (len=300) :: UserDefinedHDAnimalsFile,PrePhasedAnimalFile,PedigreeFreePhasing,PhasingOnlyOptions
-character (len=300) :: UseGeneProb,ConservHapLibImp,CharBypassGeneProb,TmpHmmOption
+character (len=300) :: ConservHapLibImp,CharBypassGeneProb,TmpHmmOption
 integer :: MultipleHDpanels
 
 open (unit=1, file=SpecFile, status="old")
@@ -824,9 +823,8 @@ subroutine GeneProbManagement
 use Global
 implicit none
 
-integer :: i,JobsDone(nProcessors)
-character(len=300) :: filout,f
-logical :: FileExists
+integer :: i
+character(len=300) :: filout
 
 open (unit=109,file="TempGeneProb.sh",status="unknown")
 
@@ -906,8 +904,8 @@ subroutine PhasingManagement
 use Global
 implicit none
 
-integer :: i,j,JobsDone(nPhaseInternal),StartJob,Tmp,StartNewJob,ProcUsed,JobsStarted(nPhaseInternal)
-character(len=300) :: filout,infile,f
+integer :: i,JobsDone(nPhaseInternal),StartJob,Tmp,ProcUsed,JobsStarted(nPhaseInternal)
+character(len=300) :: filout,infile
 logical :: FileExists
 
 print*, " "
@@ -1011,7 +1009,7 @@ use Imputation
 
 implicit none
 
-integer :: h,i,j,k,dum,tmp,JobsDone(nProcessors),JDone(nProcessors),StSnp,EnSnp,OnOff
+integer :: i,j,k,tmp,JobsDone(nProcessors)
 real,allocatable :: PatAlleleProb(:,:),MatAlleleProb(:,:),HetProb(:),GeneProbWork(:,:)
 character(len=300) :: filout,f
 logical :: FileExists
@@ -1443,6 +1441,8 @@ subroutine WriteOutResults
 use Global
 use GlobalPedigree
 use GlobalVariablesHmmMaCH
+use GlobalFiles, only:  GenotypeFile
+use output
 implicit none
 
 character(len=7) :: cm !use for formatting output - allows for up to 1 million SNPs
@@ -1457,8 +1457,9 @@ integer :: n0, n1, n2
 INTERFACE WriteProbabilities
   SUBROUTINE WriteProbabilitiesHMM(outFile, Indexes, nAnisG, nSnps)
     character(len=*), intent(IN) :: outFile
+    integer, intent(IN) :: nSnps,nAnisG
     integer, intent(IN) :: Indexes(nAnisG)
-    integer, intent(IN) :: nAnisG, nSnps
+    
   END SUBROUTINE WriteProbabilitiesHMM
 
   SUBROUTINE WriteProbabilitiesGeneProb(outFile, GenosProbs, Ids, nExtraAnims, nAnisP, nSnps)
@@ -1469,16 +1470,7 @@ INTERFACE WriteProbabilities
   END SUBROUTINE WriteProbabilitiesGeneProb
 END INTERFACE
 
-INTERFACE
-  SUBROUTINE ReReadIterateGeneProbs(GenosProbs, IterGeneProb, nAnis, markers)
-    use Global
-    logical, intent(IN) :: IterGeneProb
-    integer, intent(IN) :: markers
-    integer, intent(IN) :: nAnis
-!    double precision, intent(OUT) :: GenosProbs(nAnisP,markers,2)
-    double precision, dimension(:,:,:), intent(INOUT) :: GenosProbs
-  END SUBROUTINE ReReadIterateGeneProbs
-END INTERFACE
+
 
 INTERFACE
   SUBROUTINE CheckImputationInconsistencies(ImpGenos, ImpPhase, n, m)
@@ -1777,7 +1769,7 @@ else
     else
         if (BypassGeneProb==0) then
             allocate(GenosProbs(nAnisP,nSnpIterate,2))
-            call ReReadIterateGeneProbs(GenosProbs, .TRUE., nAnisP, nSnpIterate)
+            call ReReadIterateGeneProbs(GenosProbs, .TRUE., nAnisP)
             call WriteProbabilities("./Results/GenotypeProbabilities.txt", GenosProbs, Id, GlobalExtraAnimals, nAnisP, nSnp)
         endif
     endif
@@ -1862,16 +1854,14 @@ use Global
 use GlobalPedigree
 implicit none
 
-integer :: e,i,j,h,k,l,SuperJ,StartDisFound,EndDisFound,HetEnd,HetStart,RSide,LSide,PatMat,SireDamRL,nSnpFinal,StSnp,EnSnp,Counter
+integer :: e,i,j,k,l,SuperJ,StartDisFound,EndDisFound,HetEnd,HetStart,RSide,LSide,PatMat,SireDamRL,nSnpFinal,Counter
 integer :: StartDisPrev,EndDisPrev,RecombOnOff
 integer :: GamA,GamB,Tmp,StartDisOld,StartDisTmp
-integer :: CountRightSwitch,CountLeftSwitch,StartPt,EndPt,PedId,StartDis,EndDis,dum,StartJ,nRec
+integer :: CountRightSwitch,CountLeftSwitch,PedId,StartDis,EndDis,StartJ,nRec
 integer(kind=1),allocatable,dimension(:,:,:) :: WorkPhase,TempWork
 integer,allocatable,dimension(:) :: WorkLeft,WorkRight,TempVec,StR,EnR,StRNarrow,EnRNarrow
 real,allocatable,dimension(:) :: LengthVec
 real,allocatable,dimension(:,:) :: PatAlleleProb,MatAlleleProb,GeneProbWork
-real :: Val
-character(len=300) :: filout
 character(len=7) :: cm
 write(cm,'(I7)') nSnpRaw !for formatting
 cm = adjustl(cm)
@@ -2326,7 +2316,7 @@ subroutine IterateParentHomoFill
 use Global
 implicit none
 
-integer :: e,i,j,PedLoc,PatMat
+integer :: e,i,j,PedLoc
 
 if (SexOpt==0) then
     do i=1,nAnisP
@@ -2378,7 +2368,7 @@ use Global
 implicit none
 
 integer :: h,i,j,dum,StSnp,EnSnp
-real :: PatAlleleProb(nSnp,2),MatAlleleProb(nSnp,2),HetProb(nSnp),GeneProbWork(nSnp,4)
+real :: PatAlleleProb(nSnp,2),MatAlleleProb(nSnp,2),GeneProbWork(nSnp,4)
 character(len=300) :: filout
 
 GlobalWorkPhase=9
@@ -2570,7 +2560,7 @@ implicit none
 integer :: e,i,j,HetEnd,HetStart,WorkRight(nSnp),WorkLeft(nSnp),RSide,LSide,PatMat,SireDamRL
 integer :: CountRightSwitch,CountLeftSwitch,StartPt,EndPt,PedId
 
-integer :: StartDis,EndDis,dum,StartJ,k
+integer :: StartDis,EndDis,StartJ,k
 integer,allocatable,dimension(:) :: TempVec
 real,allocatable,dimension(:) :: LengthVec
 
@@ -2858,7 +2848,7 @@ implicit none
 integer :: e,i,j,HetEnd,HetStart,WorkRight(nSnp),WorkLeft(nSnp),RSide,LSide,PatMat,SireDamRL
 integer :: CountRightSwitch,CountLeftSwitch,StartPt,EndPt,PedId
 
-integer :: StartDis,EndDis,dum,StartJ,k
+integer :: StartDis,EndDis,StartJ,k
 integer,allocatable,dimension(:) :: TempVec
 real,allocatable,dimension(:) :: LengthVec
 
@@ -3124,7 +3114,7 @@ subroutine CurrentYield
 use Global
 implicit none
 
-integer :: i,CountPatAl,CountMatAl,CountGeno
+integer :: CountPatAl,CountMatAl,CountGeno
 real :: PropPatAl,PropMatAl,PropGeno,NotKnownStart,NotKnownEnd
 
 
@@ -3154,10 +3144,10 @@ use GlobalPedigree
 
 implicit none
 
-integer :: i,j,TempCore(nPhaseInternal),TempCplusT(nPhaseInternal)
+integer :: i,TempCore(nPhaseInternal),TempCplusT(nPhaseInternal)
 integer :: Tmp
 character(len=7) :: cm
-character(len=300) :: filout,FileCheck,fmt
+character(len=300) :: filout,FileCheck
 logical :: FileExists
 
 allocate(GpIndex(nProcessors,2))
@@ -3405,7 +3395,7 @@ end subroutine ClassifyAnimByChips
 subroutine InternalEdit
 use Global
 use GlobalPedigree
-
+use GlobalFiles, only:  PhasePath
 implicit none
 
 integer :: i,j,k,CountMiss,CountHD,nSnpR,dum,Counter(nSnp)
@@ -3981,6 +3971,7 @@ subroutine CountInData
 
 use Global
 use GlobalVariablesHmmMaCH
+use GlobalFiles, only : PedigreeFile
 implicit none
 
 integer :: k
@@ -4110,7 +4101,7 @@ use Global
 implicit none
 
 character(len=300), intent(in) :: readsFileName
-integer :: i,j,SeqLine(nSnp)
+integer :: i,j
 integer, allocatable,dimension (:) :: ReferAlleleLine, AlterAlleleLine
 
 allocate(ReferAllele(0:nAnisG,nSnp))
@@ -4268,9 +4259,9 @@ character (LEN=lengan)              :: IDhold
 integer, ALLOCATABLE                :: SortedIdIndex(:), SortedSireIndex(:), SortedDamIndex(:)
 integer, ALLOCATABLE                :: OldN(:), NewN(:), holdsire(:), holddam(:)
 INTEGER :: mode    ! mode=1 to generate dummy ids where one parent known.  Geneprob->1  Matesel->0
-INTEGER :: i, j, k, kk, newid, itth, itho, ihun, iten, iunit
+INTEGER :: i, j, newid, itth, itho, ihun, iten, iunit
 integer :: nsires, ndams, newsires, newdams, nbisexuals, flag
-INTEGER :: ns, nd, iextra, oldnobs, kn, kb, oldkn, ks, kd
+INTEGER :: iextra, oldnobs, kn, kb, oldkn, ks, kd
 INTEGER :: Noffset, Limit, Switch, ihold, ipoint
 integer :: nObs,nAnisPedigree,verbose
 character (LEN=lengan) :: path
@@ -4285,7 +4276,7 @@ do i=1,nobs
 end do
 
 nAnisPedigree=nObs
-path=".\"
+path=".\\"
 Verbose=1
 
 ! Initialize and standarize
@@ -4875,16 +4866,17 @@ subroutine Checker
 use Global
 use GlobalPedigree
 use Utils
+use GlobalFiles, only : TrueGenosFile,GenotypeFile
 implicit none
 
-integer :: h,i,j,k,l,f,nAnisTest,Work(nSnpRaw),WorkTmp(nSnpRaw),dum,GenoStratIndex(nAnisP),CountCatTest(6),CountCorr
+integer :: h,i,j,k,l,nAnisTest,Work(nSnpRaw),WorkTmp(nSnpRaw),GenoStratIndex(nAnisP),CountCatTest(6)
 integer :: SummaryStats(3,6),Div,CountLen,Counter
 real :: SummaryProps(3,6),SumPat(6),SumMat(6)
 character(len=300) :: Names(6),FileName,dumC
 integer,allocatable,dimension(:) :: RecTestId,FinalSetter
 integer,allocatable,dimension(:,:) :: TrueGenos,RawGenos,TestMat
 real,allocatable,dimension(:) :: Correlations
-real,allocatable,dimension(:,:) :: AnisSummary,WorkVec,RealTestGenos
+real,allocatable,dimension(:,:) :: AnisSummary,RealTestGenos
 character(len=lengan),allocatable,dimension(:) :: TrueGenosId
 
 FileName=trim(TrueGenosFile)
@@ -5237,9 +5229,10 @@ subroutine FinalChecker
 use Global
 use GlobalPedigree
 use Utils
+use GlobalFiles, only : GenotypeFile,TrueGenosFile
 implicit none
 
-integer :: h,i,j,k,l,f,nAnisTest,Work(nSnpRaw),WorkTmp(nSnpRaw),dum,GenoStratIndex(nAnisP),CountCatTest(6),CountCorr
+integer :: h,i,j,k,l,nAnisTest,Work(nSnpRaw),WorkTmp(nSnpRaw),GenoStratIndex(nAnisP),CountCatTest(6)
 integer :: SummaryStats(3,6),Div,CountLen,Counter,Top1,Top2,Top3,Top4,Bot,ContSnpCor,CountValAnim(6)
 double precision :: SummaryProps(3,6),SumPat(6),SumMat(6),MeanCorPerInd(6),StdDevPerGrp(6),AveCategoryInformativeness(6,6)
 double precision :: Tmpave,Tmpadev,Tmpvar,Tmpskew,Tmpcurt
@@ -5749,7 +5742,7 @@ integer n
 double precision :: prob,r,z,x(n),y(n),TINY
 parameter (tiny=1.e-20)
 integer j
-double precision :: ax,ay,df,sxx,sxy,syy,t,xt,betai,yt
+double precision :: ax,ay,df,sxx,sxy,syy,t,xt,yt
 
 ax=0.0
 ay=0.0
@@ -5854,7 +5847,7 @@ subroutine READINJUNK
 
 use Global
 
-integer :: i,dum
+integer :: i,dum,j
 
 
 open (3001,file="fort.2008",status="old")

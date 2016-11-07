@@ -91,8 +91,6 @@ CONTAINS
     integer, intent(in) :: nCores
     type(CoreIndex)     :: this
 
-    integer :: UInputs
-
     this%nCores = nCores
     allocate(this%StartSnp(this%nCores))
     allocate(this%EndSnp(this%nCores))

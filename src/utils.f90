@@ -122,7 +122,6 @@ USE Global
 USE GlobalVariablesHmmMaCH
 
 INTEGER :: gametesPhased, ind
-INTEGER :: CountPhasedAlleles
 INTEGER(KIND=1), ALLOCATABLE :: gamete(:)
 
 allocate(gamete(nSnpHmm))
@@ -195,7 +194,6 @@ INTEGER(KIND=1),INTENT(IN) :: gamete1(:), gamete2(:)
 
 ! Local variables
 INTEGER :: allelesGenotyped
-INTEGER :: i
 
 
 allelesGenotyped = count((gamete1(:)==1 .OR. gamete1(:)==0) .AND. (gamete2(:)==1 .OR. gamete2(:)==0))
