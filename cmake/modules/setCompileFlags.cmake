@@ -93,7 +93,6 @@ end program dummyprog
         ELSE()
             MESSAGE(FATAL_ERROR "Unknown language in SET_COMPILE_FLAGS: ${LANG}")
         ENDIF(LANG STREQUAL "C")
-message("flag being checked: ${flag}")
         # If this worked, use these flags, otherwise use other flags
         IF(FLAG_WORKS)
             # Append this flag to the end of the list that already exists

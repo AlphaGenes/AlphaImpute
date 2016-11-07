@@ -1432,7 +1432,7 @@ end subroutine InternalParentPhaseElim
         else
           FileName = getFileNameHapLib(h,g)
         end if
-        open (unit=UHLib,file=trim(FileName),status="old",form="unformatted")
+        open (newunit=UHLib,file=trim(FileName),status="old",form="unformatted")
 
         ! Read the number of Hap in the library and how long they are
         read(UHLib) nHap,CoreLength
