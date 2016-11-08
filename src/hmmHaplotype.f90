@@ -189,7 +189,7 @@ implicit none
 integer,intent(IN) :: CurrentInd, hap, StartSnp, StopSnp
 
 ! Local variables
-integer :: i, state, marker, Thread, Hapi, ToHap, sampleHap, FromMarker, tmpMarker
+integer :: i, state, marker, Thread, Hapi, sampleHap, FromMarker, tmpMarker
 
 ! double precision :: Probs(nHapInSubH*(nHapInSubH+1)/2)
 double precision :: Probs(nHapInSubH)
@@ -212,6 +212,8 @@ enddo
 Choice = par_uni(Thread)*Summer
 Summer=0.0
 
+Hapi = 0
+
 do i=1,nHapInSubH
     Summer = Summer + Probs(i)
     if (Summer >= Choice) then
@@ -220,9 +222,9 @@ do i=1,nHapInSubH
     endif
 enddo
 
-! if (Hapi==0) then
-!     Hapi=INT(1+par_uni(Thread)*nHapInSubH)
-! endif
+if (Hapi==0) then
+    Hapi=INT(1+par_uni(Thread)*nHapInSubH)
+endif
 
 ! do marker=StopSnp,StartSnp,-1
 marker=StopSnp

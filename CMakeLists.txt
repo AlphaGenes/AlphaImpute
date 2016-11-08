@@ -14,9 +14,13 @@ OPTION(RUN_TESTS "Run and compile tests"
 OPTION(USE_HDF5 "Use hdf"
        OFF)
 
+set(CLUSTER 0 CACHE STRING "cluster size")
 # Add our local modlues to the module path
 SET(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules")
 set(CMAKE_MACOSX_RPATH 0)
+
+
+add_definitions(-DCLUSTER=${CLUSTER})
 
 ############################################################
 # Define the actual files and folders that make up the build
@@ -27,7 +31,7 @@ SET(ALPHAIMPUTEEXE AlphaImpute${VERSION})
 SET(GENEPROBEXE GeneProbForAlphaImpute)
 # Define the library name
 SET(AHLIB alphahouse)
-SET(MACSLIB macs)
+
 # Define some directories
 SET(SRC ${CMAKE_SOURCE_DIR}/src)
 SET(LIB ${CMAKE_SOURCE_DIR}/objs)
@@ -67,7 +71,6 @@ endif(${USE_HDF5})
 # are to your liking.
 INCLUDE(${CMAKE_MODULE_PATH}/SetFortranFlags.cmake)
 SET(SRCAH ../alphahouse/src/)
-SET(SRCMACS ../alphahouse/Macs/src/)
 
 # Have the .mod files placed in the lib folder
 SET(CMAKE_Fortran_MODULE_DIRECTORY ${LIB})
@@ -75,7 +78,6 @@ SET(CMAKE_Fortran_MODULE_DIRECTORY ${LIB})
 # The source for the BAR library and have it placed in the lib folder
 ADD_SUBDIRECTORY(${SRCAH} ${LIB}/AH)
 
-ADD_SUBDIRECTORY(${SRCMACS} ${LIB}/MACS)
 
 # TODO add tests to correct location
 ADD_SUBDIRECTORY(${SRCALPHAIMPUTE} ${BIN})

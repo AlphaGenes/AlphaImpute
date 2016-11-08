@@ -3,9 +3,8 @@ subroutine GeneProbManagementWindows
 use Global
 implicit none
 
-integer :: i,JobsDone(nProcessors)
-character(len=300) :: filout,f
-logical :: FileExists
+integer :: i
+character(len=300) :: filout
 
 open (unit=109,file="TempGeneProb.BAT",status="unknown")
 
@@ -36,7 +35,7 @@ subroutine PhasingManagementWindows
 use Global
 implicit none
 
-integer :: i,j,JobsDone(nPhaseInternal),StartJob,Tmp,StartNewJob,ProcUsed,JobsStarted(nPhaseInternal)
+integer :: i,JobsDone(nPhaseInternal),StartJob,Tmp,ProcUsed,JobsStarted(nPhaseInternal)
 character(len=300) :: filout,infile,f
 logical :: FileExists
 
@@ -68,8 +67,8 @@ do i=1,nProcessors
     ProcUsed=ProcUsed+1
     write (infile,'("cd Phasing\Phase"i0)')i
     write (107,*) trim(infile)
-    if (AlphaPhasePresent==0) write (107,*) "start /b AlphaPhase1.1.exe > out 2>&1"
-    if (AlphaPhasePresent==1) write (107,*) "start /b .\AlphaPhase1.1.exe > out 2>&1"
+    if (AlphaPhasePresent==0) write (107,*) "start /b AlphaPhase.exe > out 2>&1"
+    if (AlphaPhasePresent==1) write (107,*) "start /b .\AlphaPhase.exe > out 2>&1"
     write (107,*) "cd ..\.."
     JobsStarted(i)=1
     if (ProcUsed==nPhaseInternal) exit
@@ -96,8 +95,8 @@ do
                 open (unit=107,file=trim(filout),status="unknown")
                 write (infile,'("cd Phasing\Phase"i0)')Tmp
                 write (107,*) trim(infile)
-                if (AlphaPhasePresent==0) write (107,*) "start /b AlphaPhase1.1.exe > out 2>&1"
-                if (AlphaPhasePresent==1) write (107,*) "start /b .\AlphaPhase1.1.exe > out 2>&1"
+                if (AlphaPhasePresent==0) write (107,*) "start /b AlphaPhase.exe > out 2>&1"
+                if (AlphaPhasePresent==1) write (107,*) "start /b .\AlphaPhase.exe > out 2>&1"
                 close(107)
                 call system("start """" .\\" // filout)
             endif
@@ -108,6 +107,6 @@ do
 enddo
 call system("del TempPhase*.BAT")
 
-end subroutine PhasingManagementWindows 
+end subroutine PhasingManagementWindows
 
 !#############################################################################################################################################################################################################################

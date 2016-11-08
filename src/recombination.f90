@@ -12,16 +12,14 @@ INTEGER, INTENT(IN) :: nSnpBegin,nSnpFinal
 INTEGER, INTENT(OUT) :: nRecomb(:)
 
 ! Local Variables
-integer :: e,i,j,h,k,l,SuperJ,StartDisFound,EndDisFound,HetEnd,HetStart,RSide,LSide,PatMat,SireDamRL,StSnp,EnSnp,dimSnps,nRec
+integer :: e,i,j,k,l,SuperJ,StartDisFound,EndDisFound,HetEnd,HetStart,RSide,LSide,PatMat,SireDamRL,dimSnps,nRec
 integer :: StartDisPrev,EndDisPrev
-integer :: GamA,GamB,Tmp,StartDisOld,StartDisTmp
-integer :: CountRightSwitch,CountLeftSwitch,StartPt,EndPt,PedId,StartDis,EndDis,dum
+integer :: GamA,GamB,StartDisOld,StartDisTmp
+integer :: CountRightSwitch,CountLeftSwitch,PedId,StartDis,EndDis
 integer(kind=1),allocatable,dimension(:,:,:) :: WorkPhase,TempWork
 integer,allocatable,dimension(:) :: WorkLeft,WorkRight,TempVec,StR,EnR,StRNarrow,EnRNarrow
 real,allocatable,dimension(:) :: LengthVec
 real,allocatable,dimension(:,:) :: PatAlleleProb,MatAlleleProb,GeneProbWork
-real :: Val
-character(len=300) :: filout
 character(len=7) :: cm
 write(cm,'(I7)') nSnpRaw !for formatting
 cm = adjustl(cm)
