@@ -1,6 +1,7 @@
 !######################################################################
 subroutine MaCHController(HMM)
 use Global
+use GlobalFiles, only : InbredAnimalsFile
 use GlobalVariablesHmmMaCH
 use Par_Zig_mod
 use omp_lib
@@ -9,13 +10,12 @@ use random
 
 implicit none
 integer, intent(in) :: HMM
-integer :: i, nprocs, nthreads, j
+integer :: i, nprocs, nthreads
 real(4) :: r
-real(8) :: t1, t2, tT
+real(8) :: tT
 double precision :: Theta
 integer, allocatable :: seed(:)
 integer :: grainsize, count, secs, seed0
-integer :: n0, n1, n2
 
 integer, allocatable, dimension(:,:) :: InbredHmmMaCH
 
@@ -277,7 +277,6 @@ GlobalHmmHDInd(nGenotyped+1 : nGenotyped+nInbred) = 1
 
 end subroutine ParseMaCHPhased
 
-
 !######################################################################
 subroutine ReadInbred(InbredFile, PhasedData, nInbred)
 use ISO_Fortran_Env
@@ -349,33 +348,47 @@ end subroutine ParseMaCHDataNGS
 subroutine ParseMaCHDataGenos(nGenotyped)
 ! subroutine ParseMaCHData
 use Global
+use GlobalPedigree
 use GlobalVariablesHmmMaCH
 use Utils
 
 implicit none
 integer, intent(in) :: nGenotyped
 
-integer :: i,j,k
+integer :: i,j,k, NoGenosUnit, nIndvG
 
 #ifdef DEBUG
     write(0,*) 'DEBUG: [ParseMaCHDataGenos] ...'
 #endif
 
+NoGenosUnit = 111
+open(unit=NoGenosUnit, file='Miscellaneous/NotGenotypedAnimals.txt', status="replace")
+
 GlobalHmmPhasedInd=.FALSE.
 k=0
-
-
+nIndvG=0
 ! Read both the phased information of AlphaImpute and high-denisty genotypes,
 ! store it in PhaseHmmMaCH and GenosHmmMaCH, and keep track of  which
 ! gamete is phased (GlobalHmmPhasedInd) and the high-denisity
 ! genotyped animal (GlobalHmmHDInd)
 
-do i=1,nAnisP
+do j = 1, nGenotyped
+    do i = 1, nAnisP
+        if (trim(Id(i)) == trim(GenotypeID(j))) then
+            GlobalHmmID(j) = i
+        end if
+    end do
+    write(0,*) j, GenotypeID(j), GlobalHmmID(j)
+end do
 
+
+do i=1,nGenotyped
     ! Check if individual is in the genotype file
-    if (IndivIsGenotyped(i)==1) then
-        k=k+1
-        GlobalHmmID(k)=i
+    if (IndivIsGenotyped(GlobalHmmID(i))==1) then
+        ! k=k+1
+        nIndvG=nIndvG+1
+        k=i
+        ! GlobalHmmID(k)=i
 
         ! Add animal's diploid to the Diploids Library
         GenosHmmMaCH(k,:)=ImputeGenos(i,:)
@@ -408,17 +421,26 @@ do i=1,nAnisP
         if ((GlobalHmmPhasedInd(k,1)==.TRUE.).AND.(GlobalHmmPhasedInd(k,2)==.TRUE.)) Then
             nAnimPhased=nAnimPhased+1
         endif
+    else
+        if (i > GlobalExtraAnimals) then
+            write(NoGenosUnit,*) Id(i)
+        end if
     endif
 enddo
+
+close(NoGenosUnit)
 
 ! Count the number of phased gametes
 nGametesPhased = 0
 nGametesPhased = CountPhasedGametes()
 
 ! Check if the number of genotyped animals is correct
-if (k/=nGenotyped) then
-    print*, "Error in ParseMaCHDataGenos"
-    stop
+if (nIndvG/=nGenotyped) then
+    write (6,*) '   ','WARNING: There are individuals in the genotype file that have'
+    write (6,*) '   ','         not been genotyped'
+    write (6,*) '   ','         For a list of these individuals look into the file'
+    write (6,*) '   ','         Miscellaneous/NotGenotypedAnimals.txt'
+    ! stop
 endif
 
 ! end subroutine ParseMaCHData
@@ -442,12 +464,8 @@ implicit none
 integer, intent(in) :: CurrentInd, HMM
 
 ! Local variables
-!integer :: HapCount, ShuffleInd1, ShuffleInd2, states, thread
-integer :: genotype, i, states, thread, dumb
-! integer :: Shuffle1(nIndHmmMaCH), Shuffle2(nIndHmmMaCH)
-integer :: StartSnp, StopSnp, nSegments, SegmentSize
-real :: WellPhased
-logical, allocatable :: SegmentImputeDiploidHMM(:)
+integer :: genotype, i, states, thread
+integer :: StartSnp, StopSnp
 
 
 ! The number of parameters of the HMM are:
@@ -483,7 +501,7 @@ else
     if (nGametesPhased/float(2*nAnisP)>phasedThreshold/100.0) then
         if (GlobalHmmPhasedInd(CurrentInd,1)/=.TRUE. .AND. GlobalHmmPhasedInd(CurrentInd,2)/=.TRUE.) Then
             allocate(ForwardProbs(states,nSnpHmm))
-            call ForwardAlgorithm(CurrentInd,1,nSnpHmm)
+            call ForwardAlgorithm(CurrentInd)
             call SampleChromosomes(CurrentInd,1,nSnpHmm)
         else
             allocate(ForwardProbs(nHapInSubH,nSnpHmm))
@@ -496,7 +514,7 @@ else
         endif
     else
         allocate(ForwardProbs(states,nSnpHmm))
-        call ForwardAlgorithm(CurrentInd,1,nSnpHmm)
+        call ForwardAlgorithm(CurrentInd)
         call SampleChromosomes(CurrentInd,1,nSnpHmm)
     endif
 endif
@@ -563,7 +581,7 @@ integer,intent(in) :: CurrentInd,StartSnp,StopSnp
 
 ! Local variables
 integer :: i,j,k,l,SuperJ,Index,OffOn,State1,State2,TmpJ,TopBot,FirstState,SecondState,Tmp,Thread
-double precision :: Summer,ran1,Choice,Sum00,Sum01,Sum10,Sum11
+double precision :: Summer,Choice,Sum00,Sum01,Sum10,Sum11
 double precision :: Probs(nHapInSubH*(nHapInSubH+1)/2)
 double precision :: Theta
 
@@ -821,7 +839,7 @@ integer,intent(in) :: CurrentInd,TopBot,FromMarker,ToMarker,FromState,ToState
 
 ! Local variables
 integer :: i,State,FromMarkerLocal, Thread
-double precision :: Recomb,Theta1,ran1
+double precision :: Recomb,Theta1
 double precision :: Theta
 
 Thread = omp_get_thread_num()
@@ -914,7 +932,6 @@ integer,intent(in) :: CurrentInd,CurrentMarker,State1,State2
 
 ! Local variables
 integer :: Imputed1,Imputed2,Genotype,Differences, Thread
-double precision :: ran1
 
 Thread = omp_get_thread_num()
 ! These will be the observed imputed alleles defined by the state:
@@ -994,7 +1011,7 @@ integer, intent(in) :: CurrentInd
 double precision :: Theta
 
 ! Local variables
-integer :: i,j,PrecedingMarker
+integer :: j,PrecedingMarker
 
 ! Setup the initial state distributions
 
@@ -1048,7 +1065,7 @@ integer, intent(in) :: CurrentInd, StartSnp, StopSnp
 double precision :: Theta
 
 ! Local variables
-integer :: i,j,PrecedingMarker
+integer :: j,PrecedingMarker
 
 ! Setup the initial state distributions
 
@@ -1397,10 +1414,9 @@ use Global
 use GlobalVariablesHmmMaCH
 use random
 implicit none
-
 integer, intent(in) :: nGenotyped
 
-integer :: i,j,p
+integer :: i,j
 
 !Initialise FullH
 
@@ -1487,10 +1503,9 @@ use Global
 use GlobalVariablesHmmMaCH
 use random
 implicit none
-
 integer, intent(in) :: nGenotyped
 
-integer :: i,j,p
+integer :: i,j
 
 !Initialise FullH
 do i=1,nGenotyped      ! For every Individual in the Genotype file
@@ -1546,7 +1561,7 @@ implicit none
 
 integer, intent(in) :: nGenotyped
 
-integer :: i,j,p, alleles, mac, readObs, RefAll, AltAll
+integer :: i,j, alleles, readObs, RefAll, AltAll
 double precision :: prior_11, prior_12, prior_22
 double precision :: posterior_11, posterior_12, posterior_22
 double precision :: r, frequency, summ
@@ -1880,14 +1895,14 @@ subroutine ExtractTemplate(HMM, forWhom, nGenotyped)
 end subroutine ExtractTemplate
 
 !######################################################################
-subroutine ExtractTemplateHaps(forWhom,Shuffle1,Shuffle2)
+subroutine ExtractTemplateHaps(CurrentInd,Shuffle1,Shuffle2)
 ! Set the Template of Haplotypes used in the HMM model.
 ! It takes the haplotypes from HD animals
 ! It differentiates between paternal (even) and maternal (odd) haps
 
 use GlobalVariablesHmmMaCH
 
-integer, intent(in) :: Shuffle1(nIndHmmMaCH), Shuffle2(nIndHmmMaCH)
+integer, intent(in) :: Shuffle1(nIndHmmMaCH), Shuffle2(nIndHmmMaCH),CurrentInd
 
 ! Local variables
 integer :: HapCount, ShuffleInd1, ShuffleInd2
@@ -1928,14 +1943,14 @@ enddo
 end subroutine ExtractTemplateHaps
 
 !######################################################################
-subroutine ExtractTemplateByHaps(forWhom,Shuffle1,Shuffle2)
+subroutine ExtractTemplateByHaps(CurrentInd,Shuffle1,Shuffle2)
 ! Set the Template of Haplotypes used in the HMM model.
 ! It takes the haplotypes produced by AlphaImpute
 ! It differentiates between paternal (even) and maternal (odd) haps
 
 use GlobalVariablesHmmMaCH
 
-integer, intent(in) :: Shuffle1(nIndHmmMaCH), Shuffle2(nIndHmmMaCH)
+integer, intent(in) :: Shuffle1(nIndHmmMaCH), Shuffle2(nIndHmmMaCH),CurrentInd
 
 ! Local variables
 integer :: HapCount, ShuffleInd1, ShuffleInd2
@@ -1977,13 +1992,13 @@ enddo
 end subroutine ExtractTemplateByHaps
 
 !######################################################################
-subroutine ExtractTemplateHapsByAnimals(forWhom,Shuffle)
+subroutine ExtractTemplateHapsByAnimals(CurrentInd,Shuffle)
 ! Extract the Template of Haplotypes used in the HMM model.
 ! It consideres the two haps of a given individual.
 
 use GlobalVariablesHmmMaCH
 
-integer, intent(in) :: Shuffle(nIndHmmMaCH)
+integer, intent(in) :: Shuffle(nIndHmmMaCH),CurrentInd
 
 ! Local variables
 integer :: HapCount, ShuffleInd
@@ -2022,7 +2037,7 @@ double precision, intent(in) :: ErrorRate
 
 ! Local variables
 double precision :: DFactorialInLog, ProdFactTmp
-integer :: i,k,MaxReadCounts
+integer :: i,k
 
 do k=0,MAX_READS_COUNT-1
     do i=0,MAX_READS_COUNT-1
@@ -2047,7 +2062,7 @@ implicit none
 integer, intent(in) :: CurrentInd, CurrentMarker, State1, State2
 
 ! Local variables
-integer :: copied1, copied2, Thread, bin, imputed1, imputed2, Differences, RefAll, AltAll
+integer :: copied1, copied2, Thread, imputed1, imputed2, Differences, RefAll, AltAll
 double precision :: posterior_11, posterior_12, posterior_22, summ, random, rate
 
 Thread = omp_get_thread_num()

@@ -1,29 +1,29 @@
 !GeneProbForAlphaPhase
-!Description:	GeneProb code that is run for multiple SNPs, by SNP
-!Date:			30 Mar 2011
-!Author:		Brian Kinghorn (this code put together by MA Cleveland)
+!Description:   GeneProb code that is run for multiple SNPs, by SNP
+!Date:          30 Mar 2011
+!Author:        Brian Kinghorn (this code put together by MA Cleveland)
 !Usage::
-!Notes:			Input genotype file: IDENT, SIRE, DAM, MID1,...,MID(n)
-!				Assumes Geno format is 0,1,2
-!				Unknown genotypes should be "9", but can be "3"
+!Notes:         Input genotype file: IDENT, SIRE, DAM, MID1,...,MID(n)
+!               Assumes Geno format is 0,1,2
+!               Unknown genotypes should be "9", but can be "3"
 !
-!				No header
+!               No header
 !
-!				Need paramter file=GeneProbSpec.txt
-!					nAnis
-!					nSnp
-!					inputFile
-!					startSnp
-!					endSnp
+!               Need paramter file=GeneProbSpec.txt
+!                   nAnis
+!                   nSnp
+!                   inputFile
+!                   startSnp
+!                   endSnp
 !
-!References:	This is same as GeneProb_sub.f90, but requires a starting and stopping SNP
+!References:    This is same as GeneProb_sub.f90, but requires a starting and stopping SNP
 !Updates:
 
 module Global_GP
-	implicit none
+    implicit none
 
-	character(len=1000) :: inputFile,outputFile
-	integer :: nSnp,nAnis,startSnp,endSnp
+    character(len=1000) :: inputFile,outputFile
+    integer :: nSnp,nAnis,startSnp,endSnp
 
 end module
 
@@ -59,175 +59,175 @@ module commonbits
 end module
 
 module GPinput
-	implicit none
-	integer (KIND=1),allocatable,dimension(:,:) :: InputGenos,tmpInputGenos
-	real(kind=4),allocatable,dimension(:,:) :: Probs00,Probs01,Probs10,Probs11,GPI
-	real(kind=4),allocatable,dimension(:) :: OutputMaf
+    implicit none
+    integer (KIND=1),allocatable,dimension(:,:) :: InputGenos,tmpInputGenos
+    real(kind=4),allocatable,dimension(:,:) :: Probs00,Probs01,Probs10,Probs11,GPI
+    real(kind=4),allocatable,dimension(:) :: OutputMaf
 end module
 
 program GeneProb_sub
-	use Global_GP
-	use GPinput
+    use Global_GP
+    use GPinput
 
-	integer :: i
-	character(len=7) :: cm !use for formatting output - allows for up to 1 million SNPs
+    integer :: i
+    character(len=7) :: cm !use for formatting output - allows for up to 1 million SNPs
 
-	call ReadParms
+    call ReadParms
 
-	open(UNIT=19,FILE=trim(inputFile),STATUS="old") !INPUT FILE
-	open (UNIT=111,FILE=trim(outputFile),STATUS="unknown") !OUTPUT FILE
+    open(UNIT=19,FILE=trim(inputFile),STATUS="old") !INPUT FILE
+    open (UNIT=111,FILE=trim(outputFile),STATUS="unknown") !OUTPUT FILE
   open (UNIT=222,FILE='GPI.txt',STATUS="unknown")
 
-	allocate(Probs00(nAnis,endSnp-startSnp+1))
- 	allocate(Probs01(nAnis,endSnp-startSnp+1))
- 	allocate(Probs10(nAnis,endSnp-startSnp+1))
-	allocate(Probs11(nAnis,endSnp-startSnp+1))
- 	allocate(GPI(nAnis,endSnp-startSnp+1))
- 	allocate(OutputMaf(endSnp-startSnp+1))
- 	
-	call preprocessGeneprob
-	do i=1,endSnp-startSnp+1 !calculate geneprobs for all individuals
-		call geneprob(i)
- 	end do
+    allocate(Probs00(nAnis,endSnp-startSnp+1))
+    allocate(Probs01(nAnis,endSnp-startSnp+1))
+    allocate(Probs10(nAnis,endSnp-startSnp+1))
+    allocate(Probs11(nAnis,endSnp-startSnp+1))
+    allocate(GPI(nAnis,endSnp-startSnp+1))
+    allocate(OutputMaf(endSnp-startSnp+1))
+    
+    call preprocessGeneprob
+    do i=1,endSnp-startSnp+1 !calculate geneprobs for all individuals
+        call geneprob(i)
+    end do
 
- 	write(cm,'(I7)') nSnp !for formatting
- 	cm = adjustl(cm)
- 	do i=1,nAnis
-!		write(111,'(I7,'//cm//'(1x,F8.4))') i, (Probs00(i,:))
-!		write(111,'(I7,'//cm//'(1x,F8.4))') i, (Probs01(i,:))
-!		write(111,'(I7,'//cm//'(1x,F8.4))') i, (Probs10(i,:))
-!		write(111,'(I7,'//cm//'(1x,F8.4))') i, (Probs11(i,:))
-		write(111,'(i16,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4)') i, (Probs00(i,:))
-		write(111,'(i16,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4)') i, (Probs01(i,:))
-		write(111,'(i16,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4)') i, (Probs10(i,:))
-		write(111,'(i16,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4)') i, (Probs11(i,:))
+    write(cm,'(I7)') nSnp !for formatting
+    cm = adjustl(cm)
+    do i=1,nAnis
+!       write(111,'(I7,'//cm//'(1x,F8.4))') i, (Probs00(i,:))
+!       write(111,'(I7,'//cm//'(1x,F8.4))') i, (Probs01(i,:))
+!       write(111,'(I7,'//cm//'(1x,F8.4))') i, (Probs10(i,:))
+!       write(111,'(I7,'//cm//'(1x,F8.4))') i, (Probs11(i,:))
+        write(111,'(i16,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4)') i, (Probs00(i,:))
+        write(111,'(i16,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4)') i, (Probs01(i,:))
+        write(111,'(i16,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4)') i, (Probs10(i,:))
+        write(111,'(i16,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4,20000f8.4)') i, (Probs11(i,:))
 
     ! write(111,'(I7,'//cm//'(1x,F8.4))') i, (GPI(i,:))
-		write(222,'(i16,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4)') i, (GPI(i,:))
- 	end do
+        write(222,'(i16,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4)') i, (GPI(i,:))
+    end do
 
- 	deallocate(Probs00)
- 	deallocate(Probs01)
- 	deallocate(Probs10)
-	deallocate(Probs11)
- 	deallocate(GPI)
- 	
+    deallocate(Probs00)
+    deallocate(Probs01)
+    deallocate(Probs10)
+    deallocate(Probs11)
+    deallocate(GPI)
+    
 
- 	open(unit=1002,file="GpDone.txt",status="unknown")
- 	write(1002,*) "Geneprobs done"
+    open(unit=1002,file="GpDone.txt",status="unknown")
+    write(1002,*) "Geneprobs done"
 
- 	open(unit=2002,file="MinorAlleleFrequency.txt",status="unknown")
-	do i=1,((endSnp-startSnp)+1)
- 		write(2002,*) OutputMaf(i)
- 	enddo	
-	deallocate(OutputMaf)
+    open(unit=2002,file="MinorAlleleFrequency.txt",status="unknown")
+    do i=1,((endSnp-startSnp)+1)
+        write(2002,*) OutputMaf(i)
+    enddo   
+    deallocate(OutputMaf)
 
 end program
 
 subroutine ReadParms
-	use Global_GP
+    use Global_GP
 
-	character :: tmp
+    character :: tmp
 
-	open(unit=1001,file="GeneProbSpec.txt",status="old")
-	read(1001,*) tmp,nAnis
-	read(1001,*) tmp,nSnp
-	read(1001,*) tmp,inputFile
-	read(1001,*) tmp,outputFile
-	read(1001,*) tmp,startSnp
-	read(1001,*) tmp,endSnp
-	close(1001)
+    open(unit=1001,file="GeneProbSpec.txt",status="old")
+    read(1001,*) tmp,nAnis
+    read(1001,*) tmp,nSnp
+    read(1001,*) tmp,inputFile
+    read(1001,*) tmp,outputFile
+    read(1001,*) tmp,startSnp
+    read(1001,*) tmp,endSnp
+    close(1001)
 
 end subroutine ReadParms
 
 subroutine preprocessGeneprob
-	use Global_GP
-	use common_GP
-	use commonbits
-	use GPinput
-	implicit none
+    use Global_GP
+    use common_GP
+    use commonbits
+    use GPinput
+    implicit none
 
-	integer :: i,j,k,dum
+    integer :: i,j,k
 
-	pprior_hold = 0.5
-	qprior_hold = 1 - pprior
-	phenotypes_hold = 3
-	Imprinting_hold = 1
-	PauseAtEnd_hold = 0
-	nfreq_max_hold = 50
-	StopCrit_hold = 0.0001
+    pprior_hold = 0.5
+    qprior_hold = 1 - pprior
+    phenotypes_hold = 3
+    Imprinting_hold = 1
+    PauseAtEnd_hold = 0
+    nfreq_max_hold = 50
+    StopCrit_hold = 0.0001
 
-	nobs_hold = nAnis
-	nobs=nobs_hold
+    nobs_hold = nAnis
+    nobs=nobs_hold
 
 
-	ALLOCATE(id(0:nobs),sire(nobs),dam(nobs),seqid(nobs),&
+    ALLOCATE(id(0:nobs),sire(nobs),dam(nobs),seqid(nobs),&
          seqsire(nobs),seqdam(nobs),passedorder(nobs))
 
-	phenotype(1) = 0
-	phenotype(2) = 1
-	phenotype(3) = 2
-	!g(1,0) = 1.0
-	!g(1,1) = 0.0
-	!g(1,2) = 0.0
-	!g(2,0) = 0.0
-	!g(2,1) = 1.0
-	!g(2,2) = 0.0
-	!g(3,0) = 0.0
-	!g(3,1) = 0.0
-	!g(3,2) = 1.0
+    phenotype(1) = 0
+    phenotype(2) = 1
+    phenotype(3) = 2
+    !g(1,0) = 1.0
+    !g(1,1) = 0.0
+    !g(1,2) = 0.0
+    !g(2,0) = 0.0
+    !g(2,1) = 1.0
+    !g(2,2) = 0.0
+    !g(3,0) = 0.0
+    !g(3,1) = 0.0
+    !g(3,2) = 1.0
 
-	g(1,0) = 0.99
-	g(1,1) = 0.005
-	g(1,2) = 0.005
-	g(2,0) = 0.005
-	g(2,1) = 0.99
-	g(2,2) = 0.005
-	g(3,0) = 0.005
-	g(3,1) = 0.005
-	g(3,2) = 0.99
+    g(1,0) = 0.99
+    g(1,1) = 0.005
+    g(1,2) = 0.005
+    g(2,0) = 0.005
+    g(2,1) = 0.99
+    g(2,2) = 0.005
+    g(3,0) = 0.005
+    g(3,1) = 0.005
+    g(3,2) = 0.99
 
-	allocate(tmpInputGenos(nAnis,nSnp))
-	allocate(InputGenos(nAnis,endSnp-StartSnp+1))
-	!read(19,*)
-	do i=1,nobs
-		read (19,*) seqid(i), seqsire(i), seqdam(i), tmpInputGenos(i,:)
-		passedorder(i) = i
-	end do
+    allocate(tmpInputGenos(nAnis,nSnp))
+    allocate(InputGenos(nAnis,endSnp-StartSnp+1))
+    !read(19,*)
+    do i=1,nobs
+        read (19,*) seqid(i), seqsire(i), seqdam(i), tmpInputGenos(i,:)
+        passedorder(i) = i
+    end do
 
-	do i=1,nobs
-		do j=1,nSnp
-			if(tmpInputGenos(i,j)==3) tmpInputGenos(i,j)=9
-		end do
-	end do
+    do i=1,nobs
+        do j=1,nSnp
+            if(tmpInputGenos(i,j)==3) tmpInputGenos(i,j)=9
+        end do
+    end do
 
-	do i=1,nobs
-		k=1
-		do j=startSnp,endSnp
-			InputGenos(i,k)=tmpInputGenos(i,j)
-			k=k+1
-		end do
-	end do
+    do i=1,nobs
+        k=1
+        do j=startSnp,endSnp
+            InputGenos(i,k)=tmpInputGenos(i,j)
+            k=k+1
+        end do
+    end do
 
-	call GetMaxFS!!(maxfs, maxmates, nfamilies)
+    call GetMaxFS!!(maxfs, maxmates, nfamilies)
 
 end subroutine preprocessGeneprob
 
 subroutine geneprob(currentSnp)
-	  use Global_GP
-	  use common_GP
+      use Global_GP
+      use common_GP
       USE commonbits
       use GPinput
       implicit none
 
-      integer, intent(in)	:: currentSnp
-      integer               :: i, j, k, l, i2, i3, iticks1, iticks2
+      integer, intent(in)   :: currentSnp
+      integer               :: i, j, k, l, i2, i3, iticks2
       integer               :: ia, is, idd, ifreq_iterate, maxint, maxiter, itersused, kl, kc, kd, kj, nfams, last
       integer               :: nf, im, ns, mf, iaa, ii, ms, m, n, maxvalspost, ierrors, iflag, nwritten
       integer               :: f,ff,nonzed(3,3),ntype(3,3,3)
       integer               :: maxRegpoints,LeastPositive, LeastNegative, HoldInt, LimitAnimals, LimitNumber
 
-      real (kind=8)         :: tsum, prod, ProbFit, SumFreq, IMPratio, p12, p21, LeastPositiveValue, LeastNegativeValue
+      real (kind=8)         :: tsum, prod, SumFreq, IMPratio, p12, p21, LeastPositiveValue, LeastNegativeValue
       REAL (KIND=8)         :: spost(3),dpost(3),fpost(3),tpost(3),temp(3),sum1(3),sum2(3),sum3(3),pt(3,3,3)
       REAL (KIND=8)         :: phethw,phomhw,probindex  ! this is needed for info - or compile with dble.  Don't know why!
       REAL (KIND=8)         :: s0,s1,s2, areg, breg, meanX, meanY, sumY, sumXY, sumX, sumX2
@@ -238,8 +238,6 @@ subroutine geneprob(currentSnp)
       REAL (KIND=8), allocatable :: ant(:,:),term(:,:),phom(:),phet(:),pnor(:),work(:,:,:),freq(:,:)
       REAL (KIND=8), allocatable :: pHold(:), pResult(:), pDev(:)
 
-
-      CHARACTER(256)        :: cl_arg, infile, outfile, HoldStr
 
 phenotypes=phenotypes_hold
 pprior=pprior_hold
@@ -313,7 +311,7 @@ LimitNumber = 250
 !!PRINT*, 'This version expects ID fields of maximum length ',lengan
 !!
 !!***** call getcl(cl_arg) !only supported by Lahey
-!!	 call getarg(2,cl_arg) !PGI command - actually shoudn't need this, there won't be any commands
+!!   call getarg(2,cl_arg) !PGI command - actually shoudn't need this, there won't be any commands
 !!    cl_arg = TRIM(cl_arg)
 !!
 !!     infile=''
@@ -394,20 +392,11 @@ LimitNumber = 250
 !!MC: need to populate these arrays from the data already stored
 allocate(phenhold(0:nobs))
 do i=1,nobs
-		phenhold(i) = InputGenos(i,currentSnp)
+        phenhold(i) = InputGenos(i,currentSnp)
 end do
 
 
 !!************************************************************************
-!!call pvseq(1)
-!!call GetMaxFS(maxfs, maxmates, nfamilies)
-!!Print*, 'Maxfs:     ', maxfs
-!!Print*, 'Maxmates:  ', maxmates
-!!Print*, 'nFamilies: ', nFamilies
-
-
-!maxmates = maxmates!*20     ! why ??  Fixed in 2.7
-!maxfs = maxfs
 
 mxaneq= nobs   ! was multiplied up.  For old sequencer I think.
 
@@ -609,7 +598,7 @@ do WHILE (ifreq_iterate < nfreq_max-1)
 !  print*, nfams
 !  HoldInt=nfams
 ! endif
- 				  nmem(nfams)=1
+                  nmem(nfams)=1
                   damGP(nfams)=idd
                   isib(nfams,1)=ia
                   term(1,nfams)=post(1,kc)
@@ -692,11 +681,11 @@ do WHILE (ifreq_iterate < nfreq_max-1)
 !  NOW WE ARE READY To CALCULATE THE BLOODY THING
                do ns=1,nmem(nf)
                   ia=isib(nf,ns)
-!	Here we will get the anterior probability for the progeny in question.  For appendix equations' m, f, s and i:
-!	m is here is   - the sire of i as in the outer loop
-!	f is here imum - the dam of i
-!	s is here iaa  - the sibs of i
-!	i is here ia   - the progeny animal
+!   Here we will get the anterior probability for the progeny in question.  For appendix equations' m, f, s and i:
+!   m is here is   - the sire of i as in the outer loop
+!   f is here imum - the dam of i
+!   s is here iaa  - the sibs of i
+!   i is here ia   - the progeny animal
                   do i=1,3
                      mm=0
                      do m=1,3
@@ -930,7 +919,7 @@ elseif (ifreq_iterate==1) then
 !    print'(4f12.8)', pDev(1) , pDev(0),  pHold(1) , pHold(0)
 !    print'(4f12.8)', (pDev(1) - pDev(0)) / (pHold(1) - pHold(0))
 !    print'(2i4,3f12.8)', 2, ifreq_iterate+1, areg, breg, pHold(ifreq_iterate+1)
-	if (pDev(0)<0.  .AND. pDev(1)>0. ) then
+    if (pDev(0)<0.  .AND. pDev(1)>0. ) then
            nfreq_max=ifreq_iterate+1 ! Blowing out already - get sensible midpoint
 !!           PRINT*, 'Diverging solution - taking 2-point regression'
     endif
@@ -958,12 +947,12 @@ elseif (ifreq_iterate>1) then
         pHold(ifreq_iterate+1)= -1*areg/breg
         !print'(2i4,3f12.8)', j, ifreq_iterate+1, areg, breg, pHold(ifreq_iterate+1)
 
-	if(pHold(ifreq_iterate+1) < pHold(LeastPositive) .or. pHold(ifreq_iterate+1) > pHold(LeastNegative)) then ! outside the best bound, probably curlivilear.
-	  pHold(ifreq_iterate+1) = pHold(LeastPositive) + (pHold(LeastNegative)-pHold(LeastPositive))&
-	  *   pDev(LeastPositive)/(pDev(LeastPositive)-pDev(LeastNegative))
-	  !print*,' '
-	  !print'(2i3,ff12.8)', LeastPositive , LeastNegative,    pDev(LeastPositive)/(pDev(LeastPositive)-pDev(LeastNegative)), pHold(ifreq_iterate+1)
-	endif
+    if(pHold(ifreq_iterate+1) < pHold(LeastPositive) .or. pHold(ifreq_iterate+1) > pHold(LeastNegative)) then ! outside the best bound, probably curlivilear.
+      pHold(ifreq_iterate+1) = pHold(LeastPositive) + (pHold(LeastNegative)-pHold(LeastPositive))&
+      *   pDev(LeastPositive)/(pDev(LeastPositive)-pDev(LeastNegative))
+      !print*,' '
+      !print'(2i3,ff12.8)', LeastPositive , LeastNegative,    pDev(LeastPositive)/(pDev(LeastPositive)-pDev(LeastNegative)), pHold(ifreq_iterate+1)
+    endif
 
 end if
 
@@ -989,100 +978,100 @@ endif
 ierrors=1
 IF ( ifreq_iterate==nfreq_max) then
 !!       open(7,file=outfile,status='unknown')
-!!       	if(Imprinting==0) Write(7,*)'ID SireID DamID Tag p(11) p(Het) p(22) Phen Index'
-!!     		if(Imprinting==1) Write(7,*)'ID SireID DamID Tag p(11) p(12) p(21) p(22) Phen Index'
-!!       	if(Imprinting==2) Write(7,*)'ID SireID DamID Tag p(11) p(het) p(21)-p(12) p(22) Phen Index'
+!!          if(Imprinting==0) Write(7,*)'ID SireID DamID Tag p(11) p(Het) p(22) Phen Index'
+!!          if(Imprinting==1) Write(7,*)'ID SireID DamID Tag p(11) p(12) p(21) p(22) Phen Index'
+!!          if(Imprinting==2) Write(7,*)'ID SireID DamID Tag p(11) p(het) p(21)-p(12) p(22) Phen Index'
        pnor(0)=1.- phethw - phomhw
        phet(0)=phethw
        phom(0)=phomhw
 
-	if (LimitAnimals==1 .and. nobs>LimitNumber) then
-	  PRINT*, 'Results for only', LimitNumber, ' animals will be written.'
-	  nwritten=LimitNumber
-	else
-	  nwritten=nobs
-	endif
+    if (LimitAnimals==1 .and. nobs>LimitNumber) then
+      PRINT*, 'Results for only', LimitNumber, ' animals will be written.'
+      nwritten=LimitNumber
+    else
+      nwritten=nobs
+    endif
 
 
        do i=1,nwritten
-			call info(phet(i), phom(i), phethw, phomhw, probindex)
+            call info(phet(i), phom(i), phethw, phomhw, probindex)
 
-			iflag=0
-			if (ABS(1. - pnor(i)-phet(i)-phom(i)) > .0001 ) iflag=iflag+10
+            iflag=0
+            if (ABS(1. - pnor(i)-phet(i)-phom(i)) > .0001 ) iflag=iflag+10
 
-			do j=1, phenotypes
-				if (phen(i)==phenotype(j)) then
-					if (g(j,0)<0.000001 .and. pnor(i)>0.01 ) iflag=iflag+1
-					if (g(j,1)<0.000001 .and. phet(i)>0.01 ) iflag=iflag+1
-					if (g(j,2)<0.000001 .and. phom(i)>0.01 ) iflag=iflag+1
-				endif
-			enddo
+            do j=1, phenotypes
+                if (phen(i)==phenotype(j)) then
+                    if (g(j,0)<0.000001 .and. pnor(i)>0.01 ) iflag=iflag+1
+                    if (g(j,1)<0.000001 .and. phet(i)>0.01 ) iflag=iflag+1
+                    if (g(j,2)<0.000001 .and. phom(i)>0.01 ) iflag=iflag+1
+                endif
+            enddo
 
-			!  Only for identity penetrance matrix ....
-			!			if (phen(i)==0 .and. ABS(1. - pnor(i))  > .0001 ) iflag=iflag+1
-			!			if (phen(i)==1 .and. ABS(1. - phet(i))  > .0001 ) iflag=iflag+1
-			!			if (phen(i)==2 .and. ABS(1. - phom(i))  > .0001 ) iflag=iflag+1
-			! for 0, 1 condition only here  1 (affected) = phenotype 2  ....
-			!ProbFit = ABS( phen(i) - ( g(2, 0)*pnor(i) + g(2, 1)*phet(i) + g(2, 2)*phom(i) ))
-			!ProbFit = 1 - Probfit ! Fit on 0 to 1 scale
-
-
-			if (ierrors*iflag > 0 ) then
-				open(8,file='geneprob_err.txt',status='unknown')
-				Write(8,*)'ID SireID DamID Tag p(11) p(Het) p(22) Phen Index Error'
-!!				PRINT*,' Errors found.  See Geneprob_err.ped  *********************** Errors '
-				ierrors = -1
-			end if
-			if (iflag/=0) then
-			 write(8,56) i,p1(i),p2(i),'"',id(i),'"',pnor(i),phet(i),phom(i),phen(i),probindex,'Error ', iflag
-			end if
-
-       	if(Imprinting>0) then
-				if(phet(i)<0.0000001) then
-!!						write(7,551) i,p1(i),p2(i),'"',id(i),'"',pnor(i),phet(i),phet(i),phom(i),phen(i),probindex
-						Probs00(i,currentSnp) = pnor(i)
-						Probs01(i,currentSnp) = phet(i)
-						Probs10(i,currentSnp) = phet(i)
-						Probs11(i,currentSnp) = phom(i)
-						GPI(i,currentSnp) = probindex
-				else
-					p12= (pnor(seqsire(i))+0.5*phet(seqsire(i))) * (phom( seqdam(i))+0.5*phet( seqdam(i)))  ! extra safe due to the above
-					p21= (pnor( seqdam(i))+0.5*phet( seqdam(i))) * (phom(seqsire(i))+0.5*phet(seqsire(i)))
-					if(p12+p21>0.00000001) then
-						IMPratio= p12 / (p12+p21)
-					else
-						IMPratio= 0.5 ! neutral but should not be invked anyway
-					endif
+            !  Only for identity penetrance matrix ....
+            !           if (phen(i)==0 .and. ABS(1. - pnor(i))  > .0001 ) iflag=iflag+1
+            !           if (phen(i)==1 .and. ABS(1. - phet(i))  > .0001 ) iflag=iflag+1
+            !           if (phen(i)==2 .and. ABS(1. - phom(i))  > .0001 ) iflag=iflag+1
+            ! for 0, 1 condition only here  1 (affected) = phenotype 2  ....
+            !ProbFit = ABS( phen(i) - ( g(2, 0)*pnor(i) + g(2, 1)*phet(i) + g(2, 2)*phom(i) ))
+            !ProbFit = 1 - Probfit ! Fit on 0 to 1 scale
 
 
-!					IMPratio=                       (pnor(seqsire(i))+0.5*phet(seqsire(i))) * (phom( seqdam(i))+0.5*phet( seqdam(i)))
-!					IMPratio= IMPratio / (IMPratio+ (pnor( seqdam(i))+0.5*phet( seqdam(i))) * (phom(seqsire(i))+0.5*phet(seqsire(i))))
-					if(Imprinting==2)then
-!!						write(7,552) i,p1(i),p2(i),'"',id(i),'"',pnor(i),   phet(i), (1.-2.*IMPratio)*phet(i),  phom(i),phen(i),probindex
-						Probs00(i,currentSnp) = pnor(i)
-						Probs01(i,currentSnp) = phet(i)
-						Probs10(i,currentSnp) = (1.-2.*IMPratio)*phet(i)
-						Probs11(i,currentSnp) = phom(i)
-						GPI(i,currentSnp) = probindex
-					else
-!!						write(7,551) i,p1(i),p2(i),'"',id(i),'"',pnor(i),IMPratio*phet(i),(1.-IMPratio)*phet(i),phom(i),phen(i),probindex
-						Probs00(i,currentSnp) = pnor(i)
-						Probs01(i,currentSnp) = IMPratio*phet(i)
-						Probs10(i,currentSnp) = (1.-IMPratio)*phet(i)
-						Probs11(i,currentSnp) = phom(i)
-						GPI(i,currentSnp) = probindex
+            if (ierrors*iflag > 0 ) then
+                open(8,file='geneprob_err.txt',status='unknown')
+                Write(8,*)'ID SireID DamID Tag p(11) p(Het) p(22) Phen Index Error'
+!!              PRINT*,' Errors found.  See Geneprob_err.ped  *********************** Errors '
+                ierrors = -1
+            end if
+            if (iflag/=0) then
+             write(8,56) i,p1(i),p2(i),'"',id(i),'"',pnor(i),phet(i),phom(i),phen(i),probindex,'Error ', iflag
+            end if
 
-					endif
-	       	endif
-       	else
-!!				   write(7,55 ) i,p1(i),p2(i),'"',id(i),'"',pnor(i),             phet(i),                  phom(i),phen(i),probindex
-						Probs00(i,currentSnp) = pnor(i)
-						Probs01(i,currentSnp) = phet(i)
-						Probs10(i,currentSnp) = phet(i)
-						Probs11(i,currentSnp) = phom(i)
-						GPI(i,currentSnp) = probindex
+        if(Imprinting>0) then
+                if(phet(i)<0.0000001) then
+!!                      write(7,551) i,p1(i),p2(i),'"',id(i),'"',pnor(i),phet(i),phet(i),phom(i),phen(i),probindex
+                        Probs00(i,currentSnp) = pnor(i)
+                        Probs01(i,currentSnp) = phet(i)
+                        Probs10(i,currentSnp) = phet(i)
+                        Probs11(i,currentSnp) = phom(i)
+                        GPI(i,currentSnp) = probindex
+                else
+                    p12= (pnor(seqsire(i))+0.5*phet(seqsire(i))) * (phom( seqdam(i))+0.5*phet( seqdam(i)))  ! extra safe due to the above
+                    p21= (pnor( seqdam(i))+0.5*phet( seqdam(i))) * (phom(seqsire(i))+0.5*phet(seqsire(i)))
+                    if(p12+p21>0.00000001) then
+                        IMPratio= p12 / (p12+p21)
+                    else
+                        IMPratio= 0.5 ! neutral but should not be invked anyway
+                    endif
 
-			endif
+
+!                   IMPratio=                       (pnor(seqsire(i))+0.5*phet(seqsire(i))) * (phom( seqdam(i))+0.5*phet( seqdam(i)))
+!                   IMPratio= IMPratio / (IMPratio+ (pnor( seqdam(i))+0.5*phet( seqdam(i))) * (phom(seqsire(i))+0.5*phet(seqsire(i))))
+                    if(Imprinting==2)then
+!!                      write(7,552) i,p1(i),p2(i),'"',id(i),'"',pnor(i),   phet(i), (1.-2.*IMPratio)*phet(i),  phom(i),phen(i),probindex
+                        Probs00(i,currentSnp) = pnor(i)
+                        Probs01(i,currentSnp) = phet(i)
+                        Probs10(i,currentSnp) = (1.-2.*IMPratio)*phet(i)
+                        Probs11(i,currentSnp) = phom(i)
+                        GPI(i,currentSnp) = probindex
+                    else
+!!                      write(7,551) i,p1(i),p2(i),'"',id(i),'"',pnor(i),IMPratio*phet(i),(1.-IMPratio)*phet(i),phom(i),phen(i),probindex
+                        Probs00(i,currentSnp) = pnor(i)
+                        Probs01(i,currentSnp) = IMPratio*phet(i)
+                        Probs10(i,currentSnp) = (1.-IMPratio)*phet(i)
+                        Probs11(i,currentSnp) = phom(i)
+                        GPI(i,currentSnp) = probindex
+
+                    endif
+            endif
+        else
+!!                 write(7,55 ) i,p1(i),p2(i),'"',id(i),'"',pnor(i),             phet(i),                  phom(i),phen(i),probindex
+                        Probs00(i,currentSnp) = pnor(i)
+                        Probs01(i,currentSnp) = phet(i)
+                        Probs10(i,currentSnp) = phet(i)
+                        Probs11(i,currentSnp) = phom(i)
+                        GPI(i,currentSnp) = probindex
+
+            endif
 
       enddo
 
@@ -1090,9 +1079,9 @@ IF ( ifreq_iterate==nfreq_max) then
       !!temp write geneprobs to file for testing
       !!open (UNIT=102,FILE="GenProbs.txt",STATUS="unknown")
       !!do i=1,nwritten
-		!!write(102,*) seqid(i), Probs0(i,:)
-		!!write(102,*) seqid(i), Probs1(i,:)
-		!!write(102,*) seqid(i), Probs2(i,:)
+        !!write(102,*) seqid(i), Probs0(i,:)
+        !!write(102,*) seqid(i), Probs1(i,:)
+        !!write(102,*) seqid(i), Probs2(i,:)
       !!end do
       !!close(102)
       !!*******************************************************
@@ -1104,7 +1093,7 @@ IF ( ifreq_iterate==nfreq_max) then
       CLOSE(7)
 !!      print*,' '
 !      PRINT'(a43,f14.7)', 'Frequency estimated from base individuals:', pprior  ! The value used for the set of probabilities written.
-	OutputMaf(currentSnp)=pprior
+    OutputMaf(currentSnp)=pprior
       call system_clock(iticks2,i2,i3)
       !IF(iticks2.lt.iticks1)iticks2=iticks2+i3
 !!      print'(a43,f14.7)','Number of seconds for this run:',(float(iticks2-iticks1))/i2
@@ -1145,7 +1134,7 @@ end subroutine geneprob
 
 SUBROUTINE LNKLST(I,J,NP,IFLAG)
       use common_GP
-
+      integer :: i,j, ir,ip,k,iflag,nused,np
 !      integer prog(0:2*MXANEQ)
 
       IF (I.le.0.or.J.le.0) RETURN
@@ -1197,6 +1186,7 @@ SUBROUTINE LNKLST(I,J,NP,IFLAG)
 
 SUBROUTINE FLIPPT
       use common_GP
+      integer :: kc,newpt,ioldpt,k,i
 !      integer prog(0:2*mxaneq)
 
       DO 40 K=1,MXEQ
@@ -1221,6 +1211,8 @@ SUBROUTINE FLIPPT
 !  *********************************************************************
 
 SUBROUTINE LOGADD(summ,n)
+    integer :: n,i,mm,j
+
       real*8 summ(3),add,t
 
       if(n.eq.1) return
@@ -1260,647 +1252,43 @@ function add(x1,x2)
 
 
 Subroutine info(phet, phom, phethw, phomhw, probindex)
-	implicit none
-	Real(Kind=8)	:: phet, phom, phethw, phomhw, probindex
-	Real(Kind=8)	:: r, y, x, pi, d30, yobs, xobs, hwy, hwx, xi, xj, Bangle, a, b, c, xy
+    implicit none
+    Real(Kind=8)    :: phet, phom, phethw, phomhw, probindex
+    Real(Kind=8)    :: r, y, x, pi, d30, yobs, xobs, hwy, hwx, xi, xj, Bangle, a, b, c, xy
 
-	r = 1.
-	y = .5 * r
-	x = sqrt(.75) * r
-	pi = 3.141593
-	d30 = 30 * pi / 180
+    r = 1.
+    y = .5 * r
+    x = sqrt(.75) * r
+    pi = 3.141593
+    d30 = 30 * pi / 180
 
-	yobs = -y + phet * (r + y)
-	xobs = -x + (phet * TAN(d30) + phom / COS(d30)) * (r + y)
-	hwy = -y + phethw * (r + y)
-	hwx = -x + (phethw * TAN(d30) + phomhw / COS(d30)) * (r + y)
-	xi = (xobs + yobs * hwy / hwx) / (1 + (hwy / hwx) ** 2)
-	xj = xi * hwy / hwx
+    yobs = -y + phet * (r + y)
+    xobs = -x + (phet * TAN(d30) + phom / COS(d30)) * (r + y)
+    hwy = -y + phethw * (r + y)
+    hwx = -x + (phethw * TAN(d30) + phomhw / COS(d30)) * (r + y)
+    xi = (xobs + yobs * hwy / hwx) / (1 + (hwy / hwx) ** 2)
+    xj = xi * hwy / hwx
 
-	IF(abs(hwx - xobs).lt.0.00001.and.abs(hwy - yobs).lt.0.00001) THEN
-	 probindex = 0.
-	 return
-	endif
+    IF(abs(hwx - xobs).lt.0.00001.and.abs(hwy - yobs).lt.0.00001) THEN
+     probindex = 0.
+     return
+    endif
 
-	Bangle = atan(sqrt((xobs - xi) ** 2 + (yobs - xj) ** 2) / sqrt((hwx - xi) ** 2 + (hwy - xj) ** 2))
-	IF(xi/hwx.gt.1.) Bangle = pi - Bangle
+    Bangle = atan(sqrt((xobs - xi) ** 2 + (yobs - xj) ** 2) / sqrt((hwx - xi) ** 2 + (hwy - xj) ** 2))
+    IF(xi/hwx.gt.1.) Bangle = pi - Bangle
 
-	a = sqrt(hwx ** 2 + hwy ** 2)
-	b = r
-	c = a * COS(Bangle) +  sqrt((a * COS(Bangle)) ** 2 - (a ** 2 - b ** 2))
-	 !c2 = a * COS(Bangle) - sqrt((a * COS(Bangle)) ** 2 - (a ** 2 - b ** 2))
-	 !c2 is other form of solution to quadratic formula - first seems always OK
-	xy = sqrt((xobs - hwx) ** 2 + (yobs - hwy) ** 2)
+    a = sqrt(hwx ** 2 + hwy ** 2)
+    b = r
+    c = a * COS(Bangle) +  sqrt((a * COS(Bangle)) ** 2 - (a ** 2 - b ** 2))
+     !c2 = a * COS(Bangle) - sqrt((a * COS(Bangle)) ** 2 - (a ** 2 - b ** 2))
+     !c2 is other form of solution to quadratic formula - first seems always OK
+    xy = sqrt((xobs - hwx) ** 2 + (yobs - hwy) ** 2)
 
-	probindex = 100 * xy / c
+    probindex = 100 * xy / c
 
 END
 
 ! ********************************************************************
-
-subroutine PVseq(mode)
-
-USE commonbits
-
-implicit none
-
-character (LEN=lengan), ALLOCATABLE :: holdsireid(:), holddamid(:)
-character (LEN=lengan), ALLOCATABLE :: holdid(:), SortedId(:), SortedSire(:), SortedDam(:)
-character (LEN=lengan)              :: IDhold
-
-integer, ALLOCATABLE                :: SortedIdIndex(:), SortedSireIndex(:), SortedDamIndex(:)
-integer, ALLOCATABLE                :: OldN(:), NewN(:), holdsire(:), holddam(:)
-
-INTEGER :: mode    ! mode=1 to generate dummy ids where one parent known.  Geneprob->1  Matesel->0
-INTEGER :: i, j, k, kk, newid, itth, itho, ihun, iten, iunit
-integer :: nsires, ndams, newsires, newdams, nbisexuals, flag
-INTEGER :: ns, nd, iextra, oldnobs, kn, kb, oldkn, ks, kd
-INTEGER :: Noffset, Limit, Switch, ihold, ipoint
-
-do j = 1, nobs
-  If (dam(j) == ''.or. dam(j) == '0'.or. dam(j) == '#'.or. dam(j) == '*' .or. dam(j) == '.') Then
-    dam(j) = '0'
-    seqdam(j)=0
-  endif
-  If (sire(j) == ''.or.sire(j) == '0'.or.sire(j) == '#'.or.sire(j) == '*'.or.sire(j) == '.') Then
-    sire(j) = '0'
-    seqsire(j)=0
-  endif
-enddo !j
-
-if(mode.eq.1) then
- PRINT*,  ' Inserting dummy IDs ... '
- newid=0
- do j = 1, nobs
-   if(((sire(j) == '0').and.(dam(j).ne.'0'))  .or. ((sire(j).ne.'0').and.(dam(j) == '0'))) then
-         newid=newid+1
-         if(newid.gt.99999) then
-           PRINT*, newid, ' ...'
-           stop 'too many dummy single parent IDs'
-         endif
-         itth=int(newid/10000)
-         itho=int(newid/1000)-10*itth
-         ihun=int(newid/100)-10*itho-100*itth
-         iten=int(newid/10)-10*ihun-100*itho-1000*itth
-         iunit=newid-10*iten-100*ihun-1000*itho-10000*itth
-         if(sire(j) == '0') sire(j)='dum'//achar(48+itth)//achar(48+itho)//achar(48+ihun)//achar(48+iten)//achar(48+iunit)
-         if( dam(j) == '0')  dam(j)='dum'//achar(48+itth)//achar(48+itho)//achar(48+ihun)//achar(48+iten)//achar(48+iunit)
-   endif
- enddo
-endif
-
-PRINT*,  ' Sorting Sires ... '
-
-ALLOCATE  (SortedId(nobs), SortedIdIndex(nobs))
-
-SortedId(1:nobs) = Sire(1:nobs)
-
-  Noffset = INT(nobs/2)
-  DO WHILE (Noffset>0)
-      Limit = nobs - Noffset
-      switch=1
-    DO WHILE (Switch.ne.0)
-       Switch = 0
-       do i = 1, Limit
-          IF (SortedId(i).gt.SortedId(i + Noffset)) THEN
-               IDhold=SortedId(i)
-               SortedId(i)=SortedId(i + Noffset)
-               SortedId(i + Noffset)=IDhold
-
-               Switch = i
-          endif
-       enddo
-       Limit = Switch - Noffset
-    enddo
-    Noffset = INT(Noffset/2)
-  enddo
-
-nsires=0
-IF(SortedId(1) /= '0') nsires=1
-do i=2,nobs
-  IF(SortedId(i) /= SortedId(i-1) .and. SortedId(i) /= '0') nsires=nsires+1
-end do
-
-ALLOCATE  (SortedSire(0:nsires), SortedSireIndex(nsires))
-SortedSire(0) = '0'
-
-nsires=0
-IF(SortedId(1) /= '0') THEN
- nsires=1
- SortedSire(1) = SortedId(1)
-ENDIF
-do i=2,nobs
-  IF(SortedId(i) /= SortedId(i-1) .and. SortedId(i) /= '0') then
-   nsires=nsires+1
-   SortedSire(nsires) = SortedId(i)
-  ENDIF
-end do
-
-PRINT*,  ' Sorting Dams ... '
-
-SortedId(1:nobs) = Dam(1:nobs)
-
-  Noffset = INT(nobs/2)
-  DO WHILE (Noffset>0)
-      Limit = nobs - Noffset
-      switch=1
-    DO WHILE (Switch.ne.0)
-       Switch = 0
-       do i = 1, Limit
-          IF (SortedId(i).gt.SortedId(i + Noffset)) THEN
-               IDhold=SortedId(i)
-               SortedId(i)=SortedId(i + Noffset)
-               SortedId(i + Noffset)=IDhold
-
-               Switch = i
-          endif
-       enddo
-       Limit = Switch - Noffset
-    enddo
-    Noffset = INT(Noffset/2)
-  enddo
-
-nDams=0
-IF(SortedId(1) /= '0') nDams=1
-do i=2,nobs
-  IF(SortedId(i) /= SortedId(i-1) .and. SortedId(i) /= '0') nDams=nDams+1
-end do
-
-ALLOCATE  (SortedDam(0:nDams), SortedDamIndex(ndams))
-SortedDam(0)='0'
-
-nDams=0
-IF(SortedId(1) /= '0') THEN
- nDams=1
- SortedDam(1) = SortedId(1)
-ENDIF
-do i=2,nobs
-  IF(SortedId(i) /= SortedId(i-1) .and. SortedId(i) /= '0') then
-   nDams=nDams+1
-   SortedDam(nDams) = SortedId(i)
-  ENDIF
-end do
-
-
-PRINT*,  ' Sorting IDs ... '
-
-SortedId(1:nobs) = ID(1:nobs)
-do i=1,nobs
- SortedIdIndex(i) = i
-end do
-
-  Noffset = INT(nobs/2)
-  DO WHILE (Noffset>0)
-      Limit = nobs - Noffset
-      switch=1
-    DO WHILE (Switch.ne.0)
-       Switch = 0
-       do i = 1, Limit
-          IF (SortedId(i).gt.SortedId(i + Noffset)) THEN
-               IDhold=SortedId(i)
-               SortedId(i)=SortedId(i + Noffset)
-               SortedId(i + Noffset)=IDhold
-
-               ihold=SortedIdIndex(i)
-               SortedIdIndex(i)=SortedIdIndex(i + Noffset)
-               SortedIdIndex(i + Noffset)=ihold
-
-               Switch = i
-          endif
-       enddo
-       Limit = Switch - Noffset
-    enddo
-    Noffset = INT(Noffset/2)
-  enddo
-
-PRINT*,  ' Check for duplicate IDs ... '
-flag = -1
-Do i = 2, nobs
-  If (SortedID(i) == SortedID(i - 1)) Then
-   If (flag == -1) Then
-     open (1,FILE='ID_err.txt',STATUS = 'unknown')
-     WRITE(1,*) 'Duplicated IDs ...'
-     flag = 0
-   End If
-   WRITE(1,*) SortedID(i)
-   flag = flag + 1
-  End If
-enddo
-
- If (flag > -1) Then
-  Close (1)
-  PRINT*, flag,' case(s) of duplicate ID. See ID_ERR.TXT        <------------ WARNING !!!'
- End If
-
-PRINT*,  ' Males ... '
-PRINT*,  '  Find or set sire indices ... '
-
-newsires = 0
-
-do j=1,nsires
-
-! check if already listed as an individual
-   ipoint=INT(nobs/2)
-   Noffset = INT(ipoint/2)
-   do while (Noffset>1)
-    IF (SortedSire(j).lt.SortedId(ipoint)) THEN
-     ipoint = ipoint - Noffset
-     Noffset = INT(Noffset/2)
-    else
-     ipoint = ipoint + Noffset
-     Noffset = INT(Noffset/2)
-    endif
-   enddo
-
-    kn=0
-    if (SortedSire(j)==SortedId(ipoint)) kn=1
-    do while (ipoint<nobs .and. kn==0 .and. SortedSire(j) > SortedId(ipoint))
-     ipoint=ipoint+1
-    enddo
-    if (SortedSire(j)==SortedId(ipoint)) kn=1
-    do while (ipoint>1 .and. kn==0 .and. SortedSire(j) < SortedId(ipoint))
-     ipoint=ipoint-1
-    enddo
-    if (SortedSire(j)==SortedId(ipoint)) kn=1
-
-    IF(kn==1) then
-     SortedSireIndex(j) = SortedIdIndex(ipoint)
-    else    ! sire is unlisted base sire
-     newsires = newsires + 1
-     SortedSireIndex(j) = nobs + newsires ! for now
-    endif
-end do !j
-
- ALLOCATE  (holdsireid(newsires))
- kn=0
- do j=1,nsires
-  if (SortedSireIndex(j) > nobs) then
-   kn=kn+1
-   holdsireid(SortedSireIndex(j)-nobs) = SortedSire(j)
-  end if
- enddo
- IF(kn /= newsires) stop'newsires error'
-
-
-PRINT*,  '  Find seqsire ... '
-
-do j = 1, nobs
-
-  If (sire(j) == '0') Then
-    seqsire(j)=0
-  else
-
-    ipoint=INT(nsires/2)
-    Noffset = INT(ipoint/2)
-   do while (Noffset>1)
-    IF (Sire(j).lt.SortedSire(ipoint)) THEN
-     ipoint = ipoint - Noffset
-     Noffset = INT(Noffset/2)
-    else
-     ipoint = ipoint + Noffset
-     Noffset = INT(Noffset/2)
-    endif
-   enddo
-
-    kn=0
-    if (Sire(j)==SortedSire(ipoint)) kn=1
-    do while (ipoint<nsires .and. kn==0 .and. Sire(j) > SortedSire(ipoint))
-     ipoint=ipoint+1
-    enddo
-    if (Sire(j)==SortedSire(ipoint)) kn=1
-    do while (ipoint>1 .and. kn==0 .and. Sire(j) < SortedSire(ipoint))
-     ipoint=ipoint-1
-    enddo
-    if (Sire(j)==SortedSire(ipoint)) kn=1
-    IF(kn==1) then
-     seqsire(j) = SortedSireIndex(ipoint)
-    else
-     PRINT*, ' Error: Sire missing: ', Sire(j)
-     stop
-    endif
-
-  endif
-
-ENDDO !j
-
-PRINT*,  '  Sires: ',newsires,' unlisted, ',nsires,' in total'
-
-PRINT*,  ' Females ... '
-PRINT*,  '  Find or set dam indices ... '
-
-newdams = 0
-nbisexuals = 0
-
-do j=1,ndams
-
-! check if already listed as an individual
-   ipoint=INT(nobs/2)
-   Noffset = INT(ipoint/2)
-   do while (Noffset>1)
-    IF (Sorteddam(j).lt.SortedId(ipoint)) THEN
-     ipoint = ipoint - Noffset
-     Noffset = INT(Noffset/2)
-    else
-     ipoint = ipoint + Noffset
-     Noffset = INT(Noffset/2)
-    endif
-   enddo
-
-    kn=0
-    if (Sorteddam(j)==SortedId(ipoint)) kn=ipoint  ! store ipoint here as ipoint can change with bisexuals
-    do while (ipoint<nobs .and. kn==0 .and. Sorteddam(j) > SortedId(ipoint))
-     ipoint=ipoint+1
-    enddo
-    if (Sorteddam(j)==SortedId(ipoint)) kn=ipoint
-    do while (ipoint>1 .and. kn==0 .and. Sorteddam(j) < SortedId(ipoint))
-     ipoint=ipoint-1
-    enddo
-    if (Sorteddam(j)==SortedId(ipoint)) kn=ipoint
-! check if already listed as a sire (and therefore bisexual)
-   ipoint=INT(nsires/2)
-   Noffset = INT(ipoint/2)
-   do while (Noffset>1)
-    IF (SortedDam(j).lt.SortedSire(ipoint)) THEN
-     ipoint = ipoint - Noffset
-     Noffset = INT(Noffset/2)
-    else
-     ipoint = ipoint + Noffset
-     Noffset = INT(Noffset/2)
-    endif
-   enddo
-
-    kb=0
-    if (SortedDam(j)==SortedSire(ipoint)) kb=1
-    do while (ipoint<nsires .and. kb==0 .and. SortedDam(j) > SortedSire(ipoint))
-     ipoint=ipoint+1
-    enddo
-    if (SortedDam(j)==SortedSire(ipoint)) kb=1
-    do while (ipoint>1 .and. kb==0 .and. SortedDam(j) < SortedSire(ipoint))
-     ipoint=ipoint-1
-    enddo
-    if (SortedDam(j)==SortedSire(ipoint)) kb=1
-
-    IF(kb==1) then
-      nbisexuals = nbisexuals + 1
-      open (1,FILE='bisex.txt',position = 'append')
-       WRITE(1,*) SortedDam(j)
-      close(1)
-    endif
-
-    if (kb==1) then
-     SorteddamIndex(j) = SortedSireIndex(ipoint)
-    elseif (kn>=1) then
-     SorteddamIndex(j) = SortedIdIndex(kn)
-    else    ! dam is unlisted base dam
-     newdams = newdams + 1
-     SorteddamIndex(j) = nobs + newsires + newdams ! for now
-    endif
-
-end do !j
-
-If (nbisexuals > 0)  PRINT*, nbisexuals,' bisexual parent(s) found. See file bisex.txt.  <------------ WARNING !!!'
-
- ALLOCATE  (holddamid(newdams))
- kn=0
- do j=1,ndams
-  if (SortedDamIndex(j) > nobs+newsires) then
-   kn=kn+1
-   holddamid(SortedDamIndex(j)-nobs-newsires) = SortedDam(j)
-  end if
- enddo
- IF(kn /= newdams) stop'newdams error'
-
-
-
-PRINT*,  '  Find seqdam ... '
-
-do j = 1, nobs
-
-  If (dam(j) == '0') Then
-    seqdam(j)=0
-  else
-
-    ipoint=INT(ndams/2)
-    Noffset = INT(ipoint/2)
-   do while (Noffset>1)
-    IF (dam(j).lt.Sorteddam(ipoint)) THEN
-     ipoint = ipoint - Noffset
-     Noffset = INT(Noffset/2)
-    else
-     ipoint = ipoint + Noffset
-     Noffset = INT(Noffset/2)
-    endif
-   enddo
-
-    kn=0
-    if (dam(j)==Sorteddam(ipoint)) kn=1
-    do while (ipoint<ndams .and. kn==0 .and. dam(j) > Sorteddam(ipoint))
-     ipoint=ipoint+1
-    enddo
-    if (dam(j)==Sorteddam(ipoint)) kn=1
-    do while (ipoint>1 .and. kn==0 .and. dam(j) < Sorteddam(ipoint))
-     ipoint=ipoint-1
-    enddo
-    if (dam(j)==Sorteddam(ipoint)) kn=1
-    IF(kn==1) then
-     seqdam(j) = SorteddamIndex(ipoint)
-    else
-     PRINT*, ' Error: dam missing: ', dam(j)
-     stop
-    endif
-
-  endif
-
-ENDDO !j
-
-PRINT*,  '  Dams: ',newdams,' unlisted, ',ndams,' in total'
-
-PRINT*,  ' Arranging unlisted base parents ... '
-
-
-iextra = newsires + newdams
-
-If (iextra > 0) then
-      PRINT*, ' ', iextra, ' unlisted base parents found.'
-
- ! SortedId and SortedIdIndex just used as a holder while redimensioning
-
- SortedId(1:nobs)=id(1:nobs)
- deallocate (id)
- ALLOCATE(id(nobs+iextra))
- id(1+iextra:nobs+iextra)=SortedId(1:nobs)
-
- SortedId(1:nobs)=sire(1:nobs)
- deallocate (sire)
- ALLOCATE(sire(nobs+iextra))
- sire(1+iextra:nobs+iextra)=SortedId(1:nobs)
-
- SortedId(1:nobs)=dam(1:nobs)
- deallocate (dam)
- ALLOCATE(dam(nobs+iextra))
- dam(1+iextra:nobs+iextra)=SortedId(1:nobs)
-
- SortedIdIndex(1:nobs)=seqsire(1:nobs)
- deallocate (seqsire)
- ALLOCATE(seqsire(nobs+iextra))
- seqsire(1+iextra:nobs+iextra)=SortedIdIndex(1:nobs)
-
- SortedIdIndex(1:nobs)=seqdam(1:nobs)
- deallocate (seqdam)
- ALLOCATE(seqdam(nobs+iextra))
- seqdam(1+iextra:nobs+iextra)=SortedIdIndex(1:nobs)
-
-endif
-
-PRINT*, ' Inserting unlisted base parents ...'
-
-oldnobs = nobs
-nobs = nobs + iextra
-PRINT*, ' Total number of animals = ',nobs
-
-ALLOCATE (passedorder(nobs))
-passedorder=0
-
-do i = 1+iextra, nobs
- passedorder(i)= i-iextra
-
- If (sire(i) == '0')then
-   seqsire(i) = 0
- Else
-   seqsire(i) = iextra + seqsire(i)
-   If (seqsire(i) > nobs)  seqsire(i) = seqsire(i) - nobs  ! for unlisted sires
- End If
-
- If (dam(i) == '0') Then
-   seqdam(i) = 0
-  Else
-   seqdam(i) = iextra + seqdam(i)
-   If (seqdam(i) > nobs)  seqdam(i) = seqdam(i) - nobs
-  End If
-ENDDO !i
-
-do i = 1, newsires
- ID(i) = holdsireid(i)
- passedorder(i)=0
- seqsire(i) = 0
- seqdam(i) = 0
-ENDDO !i
-do i = newsires + 1, newsires + newdams
- ID(i) = holddamid(i - newsires)
- passedorder(i)=0
- seqsire(i) = 0
- seqdam(i) = 0
-ENDDO !i
-
-DEALLOCATE(holdsireid, holddamid, SortedIdIndex, SortedId)
-
-flag = 0
-Do i = 1, nobs
-If (i <= seqsire(i) .Or. i <= seqdam(i) ) flag = 1
-enddo !i
-If (flag == 0) return  !PRINT*, 'not needed'!return
-
-PRINT*, ' Re-Ordering pedigree ...'
-
-
-Allocate ( OldN(0:nobs), NewN(0:nobs) )
-ALLOCATE ( holdid(0:nobs), holdsire(nobs), holddam(nobs) )
-
-OldN(0) = 0
-NewN=0
-!seqsire(0) = 0 !not needed !
-!seqdam(0) = 0
-
-holdid(1:nobs) = ID(1:nobs)
-holdsire = seqsire
-holddam = seqdam
-
-!Find base ancestors ...
-kn = 0
-do i = 1, nobs
- If (seqsire(i) == 0 .And. seqdam(i) == 0) Then
-      kn = kn + 1
-      NewN(i) = kn
-      OldN(kn) = i
- End If
-ENDDO !i
-
-!Re-order pedigree ...
-NewN(0) = nobs + 1
-flag = 0
-Do While (kn < nobs)
- oldkn = kn
- do i = 1, nobs
-  If (NewN(i) == 0) Then !And ID(i) <> 'UniqueNULL' Then
-    Ks = seqsire(i)
-    Kd = seqdam(i)
-    If (NewN(Ks) > 0 .And. NewN(Kd) > 0) Then
-      kn = kn + 1
-      NewN(i) = kn
-      OldN(kn) = i
-    End If
-  End If
- enddo !i
-
- ! to avoid hang on unexpected problem ...
- If (kn == oldkn) Then
-  flag = flag + 1
- Else
-  flag = 0
- endif
-
- If (flag > 10) Then
-   open(1,file='ped_err.txt',status='unknown')
-   write(1,*) 'Pedigree errors found involving two or more of the following relationships ...'
-   write(1,*)
-   write(1,*) '       Index numbers are followed by names.'
-   write(1,*) '       Index number 0 means unknown, whence name is blank.'
-   write(1,*)
-   do i = 1, nobs
-    If (NewN(i) == 0) Then
-     write(1,*) 'Individual:',          i, ':  ', ID(i)
-     write(1,*) '    Father:', seqsire(i), ':  ', ID(seqsire(i))
-     write(1,*) '    Mother:',  seqdam(i), ':  ', ID(seqdam(i))
-     write(1,*)
-    End If
-   ENDDO !i
-   Close (1)
-   PRINT*,  'Logical error when re-ordering pedigree - see details in file PED_ERR.TXT'
-   stop
- End If
-ENDDO !while
-
-NewN(0) = 0
-
-do i = 1, nobs
- ID(i) = holdid(OldN(i))
-enddo
-
-do i = 1, nobs
-seqsire(i) = NewN(holdsire(OldN(i)))
-seqdam(i) = NewN(holddam(OldN(i)))
-If (i <= NewN(holdsire(OldN(i))) .Or. i <= NewN(holddam(OldN(i)))) then
-   PRINT*,  'out of order'
-   stop
-endif
-ENDDO !i
-
-DO i = 1, nobs
-  holdsire(i) = passedorder(i)  ! holdsire just because it is free
-enddo
-DO i = 1, nobs
-  passedorder(i) = holdsire(OldN(i))
-enddo
-
-deallocate ( OldN, NewN, holdid, holdsire, holddam) ! holdrec)
-
-!do i = 1, nobs
-! PRINT'(3i5,2x,3a4,i5)', i, seqsire(i), seqdam(i), id(i), sire(i), dam(i), passedorder(i)
-!enddo
-
-end subroutine
-
-
 
 subroutine GetMaxFS!!(maxfs, maxmates, nfamilies)
 
@@ -1959,23 +1347,26 @@ fs=1
 do i=2,nobs
   parent1=INT(family(i)/multiplier)
   parent2=family(i)-multiplier*parent1
- IF(parent1 /= 0 .and. parent2 /= 0) then  ! note how this is handled
-  IF(family(i) == family(i-1)) then
-    fs = fs + 1
-  else
-    IF(fs > maxfs) then
-     maxfs = fs
-     holdfamily=family(i-1)
+  IF(parent1 /= 0 .and. parent2 /= 0) then  ! note how this is handled
+    IF(family(i) == family(i-1)) then
+      fs = fs + 1
+    else
+      IF(fs > maxfs) then
+        maxfs = fs
+        holdfamily=family(i-1)
+      endif
+      fs = 1
     endif
-    fs = 1
   endif
- endif
 end do
+if (fs > maxfs) then
+  maxfs = fs
+  holdfamily = family(nobs)
+end if
 
 parent1=INT(holdfamily/multiplier)
 parent2=holdfamily-multiplier*parent1
-!PRINT*, '  Maximum FS family size ... ',maxfs, ' for parents: ',parent1,' ',parent2
-PRINT*, '  Maximum FS family size ... ',maxfs, ' for parents: ',id(parent1),' ',id(parent2)
+PRINT*, '  Maximum FS family size ... ',maxfs, ' for parents: ',parent1,' ',parent2
 
 Maxmates1 = 0
 mates=1
@@ -1996,10 +1387,10 @@ do i=2,nobs
     endif
     mates=1
    endif
-	If (i==nobs .and. mates > maxmates1) Then  ! need to cover the last observation
-		maxmates1 = mates
-		Limit = oldparent1 ! to record the one with most mates
-	End If
+    If (i==nobs .and. mates > maxmates1) Then  ! need to cover the last observation
+        maxmates1 = mates
+        Limit = oldparent1 ! to record the one with most mates
+    End If
    oldparent1=parent1
    oldparent2=parent2
  endif
@@ -2056,10 +1447,10 @@ do i=2,nobs
     endif
     mates=1
    endif
-   	If (i==nobs .and. mates > maxmates2) Then  ! need to cover the last observation
-   		maxmates2 = mates
-   		Limit = oldparent1 ! to record the one with most mates
-   	End If
+    If (i==nobs .and. mates > maxmates2) Then  ! need to cover the last observation
+        maxmates2 = mates
+        Limit = oldparent1 ! to record the one with most mates
+    End If
    oldparent1=parent1
    oldparent2=parent2
 
@@ -2078,17 +1469,17 @@ end subroutine
 
 subroutine mkdir(tmpdir)
 
-	character(len=*) :: tmpdir
+    character(len=*) :: tmpdir
 
-	open(unit=1000,file=".tmpsh",status="unknown")
-	write(1000,*) "if [ ! -d "// trim(tmpdir) //" ]"
-	write(1000,*) "then mkdir " // trim(tmpdir)
-	write(1000,*) "fi"
-	close(1000)
+    open(unit=1000,file=".tmpsh",status="unknown")
+    write(1000,*) "if [ ! -d "// trim(tmpdir) //" ]"
+    write(1000,*) "then mkdir " // trim(tmpdir)
+    write(1000,*) "fi"
+    close(1000)
 
-	call system("chmod a+x .tmpsh")
-	call system("./.tmpsh")
-	call system("rm .tmpsh")
+    call system("chmod a+x .tmpsh")
+    call system("./.tmpsh")
+    call system("rm .tmpsh")
 
 end subroutine mkdir
 

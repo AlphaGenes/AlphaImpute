@@ -114,8 +114,10 @@ do marker=nSnpHmm-1,1,-1
     ! marker=marker-1
     ! Track whether imputed state matches observed allele
     if (SubH(Hapi,marker)==PhaseHmmMaCH(CurrentInd,marker,hap)) then
+        !$OMP ATOMIC
         ErrorMatches(marker)=ErrorMatches(marker)+1
     else
+        !$OMP ATOMIC
         ErrorMismatches(marker)=ErrorMismatches(marker)+1
     endif
 
@@ -161,8 +163,10 @@ enddo
 
 ! Track whether imputed state matches observed allele
 if (SubH(Hapi,1)==PhaseHmmMaCH(CurrentInd,1,hap)) then
+    !$OMP ATOMIC
     ErrorMatches(1)=ErrorMatches(1)+1
 else
+    !$OMP ATOMIC
     ErrorMismatches(1)=ErrorMismatches(1)+1
 endif
 
@@ -185,7 +189,7 @@ implicit none
 integer,intent(IN) :: CurrentInd, hap, StartSnp, StopSnp
 
 ! Local variables
-integer :: i, state, marker, Thread, Hapi, ToHap, sampleHap, FromMarker, tmpMarker
+integer :: i, state, marker, Thread, Hapi, sampleHap, FromMarker, tmpMarker
 
 ! double precision :: Probs(nHapInSubH*(nHapInSubH+1)/2)
 double precision :: Probs(nHapInSubH)
@@ -228,8 +232,10 @@ do while (marker>StartSnp)
     marker=marker-1
     ! Track whether imputed state matches observed allele
     if (SubH(Hapi,marker)==PhaseHmmMaCH(CurrentInd,marker,hap)) then
+        !$OMP ATOMIC
         ErrorMatches(marker)=ErrorMatches(marker)+1
     else
+        !$OMP ATOMIC
         ErrorMismatches(marker)=ErrorMismatches(marker)+1
     endif
 
@@ -272,8 +278,10 @@ do while (marker>StartSnp)
     if (Choice <= nocross) then
             do i=marker,tmpMarker
                 if (SubH(Hapi,i)==PhaseHmmMaCH(CurrentInd,i,hap)) then
+                    !$OMP ATOMIC
                     ErrorMatches(i)=ErrorMatches(i)+1
                 else
+                    !$OMP ATOMIC
                     ErrorMismatches(i)=ErrorMismatches(i)+1
                 endif
 
@@ -324,7 +332,7 @@ do while (marker>StartSnp)
         !    => Recombinant in second interval
             FromMarker=FromMarker+1
             if (PhaseHmmMaCH(CurrentInd,FromMarker,hap)==ALLELE_MISSING) then
-                FullH(CurrentInd,FromMarker,hap) = SubH(ToHap,FromMarker)
+                FullH(CurrentInd,FromMarker,hap) = SubH(Hapi,FromMarker)
             endif
             cycle
         endif
@@ -355,8 +363,10 @@ enddo
 
 ! Track whether imputed state matches observed allele
 if (SubH(Hapi,StartSnp)==PhaseHmmMaCH(CurrentInd,StartSnp,hap)) then
+    !$OMP ATOMIC
     ErrorMatches(StartSnp)=ErrorMatches(StartSnp)+1
 else
+    !$OMP ATOMIC
     ErrorMismatches(StartSnp)=ErrorMismatches(StartSnp)+1
 endif
 

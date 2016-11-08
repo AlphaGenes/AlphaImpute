@@ -30,14 +30,15 @@ integer,parameter :: ImputeFromHDLibraryCountThresh=1,ImputeFromHDPhaseThresh=1
 integer,parameter :: ImputeFromParentCountThresh=1,ImputeFromGrandParentCountThresh=1
 real,parameter :: DisagreeThreshold=0.05,GeneProbThresh=0.99
 
-character (len=300) :: PedigreeFile,PhasePath,TrueGenosFile,GenotypeFile,GenderFile,InbredAnimalsFile
-
 integer :: nAnisG,nAnisRawPedigree,nSnp,nAnisP,IntEditStat,nPhaseInternal,nPhaseExternal,OutOpt,SexOpt,HetGameticStatus,HomGameticStatus,MultiHD
 integer :: nProcessors,nProcessGeneProb,nProcessAlphaPhase,ManagePhaseOn1Off0,CountRawGenos,InternalIterations,nAnisInGenderFile
 integer :: nAgreeImputeHDLib,nAgreeParentPhaseElim,nAgreeInternalHapLibElim,MaxLeftRightSwitch,MinSpan,ConservativeHapLibImputation
 integer :: TrueGenos1None0,nSnpRaw,nObsDataRaw,nAgreePhaseElim,nAgreeGrandParentPhaseElim,UseGP,BypassGeneProb,HMMOption
 integer :: nSnpIterate,NoPhasing,AlphaPhasePresent,GeneProbPresent,PrePhased,UserDefinedHD,PedFreePhasing,PhaseTheDataOnly,RestartOption
 integer :: nSnpChips
+
+integer :: PhaseSubsetSize, PhaseNIterations
+character (len=300) :: LargeDatasets
 
 logical :: PreProcess
 
@@ -63,7 +64,10 @@ integer, allocatable :: nSnpByChip(:), animChip(:)
 end module Global
 
 !#############################################################################################################################################################################################################################
+module GlobalFiles
+    character (len=300),save :: PedigreeFile,PhasePath,TrueGenosFile,GenotypeFile,GenderFile, InbredAnimalsFile
 
+end module GlobalFiles
 
 module GlobalPedigree
 use Global

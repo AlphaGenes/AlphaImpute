@@ -3,6 +3,44 @@ IMPLICIT NONE
 
 CONTAINS
 
+  !---------------------------------------------------------------------------
+  ! DESCRIPTION:
+  !> @brief      Return the number of lines in a file
+  !
+  !> @details    Return the number of lines in a file
+  !
+  !> @author     Roberto Antolin, roberto.antolin@roslin.ed.ac.uk
+  !
+  !> @date       July 25, 2016
+  !
+  ! PARAMETERS:
+  !> @param[in]  FileName  File name
+  !> @return     Number of lines in the file
+  !---------------------------------------------------------------------------
+  FUNCTION CountLines(FileName) result(nLines)
+    use ISO_Fortran_Env
+    implicit none
+
+    character(len=*), intent(in) :: FileName
+    integer                         :: nLines
+
+    integer :: f, UInputs
+    character(len=300) :: dumC
+
+    nLines=0
+    UInputs = 111
+    open (unit=UInputs,file=trim(FileName),status="old")
+    do
+      read (UInputs,*,iostat=f) dumC
+      nLines=nLines+1
+      if (f/=0) then
+        nLines=nLines-1
+        exit
+      endif
+    enddo
+    close(UInputs)
+  END FUNCTION CountLines
+
 !######################################################################
 SUBROUTINE RemoveInformationGameteSegment(gamete,nStart,nStop)
 ! Remove the allele information of a gamete segment
@@ -84,7 +122,6 @@ USE Global
 USE GlobalVariablesHmmMaCH
 
 INTEGER :: gametesPhased, ind
-INTEGER :: CountPhasedAlleles
 INTEGER(KIND=1), ALLOCATABLE :: gamete(:)
 
 allocate(gamete(nSnpHmm))
@@ -157,7 +194,6 @@ INTEGER(KIND=1),INTENT(IN) :: gamete1(:), gamete2(:)
 
 ! Local variables
 INTEGER :: allelesGenotyped
-INTEGER :: i
 
 
 allelesGenotyped = count((gamete1(:)==1 .OR. gamete1(:)==0) .AND. (gamete2(:)==1 .OR. gamete2(:)==0))

@@ -1,0 +1,30 @@
+# Alphasim-2.0 library
+SET(ALPHAIMPUTE_src 
+            ${SRCALPHAIMPUTE}/global.f90
+            ${SRCALPHAIMPUTE}/HaplotypeBits.f90
+            ${SRCALPHAIMPUTE}/hmm.f90
+            ${SRCALPHAIMPUTE}/output.f90
+            ${SRCALPHAIMPUTE}/hmmHaplotype.f90
+            ${SRCALPHAIMPUTE}/hmmvariables.f90
+            ${SRCALPHAIMPUTE}/imputation.f90
+            ${SRCALPHAIMPUTE}/manageWindows.f90
+            ${SRCALPHAIMPUTE}/par_zig_mod.f90
+            ${SRCALPHAIMPUTE}/PhaseRounds.f90
+            ${SRCALPHAIMPUTE}/random.f90
+            ${SRCALPHAIMPUTE}/recombination.f90
+            ${SRCALPHAIMPUTE}/utils.f90
+            ${SRCALPHAIMPUTE}/AlphaImpute.f90
+
+)
+ADD_EXECUTABLE(${ALPHAIMPUTEEXE} ${ALPHAIMPUTE_src})
+
+SET(GENEPROB_src ${SRCALPHAIMPUTE}/GeneProbForAlphaImpute.f90)
+ADD_EXECUTABLE(${GENEPROBEXE} ${GENEPROB_src})
+# SET(HDF5TEST_src ${SRCALPHAIMPUTE}/hdf5test.f90 ${SRCALPHAIMPUTE}/hdf5module.f90)
+# ADD_EXECUTABLE(hdf5test ${HDF5TEST_src})
+
+# add external links here
+# TARGET_LINK_LIBRARIES(${ALPHASIMEXE} ${AHLIB})
+
+INSTALL(TARGETS ${ALPHAIMPUTEEXE} RUNTIME DESTINATION bin)
+INSTALL(TARGETS ${GENEPROBEXE} RUNTIME DESTINATION bin)
