@@ -65,7 +65,7 @@ end module Global
 
 !#############################################################################################################################################################################################################################
 module GlobalFiles
-    character (len=300),save :: PedigreeFile,PhasePath,TrueGenosFile,GenotypeFile,GenderFile
+    character (len=300),save :: PedigreeFile,PhasePath,TrueGenosFile,GenotypeFile,GenderFile, InbredAnimalsFile
 
 end module GlobalFiles
 

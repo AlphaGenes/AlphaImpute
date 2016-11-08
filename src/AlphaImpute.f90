@@ -60,7 +60,7 @@ INTERFACE WriteProbabilities
   SUBROUTINE WriteProbabilitiesHMM(outFile, Indexes, nAnisG, nSnps)
     character(len=*), intent(IN) :: outFile
     integer, intent(IN) :: nAnisG, nSnps
-    integer, intent(IN) :: Indexes(nAnisG)  
+    integer, intent(IN) :: Indexes(nAnisG)
   END SUBROUTINE WriteProbabilitiesHMM
 
   SUBROUTINE WriteProbabilitiesGeneProb(outFile, GenosProbs, Ids, nExtraAnims, nAnisP, nSnps)
@@ -104,11 +104,6 @@ if (HMMOption /= RUN_HMM_NGS) then
     call ReadInData
     call SnpCallRate
     call CheckParentage
-    ! allocate(nSnpsAnimal(nAnisG))
-    ! do i=1,nAnisG
-    !     nSnpsAnimal(i)=count(TempGenos(i,:)/=9)
-    ! enddo
-    ! call ClusterIndivByChip(nSnpChips)
     if (MultiHD/=0) call ClassifyAnimByChips
     call FillInSnp
     call FillInBasedOnOffspring
@@ -321,7 +316,7 @@ subroutine ReadInParameterFile(SpecFile)
 use Global
 use GlobalPedigree
 use GlobalVariablesHmmMaCH
-use GlobalFiles, only : PedigreeFile,GenotypeFile,TrueGenosFile, PhasePath,GenderFile
+use GlobalFiles, only : PedigreeFile,GenotypeFile,TrueGenosFile, PhasePath,GenderFile, InbredAnimalsFile
 implicit none
 
 character(len=4096), intent(in) :: SpecFile
@@ -644,6 +639,7 @@ read (1,*) dumC, useProcs
 read (1,*) dumC, idum
 read (1,*) dumC, phasedThreshold
 read (1,*) dumC, imputedThreshold
+read (1,*) dumC, InbredAnimalsFile
 ! read (1,*) dumC, windowLength
 ! print *, trim(TmpHmmOption), nHapInSubH,HmmBurnInRound,nRoundsHMM,useProcs,idum,phasedThreshold,imputedThreshold,windowLength
 
@@ -1459,7 +1455,7 @@ INTERFACE WriteProbabilities
     character(len=*), intent(IN) :: outFile
     integer, intent(IN) :: nSnps,nAnisG
     integer, intent(IN) :: Indexes(nAnisG)
-    
+
   END SUBROUTINE WriteProbabilitiesHMM
 
   SUBROUTINE WriteProbabilitiesGeneProb(outFile, GenosProbs, Ids, nExtraAnims, nAnisP, nSnps)
@@ -1652,7 +1648,7 @@ else
          write (34,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') Id(i),TmpGenos(i,:)
     enddo
     if (SexOpt==0 .and. HMMOption/=RUN_HMM_NGS) then
-        ! open (unit=39,file="IterateGeneProb/IterateGeneProbInput.txt")
+    ! if (SexOpt==0 .and. HMMOption==RUN_HMM_NO) then
         open (unit=39, file="IterateGeneProb" // DASH // "IterateGeneProbInput.txt")
         do i=1,nAnisP
             write (39,'(3i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') RecPed(i,:),TmpGenos(i,:)
@@ -1693,8 +1689,8 @@ else
             allocate(ProbImputeGenos(0:nAnisP,nSnpIterate))
             allocate(ProbImputePhase(0:nAnisP,nSnpIterate,2))
             allocate(Maf(nSnpIterate))
-            ProbImputeGenos(1:nAnisP,:)=-9.0
-            ProbImputePhase(1:nAnisP,:,:)=-9.0
+            ProbImputeGenos(1:nAnisP,:)= 9.0
+            ProbImputePhase(1:nAnisP,:,:)= 9.0
         endif
 
         ! Feed Impute and Phase probabilites
@@ -3171,7 +3167,6 @@ enddo
 open(unit=103,file="." // DASH // "InputFiles" // DASH // "AlphaPhaseInputPedigree.txt", status="unknown")
 open(unit=104,file="." // DASH // "InputFiles" // DASH // "RecodedGeneProbInput.txt", status="unknown")
 open(unit=105,file="." // DASH // "InputFiles" // DASH // "AlphaPhaseInputGenotypes.txt", status="unknown")
-
 
 do i=1,nAnisP
      write (104,'(i16,1x,i16,1x,i16,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') RecPed(i,:),Genos(i,:)
