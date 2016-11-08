@@ -1,4 +1,4 @@
-#ifdef OS_UNIX
+ #ifdef OS_UNIX
 
 #define STRINGIFY(x) #x
 #define TOSTRING(x) STRINGIFY(x)
@@ -317,9 +317,19 @@ end subroutine FromHMM2ImputePhase
 
 !#############################################################################################################################################################################################################################
 subroutine ReadInParameterFile(SpecFile, output)
-
-    use AlphaHouseMod, only: parseToFirstWhitespace,splitLineIntoTwoParts
+    use AlphaImputeInputParamModule
+    use AlphaHouseMod, only: parseToFirstWhitespace,splitLineIntoTwoParts,toLower
     integer :: unit,IOStatus,MultipleHDpanels
+
+type(AlphaImputeInput), optional, intent(in),target :: inputIn
+type(AlphaImputeInput), pointer :: input
+
+    if (present(inputIn)) then
+        input => inputIn
+    else
+        allocate(defaultInput)
+        input => defaultInput
+    endif
 
     open(newunit=unit, file=SpecFile, action="read", status="old")
 
@@ -425,8 +435,8 @@ subroutine ReadInParameterFile(SpecFile, output)
 
                 ! box 4
             case("internaledit")
-                if (tlc(trim(second(1))) == "yes") input%inteditstat = 1
-                else if (tlc(trim(second(1))) == "no") input%inteditstat = 0
+                if (ToLower(trim(second(1))) == "yes") input%inteditstat = 1
+                else if (ToLower(trim(second(1))) == "no") input%inteditstat = 0
                 else
                     write(error_unit,"error: internaledit is incorrectly defined in the spec file")
                     stop
@@ -467,12 +477,94 @@ subroutine ReadInParameterFile(SpecFile, output)
 
                 ! box 5
             case("numberphasingruns")
-            case("coreandtaillengths")
-            case("corelengths")
-            case("pedigreefreephasing")
-            case("genotypeerror")
-            case("largedatasets")
+                input%noPhasing = 1
+                
+                if (ToLower(trim(second(1))) == "phasedone") then
+                    if (size(second) /=3) then
+                        goto 4051
+                    endif
+                    input%ManagePhaseOn1Off0=0
+                    allocate(character(len(second(2))) :: input%phasePath)
+                    input%phasePath = second(2)
+                    input%nPhaseInternal = int(second(3))
+                else if(ToLower(trim(second(1))) == "nophase") then
+                    input%noPhasing = 1
+                    input%ManagePhaseOn1Off0 = 0
+                else
+                    input%ManagePhaseOn1Off0 = 1
+                    input%nPhaseExternal = int(second(1))
 
+                    if (input%nPhaseExternal > 40) then
+                        write(error_unit,*) "Error: Too many phasing runs required. The most that this program supports is 40."
+                        stop 40511
+                    else if(input%nPhaseExternal < 2) then
+                        write(error_unit,*) "Error: Too few phasing runs requested. The minimum this program supports is 2, 10 is reccomended."
+                        stop 40512
+                    endif
+
+                    input%nPhaseInternal = 2*input%nPhaseExternal
+                    allocate(input%CoreAndTailLengths(input%nPhaseExternal))
+                    allocate(input%CoreLengths(input%nPhaseExternal))
+
+                endif
+                cycle
+                4051 write(error_unit,*) "NumberPhasingRuns has been set incorrectly"
+                stop 4051
+
+            case("coreandtaillengths")
+                if (.not. allocated(input%CoreAndTailLengths)) then
+                    write(error_unit,*) "Error: numberofphasingruns is not defined. Please define this before CoreAndTailLengths and CoreLengths"
+                    stop 40521
+                endif
+                if (size(second) /= this%nPhaseExternal) then
+                    write(error_unit,*) "Error: numberofphasingruns is set to a different number of parameters than what is specified here. \n Please set this to the same number of parameters that are given for CoreAndTailLengths and CoreLengths"
+                    stop 40522
+                endif
+                do i=1,size(second)
+                    input%CoreAndTailLengths(i) = int(second(i))
+                enddo
+
+            case("corelengths")
+                if (.not. allocated(input%corelengths)) then
+                    write(error_unit,*) "Error: numberofphasingruns is not defined. Please define this before CoreAndTailLengths and CoreLengths"
+                    stop 40531
+                endif
+                if (size(second) /= input%corelengths) then
+                    write(error_unit,*) "Error: numberofphasingruns is set to a different number of parameters than what is specified here. \n Please set this to the same number of parameters that are given for CoreAndTailLengths and CoreLengths"
+                    stop 40532
+                endif
+                do i=1,size(second)
+                    input%corelengths(i) = int(second(i))
+                enddo
+
+            case("pedigreefreephasing")
+                if (input%nPhaseExternal /= 0)
+                    if (ToLower(trim(second(1))) == "no") then
+                        input%PedFreePhasing= 0
+                    elseif (ToLower(trim(second(1))) == "yes") then
+                        input%PedFreePhasing = 1
+                    else
+                         write(error_unit,*) "Error: PedFreePhasing has been set incorrectly."
+                        stop 4054
+                    endif
+                endif
+
+
+            case("genotypeerror")
+                if (input%nPhaseExternal /= 0) then
+                    input%GenotypeErrorPhase = real(second(1))
+                endif
+
+            case("numberofprocessorsavailable")
+                input%nProcessors = int(second(1))
+
+            case("largedatasets")
+                if (ToLower(trim(second(1))== "yes")) then
+                    input%largedatasets=.true.
+                    input%PhaseSubsetSize = int(second(2))
+                    input%PhaseNIterations = int(second(3))
+                else 
+                    input%largedatasets=.false.
 
 
 
@@ -480,9 +572,9 @@ subroutine ReadInParameterFile(SpecFile, output)
             case("internaliterations")
                 input%InternalIterations = second(1)
             case("ConservativeHaplotypeLibraryUse")
-                if(tlc(trim(ConservHapLibImp)) == "no") then
+                if(ToLower(trim(ConservHapLibImp)) == "no") then
                     input%ConservativeHapLibImputation = 0
-                else if (tlc(trim(ConservHapLibImp)) == "yes") 
+                else if (ToLower(trim(ConservHapLibImp)) == "yes") 
                     input%ConservativeHapLibImputation = 1
                 else
                     write (error_unit, *) "ConservativeHaplotypeLibraryUse not correctly set"
@@ -582,13 +674,55 @@ subroutine ReadInParameterFile(SpecFile, output)
         end if
     end do READFILE
 
+    open (newUnit=input%pedigreeFileUnit,file=trim(input%PedigreeFile),status="old")
+    open (newUnit=input%genotypeFileUnit,file=trim(input%GenotypeFile),status="old")
+    if (input%SexOpt==1) open (newUnit=input%genderFileUnit,file=trim(input%GenderFile),status="old")
+
+    nProcessAlphaPhase=nProcessors-nProcessGeneProb ! Never used!
+
+    ! Set parameters for parallelisation
+    if (input%nPhaseInternal==2) then
+        input%nAgreeImputeHDLib=1
+        input%nAgreeParentPhaseElim=1
+        input%nAgreePhaseElim=1
+        input%nAgreeInternalHapLibElim=1
+    endif
+    if (input%nPhaseInternal==4) then
+        input%nAgreeImputeHDLib=2
+        input%nAgreeParentPhaseElim=2
+        input%nAgreePhaseElim=2
+        input%nAgreeInternalHapLibElim=2
+    endif
+    if (input%nPhaseInternal==6) then
+        input%nAgreeImputeHDLib=3
+        input%nAgreeParentPhaseElim=3
+        input%nAgreePhaseElim=3
+        input%nAgreeInternalHapLibElim=3
+    endif
+    if (input%nPhaseInternal>6) then
+        input%nAgreeImputeHDLib=4
+        input%nAgreeParentPhaseElim=4
+        input%nAgreeGrandParentPhaseElim=4
+        input%nAgreePhaseElim=4
+        input%nAgreeInternalHapLibElim=4
+    endif
+
+    input%GlobalExtraAnimals=0
+
+    input%nSnpRaw = input%nSnp
+
+!$  CALL OMP_SET_NUM_THREADS(nProcessors)
+end subroutine ReadInParameterFile
+
+
 !#############################################################################################################################################################################################################################
 
-subroutine ReadInParameterFile(SpecFile)
-use Global
-use GlobalPedigree
-use GlobalVariablesHmmMaCH
-use GlobalFiles, only : PedigreeFile,GenotypeFile,TrueGenosFile, PhasePath,GenderFile
+subroutine ReadInParameterFileOld(SpecFile)
+    use AlphaImputeInputModule
+! use Global
+! use GlobalPedigree
+! use GlobalVariablesHmmMaCH
+! use GlobalFiles, only : PedigreeFile,GenotypeFile,TrueGenosFile, PhasePath,GenderFile
 implicit none
 
 character(len=4096), intent(in) :: SpecFile
@@ -598,6 +732,8 @@ character (len=300) :: dumC,IntEdit,PhaseDone,OutputOptions,PreProcessOptions,Te
 character (len=300) :: UserDefinedHDAnimalsFile,PrePhasedAnimalFile,PedigreeFreePhasing,PhasingOnlyOptions
 character (len=300) :: ConservHapLibImp,CharBypassGeneProb,TmpHmmOption
 integer :: MultipleHDpanels
+
+
 
 open (unit=1, file=SpecFile, status="old")
 
@@ -1033,7 +1169,7 @@ nSnpRaw=nSnp
 
 !$  CALL OMP_SET_NUM_THREADS(nProcessors)
 
-end subroutine ReadInParameterFile
+end subroutine ReadInParameterFileOld
 
 !########################################################################################################################################################################
 
@@ -3547,7 +3683,7 @@ do i=1,nPhaseInternal           ! Phasing is done in parallel
         write (106,*) 'Simulation                       ,0'
         write (106,*) 'TruePhaseFile                    ,None'
         write (106,*) 'CoreAtTime                       ,0'
-        if (trim(LargeDatasets) == 'Yes') then
+        if (largeDatasets) then
           write (106,*) 'IterateMethod                    ,RandomOrder'
         else
           write (106,*) 'IterateMethod                    ,Off'

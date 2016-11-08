@@ -31,24 +31,24 @@ integer,parameter :: ImputeFromHDLibraryCountThresh=1,ImputeFromHDPhaseThresh=1
 integer,parameter :: ImputeFromParentCountThresh=1,ImputeFromGrandParentCountThresh=1
 real,parameter :: DisagreeThreshold=0.05,GeneProbThresh=0.99
 
-integer :: nAnisG,nAnisRawPedigree,nSnp,nAnisP,nPhaseInternal,nPhaseExternal,SexOpt,HetGameticStatus,HomGameticStatus,MultiHD
-integer :: nProcessors,nProcessGeneProb,nProcessAlphaPhase,ManagePhaseOn1Off0,CountRawGenos,nAnisInGenderFile
-integer :: nAgreeImputeHDLib,nAgreeParentPhaseElim,nAgreeInternalHapLibElim,MaxLeftRightSwitch,MinSpan
-integer :: TrueGenos1None0,nSnpRaw,nObsDataRaw,nAgreePhaseElim,nAgreeGrandParentPhaseElim,UseGP
-integer :: nSnpIterate,NoPhasing,AlphaPhasePresent,GeneProbPresent,UserDefinedHD,PedFreePhasing
+integer :: nAnisG,nAnisRawPedigree,nSnp,nAnisP,SexOpt,HetGameticStatus,HomGameticStatus,MultiHD
+integer :: nProcessors,nProcessGeneProb,nProcessAlphaPhase,CountRawGenos,nAnisInGenderFile
+integer :: MaxLeftRightSwitch,MinSpan
+integer :: TrueGenos1None0,nObsDataRaw,UseGP
+integer :: nSnpIterate,AlphaPhasePresent,GeneProbPresent,UserDefinedHD
 integer :: nSnpChips
 
-integer :: PhaseSubsetSize, PhaseNIterations
+
 character (len=300) :: LargeDatasets
 
-real :: GenotypeErrorPhase
+
 
 integer,allocatable,dimension (:,:) :: Reads,ReferAllele,AlterAllele
 integer(kind=1),allocatable,dimension (:) :: SnpIncluded,RecIdHDIndex,GenderRaw,RecGender,IndivIsGenotyped
 integer(kind=1),allocatable,dimension (:,:) :: Genos,TempGenos,TmpGenos,MSTermInfo
 integer(kind=1),allocatable,dimension (:,:) :: ImputeGenos,SireDam
 integer(kind=1),allocatable,dimension (:,:,:) :: ImputePhase,TmpPhase,GlobalWorkPhase
-integer,allocatable :: RecPed(:,:),Setter(:),CoreAndTailLengths(:),CoreLengths(:),GpIndex(:,:),BaseAnimals(:),GlobalTmpCountInf(:,:)
+integer,allocatable :: RecPed(:,:),Setter(:),GpIndex(:,:),BaseAnimals(:),GlobalTmpCountInf(:,:)
 integer,allocatable :: GlobalHmmID(:)
 real,allocatable,dimension (:) :: Maf
 real,allocatable,dimension (:,:) :: ProbImputeGenos, GPI
