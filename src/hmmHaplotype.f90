@@ -67,6 +67,7 @@ end subroutine ForwardAlgorithmForSegmentHaplotype
 subroutine SampleHaplotypeSource(CurrentInd,hap)
 use Global
 use GlobalVariablesHmmMaCH
+use AlphaImputeInMod
 use Par_Zig_mod
 use omp_lib
 
@@ -75,21 +76,24 @@ integer,intent(IN) :: CurrentInd, hap
 
 ! Local variables
 integer :: i, state, marker, Thread, Hapi
-
-! double precision :: Probs(nHapInSubH*(nHapInSubH+1)/2)
-double precision :: Probs(nHapInSubH)
+type(AlphaImputeInput), pointer :: inputParams !TODO make this input params
+! double precision :: Probs(inputParams%nHapInSubH*(inputParams%nHapInSubH+1)/2)
+double precision,dimension(:), allocatable :: Probs
 double precision :: Summer, Choice, Theta, cross, nocross
 
 #if DEBUG.EQ.1
     write(0,*) 'DEBUG: [SampleHaplotypeSource]'
 #endif
 
+inputParams => defaultInput
+
+allocate(Probs(inputParams%nHapInSubH))
 Thread = omp_get_thread_num()
 Summer=0.0
 Probs = ForwardProbs(:,nSnpHmm)
 
 ! Calculate sum over all states
-do state=1,nHapInSubH
+do state=1,inputParams%nHapInSubH
     Summer = Summer + Probs(state)
 enddo
 
@@ -97,7 +101,7 @@ enddo
 Choice = par_uni(Thread)*Summer
 Summer=0.0
 
-do i=1,nHapInSubH
+do i=1,inputParams%nHapInSubH
     Summer = Summer + Probs(i)
     if (Summer >= Choice) then
         Hapi = i
@@ -106,7 +110,7 @@ do i=1,nHapInSubH
 enddo
 
 if (Hapi==0) then
-    Hapi=INT(1+par_uni(Thread)*nHapInSubH)
+    Hapi=INT(1+par_uni(Thread)*inputParams%nHapInSubH)
 endif
 
 do marker=nSnpHmm-1,1,-1
@@ -132,11 +136,11 @@ do marker=nSnpHmm-1,1,-1
     nocross = Probs(Hapi) * (1.0 - Theta)
     Summer = 0.0
 
-    do i=1,nHapInSubH
+    do i=1,inputParams%nHapInSubH
         Summer = Summer + Probs(i)
     enddo
 
-    cross = Summer * Theta / nHapInSubH
+    cross = Summer * Theta / inputParams%nHapInSubH
 
     ! Sample number and decide how many state changes occurred between the
     ! two positions
@@ -152,7 +156,7 @@ do marker=nSnpHmm-1,1,-1
     Choice = par_uni(Thread)*(Summer)
 
     Summer = 0.0
-    do i=1,nHapInSubH
+    do i=1,inputParams%nHapInSubH
         Summer = Summer + Probs(i)
         if (Summer >= Choice) then
             Hapi = i
@@ -175,6 +179,8 @@ if (PhaseHmmMaCH(CurrentInd,1,hap)==ALLELE_MISSING) then
     FullH(CurrentInd,1,hap) = SubH(Hapi,1)
 endif
 
+deallocate(probs)
+
 end subroutine SampleHaplotypeSource
 
 
@@ -182,6 +188,7 @@ end subroutine SampleHaplotypeSource
 subroutine SampleSegmentHaplotypeSource(CurrentInd,hap,StartSnp,StopSnp)
 use Global
 use GlobalVariablesHmmMaCH
+use AlphaImputeInMod
 use Par_Zig_mod
 use omp_lib
 
@@ -190,10 +197,14 @@ integer,intent(IN) :: CurrentInd, hap, StartSnp, StopSnp
 
 ! Local variables
 integer :: i, state, marker, Thread, Hapi, sampleHap, FromMarker, tmpMarker
+type(AlphaImputeInput), pointer :: inputParams 
 
-! double precision :: Probs(nHapInSubH*(nHapInSubH+1)/2)
-double precision :: Probs(nHapInSubH)
+! double precision :: Probs(inputParams%nHapInSubH*(inputParams%nHapInSubH+1)/2)
+double precision, allocatable, dimension(:) :: Probs
 double precision :: Summer, Choice, Theta, cross, nocross, Theta1, Recomb
+
+inputParams => defaultInput
+allocate(probs(inputParams%nHapInSubH))
 
 #if DEBUG.EQ.1
     write(0,*) 'DEBUG: [SampleSegmentHaplotypeSource]'
@@ -204,7 +215,7 @@ Summer=0.0
 Probs = ForwardProbs(:,StopSnp)
 
 ! Calculate sum over all states
-do state=1,nHapInSubH
+do state=1,inputParams%nHapInSubH
     Summer = Summer + Probs(state)
 enddo
 
@@ -212,7 +223,7 @@ enddo
 Choice = par_uni(Thread)*Summer
 Summer=0.0
 
-do i=1,nHapInSubH
+do i=1,inputParams%nHapInSubH
     Summer = Summer + Probs(i)
     if (Summer >= Choice) then
         Hapi = i
@@ -221,7 +232,7 @@ do i=1,nHapInSubH
 enddo
 
 ! if (Hapi==0) then
-!     Hapi=INT(1+par_uni(Thread)*nHapInSubH)
+!     Hapi=INT(1+par_uni(Thread)*inputParams%nHapInSubH)
 ! endif
 
 ! do marker=StopSnp,StartSnp,-1
@@ -262,11 +273,11 @@ do while (marker>StartSnp)
     nocross = Probs(Hapi) * (1.0 - Theta)
     Summer = 0.0
 
-    do i=1,nHapInSubH
+    do i=1,inputParams%nHapInSubH
         Summer = Summer + Probs(i)
     enddo
 
-    cross = Summer * Theta / nHapInSubH
+    cross = Summer * Theta / inputParams%nHapInSubH
 
     ! Sample number and decide how many state changes occurred between the
     ! two positions
@@ -296,7 +307,7 @@ do while (marker>StartSnp)
    ! If a crossover occured, we need to sample a state according to probability
     Choice = par_uni(Thread)*(Summer)
     Summer = 0.0
-    do i=1,nHapInSubH
+    do i=1,inputParams%nHapInSubH
         Summer = Summer + Probs(i)
         if (Summer >= Choice) then
             Hapi = i
@@ -350,7 +361,7 @@ do while (marker>StartSnp)
             ! Recombinants in both intervals, so we must sample
             ! an intervening state
             FromMarker=FromMarker+1
-            sampleHap=1+INT(par_uni(Thread)*nHapInSubH)
+            sampleHap=1+INT(par_uni(Thread)*inputParams%nHapInSubH)
             if (PhaseHmmMaCH(CurrentInd,FromMarker,hap)==ALLELE_MISSING) then
                 FullH(CurrentInd,FromMarker,hap) = SubH(sampleHap,FromMarker)
             endif
@@ -375,6 +386,7 @@ if (PhaseHmmMaCH(CurrentInd,StartSnp,hap)==ALLELE_MISSING) then
     FullH(CurrentInd,StartSnp,hap) = SubH(Hapi,StartSnp)
 endif
 
+deallocate(probs)
 end subroutine SampleSegmentHaplotypeSource
 
 !######################################################################
@@ -382,16 +394,19 @@ subroutine TransposeHaplotype(PrecedingMarker, CurrentMarker, Theta)
 ! Calculates the probability of get a particular state at CurrentMarker
 ! from any other state at PrecedingMarker using the transition probabilities.
 use GlobalVariablesHmmMaCH
-
+use AlphaImputeInMod
 integer, intent(IN) :: PrecedingMarker, CurrentMarker
+type(AlphaImputeInput), pointer :: inputParams
 double precision, intent(IN) :: Theta
 
 ! Local variables
 integer :: i
 double precision :: Summer, NoChange, OneChange
 
+
+inputParams => defaultInput
 if (Theta==0.0) then
-    do i=1,nHapInSubH
+    do i=1,inputParams%nHapInSubH
         ForwardProbs(i,CurrentMarker)=ForwardProbs(i,PrecedingMarker)
     enddo
     return
@@ -400,7 +415,7 @@ endif
 ! Summer=0.0
 Summer=sum(ForwardProbs(:,PrecedingMarker))
 NoChange=1.0-Theta
-OneChange=Summer*Theta/nHapInSubH
+OneChange=Summer*Theta/inputParams%nHapInSubH
 
 ! Automatically rescale likelihoods when they get too small
 if (Summer < 1e-15) then
@@ -409,7 +424,7 @@ if (Summer < 1e-15) then
 endif
 
 ! This final loop actually transposes the probabilities for each state
-do i=1,nHapInSubH
+do i=1,inputParams%nHapInSubH
     ForwardProbs(i,CurrentMarker)=ForwardProbs(i,PrecedingMarker)*NoChange+OneChange
 enddo
 
@@ -421,6 +436,7 @@ use Global
 use GlobalVariablesHmmMaCH
 use Par_Zig_mod
 use omp_lib
+use AlphaImputeInMod
 
 implicit none
 integer, intent(IN) :: Marker
@@ -429,13 +445,14 @@ integer(kind=1),intent(IN) :: allele
 ! Local variables
 integer :: i
 double precision :: factors(0:1), ErrorRate
-
+type(AlphaImputeInput), pointer :: inputParams
+inputParams => defaultInput
 
 call GetErrorRatebyMarker(Marker, ErrorRate)
 factors(0) = ErrorRate
 factors(1) = 1.0 - factors(0)
 
-do i=1,nHapInSubH
+do i=1,inputParams%nHapInSubH
     if (allele==SubH(i,Marker)) then
         ForwardProbs(i,Marker) = ForwardProbs(i,Marker) * factors(1)
     else
@@ -450,7 +467,7 @@ subroutine SetUpPriorHaplotype
 ! Set up de initial state distribution, that is, the probability that
 ! the sequence starts with the state Sj:
 !   PIj = P(t1=Sj) = ForwardProb(j,1)
-
+use AlphaImputeInMod
 use GlobalVariablesHmmMaCH
 use omp_lib
 
@@ -458,9 +475,11 @@ implicit none
 integer :: i
 double precision :: prior
 
+type(AlphaImputeInput), pointer :: inputParams
+inputParams => defaultInput
 ! Initially, every state is equally possible
-prior=1.0/nHapInSubH
-do i=1,nHapInSubH
+prior=1.0/inputParams%nHapInSubH
+do i=1,inputParams%nHapInSubH
    ForwardProbs(i,1)=prior
 enddo
 

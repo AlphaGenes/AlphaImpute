@@ -3,6 +3,7 @@ subroutine MaCHController(HMM)
 use Global
 use GlobalVariablesHmmMaCH
 use Par_Zig_mod
+use AlphaImputeInMod
 use omp_lib
 use random
 
@@ -15,21 +16,24 @@ real(8) :: tT
 double precision :: Theta
 integer, allocatable :: seed(:)
 integer :: grainsize, count, secs, seed0
+type(AlphaImputeInput), pointer :: inputParams
+
+inputParams => defaultInput
 
 ! #ifdef DEBUG
 !     write(0,*) 'DEBUG: [MaCHController] Allocate memory'
 ! #endif
 
 ! Number of SNPs and genotyped animals for the HMM algorithm
-nSnpHmm=nSnp
+nSnpHmm=inputParams%nsnp
 nIndHmmMaCH=nAnisG
 
 ! ALLOCATE MEMORY
 ! Allocate a matrix to store the diploids of every Animal
 ! Template Diploids Library
 ! NOTE: GenosHmmMaCH can contain either genotype or reads information (if working with sequence data NGS)
-allocate(GenosHmmMaCH(nIndHmmMaCH,nSnp))
-allocate(PhaseHmmMaCH(nIndHmmMaCH,nSnp,2))
+allocate(GenosHmmMaCH(nIndHmmMaCH,inputParams%nsnp))
+allocate(PhaseHmmMaCH(nIndHmmMaCH,inputParams%nsnp,2))
 ! Allocate memory to store Animals contributing to the Template
 ! Haplotype Library
 allocate(GlobalHmmID(nIndHmmMaCH))
@@ -46,8 +50,8 @@ GlobalHmmHDInd=0
 
 ! Allocate a matrix to store probabilities of genotypes and
 ! alleles for each animal
-allocate(ProbImputeGenosHmm(nIndHmmMaCH,nSnp))
-allocate(ProbImputePhaseHmm(nIndHmmMaCH,nSnp,2))
+allocate(ProbImputeGenosHmm(nIndHmmMaCH,inputParams%nsnp))
+allocate(ProbImputePhaseHmm(nIndHmmMaCH,inputParams%nsnp,2))
 ! Initialise probabilities to 0
 ProbImputeGenosHmm=0.0
 ProbImputePhaseHmm=0.0
@@ -87,10 +91,10 @@ endif
 
 ! Set up number of process to be used
 nprocs = OMP_get_num_procs()
-call OMP_set_num_threads(useProcs)
+call OMP_set_num_threads(inputParams%useprocs)
 nthreads = OMP_get_num_threads()
 
-allocate(seed(useProcs))
+allocate(seed(inputParams%useprocs))
 
 ! Warm up the random seed generator
 call system_clock(count)
@@ -104,14 +108,14 @@ enddo
 call system_clock(count)
 secs = mod(count,int(1e6))
 seed0 = secs*1e5
-idum=-abs(seed0)
-do i = 1,useProcs
+inputParams%idum=-abs(seed0)
+do i = 1,inputParams%useprocs
     call random_number(r)
     seed(i) = seed0*r
 enddo
 
 grainsize = 32
-call par_zigset(useProcs, seed, grainsize)
+call par_zigset(inputParams%useprocs, seed, grainsize)
 
 #ifdef DEBUG
     write(0,*) 'DEBUG: [ParseMaCHData] ...'
@@ -120,13 +124,13 @@ call par_zigset(useProcs, seed, grainsize)
 call ParseMaCHData(HMM)
 
 ! do i=1,nIndHmmMaCH
-!     do j=1,nSnp
+!     do j=1,inputParams%nsnp
 !         if (GenosHmmMaCH(i,j)==0) then
 !             PhaseHmmMaCH(i,j,:)=0
 !         elseif (GenosHmmMaCH(i,j)==2) then
 !             PhaseHmmMaCH(i,j,:)=1
 !         elseif (GenosHmmMaCH(i,j)==1) then
-!             if (ran1(idum)>=0.5) then
+!             if (ran1(inputParams%idum)>=0.5) then
 !                 PhaseHmmMaCH(i,j,1)=0
 !                 PhaseHmmMaCH(i,j,2)=1
 !             else
@@ -168,7 +172,7 @@ open (unit=6,form='formatted')
 
 print*, ""
 print*, " Impute genotypes by HMM"
-print*, "    Using", useProcs, "processors of", nprocs
+print*, "    Using", inputParams%useprocs, "processors of", nprocs
 
 ! Allocate and set up variables storing allele frequencies
 allocate(GenosCounts(nIndHmmMaCH,nSnpHmm,2))
@@ -176,7 +180,7 @@ GenosCounts=0
 
 tT=0.0
 
-do GlobalRoundHmm=1,nRoundsHmm
+do GlobalRoundHmm=1,inputParams%nroundshmm
     write(6, 100, advance="no") char(13),"   HMM Round   ",GlobalRoundHmm
     !write(6, 100) char(13),"   HMM Round   ",GlobalRoundHmm
     100 format (a1, a17, i10)
@@ -217,15 +221,15 @@ enddo
 
 
 ! Average genotype probability of the different hmm processes
-ProbImputeGenosHmm=ProbImputeGenosHmm/(nRoundsHmm-HmmBurnInRound)
-ProbImputePhaseHmm=ProbImputePhaseHmm/(nRoundsHmm-HmmBurnInRound)
+ProbImputeGenosHmm=ProbImputeGenosHmm/(inputParams%nroundshmm-inputParams%hmmburninround)
+ProbImputePhaseHmm=ProbImputePhaseHmm/(inputParams%nroundshmm-inputParams%hmmburninround)
 
 ! Most likely genotype is the genotype that has been sampled most frequently
 !IndHmmMaCH
 !    do j=1,nSnpHmm
 !        n2 = GenosCounts(i,j,3)                           ! Homozygous: 2 case
 !        n1 = GenosCounts(i,j,2)                           ! Heterozygous
-!        n0 = (nRoundsHmm-HmmBurnInRound) - n1 - n2      ! Homozygous: 0 case
+!        n0 = (inputParams%nroundshmm-inputParams%hmmburninround) - n1 - n2      ! Homozygous: 0 case
 !        if ((n0>n1).and.(n0>n2)) then
 !            ProbImputeGenosHmm(i,j)=0
 !        elseif (n1>n2) then
@@ -277,10 +281,12 @@ end subroutine ParseMaCHData
 subroutine ParseMaCHDataNGS
 use Global
 use GlobalVariablesHmmMaCH
-
+use AlphaImputeInMod
 implicit none
 integer :: i
+type(AlphaImputeInput), pointer :: inputParams
 
+inputParams => defaultInput
 #ifdef DEBUG
     write(0,*) 'DEBUG: [ParseMaCHDataNGS]'
 #endif
@@ -290,7 +296,7 @@ do i=1,nAnisG
     GenosHmmMaCH(i,:)=reads(i,:)
     GlobalHmmID(i)=i
     ! Find individuals sequenced with high coverage
-    if ((float(count(GenosHmmMaCH(i,:)/=MISSING))/nSnp)>0.90) then
+    if ((float(count(GenosHmmMaCH(i,:)/=MISSING))/inputParams%nsnp)>0.90) then
         ! WARNING: If this variable only stores 1 and 0, then its
         !          type should logical: GlobalHmmHDInd=.true.
         GlobalHmmHDInd(i)=1
@@ -299,7 +305,7 @@ enddo
 
 ! Check if the number of Haplotypes the user has considered in the
 ! Spec file, Sub H (MaCH paper: Li et al. 2010), is reached.
-if (nHapInSubH>2*sum(GlobalHmmHDInd(:))) then
+if (inputParams%nhapinsubh>2*sum(GlobalHmmHDInd(:))) then
     print*, "WARNING! Number of individuals highly-covered is too small"
     print*, "         for the number of Haplotypes in Sub H specified."
     print*, "         Reference haplotypes will be taken from the whole population"
@@ -316,11 +322,15 @@ use Global
 use GlobalPedigree
 use GlobalVariablesHmmMaCH
 use Utils
+use AlphaImputeInMod
 
 implicit none
+
+type(AlphaImputeInput), pointer :: inputParams
 integer :: i,j,k, NoGenosUnit, nIndvG
 integer :: maxHaps      ! Maximum number of haplotypes possible
 
+inputParams => defaultInput
 #ifdef DEBUG
     write(0,*) 'DEBUG: [ParseMaCHDataGenos] ...'
 #endif
@@ -362,22 +372,22 @@ do i=1,nAnisG
         PhaseHmmMaCH(k,:,2)=ImputePhase(i,:,2)
 
         ! Check if this animal is Highly Dense genotyped
-        if ((float(count(GenosHmmMaCH(k,:)==9))/nSnp)<0.10) then
+        if ((float(count(GenosHmmMaCH(k,:)==9))/inputParams%nsnp)<0.10) then
             GlobalHmmHDInd(k)=1
         endif
 
         ! Clean the genotypes and alleles from possible coding errors
-        do j=1,nSnp
+        do j=1,inputParams%nsnp
             if ((GenosHmmMaCH(k,j)<0).or.(GenosHmmMaCH(k,j)>2)) GenosHmmMaCH(k,j)=MISSING
             if ((PhaseHmmMaCH(k,j,1)/=0) .AND. (PhaseHmmMaCH(k,j,1)/=1)) PhaseHmmMaCH(k,j,1)=3
             if ((PhaseHmmMaCH(k,j,2)/=0) .AND. (PhaseHmmMaCH(k,j,2)/=1)) PhaseHmmMaCH(k,j,2)=3
         enddo
 
         ! Check if this individual has its haplotypes phased
-        if (float(count(PhaseHmmMaCH(k,:,1)/=3))/nSnpHmm >= (imputedThreshold/100.0)) Then
+        if (float(count(PhaseHmmMaCH(k,:,1)/=3))/nSnpHmm >= (inputParams%imputedThreshold/100.0)) Then
             GlobalHmmPhasedInd(k,1)=.TRUE.
         endif
-        if (float(count(PhaseHmmMaCH(k,:,2)/=3))/nSnpHmm >= (imputedThreshold/100.0)) Then
+        if (float(count(PhaseHmmMaCH(k,:,2)/=3))/nSnpHmm >= (inputParams%imputedThreshold/100.0)) Then
             GlobalHmmPhasedInd(k,2)=.TRUE.
         endif
 
@@ -386,7 +396,7 @@ do i=1,nAnisG
             nAnimPhased=nAnimPhased+1
         endif
     else
-        if (i > GlobalExtraAnimals) then
+        if (i > inputParams%GlobalExtraAnimals) then
             write(NoGenosUnit,*) Id(i)
         end if
     endif
@@ -412,7 +422,7 @@ endif
 
 ! Check if the number of Haplotypes the user has considered in the
 ! Spec file, Sub H (MaCH paper: Li et al. 2010), is reached.
-if (nHapInSubH>maxHaps) then
+if (inputParams%nhapinsubh>maxHaps) then
     print*, "Data set is too small for the number of Haplotypes in Sub H specified"
     stop
 endif
@@ -432,9 +442,11 @@ use Utils
 use random
 use Par_Zig_mod
 use omp_lib
+use AlphaImputeInMod
 
 implicit none
 
+type(AlphaImputeInput), pointer :: inputParams
 integer, intent(in) :: CurrentInd, HMM
 
 ! Local variables
@@ -443,24 +455,25 @@ integer :: genotype, i, states, thread
 integer :: Shuffle1(nIndHmmMaCH), Shuffle2(nIndHmmMaCH)
 integer :: StartSnp, StopSnp
 
+inputParams => defaultInput
 
 ! The number of parameters of the HMM are:
-!   nHapInSubH = Number of haplotypes in the template haplotype set, H
-!   nHapInSubH*(nHapInSubH+1)/2 = Number of states, N = H^2 (Li et al, 2010)
+!   inputParams%nhapinsubh = Number of haplotypes in the template haplotype set, H
+!   inputParams%nhapinsubh*(inputParams%nhapinsubh+1)/2 = Number of states, N = H^2 (Li et al, 2010)
 ! ForwardProbs are the accumulated probabilities, and
 ! ForwardPrbos(:,1) are the prior probabilities
 ! Allocate all possible state sequencies
-states = nHapInSubH*(nHapInSubH+1)/2
+states = inputParams%nhapinsubh*(inputParams%nhapinsubh+1)/2
 ! allocate(ForwardProbs(states,nSnpHmm))
-allocate(SubH(nHapInSubH,nSnpHmm))
+allocate(SubH(inputParams%nhapinsubh,nSnpHmm))
 
 ! Create vectors of random indexes
 ! Serial
 !#ifdef DEBUG
 !    write(0,*) 'DEBUG: Shuffle Individuals [MaCHForInd]'
 !#endif
-!call RandomOrder(Shuffle1,nIndHmmMaCH,idum)
-!call RandomOrder(Shuffle2,nIndHmmMaCH,idum)
+!call RandomOrder(Shuffle1,nIndHmmMaCH,inputParams%idum)
+!call RandomOrder(Shuffle2,nIndHmmMaCH,inputParams%idum)
 
 #if DEBUG.EQ.1
     write(0,*) "DEBUG: RandomOrderPar [MaCHForInd]"
@@ -474,11 +487,11 @@ call RandomOrderPar(Shuffle2,nIndHmmMaCH,thread)
 if (HMM==RUN_HMM_ONLY) then
     call ExtractTemplateHaps(CurrentInd,Shuffle1,Shuffle2)
 else
-    if (nGametesPhased/float(2*nAnisP)>phasedThreshold/100.0) then
+    if (nGametesPhased/float(2*nAnisP)>inputParams%phasedThreshold/100.0) then
         ! If the number of phased gametes with AlphaImpute is above
         ! a threshold, then template is populated with the phased data
         call ExtractTemplateByHaps(CurrentInd,Shuffle1,Shuffle2)
-        ! do i=1,nHapInSubH
+        ! do i=1,inputParams%nhapinsubh
         !     print *, ''
         !     print *,i, SubH(i,:)
         ! enddo
@@ -498,26 +511,26 @@ if (HMM==RUN_HMM_ONLY) then
     ! allocate(ForwardProbs(states,nSnpHmm))
     ! call ForwardAlgorithm(CurrentInd,StartSnp,StopSnp)
     ! call SampleChromosomes(CurrentInd,StartSnp,StopSnp)
-    allocate(ForwardProbs(nHapInSubH,nSnpHmm))
+    allocate(ForwardProbs(inputParams%nhapinsubh,nSnpHmm))
     call ForwardAlgorithmForSegmentHaplotype(currentInd,1,1,nSnpHmm)     ! Paternal haplotype
     call SampleSegmentHaplotypeSource(CurrentInd,1,1,nSnpHmm)
     deallocate(ForwardProbs)
-    allocate(ForwardProbs(nHapInSubH,nSnpHmm))
+    allocate(ForwardProbs(inputParams%nhapinsubh,nSnpHmm))
     call ForwardAlgorithmForSegmentHaplotype(currentInd,2,1,nSnpHmm)     ! Paternal haplotype
     call SampleSegmentHaplotypeSource(CurrentInd,2,1,nSnpHmm)
 
 else
-    if (nGametesPhased/float(2*nAnisP)>phasedThreshold/100.0) then
+    if (nGametesPhased/float(2*nAnisP)>inputParams%phasedThreshold/100.0) then
         if (GlobalHmmPhasedInd(CurrentInd,1)/=.TRUE. .AND. GlobalHmmPhasedInd(CurrentInd,2)/=.TRUE.) Then
             allocate(ForwardProbs(states,nSnpHmm))
             call ForwardAlgorithm(CurrentInd)
             call SampleChromosomes(CurrentInd,1,nSnpHmm)
         else
-            allocate(ForwardProbs(nHapInSubH,nSnpHmm))
+            allocate(ForwardProbs(inputParams%nhapinsubh,nSnpHmm))
             call ForwardAlgorithmForSegmentHaplotype(currentInd,1,1,nSnpHmm)     ! Paternal haplotype
             call SampleSegmentHaplotypeSource(CurrentInd,1,1,nSnpHmm)
             deallocate(ForwardProbs)
-            allocate(ForwardProbs(nHapInSubH,nSnpHmm))
+            allocate(ForwardProbs(inputParams%nhapinsubh,nSnpHmm))
             call ForwardAlgorithmForSegmentHaplotype(currentInd,2,1,nSnpHmm)     ! Paternal haplotype
             call SampleSegmentHaplotypeSource(CurrentInd,2,1,nSnpHmm)
         endif
@@ -554,7 +567,7 @@ else
         ! ! Impute paternal gamete with haploid HMM by segments.
         ! ! If segment has already been imputed by diploid HMM, then skip
         ! if (allocated(ForwardProbs)==.TRUE.) deallocate(ForwardProbs)
-        ! allocate(ForwardProbs(nHapInSubH,nSnpHmm))
+        ! allocate(ForwardProbs(inputParams%nhapinsubh,nSnpHmm))
         ! ! Calculate Forward probabilities for paternal gamete
         ! call ForwardAlgorithmForSegmentHaplotype(currentInd,1,1,nSnpHmm)     ! Paternal haplotype
         ! do i=1,nSegments
@@ -569,7 +582,7 @@ else
         ! ! Impute maternal gamete with haploid HMM by segments.
         ! ! If segment has already been imputed by diploid HMM, then skip
         ! if (allocated(ForwardProbs)==.TRUE.) deallocate(ForwardProbs)
-        ! allocate(ForwardProbs(nHapInSubH,nSnpHmm))
+        ! allocate(ForwardProbs(inputParams%nhapinsubh,nSnpHmm))
         ! ! Calculate Forward probabilities for maternal gamete
         ! call ForwardAlgorithmForSegmentHaplotype(currentInd,2,1,nSnpHmm)     ! Paternal haplotype
         ! do i=1,nSegments
@@ -587,7 +600,7 @@ else
     endif
 endif
 
-! WARNING: The idea of not to use the first HmmBurnInRound rounds suggests
+! WARNING: The idea of not to use the first inputParams%hmmburninround rounds suggests
 !          the imputation in those rounds aren't accurate enough, which
 !          also suggests that each round a better solution is found.
 !          Better solutions are obtained by improving previous solutions
@@ -604,7 +617,7 @@ endif
 #if DEBUG.EQ.1
     write(0,*) 'DEBUG: Calculate genotype counts [MaCHForInd]'
 #endif
-if (GlobalRoundHmm>HmmBurnInRound) then
+if (GlobalRoundHmm>inputParams%hmmburninround) then
     do i=1,nSnpHmm
         genotype = FullH(CurrentInd,i,1)+FullH(CurrentInd,i,2)
         if (genotype==2) then
@@ -612,7 +625,7 @@ if (GlobalRoundHmm>HmmBurnInRound) then
         elseif (genotype==1) then
             GenosCounts(CurrentInd,i,1)=GenosCounts(CurrentInd,i,1)+1
         endif
-        ! GenosCounts(CurrentInd,i,1)=(GlobalRoundHmm-HmmBurnInRound) - GenosCounts(CurrentInd,i,2) - GenosCounts(CurrentInd,i,3)
+        ! GenosCounts(CurrentInd,i,1)=(GlobalRoundHmm-inputParams%hmmburninround) - GenosCounts(CurrentInd,i,2) - GenosCounts(CurrentInd,i,3)
     enddo
 endif
 
@@ -620,7 +633,7 @@ endif
 #if DEBUG.EQ.1
     write(0,*) 'DEBUG: Calculate genotype dosages [MaCHForInd]'
 #endif
-if (GlobalRoundHmm>HmmBurnInRound) then
+if (GlobalRoundHmm>inputParams%hmmburninround) then
     ProbImputeGenosHmm(CurrentInd,:)=ProbImputeGenosHmm(CurrentInd,:)&
         +FullH(CurrentInd,:,1)+FullH(CurrentInd,:,2)
     ProbImputePhaseHmm(CurrentInd,:,1)=ProbImputePhaseHmm(CurrentInd,:,1)&
@@ -643,16 +656,20 @@ use Global
 use GlobalVariablesHmmMaCH
 use omp_lib
 use Par_Zig_mod
+use AlphaImputeInMod
 implicit none
 
 integer,intent(in) :: CurrentInd,StartSnp,StopSnp
-
+type(AlphaImputeInput), pointer :: inputParams
 ! Local variables
 integer :: i,j,k,l,SuperJ,Index,OffOn,State1,State2,TmpJ,TopBot,FirstState,SecondState,Tmp,Thread
 double precision :: Summer,Choice,Sum00,Sum01,Sum10,Sum11
-double precision :: Probs(nHapInSubH*(nHapInSubH+1)/2)
+double precision,dimension(:), allocatable :: Probs
 double precision :: Theta
 
+
+inputParams => defaultInput
+allocate(probs(inputParams%nhapinsubh*(inputParams%nhapinsubh+1)/2))
 Summer=0.0
 Index=0
 Probs = ForwardProbs(:,StopSnp)
@@ -661,7 +678,7 @@ Thread = omp_get_thread_num()
 ! Calculate sum over all states. The sum corresponds to all the
 ! forward probabilities, that is, the probability of the sequence of
 ! observed genotypes of animal CurrentInd.
-do i=1,nHapInSubH
+do i=1,inputParams%nhapinsubh
     do j=1,i
         Index=Index+1
         Summer=Summer+Probs(Index)
@@ -669,7 +686,7 @@ do i=1,nHapInSubH
 enddo
 
 ! Sample number at random and select state: (State1,State2)
-!Choice=ran1(idum)*Summer
+!Choice=ran1(inputParams%idum)*Summer
 Choice = par_uni(Thread)*Summer
 Summer=0.0
 Index=0
@@ -679,7 +696,7 @@ State1 = 1
 State2 = 1
 
 Probs = ForwardProbs(:,StopSnp)
-do i=1,nHapInSubH
+do i=1,inputParams%nhapinsubh
     do j=1,i
         Index=Index+1
         Summer=Summer+Probs(Index)
@@ -696,7 +713,7 @@ enddo
 SuperJ=StopSnp
 do while (SuperJ>StartSnp)
     SuperJ=SuperJ-1
-    if (HMMOption/=RUN_HMM_NGS) then
+    if (inputParams%HMMOption/=RUN_HMM_NGS) then
         call ImputeAlleles(CurrentInd,SuperJ+1,State1,State2)
     else
         call ImputeAllelesNGS(CurrentInd,SuperJ+1,State1,State2)
@@ -725,7 +742,7 @@ do while (SuperJ>StartSnp)
 
     Index=0
     Probs = ForwardProbs(:,SuperJ)
-    do k=1,nHapInSubH
+    do k=1,inputParams%nhapinsubh
         do l=1,k
             Index=Index+1
             Sum11=Sum11+Probs(Index)
@@ -739,8 +756,8 @@ do while (SuperJ>StartSnp)
         enddo
     enddo
 
-    Summer=Sum11*Theta*Theta/(nHapInSubH*nHapInSubH)&
-          +(Sum10+Sum01)*Theta*(1.0-Theta)/nHapInSubH&
+    Summer=Sum11*Theta*Theta/(inputParams%nhapinsubh*inputParams%nhapinsubh)&
+          +(Sum10+Sum01)*Theta*(1.0-Theta)/inputParams%nhapinsubh&
           +Sum00*(1.0-Theta)*(1.0-Theta)
 
     ! WARNING: Why is this assignment here?!?! In case it has to exit,
@@ -750,7 +767,7 @@ do while (SuperJ>StartSnp)
 
     !Sample number and decide how many state changes occurred between the
     !two positions
-    !Choice=ran1(idum)*Summer
+    !Choice=ran1(inputParams%idum)*Summer
     Choice = par_uni(Thread)*Summer
 
     !The most likely outcome is that no changes occur ...
@@ -766,19 +783,19 @@ do while (SuperJ>StartSnp)
     endif
 
     !But perhaps the first or second haplotype recombined
-    Choice=Choice-(Sum10*Theta*(1.0-Theta)/nHapInSubH)
+    Choice=Choice-(Sum10*Theta*(1.0-Theta)/inputParams%nhapinsubh)
 
     ! Did the first hap recombine?
     if (Choice<=0.0) then
         !The first haplotype changed ...
-        Choice=Choice*nHapInSubH/(Theta*(1.0-Theta))
+        Choice=Choice*inputParams%nhapinsubh/(Theta*(1.0-Theta))
         !Record the original state
         FirstState=State1
 
         ! Sample number at random and decide haplotype
-!        do while (State1<nHapInSubH)
+!        do while (State1<inputParams%nhapinsubh)
 !            State1=State1+1
-        do State1=1,nHapInSubH
+        do State1=1,inputParams%nhapinsubh
             if (State1>=State2) then
                 Choice=Choice+ForwardProbs(State1*(State1-1)/2+State2,SuperJ)
             else
@@ -795,20 +812,20 @@ do while (SuperJ>StartSnp)
         cycle
     endif
 
-    Choice=Choice-(Sum01*Theta*(1.0-Theta)/nHapInSubH)
+    Choice=Choice-(Sum01*Theta*(1.0-Theta)/inputParams%nhapinsubh)
 
     ! Did the second hap recombine?
     if (Choice<=0.0) then
         !The second haplotype changed ...
-        Choice=Choice*nHapInSubH/(Theta*(1.0-Theta))
+        Choice=Choice*inputParams%nhapinsubh/(Theta*(1.0-Theta))
         !Save the original state
         SecondState=State2
 
         ! Sample number at random and decide haplotype
         ! WARNING: State2 variable should be set to 0 before the loop!?!?
-!        do while (State2<nHapInSubH)
+!        do while (State2<inputParams%nhapinsubh)
 !            State2=State2+1
-        do State2=1,nHapInSubH
+        do State2=1,inputParams%nhapinsubh
             if (State1>=State2) then
                 Choice=Choice+ForwardProbs(State1*(State1-1)/2+State2,SuperJ)
             else
@@ -826,7 +843,7 @@ do while (SuperJ>StartSnp)
     endif
 
     !Try to select any other state
-    Choice=Choice*nHapInSubH*nHapInSubH/(Theta*Theta)
+    Choice=Choice*inputParams%nhapinsubh*inputParams%nhapinsubh/(Theta*Theta)
 
     !Save the original states
     FirstState=State1
@@ -835,7 +852,7 @@ do while (SuperJ>StartSnp)
     Summer=0.0
     Index=0
     OffOn=0
-    do i=1,nHapInSubH
+    do i=1,inputParams%nhapinsubh
         do j=1,i
             Index=Index+1
             Summer=Summer+ForwardProbs(Index,SuperJ)
@@ -850,7 +867,7 @@ do while (SuperJ>StartSnp)
     enddo
 
     ! Shuffle haplotypes at random
-    !if (ran1(idum)>0.5) then
+    !if (ran1(inputParams%idum)>0.5) then
     if (par_uni(Thread)>0.5) then
         Tmp=State1
         State2=State1
@@ -865,12 +882,13 @@ do while (SuperJ>StartSnp)
 
 enddo
 
-if (HMMOption/=RUN_HMM_NGS) then
+if (inputParams%HMMOption/=RUN_HMM_NGS) then
     call ImputeAlleles(CurrentInd,StartSnp,State1,State2)
 else
     call ImputeAllelesNGS(CurrentInd,StartSnp,State1,State2)
 endif
 
+deallocate(probs)
 end subroutine SampleChromosomes
 
 !######################################################################
@@ -901,14 +919,18 @@ subroutine SamplePath(CurrentInd,FromMarker,ToMarker,FromState,ToState,TopBot)
 use GlobalVariablesHmmMaCH
 use omp_lib
 use Par_Zig_mod
+use AlphaImputeInMod
 implicit none
 
 integer,intent(in) :: CurrentInd,TopBot,FromMarker,ToMarker,FromState,ToState
-
+type(AlphaImputeInput), pointer :: inputParams
 ! Local variables
 integer :: i,State,FromMarkerLocal, Thread
 double precision :: Recomb,Theta1
 double precision :: Theta
+
+
+inputParams => defaultInput
 
 Thread = omp_get_thread_num()
 
@@ -924,7 +946,7 @@ enddo
 ! Impute a path between the two end markers
 do while (FromMarkerLocal<ToMarker-1)
     ! Random recombination
-    !Recomb=ran1(idum)*Theta
+    !Recomb=ran1(inputParams%idum)*Theta
     Recomb = par_uni(Thread)*Theta
 
     ! Recombination fraction of the FromMarkerLocal
@@ -969,10 +991,10 @@ do while (FromMarkerLocal<ToMarker-1)
         FromMarkerLocal=FromMarkerLocal+1
 
         ! WARNING: Not really a bug, but not used a coherent notation
-        !ToState=int(ran1(idum)*nHapInSubH)+1
+        !ToState=int(ran1(inputParams%idum)*inputParams%nhapinsubh)+1
         !call ImputeAllele(CurrentInd,FromMarkerLocal,ToState,TopBot)
-        !State=int(ran1(idum)*nHapInSubH)+1
-        State=int(par_uni(Thread)*nHapInSubH)+1
+        !State=int(ran1(inputParams%idum)*inputParams%nhapinsubh)+1
+        State=int(par_uni(Thread)*inputParams%nhapinsubh)+1
 
         call ImputeAllele(CurrentInd,FromMarkerLocal,State,TopBot)
     endif
@@ -1043,7 +1065,7 @@ if (Genotype/=1) return
 ! If the observed allele is homozygous but the genotype is heterozygous
 if (Imputed1==Imputed2) then
     ! Impute the allele to the paternal or maternal haplotype at random
-    !if (ran1(idum)>=0.5) then
+    !if (ran1(inputParams%idum)>=0.5) then
     if (par_uni(Thread)>=0.5) then
         FullH(CurrentInd,CurrentMarker,1)=abs(Imputed1-1)
     else
@@ -1182,15 +1204,20 @@ subroutine Transpose(CurrentMarker,PrecedingMarker,Theta)
 ! from any other state at PrecedingMarker using the transition probabilities.
 ! It basically calculates the first term of the forward variable.
 use GlobalVariablesHmmMaCH
+use AlphaImputeInMod
 implicit none
 
 integer,intent(in) :: CurrentMarker,PrecedingMarker
 double precision,intent(in) :: Theta
-
+type(AlphaImputeInput), pointer :: inputParams
 !Local variables
 integer :: i,j,Index
-double precision :: Summer,Marginals(nHapInSubH),NoChange,OneChange,TwoChange
+double precision, dimension(:), allocatable :: Marginals
+double precision :: Summer,NoChange,OneChange,TwoChange
 
+inputParams => defaultInput
+
+allocate(Marginals((inputParams%nhapinsubh)))
 #if DEBUG.EQ.1
     write(0,*) 'DEBUG: [Transpose]'
 #endif
@@ -1209,7 +1236,7 @@ Marginals(:)=0.0
 #if DEBUG.EQ.1
     write(0,*) 'DEBUG: Calculate the acumulate sum of forward variables and the marginals [Transpose]'
 #endif
-do i=1,nHapInSubH
+do i=1,inputParams%nhapinsubh
     do j=1,i-1
         Index=Index+1
         Summer=Summer+ForwardProbs(Index,PrecedingMarker)
@@ -1245,16 +1272,16 @@ enddo
 ! NOTE: to the transition probabilities:
 !   (1-Theta) is the probability that a haplotype does not change =>
 !       => Theta is the probability that a haplotype does change =>
-!       => Theta/nHapInSubH is the probability that a haplotype change
+!       => Theta/inputParams%nhapinsubh is the probability that a haplotype change
 !          to a particular haplotype
 !
 ! Given those probabilities, then:
 !   * None hapltoyped have changed
 NoChange=(1.0-Theta)*(1.0-Theta)
 !   * Only one haplotype has changed
-OneChange=(1.0-Theta)*Theta/nHapInSubH
+OneChange=(1.0-Theta)*Theta/inputParams%nhapinsubh
 !   * The two haplotypes have changed
-TwoChange=Summer*Theta*Theta/(nHapInSubH*nHapInSubH)
+TwoChange=Summer*Theta*Theta/(inputParams%nhapinsubh*inputParams%nhapinsubh)
 
 !Automatically rescale likelihoods when they get too small
 #if DEBUG.EQ.1
@@ -1272,7 +1299,7 @@ Index=0
 #if DEBUG.EQ.1
     write(0,*) 'DEBUG: Calculate the final probabilities [Transpose]'
 #endif
-do i=1,nHapInSubH
+do i=1,inputParams%nhapinsubh
     do j=1,i-1
         Index=Index+1
         ! The new forward probability will be the probability of no change,
@@ -1291,6 +1318,8 @@ do i=1,nHapInSubH
         + (2*TwoChange)
 enddo
 
+deallocate(Marginals)
+
 end subroutine Transpose
 
 !######################################################################
@@ -1300,20 +1329,22 @@ subroutine ConditionOnData(CurrentInd,Marker)
 ! It basically calculate the second term of the forward variables
 use Global
 use GlobalVariablesHmmMaCH
+use AlphaImputeInMod
 implicit none
 
 integer, intent(in) :: CurrentInd, Marker
-
+type(AlphaImputeInput), pointer :: inputParams
 ! Local variables
 integer :: i, j, Index, genotype, nReads, RefAll, AltAll
 double precision :: Factors(0:1), cond_probs(0:2)
 
+inputParams => defaultInput
 ! We treat missing genotypes as uninformative about the mosaic's
 ! underlying state. If we were to allow for deletions and the like,
 ! that may no longer be true.
 ! NOTE: gentoype can be refer either to genotypes or reads if working with sequence data (NGS)
 
-if (HMMOption==RUN_HMM_NGS) then
+if (inputParams%HMMOption==RUN_HMM_NGS) then
     nReads = AlterAllele(CurrentInd,Marker)*MAX_READS_COUNT+ReferAllele(CurrentInd,Marker)
     RefAll = ReferAllele(CurrentInd,Marker)
     AltAll = AlterAllele(CurrentInd,Marker)
@@ -1327,9 +1358,9 @@ if (genotype==MISSING) then
     return
 else
     ! Index keeps track of the states already visited. The total number
-    ! of states in this chunk of code is (nHapInSubH x (nHapInSubH-1)/2)
+    ! of states in this chunk of code is (inputParams%nhapinsubh x (inputParams%nhapinsubh-1)/2)
     Index=0
-    if (HMMOption==RUN_HMM_NGS) then
+    if (inputParams%HMMOption==RUN_HMM_NGS) then
         do i=0,2
             ! cond_probs(i)=Penetrance(Marker,i,0)*shotgunErrorMatrix(0,nReads)&
             !              +Penetrance(Marker,i,1)*shotgunErrorMatrix(1,nReads)&
@@ -1340,8 +1371,8 @@ else
         enddo
     endif
 
-    do i=1,nHapInSubH
-        if (HMMOption /= RUN_HMM_NGS) then
+    do i=1,inputParams%nhapinsubh
+        if (inputParams%HMMOption /= RUN_HMM_NGS) then
             ! Probability to observe genotype SubH(i) being the true
             ! genotype GenosHmmMaCH in locus Marker
             Factors(0) = Penetrance(Marker,SubH(i,Marker),genotype)
@@ -1408,27 +1439,30 @@ subroutine SetUpPrior
 !   PIj = P(t1=Sj) = ForwardProb(j,1)
 
 use GlobalVariablesHmmMaCH
+use AlphaImputeInMod
 use omp_lib
 
 implicit none
+type(AlphaImputeInput), pointer :: inputParams
 integer :: i,j,state
 double precision :: prior
 
- prior=1.0/(nHapInSubH*nHapInSubH)
+inputParams => defaultInput
+ prior=1.0/(inputParams%nhapinsubh*inputParams%nhapinsubh)
 
 ! Initially, every state is equally possible
-!ForwardProbs(:,1)=1.0/(nHapInSubH*nHapInSubH)
+!ForwardProbs(:,1)=1.0/(inputParams%nhapinsubh*inputParams%nhapinsubh)
 
 ! WARNING: I think this variable is treated in a wrong way. In MaCH
 !          code, FordwardProbs is the array variable leftMatrices.
 !          In there, every element of the array is another array with
-!          s(s+1)/2 elements, as S(i,j)=S(j,i); where s=nHapInSubH.
+!          s(s+1)/2 elements, as S(i,j)=S(j,i); where s=inputParams%nhapinsubh.
 !          So the probability of each state is two times 1 divided by
 !          the total number of possible states.
 !          So the code should be:
 
 state=0
-do i=1,nHapInSubH
+do i=1,inputParams%nhapinsubh
    do j=1,i-1
       state=state+1
       ForwardProbs(state,1)=2.0*prior
@@ -1447,22 +1481,24 @@ subroutine SetUpEquationsGenotypesHaploid
 use Global
 use GlobalVariablesHmmMaCH
 use random
+use AlphaImputeInMod
 implicit none
 
 integer :: i,j
-
+type(AlphaImputeInput), pointer :: inputParams
 !Initialise FullH
 
+inputParams => defaultInput
 ! If the number of phased gametes from AlphaImpute is above a threshold, then
 ! haploytpes produced from AlphaImpute are used in the model (FullH)
-if (nGametesPhased/float(2*nAnisP)>phasedThreshold/100.0) then
+if (nGametesPhased/float(2*nAnisP)>inputParams%phasedThreshold/100.0) then
     do i=1,nIndHmmMaCH
         FullH(i,:,:)=PhaseHmmMaCH(i,:,:)
 
         ! Missing alleles (and individuals that are not phased) are called at random
         do j=1,nSnpHmm
             if (PhaseHmmMaCH(i,j,1)==ALLELE_MISSING) then
-                if (ran1(idum)>=0.5) then
+                if (ran1(inputParams%idum)>=0.5) then
                     FullH(i,j,1)=0
                 else
                     FullH(i,j,1)=1
@@ -1470,7 +1506,7 @@ if (nGametesPhased/float(2*nAnisP)>phasedThreshold/100.0) then
             endif
 
             if (PhaseHmmMaCH(i,j,2)==ALLELE_MISSING) then
-                if (ran1(idum)>=0.5) then
+                if (ran1(inputParams%idum)>=0.5) then
                     FullH(i,j,2)=0
                 else
                     FullH(i,j,2)=1
@@ -1499,7 +1535,7 @@ else
             !  If there is missing information in the phased data, called allele at random
             do j=1,nSnpHmm
                 if (PhaseHmmMaCH(i,j,1)==ALLELE_MISSING) then
-                    if (ran1(idum)>=0.5) then
+                    if (ran1(inputParams%idum)>=0.5) then
                         FullH(i,j,1)=0
                     else
                         FullH(i,j,1)=1
@@ -1514,7 +1550,7 @@ else
             do j=1,nSnpHmm
 
                 if (PhaseHmmMaCH(i,j,2)==ALLELE_MISSING) then
-                    if (ran1(idum)>=0.5) then
+                    if (ran1(inputParams%idum)>=0.5) then
                         FullH(i,j,2)=0
                     else
                         FullH(i,j,2)=1
@@ -1541,10 +1577,13 @@ subroutine SetUpEquationsGenotypesDiploid
 use Global
 use GlobalVariablesHmmMaCH
 use random
+use AlphaImputeInMod
 implicit none
 
 integer :: i,j
+type(AlphaImputeInput), pointer :: inputParams
 
+inputParams => defaultInput
 !Initialise FullH
 do i=1,nIndHmmMaCH      ! For every Individual in the Genotype file
     do j=1,nSnpHmm      ! For each SNP
@@ -1560,7 +1599,7 @@ do i=1,nIndHmmMaCH      ! For every Individual in the Genotype file
 
         ! Phase heterozygose case at random
         if (GenosHmmMaCH(i,j)==1) then
-            if (ran1(idum)>=0.5) then
+            if (ran1(inputParams%idum)>=0.5) then
                 FullH(i,j,1)=0
                 FullH(i,j,2)=1
             else
@@ -1571,12 +1610,12 @@ do i=1,nIndHmmMaCH      ! For every Individual in the Genotype file
 
         ! If locus is not genotyped, phase each haplotype at random
         if (GenosHmmMaCH(i,j)==MISSING) then
-            if (ran1(idum)>=0.5) then
+            if (ran1(inputParams%idum)>=0.5) then
                 FullH(i,j,1)=0
             else
                 FullH(i,j,1)=1
             endif
-            if (ran1(idum)>=0.5) then
+            if (ran1(inputParams%idum)>=0.5) then
                 FullH(i,j,2)=0
             else
                 FullH(i,j,2)=1
@@ -1601,13 +1640,16 @@ subroutine SetUpEquationsReads
 use Global
 use GlobalVariablesHmmMaCH
 use random
+use AlphaImputeInMod
 implicit none
 
+type(AlphaImputeInput), pointer :: inputParams
 integer :: i,j, alleles, readObs, RefAll, AltAll
 double precision :: prior_11, prior_12, prior_22
 double precision :: posterior_11, posterior_12, posterior_22
 double precision :: r, frequency, summ
 
+inputParams => defaultInput
 ! ! Initialization of HMM parameters
 ! Epsilon=0.00000001
 ! Thetas=0.01
@@ -1669,12 +1711,12 @@ do j=1,nSnpHmm      ! For each SNP
          posterior_11 = posterior_11 / summ
          posterior_12 = posterior_12 / summ
 
-         r = ran1(idum)
+         r = ran1(inputParams%idum)
 
          if (r < posterior_11) then
             FullH(i,j,:) = 0
          elseif (r < posterior_11 + posterior_12) then
-            if (ran1(idum)<0.5) then
+            if (ran1(inputParams%idum)<0.5) then
                 FullH(i,j,1) = 0
                 FullH(i,j,2) = 1
             else
@@ -1907,13 +1949,16 @@ subroutine ExtractTemplateHaps(CurrentInd,Shuffle1,Shuffle2)
 ! Set the Template of Haplotypes used in the HMM model.
 ! It takes the haplotypes from HD animals
 ! It differentiates between paternal (even) and maternal (odd) haps
-
+use AlphaImputeInMod
 use GlobalVariablesHmmMaCH
 
 integer, intent(in) :: Shuffle1(nIndHmmMaCH), Shuffle2(nIndHmmMaCH),CurrentInd
 
 ! Local variables
 integer :: HapCount, ShuffleInd1, ShuffleInd2
+type(AlphaImputeInput), pointer :: inputParams
+
+inputParams => defaultInput
 
 HapCount=0
 ShuffleInd1=0
@@ -1924,7 +1969,7 @@ ShuffleInd2=0
 #endif
 ! While the maximum number of haps in the template haplotypes set,
 ! H, is not reached...
-do while (HapCount<nHapInSubH)
+do while (HapCount<inputParams%nhapinsubh)
     if (mod(HapCount,2)==0) then
         ShuffleInd1=ShuffleInd1+1
 
@@ -1957,12 +2002,15 @@ subroutine ExtractTemplateByHaps(CurrentInd,Shuffle1,Shuffle2)
 ! It differentiates between paternal (even) and maternal (odd) haps
 
 use GlobalVariablesHmmMaCH
+use AlphaImputeInMod
 
 integer, intent(in) :: Shuffle1(nIndHmmMaCH), Shuffle2(nIndHmmMaCH),CurrentInd
 
 ! Local variables
 integer :: HapCount, ShuffleInd1, ShuffleInd2
+type(AlphaImputeInput), pointer :: inputParams
 
+inputParams => defaultInput
 HapCount=0
 ShuffleInd1=0
 ShuffleInd2=0
@@ -1972,7 +2020,7 @@ ShuffleInd2=0
 #endif
 ! While the maximum number of haps in the template haplotypes set,
 ! H, is not reached...
-do while (HapCount<nHapInSubH)
+do while (HapCount<inputParams%nhapinsubh)
     if (mod(HapCount,2)==0) then
         ShuffleInd1=ShuffleInd1+1
 
@@ -2004,13 +2052,15 @@ subroutine ExtractTemplateHapsByAnimals(CurrentInd,Shuffle)
 ! Extract the Template of Haplotypes used in the HMM model.
 ! It consideres the two haps of a given individual.
 
+use AlphaImputeInMod
 use GlobalVariablesHmmMaCH
 
 integer, intent(in) :: Shuffle(nIndHmmMaCH),CurrentInd
-
+type(AlphaImputeInput), pointer :: inputParams
 ! Local variables
 integer :: HapCount, ShuffleInd
 
+inputParams => defaultInput
 HapCount=1
 ShuffleInd=0
 
@@ -2019,7 +2069,7 @@ ShuffleInd=0
 #endif
 ! While the maximum number of haps in the template haplotypes set,
 ! H, is not reached...
-do while (HapCount<nHapInSubH)
+do while (HapCount<inputParams%nhapinsubh)
     ShuffleInd=ShuffleInd+1
 
     ! Select the paternal and maternal haplotypes from one individual
