@@ -62,4 +62,17 @@ module testReadSpecAlphaImpute
         @assertEqualUserDefined(input%PhaseNIterations,0)
     end subroutine testBox5
 
+
+
+    @test
+    subroutine testBox6
+        
+        
+        @assertEqualUserDefined(input%hmmoption,1)
+        @assertEqualUserDefined(input%nHapInSubH,100)
+        @assertEqualUserDefined(input%HmmBurnInRound,5)
+        @assertEqualUserDefined(input%nRoundsHMM,20)
+        @assertEqualUserDefined(input%useProcs,8)
+        ! @assertEqualUserDefined(input%PhaseNIterations,0)
+    end subroutine testBox6
 end module testReadSpecAlphaImpute

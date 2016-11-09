@@ -55,7 +55,7 @@ implicit none
 integer :: markers
 double precision, allocatable :: GenosProbs(:,:,:)
 character(len=4096) :: cmd, SpecFile
-
+! type(AlphaImputeInput), pointer :: inputParams
 
 INTERFACE WriteProbabilities
   SUBROUTINE WriteProbabilitiesHMM(outFile, Indexes, nAnisG, nSnps)
@@ -99,10 +99,11 @@ end if
 
 
 call Titles
-call ReadInParameterFile(SpecFile)
+call ReadInParameterFile(SpecFile,defaultInput)
 
 inputParams => defaultInput
 
+print *,"input", inputParams%nSnp
 if (inputParams%hmmoption /= RUN_HMM_NGS) then
     if (inputParams%restartOption<OPT_RESTART_PHASING) call MakeDirectories(RUN_HMM_NULL)
     call CountInData
@@ -3250,10 +3251,14 @@ character(len=300) :: filout,FileCheck
 logical :: FileExists
 type(AlphaImputeInput), pointer :: inputParams
 
+
 inputParams => defaultInput
+
 allocate(TempCore(inputParams%nPhaseInternal))
 allocate(TempCplusT(inputParams%nPhaseInternal))
 
+
+print *,"nproc",inputParams%nprocessors
 allocate(GpIndex(inputParams%nprocessors,2))
 
 ! WARNING: This code is not necessary
@@ -3519,6 +3524,8 @@ allocate(SnpSummary(inputParams%nsnp))
 allocate(TempFreq(inputParams%nsnp))
 allocate(Counter(inputParams%nsnp))
 allocate(SnpIncluded(inputParams%nsnp))
+
+print *, "in internal edit"
 allocate(Setter(0:nAnisP))
 
 SnpIncluded(:)=0
@@ -3707,7 +3714,6 @@ deallocate(SnpSummary)
 deallocate(TempFreq)
 deallocate(Counter)
 deallocate(SnpIncluded)
-deallocate(Setter)
 end subroutine InternalEdit
 
 !#############################################################################################################################################################################################################################
@@ -4114,7 +4120,7 @@ type(AlphaImputeInput), pointer :: inputParams
 
 inputParams => defaultInput
 do
-    read (2,*,iostat=k) dumC
+    read (inputParams%pedigreeFileUnit,*,iostat=k) dumC
     nAnisRawPedigree=nAnisRawPedigree+1
     if (k/=0) then
         nAnisRawPedigree=nAnisRawPedigree-1
@@ -4127,7 +4133,7 @@ print*, " ",nAnisRawPedigree," individuals in the pedigree file"
 nObsDataRaw=nAnisRawPedigree
 
 do
-    read (3,*,iostat=k) dumC
+    read (inputParams%genotypeFileUnit,*,iostat=k) dumC
     nAnisG=nAnisG+1
     if (k/=0) then
         nAnisG=nAnisG-1
@@ -4178,13 +4184,16 @@ allocate(GenderRaw(nAnisRawPedigree))
 Genos(0,:)=9
 
 ! Read the pedigree information
+print *,"Nansiraw", nAnisRawPedigree
+rewind(inputParams%pedigreeFileUnit)
 do i=1,nAnisRawPedigree
-    read(2,*) ped(i,:)
+    read(inputParams%pedigreeFileUnit,*) ped(i,:)
 enddo
 
 if (inputParams%hmmoption /= RUN_HMM_NGS) then
+    rewind(inputParams%genotypeFileUnit)
     do i=1,nAnisG
-        read (3,*) GenotypeId(i),Temp(:)
+        read (inputParams%genotypeFileUnit,*) GenotypeId(i),Temp(:)
         do j=1,inputParams%nsnp
             if ((Temp(j)<0).or.(Temp(j)>2)) Temp(j)=9
         enddo
@@ -4198,21 +4207,21 @@ GenderRaw=9
 if (inputParams%SexOpt==1) then
     CountLinesGender=0
     do
-        read (4,*,iostat=k) dumC
+        read (inputParams%GenderFileUnit,*,iostat=k) dumC
         CountLinesGender=CountLinesGender+1
         if (k/=0) then
             CountLinesGender=CountLinesGender-1
             exit
         endif
     enddo
-    rewind(4)
+    rewind(inputParams%GenderFileUnit)
     nAnisInGenderFile=CountLinesGender
     if (CountLinesGender/=nAnisRawPedigree) then
         print*, "Warning - number of lines in Gender file not the same as in pedigree file"
         stop
     endif
     do j=1,nAnisRawPedigree                 ! For each individual in the file
-        read (4,*) dumC,GenCode
+        read (inputParams%GenderFileUnit,*) dumC,GenCode
         if ((GenCode/=1).and.(GenCode/=2)) then
             print*, "Warning - Gender code incorrect for at least one animal"
             stop
