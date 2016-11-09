@@ -242,6 +242,8 @@ CONTAINS
     type(BitSection) :: Section
     integer :: numSections, curSection, curPos,l
 
+
+    inputParams => defaultInput
     ! WARNING: This should go in a function since it is the same code as InternalParentPhaseElim subroutine
     nGlobalLoop=25
 
@@ -493,6 +495,7 @@ end subroutine InternalParentPhaseElim
 
     use Global
     use HaplotypeBits
+    use alphaimputeinmod
     implicit none
 
     integer :: f,e,h,g,i,j,l,nCore,nHap,nGlobalLoop,CoreLength,CoreStart,CoreEnd,InLib,Count0,Count1
@@ -509,6 +512,7 @@ end subroutine InternalParentPhaseElim
     integer :: numSections, curSection, curPos
     integer :: BitGeno
 
+     inputParams => defaultInput
     ! WARNING: This should go in a function since it is the same code as InternalParentPhaseElim subroutine
     nGlobalLoop=25
 
@@ -1983,14 +1987,14 @@ endif
 
   subroutine InitialiseArrays
     ! Impute phase information for homozygous cases
-    ! use Global
+    use alphaimputeinmod
     implicit none
 
     integer :: i,j,dum
 
     ImputeGenos=9
     ImputePhase=9
-
+    inputParams => defaultInput
     ! Get information from RecodedGeneProbInput.txt which has been created in Makefiles subroutine
     ! WARNING: Why don't read information from Geno(:,:) that has been used to feed RecodedGeneProbInput.txt instead??
     !          Read from file is always slower!
@@ -2031,9 +2035,12 @@ endif
   SUBROUTINE EnsureHetGametic
     ! Impute phase to Y chromosome from X chromosome for heterogametic individuals
     use Global
+    use alphaimputeinmod
     implicit none
 
     integer :: i,j
+
+    inputParams => defaultInput
 
     do j=1,inputParams%nsnp
       do i=1,nAnisP
@@ -2056,10 +2063,13 @@ endif
     ! Any individual that has a missing genotype information but has both alleles
     ! known, has its genotype filled in as the sum of the two alleles
     use Global
+    use alphaimputeinmod
+    
     implicit none
 
     integer :: i,j
 
+    inputParams => defaultInput
     do j=1,inputParams%nsnp
       do i=1,nAnisP
         if (ImputeGenos(i,j)==9) then
@@ -2109,10 +2119,12 @@ endif
     ! Fill in the allele of an offspring of a parent that has both its
     ! alleles filled in and has a resulting genotype that is homozygous
     use Global
+    use alphaimputeinmod
     implicit none
 
     integer :: e,i,j,ParId
 
+    inputParams => defaultInput
     do i=1,nAnisP
       if (inputParams%sexopt==0 .or. (inputParams%sexopt==1 .and. RecGender(i)/=HetGameticStatus) ) then     ! If individual is homogametic
         do e=1,2
@@ -2152,11 +2164,12 @@ endif
   ! in the missing allele in the parent if, at least, one of its offspring
   ! is known to carry an allele that does not match the known allele in the parent
     use Global
+    use alphaimputeinmod
 
     implicit none
 
     integer :: i,j,k,l,Count1,Count0
-
+    inputParams => defaultInput
     do i=1,nAnisP
       do j=1,2
         if (SireDam(i,j)==1) then       ! We are only interested in sires because they have more progeny
@@ -2282,6 +2295,8 @@ endif
 
     use Global
     use GlobalPedigree
+    use alphaimputeinmod
+
     implicit none
 
     integer :: h,i,j,k,m,dum,StSnp,EnSnp
@@ -2289,6 +2304,7 @@ endif
     integer :: Informativeness(inputParams%nsnp,6),TmpInfor(inputParams%nsnp,6),GrandPar
     character(len=300) :: filout
 
+    inputParams => defaultInput
     if (inputParams%BypassGeneProb==0) then
     ! Get information from GeneProb
       do h=1,inputParams%nProcessors
@@ -2428,9 +2444,11 @@ endif
   ! Major sub-step 8 is iterated a number of times with increasingly relaxed
   ! restrictions. After each iteration, the minor sub-steps are also carried out.
     use Global
+    use alphaimputeinmod
 
     implicit none
 
+    inputParams => defaultInput
     MaxLeftRightSwitch=4; MinSpan=200
     call WorkLeftRight
     if (inputParams%sexopt==1) then

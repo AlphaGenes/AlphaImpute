@@ -9,7 +9,7 @@ use random
 
 
 implicit none
-integer, intent(in) :: HMM
+integer(kind=1), intent(in) :: HMM
 integer :: i, nprocs, nthreads
 real(4) :: r
 real(8) :: tT
@@ -267,7 +267,7 @@ use Global
 use GlobalVariablesHmmMaCH
 
 implicit none
-integer, intent(in) :: HMM
+integer(kind=1), intent(in) :: HMM
 
 if (HMM == RUN_HMM_NGS) then
     call ParseMaCHDataNGS
@@ -447,7 +447,8 @@ use AlphaImputeInMod
 implicit none
 
 type(AlphaImputeInput), pointer :: inputParams
-integer, intent(in) :: CurrentInd, HMM
+integer, intent(in) :: CurrentInd
+integer(kind=1), intent(in) :: HMM
 
 ! Local variables
 !integer :: HapCount, ShuffleInd1, ShuffleInd2, states, thread

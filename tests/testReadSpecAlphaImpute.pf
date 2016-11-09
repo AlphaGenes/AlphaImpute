@@ -1,0 +1,65 @@
+module testReadSpecAlphaImpute
+  use pFUnit_mod
+  use alphaimputeinmod
+  use ISO_Fortran_env
+
+  implicit none
+
+  type(AlphaImputeInput) :: input
+
+  contains
+
+ @before
+    subroutine initialise
+         implicit none
+        
+        call readinparameterfile("AlphaImputeSpec.txt", input)   
+        
+    end subroutine
+
+   @after
+    subroutine Uninit
+        
+        print *, "test finished."
+    end subroutine
+
+    @test
+    subroutine testBox2
+        implicit none
+         @assertEqualUserDefined(input%SexOpt,0)
+         @assertEqualUserDefined(input%HetGameticStatus,9)
+         @assertEqualUserDefined(input%HomGameticStatus,9)
+    end subroutine testBox2
+
+
+    @test
+    subroutine testBox3
+        @assertEqualUserDefined(input%nSnp,1500)
+        @assertEqualUserDefined(input%MultiHD,0)
+
+        @assertEqualUserDefined(size(input%nSnpByChip),0)
+        @assertEqualUserDefined(input%PercGenoForHD,0.9)
+    end subroutine testBox3
+
+    @test
+    subroutine testBox4
+        @assertEqualUserDefined(input%IntEditStat,0)
+        @assertEqualUserDefined(input%OutOpt,1)
+        @assertEqualUserDefined(input%PercGenoForHD,0.9)
+        @assertEqualUserDefined(input%PercSnpMiss,0)
+        @assertEqualUserDefined(input%SecondPercGenoForHD,0)
+    end subroutine testBox4
+
+     @test
+    subroutine testBox5
+        
+        
+        @assertEqualUserDefined(input%PedFreePhasing,0)
+        @assertEqualUserDefined(input%GenotypeErrorPhase,0)
+        @assertEqualUserDefined(input%nProcessors,8)
+        @assertEqualUserDefined(input%LargeDatasets,.false.)
+        @assertEqualUserDefined(input%PhaseSubsetSize,0)
+        @assertEqualUserDefined(input%PhaseNIterations,0)
+    end subroutine testBox5
+
+end module testReadSpecAlphaImpute

@@ -44,11 +44,6 @@ integer :: TrueGenos1None0,nObsDataRaw,UseGP
 integer :: nSnpIterate,AlphaPhasePresent,GeneProbPresent,UserDefinedHD
 integer :: nSnpChips
 
-
-character (len=300) :: LargeDatasets
-
-
-
 integer,allocatable,dimension (:,:) :: Reads,ReferAllele,AlterAllele
 integer(kind=1),allocatable,dimension (:) :: SnpIncluded,RecIdHDIndex,GenderRaw,RecGender,IndivIsGenotyped
 integer(kind=1),allocatable,dimension (:,:) :: Genos,TempGenos,TmpGenos,MSTermInfo

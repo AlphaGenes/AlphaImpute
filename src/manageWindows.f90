@@ -42,7 +42,7 @@ implicit none
 type(AlphaImputeInput), pointer :: inputParams
 integer :: i,StartJob,Tmp,ProcUsed
 integer, dimension(:), allocatable :: JobsDone, JobsStarted
-character(len=300) :: filout,infile,f
+character(len=300) :: filout,infile
 logical :: FileExists
 
 inputParams => defaultInput
@@ -59,11 +59,11 @@ endif
 #ifdef OS_UNIX
 #else
 do i=1,inputParams%nProcessors
-    write (f,'("Phasing\Phase"i0,"\PhasingResults\Timer.txt")')i
-    inquire(file=trim(f),exist=FileExists)
+    write (filout,'("Phasing\Phase"i0,"\PhasingResults\Timer.txt")')i
+    inquire(file=trim(filout),exist=FileExists)
     if (FileExists .eqv. .true.) then
-        write (f,'("Phasing\Phase"i0"\PhasingResults")')i
-        call system("rmdir /s /q " // f // " >NUL")
+        write (filout,'("Phasing\Phase"i0"\PhasingResults")')i
+        call system("rmdir /s /q " // filout // " >NUL")
     endif
 enddo
 #endif
