@@ -99,7 +99,7 @@ end if
 
 
 call Titles
-call ReadInParameterFile(SpecFile,defaultInput)
+call ReadInParameterFile(SpecFile)
 
 inputParams => defaultInput
 
@@ -1062,6 +1062,8 @@ allocate(ProbImputeGenos(0:nAnisP,nSnpIterate))
 allocate(ProbImputePhase(0:nAnisP,nSnpIterate,2))
 allocate(GPI(nAnisP,nSnpIterate))
 deallocate(GpIndex)
+
+print *,"nproce2", inputParams%nprocessors
 allocate(GpIndex(inputParams%nprocessors,2))
 
 ProbImputeGenos(0,:)=0.0
@@ -2153,8 +2155,10 @@ do i=1,nAnisP
                     If (GamA==1) GamB=2
                     If (GamA==2) GamB=1
                 endif
-                if (j==EnR(k-1)) then
-                    RecombOnOff=0
+                if (k>1) then
+                    if (j==EnR(k-1)) then
+                        RecombOnOff=0
+                    endif
                 endif
                 if (GamA==9) cycle
                 if (RecombOnOff==1) then
@@ -3454,7 +3458,6 @@ endif
 
 deallocate(TempCore)
 deallocate(TempCplusT)
-deallocate(GpIndex)
 end subroutine MakeFiles
 
 !#############################################################################################################################################################################################################################
@@ -3713,7 +3716,6 @@ print*, " ",inputParams%nsnp," snp remain after editing"
 deallocate(SnpSummary)
 deallocate(TempFreq)
 deallocate(Counter)
-deallocate(SnpIncluded)
 end subroutine InternalEdit
 
 !#############################################################################################################################################################################################################################
