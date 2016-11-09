@@ -223,7 +223,9 @@ enddo
 Choice = par_uni(Thread)*Summer
 Summer=0.0
 
-do i=1,inputParams%nHapInSubH
+Hapi = 0
+
+do i=1,nHapInSubH
     Summer = Summer + Probs(i)
     if (Summer >= Choice) then
         Hapi = i
@@ -231,9 +233,9 @@ do i=1,inputParams%nHapInSubH
     endif
 enddo
 
-! if (Hapi==0) then
-!     Hapi=INT(1+par_uni(Thread)*inputParams%nHapInSubH)
-! endif
+if (Hapi==0) then
+    Hapi=INT(1+par_uni(Thread)*nHapInSubH)
+endif
 
 ! do marker=StopSnp,StartSnp,-1
 marker=StopSnp

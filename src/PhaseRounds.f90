@@ -334,8 +334,7 @@ CONTAINS
     character(len=300) :: dumC
 
   ! Get phase information from file
-    Uphased = 111
-    open (unit=UPhased,file=trim(FileName),status="old")
+    open (newUnit=UPhased,file=trim(FileName),status="old")
     do i=1,nAnis
         read (UPhased,*) dumC,PhaseHD(i,:,1)
         read (UPhased,*) dumC,PhaseHD(i,:,2)
