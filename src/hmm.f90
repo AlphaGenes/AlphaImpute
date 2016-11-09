@@ -421,7 +421,8 @@ do i=1,nGenotyped
         if ((GlobalHmmPhasedInd(k,1)==.TRUE.).AND.(GlobalHmmPhasedInd(k,2)==.TRUE.)) Then
             nAnimPhased=nAnimPhased+1
         endif
-    end do
+    endif
+end do
 !enddo
 
 close(NoGenosUnit)
