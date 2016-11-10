@@ -341,7 +341,7 @@ do
 enddo
 rewind(1)
 
-if (nLines/=42) then
+if (nLines/=43) then
     print*, "   ","There are some lines missing from AlphaImputeSpec.txt"
     print*, "   ","HINT - maybe you are using the Spec file from the beta version"
     print*, "   ","       which is out of date"
@@ -1672,7 +1672,6 @@ else
     endif
     !REMOVE THIS
 
-    write(0,*) 'DEBUG: CheckInconsistencies'
     call CheckImputationInconsistencies(ImputeGenos, ImputePhase, nAnisP, nSnp)
 
     !if (HMMOption==RUN_HMM_ONLY.or.HMMOption==RUN_HMM_PREPHASE) then
@@ -1681,21 +1680,16 @@ else
 #ifdef DEBUG
         write(0,*) 'DEBUG: Write HMM results [WriteOutResults]'
 #endif
-        write(0,*) 'DEBUG: Write HMM results [WriteOutResults]'
-
         if (HMMOption/=RUN_HMM_NO) Then
             nSnpIterate=nSnp
-            write(0,*) 'DEBUG: Alloc&dealloc ProbImputeGenos'
             if (allocated(ProbImputeGenos)) then
                 deallocate(ProbImputeGenos)
             end if
             allocate(ProbImputeGenos(0:nAnisP,nSnpIterate))
-            write(0,*) 'DEBUG: Alloc&dealloc ProbImputePhase'
             if (allocated(ProbImputePhase)) then
                 deallocate(ProbImputePhase)
             end if
             allocate(ProbImputePhase(0:nAnisP,nSnpIterate,2))
-            write(0,*) 'DEBUG: Alloc&dealloc Maf'
             if (allocated(Maf)) then
                 deallocate(Maf)
             end if
@@ -1703,9 +1697,6 @@ else
             ProbImputeGenos(1:nAnisP,:)= 9.0
             ProbImputePhase(1:nAnisP,:,:)= 9.0
         endif
-
-        write(0,*) 'Feed Impute and Phase probabilities'
-        ! Feed Impute and Phase probabilites
 
         l=0
         !do j=1,nSnpRaw
@@ -1724,8 +1715,6 @@ else
 #ifdef DEBUG
         write(0,*) 'DEBUG: Impute alleles and genotypes based on HMM genotypes probabilities [WriteOutResults]'
 #endif
-        write(0,*) 'DEBUG: Impute alleles and genotypes based on HMM genotypes probabilities [WriteOutResults]'
-
         ! Impute the most likely genotypes. (Most frequent genotype)
         do i=1,nAnisG
             do j=1,nSnpIterate
@@ -1756,8 +1745,6 @@ else
 #ifdef DEBUG
     write(0,*) 'DEBUG: Write phase, genotypes and probabilities into files [WriteOutResults]'
 #endif
-    write(0,*) 'DEBUG: Write phase, genotypes and probabilities into files [WriteOutResults]'
-
     ! call CheckImputationInconsistencies(ImputeGenos, ImputePhase, nAnisP, nSnp)
     do i=GlobalExtraAnimals+1,nAnisP
          write (53,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') Id(i),ImputePhase(i,:,1)
@@ -2267,7 +2254,7 @@ open(unit=111,file="." // DASH // "Miscellaneous" // "MinorAlleleFrequency.txt",
 
 do j=1,nSnpIterate
     write (111,*) j,Maf(j)
-enddoπ
+enddo
 close(111)
 
 

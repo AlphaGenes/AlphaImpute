@@ -378,7 +378,6 @@ do j = 1, nGenotyped
             GlobalHmmID(j) = i
         end if
     end do
-    write(0,*) j, GenotypeID(j), GlobalHmmID(j)
 end do
 
 
