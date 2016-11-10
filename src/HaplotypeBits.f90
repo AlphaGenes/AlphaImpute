@@ -33,44 +33,71 @@ MODULE HaplotypeBits
 
   PRIVATE
 
-  PUBLIC compareHaplotype, compareHaplotypeAllowMissing, compareHaplotypeAllowSimultaneousMissing
-  PUBLIC BitCountAllelesImputed, BitCountAllelesPhased, BitCountAllelesMissing
-  PUBLIC BitCompletePhased, BitCompleteMissing
+  ! PUBLIC compareHaplotype, compareHaplotypeAllowMissing, compareHaplotypeAllowSimultaneousMissing
+  ! PUBLIC BitCountAllelesImputed, BitCountAllelesPhased, BitCountAllelesMissing
+  ! PUBLIC BitCompletePhased, BitCompleteMissing
 !  PUBLIC BitCountRefAlleles, BitCountAltAlleles
 
 !  PUBLIC compareHaplotype2AllowMissingThreshold
   
-  INTERFACE compareHaplotype
-    MODULE PROCEDURE compareHaplotypeThreshold, compareHaplotypeExtrict, compareHaplotype2Threshold, compareHaplotype2Extrict
-  END INTERFACE compareHaplotype
 
-  INTERFACE compareHaplotypeAllowMissing
-    MODULE PROCEDURE compareHaplotypeAllowMissingThreshold, compareHaplotypeAllowMissingExtrict
-  END INTERFACE compareHaplotypeAllowMissing
 
-  INTERFACE compareHaplotypeAllowSimultaneousMissing
-    MODULE PROCEDURE compareHaplotypeAllowSimultaneousMissingThreshold, compareHaplotypeAllowSimultaneousMissingExtrict
-  END INTERFACE compareHaplotypeAllowSimultaneousMissing
+  !   INTERFACE compareHaplotype
+  !   MODULE PROCEDURE compareHaplotypeThreshold, compareHaplotypeExtrict, compareHaplotype2Threshold, compareHaplotype2Extrict
+  ! END INTERFACE compareHaplotype
+
+  ! INTERFACE compareHaplotypeAllowMissing
+  !   MODULE PROCEDURE compareHaplotypeAllowMissingThreshold, compareHaplotypeAllowMissingExtrict
+  ! END INTERFACE compareHaplotypeAllowMissing
+
+  ! INTERFACE compareHaplotypeAllowSimultaneousMissing
+  !   MODULE PROCEDURE compareHaplotypeAllowSimultaneousMissingThreshold, compareHaplotypeAllowSimultaneousMissingExtrict
+  ! END INTERFACE compareHaplotypeAllowSimultaneousMissing
+
 
   TYPE, PUBLIC :: BitSection
     ! PUBLIC
     integer :: numSections
     integer :: overhang
+
+    contains
+      private
+      procedure :: compareHaplotypeThreshold
+      procedure :: compareHaplotypeExtrict
+      procedure :: compareHaplotype2Threshold
+      procedure :: compareHaplotype2Extrict
+      generic,public :: compareHaplotype => compareHaplotypeThreshold,compareHaplotypeExtrict, compareHaplotype2Threshold, compareHaplotype2Extrict
+
+      procedure :: compareHaplotypeAllowMissingThreshold
+      procedure :: compareHaplotypeAllowMissingExtrict
+      generic,public ::  compareHaplotypeAllowMissing => compareHaplotypeAllowMissingThreshold, compareHaplotypeAllowMissingExtrict
+
+      procedure :: compareHaplotypeAllowSimultaneousMissingThreshold
+      procedure :: compareHaplotypeAllowSimultaneousMissingExtrict
+      generic, public :: compareHaplotypeAllowSimultaneousMissing => compareHaplotypeAllowSimultaneousMissingThreshold, compareHaplotypeAllowSimultaneousMissingExtrict
+      procedure, public :: BitCompletePhased
+      procedure, public :: BitCompleteMissing
+      procedure, public :: BitCountAllelesPhased
+      procedure, public :: BitCountAllelesImputed
+      procedure, public :: BitCountAllelesMissing
   END TYPE BitSection
+
+
+
   
   INTERFACE BitSection
     MODULE PROCEDURE newBitSection
   END INTERFACE BitSection
 
-  TYPE, PUBLIC :: HaplotypeBit
-    integer :: numSections
-    integer(kind = int64), allocatable, dimension(:,:) :: alt
-    integer(kind = int64), allocatable, dimension(:,:) :: missing
-  END TYPE
+  ! TYPE, PUBLIC :: HaplotypeBit
+  !   integer :: numSections
+  !   integer(kind = int64), allocatable, dimension(:,:) :: alt
+  !   integer(kind = int64), allocatable, dimension(:,:) :: missing
+  ! END TYPE
 
-  INTERFACE HaplotypeBit
-    MODULE PROCEDURE newHaplotypeBit
-  END INTERFACE HaplotypeBit
+  ! INTERFACE HaplotypeBit
+  !   MODULE PROCEDURE newHaplotypeBit
+  ! END INTERFACE HaplotypeBit
 
 CONTAINS
 
@@ -87,18 +114,18 @@ CONTAINS
 ! PARAMETERS:
 !> @param[inout]  this  HaplotypeBit
 !---------------------------------------------------------------------------
-  FUNCTION newHaplotypeBit(nsecs, ids) result(this)
-    integer, intent(in) :: nsecs, ids
-    type(HaplotypeBit)    :: this
+  ! FUNCTION newHaplotypeBit(nsecs, ids) result(this)
+  !   integer, intent(in) :: nsecs, ids
+  !   type(HaplotypeBit)    :: this
 
-    this%numSections = nsecs
-    allocate(this%alt(nsecs,ids))
-    allocate(this%missing(nsecs,ids))
+  !   this%numSections = nsecs
+  !   allocate(this%alt(nsecs,ids))
+  !   allocate(this%missing(nsecs,ids))
 
-    this%alt = 0
-    this%missing = 0
+  !   this%alt = 0
+  !   this%missing = 0
 
-  END FUNCTION newHaplotypeBit
+  ! END FUNCTION newHaplotypeBit
 
 !---------------------------------------------------------------------------
 ! DESCRIPTION:
@@ -151,7 +178,8 @@ CONTAINS
 !> @param[in]  thres  Number of alleles allow to differ
 !> @return     .TRUE. if haplotypes are the same, .FALSE. otherwise 
 !---------------------------------------------------------------------------  
-  FUNCTION compareHaplotypeThreshold(hap1, hap2, miss1, miss2, nSecs, thres) result(same)
+  FUNCTION compareHaplotypeThreshold(this,hap1, hap2, miss1, miss2, nSecs, thres) result(same)
+    class(BitSection) :: this
     integer(kind=int64), dimension(:), intent(in) :: hap1, hap2, miss1, miss2
     integer, intent(in) :: nSecs, thres
     logical :: same
@@ -194,13 +222,14 @@ CONTAINS
 !> @param[in]  nSecs  Number of elements of the bit-wise arrays
 !> @return     .TRUE. if haplotypes are the extrictly the same, .FALSE. otherwise 
 !---------------------------------------------------------------------------  
-  FUNCTION compareHaplotypeExtrict(hap1, hap2, miss1, miss2, nSecs) result(same)
+  FUNCTION compareHaplotypeExtrict(this,hap1, hap2, miss1, miss2, nSecs) result(same)
+    class(BitSection) :: this
     integer(kind=int64), dimension(:), intent(in) :: hap1, hap2, miss1, miss2
     integer, intent(in) :: nSecs
     logical :: same
 
     same = .TRUE.
-    same = compareHaplotypeThreshold(hap1, hap2, miss1, miss2, nSecs, 1)
+    same = this%compareHaplotypeThreshold(hap1, hap2, miss1, miss2, nSecs, 1)
 
   END FUNCTION compareHaplotypeExtrict
 
@@ -225,13 +254,14 @@ CONTAINS
 !> @param[in]  nSecs  Number of elements of the bit-wise arrays
 !> @return     .TRUE. if haplotypes are the extrictly the same, .FALSE. otherwise 
 !---------------------------------------------------------------------------  
-  FUNCTION compareHaplotypeAllowMissingExtrict(hap1, hap2, miss1, miss2, nSecs) result(same)
+  FUNCTION compareHaplotypeAllowMissingExtrict(this,hap1, hap2, miss1, miss2, nSecs) result(same)
+    class(BitSection) :: this
     integer(kind=int64), dimension(:), intent(in) :: hap1, hap2, miss1, miss2
     integer, intent(in) :: nSecs
     logical :: same
 
     same = .TRUE.
-    same = compareHaplotypeAllowMissingThreshold(hap1, hap2, miss1, miss2, nSecs, 1)
+    same = this%compareHaplotypeAllowMissingThreshold(hap1, hap2, miss1, miss2, nSecs, 1)
 
   END FUNCTION compareHaplotypeAllowMissingExtrict
 
@@ -257,7 +287,8 @@ CONTAINS
 !> @param[in]  thres  Number of alleles allow to differ
 !> @return     .TRUE. if haplotypes are the same, .FALSE. otherwise 
 !---------------------------------------------------------------------------  
-  FUNCTION compareHaplotypeAllowMissingThreshold(hap1, hap2, miss1, miss2, nSecs, thres) result(same)
+  FUNCTION compareHaplotypeAllowMissingThreshold(this,hap1, hap2, miss1, miss2, nSecs, thres) result(same)
+    class(BitSection) :: this
     integer(kind=int64), dimension(:), intent(in) :: hap1, hap2, miss1, miss2
     integer, intent(in) :: nSecs, thres
     logical :: same
@@ -302,7 +333,8 @@ CONTAINS
 !> @param[in]  thres  Number of alleles allow to differ
 !> @return     .TRUE. if haplotypes are the same, .FALSE. otherwise
 !---------------------------------------------------------------------------
-  FUNCTION compareHaplotype2Threshold(hap1, hap2, miss, nSecs, thres) result(same)
+  FUNCTION compareHaplotype2Threshold(this,hap1, hap2, miss, nSecs, thres) result(same)
+    class(BitSection) :: this
     integer(kind=int64), dimension(:), intent(in) :: hap1, hap2, miss
     integer, intent(in) :: nSecs, thres
     logical :: same
@@ -342,13 +374,14 @@ CONTAINS
 !> @param[in]  nSecs  Number of elements of the bit-wise arrays
 !> @return     .TRUE. if haplotypes are extrictly the same, .FALSE. otherwise
 !---------------------------------------------------------------------------
-  FUNCTION compareHaplotype2Extrict(hap1, hap2, miss, nSecs) result(same)
+  FUNCTION compareHaplotype2Extrict(this,hap1, hap2, miss, nSecs) result(same)
+    class(BitSection) :: this
     integer(kind=int64), dimension(:), intent(in) :: hap1, hap2, miss
     integer, intent(in) :: nSecs
     logical :: same
 
     same = .TRUE.
-    same = compareHaplotype2Threshold(hap1, hap2, miss, nSecs, 1)
+    same = this%compareHaplotype2Threshold(hap1, hap2, miss, nSecs, 1)
 
   END FUNCTION compareHaplotype2Extrict
 
@@ -375,7 +408,8 @@ CONTAINS
 !> @param[in]  thres  Number of alleles allow to differ
 !> @return     .TRUE. if haplotypes are the same, .FALSE. otherwise
 !---------------------------------------------------------------------------
-  FUNCTION compareHaplotypeAllowSimultaneousMissingThreshold(hap1, hap2, miss1, miss2, nSecs, thres) result(same)
+  FUNCTION compareHaplotypeAllowSimultaneousMissingThreshold(this,hap1, hap2, miss1, miss2, nSecs, thres) result(same)
+    class(BitSection) :: this
     integer(kind=int64), dimension(:), intent(in) :: hap1, hap2, miss1, miss2
     integer, intent(in) :: nSecs, thres
     logical :: same
@@ -417,13 +451,14 @@ CONTAINS
 !> @param[in]  nSecs  Number of elements of the bit-wise arrays
 !> @return     .TRUE. if haplotypes are the extrictly the same, .FALSE. otherwise
 !---------------------------------------------------------------------------
-  FUNCTION compareHaplotypeAllowSimultaneousMissingExtrict(hap1, hap2, miss1, miss2, nSecs) result(same)
+  FUNCTION compareHaplotypeAllowSimultaneousMissingExtrict(this,hap1, hap2, miss1, miss2, nSecs) result(same)
+    class(BitSection) :: this
     integer(kind=int64), dimension(:), intent(in) :: hap1, hap2, miss1, miss2
     integer, intent(in) :: nSecs
     logical :: same
 
     same = .TRUE.
-    same = compareHaplotypeAllowSimultaneousMissingThreshold(hap1, hap2, miss1, miss2, nSecs, 1)
+    same = this%compareHaplotypeAllowSimultaneousMissingThreshold(hap1, hap2, miss1, miss2, nSecs, 1)
 
   END FUNCTION compareHaplotypeAllowSimultaneousMissingExtrict
 
@@ -445,7 +480,8 @@ CONTAINS
 !> @param[in]  nSecs  Number of elements of the bit-wise arrays
 !> @return     Number of markers phased
 !---------------------------------------------------------------------------
-  FUNCTION BitCountAllelesPhased(miss1, miss2, nSecs) result(c)
+  FUNCTION BitCountAllelesPhased(this,miss1, miss2, nSecs) result(c)
+    class(BitSection) :: this
     integer(kind=int64), dimension(:), intent(in) :: miss1, miss2
     integer, intent(in) :: nSecs
     integer :: c
@@ -474,7 +510,8 @@ CONTAINS
 !> @param[in]  nSecs  Number of elements of the bit-wise arrays
 !> @return     Number of alleles imputed
 !---------------------------------------------------------------------------
-  FUNCTION BitCountAllelesImputed(miss, nSecs) result(c)
+  FUNCTION BitCountAllelesImputed(this,miss, nSecs) result(c)
+    class(BitSection) :: this
     integer(kind=int64), dimension(:), intent(in) :: miss
     integer, intent(in) :: nSecs
     integer :: c
@@ -503,7 +540,8 @@ CONTAINS
 !> @param[in]  nSecs  Number of elements of the bit-wise arrays
 !> @return     Number of alleles missing
 !---------------------------------------------------------------------------
-  FUNCTION BitCountAllelesMissing(miss, nSecs) result(c)
+  FUNCTION BitCountAllelesMissing(this,miss, nSecs) result(c)
+    class(BitSection) :: this
     integer(kind=int64), dimension(:), intent(in) :: miss
     integer, intent(in) :: nSecs
     integer :: c
@@ -519,7 +557,7 @@ CONTAINS
 
 !---------------------------------------------------------------------------
 ! DESCRIPTION:
-!> @brief      Determine if the haplotype is phased
+!> @brief      Determine if the haplotype is not fully phased
 !
 !> @details    Determine if the haplotype is phased
 !
@@ -532,7 +570,8 @@ CONTAINS
 !> @param[in]  nSecs  Number of elements of the bit-wise arrays
 !> @return     .TRUE. if haplotype is phased, .FALSE. otherwise
 !---------------------------------------------------------------------------
-  FUNCTION BitCompletePhased(miss, nSecs) result(phased)
+  FUNCTION BitCompletePhased(this,miss, nSecs) result(phased)
+    class(BitSection) :: this
     integer(kind=int64), dimension(:), intent(in) :: miss
     integer, intent(in) :: nSecs
     logical :: phased
@@ -551,9 +590,9 @@ CONTAINS
 
 !---------------------------------------------------------------------------
 ! DESCRIPTION:
-!> @brief      Determine if the haplotype is phased
+!> @brief      Determine if the haplotype is fully phased
 !
-!> @details    Determine if the haplotype is phased
+!> @details    Determine if the haplotype is fully phased
 !
 !> @author     Roberto Antolin, roberto.antolin@roslin.ed.ac.uk
 !
@@ -564,7 +603,8 @@ CONTAINS
 !> @param[in]  nSecs  Number of elements of the bit-wise arrays
 !> @return     .TRUE. if haplotype is phased, .FALSE. otherwise
 !---------------------------------------------------------------------------
-  FUNCTION BitCompleteMissing(miss, nSecs) result(phased)
+  FUNCTION BitCompleteMissing(this,miss, nSecs) result(phased)
+    class(BitSection) :: this
     integer(kind=int64), dimension(:), intent(in) :: miss
     integer, intent(in) :: nSecs
     logical :: phased
@@ -598,7 +638,8 @@ CONTAINS
 !> @param[in]  nSecs  Number of elements of the bit-wise arrays
 !> @return     Number of reference alleles
 !---------------------------------------------------------------------------
-  FUNCTION BitCountRefAlleles(hap, miss, nSecs) result(RefA)
+  FUNCTION BitCountRefAlleles(this,hap, miss, nSecs) result(RefA)
+    class(BitSection) :: this
     integer(kind=int64), dimension(:), intent(in) :: hap, miss
     integer, intent(in) :: nSecs
     integer :: RefA
@@ -627,7 +668,8 @@ CONTAINS
 !> @param[in]  nSecs  Number of elements of the bit-wise arrays
 !> @return     Number of reference alleles
 !---------------------------------------------------------------------------
-  FUNCTION BitCountAltAlleles(hap, nSecs) result(AltA)
+  FUNCTION BitCountAltAlleles(this,hap, nSecs) result(AltA)
+    class(BitSection) :: this
     integer(kind=int64), dimension(:), intent(in) :: hap
     integer, intent(in) :: nSecs
     integer :: AltA
