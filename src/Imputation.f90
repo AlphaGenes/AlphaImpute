@@ -343,12 +343,12 @@ CONTAINS
               if (RecPed(i,e+1)>0) then
                 CompPhase=1
                 ! If the haplotype for this core is not completely phased
-                if (Section%BitCompletePhased(MissImputePhase(:,e,i), numSections) == .FALSE.) then
+                if (Section%BitCompletePhased(MissImputePhase(:,e,i)) == .FALSE.) then
                   ! Check is this haplotype is the very same that the paternal haplotype
                   ! of the parent of the individual
                   GamA=1
                   if (.NOT. Section%compareHaplotype(BitImputePhase(:,1,RecPed(i,e+1)), BitImputePhase(:,e,i), &
-                      MissImputePhase(:,1,RecPed(i,e+1)), MissImputePhase(:,e,i), numSections) ) then
+                      MissImputePhase(:,1,RecPed(i,e+1)), MissImputePhase(:,e,i)) ) then
                     GamA = 0
                   end if
 
@@ -356,7 +356,7 @@ CONTAINS
                   ! of the parent of the individual
                   GamB=1
                   if (.NOT. Section%compareHaplotype(BitImputePhase(:,2,RecPed(i,e+1)), BitImputePhase(:,e,i), &
-                      MissImputePhase(:,2,RecPed(i,e+1)), MissImputePhase(:,e,i), numSections) ) then
+                      MissImputePhase(:,2,RecPed(i,e+1)), MissImputePhase(:,e,i)) ) then
                     GamB = 0
                   end if
 
@@ -623,7 +623,7 @@ end subroutine InternalParentPhaseElim
               if ((inputParams%ConservativeHapLibImputation==1).and.(MSTermInfo(i,e)==0)) cycle
 
               ! Check if the haplotype for this core is completely phased and populate HapLib
-              if (Section%BitCompletePhased(MissImputePhase(i,:,e), numSections) ) then
+              if (Section%BitCompletePhased(MissImputePhase(i,:,e)) ) then
                 !$OMP ORDERED
                 if (nHap==0) then       ! The first haplotype in the library
                   HapLib(1,CoreStart:CoreEnd)=ImputePhase(i,CoreStart:CoreEnd,e)
@@ -634,7 +634,7 @@ end subroutine InternalParentPhaseElim
                   InLib=0
                   do h=1,nHap
                     if (Section%compareHaplotypeAllowMissing(BitHapLib(h,:), BitImputePhase(i,:,e), &
-                      MissHapLib(h,:), MissImputePhase(i,:,e), numSections)) then
+                      MissHapLib(h,:), MissImputePhase(i,:,e))) then
                       InLib = 1
                       exit
                     end if
@@ -679,13 +679,13 @@ end subroutine InternalParentPhaseElim
               if ((inputParams%ConservativeHapLibImputation==1).and.(MSTermInfo(i,e)==0)) cycle
 
               ! If haplotype is partially phased
-              if ( (Section%BitCompletePhased(MissImputePhase(i,:,e), numSections) == .FALSE.) .AND. &
-                   (Section%BitCompleteMissing(MissImputePhase(i,:,e), numSections) == .FALSE.) ) then
+              if ( (Section%BitCompletePhased(MissImputePhase(i,:,e)) == .FALSE.) .AND. &
+                   (Section%BitCompleteMissing(MissImputePhase(i,:,e)) == .FALSE.) ) then
 
                 ! Identify and reject the candidate haplotypes if it does not explain the whole haplotype
                 do h=1,nHap
                   if ( .NOT. Section%compareHaplotypeAllowMissing(BitHapLib(h,:), BitImputePhase(i,:,e), &
-                    MissHapLib(h,:), MissImputePhase(i,:,e), numSections)) then
+                    MissHapLib(h,:), MissImputePhase(i,:,e))) then
                     HapElim(h,e)=0
                   end if
                 enddo
@@ -973,11 +973,11 @@ end subroutine InternalParentPhaseElim
           PosHDInd=PosHD(RecPed(i,1))         ! Index of the individual in the HD phase information
 
           ! If there is one allele phased at least
-          if ((Section%BitCountAllelesImputed(MissImputePhase(i,:,1), numSections) + &
-               Section%BitCountAllelesImputed(MissImputePhase(i,:,2), numSections)) > 0 .AND. PosHDInd>0) then
+          if ((Section%BitCountAllelesImputed(MissImputePhase(i,:,1)) + &
+               Section%BitCountAllelesImputed(MissImputePhase(i,:,2))) > 0 .AND. PosHDInd>0) then
             ! If at least one locus is heterozygous
               if (.NOT. Section%compareHaplotype(BitImputePhase(i,:,1), BitImputePhase(i,:,2), &
-                  MissImputePhase(i,:,1), MissImputePhase(i,:,2), numSections)) then
+                  MissImputePhase(i,:,1), MissImputePhase(i,:,2))) then
               Gam1=0
               Gam2=0
               do e=1,2
@@ -985,12 +985,12 @@ end subroutine InternalParentPhaseElim
                 GamB=1
 
                 if (.NOT. Section%compareHaplotypeAllowMissing(BitPhaseHD(PosHDInd,:,1), BitImputePhase(i,:,e), &
-                    MissPhaseHD(PosHDInd,:,1), MissImputePhase(i,:,e), numSections, ImputeFromHDPhaseThresh)) then
+                    MissPhaseHD(PosHDInd,:,1), MissImputePhase(i,:,e), ImputeFromHDPhaseThresh)) then
                   GamA = 0
                 end if
 
                 if (.NOT. Section%compareHaplotypeAllowMissing(BitPhaseHD(PosHDInd,:,2), BitImputePhase(i,:,e), &
-                    MissPhaseHD(PosHDInd,:,2), MissImputePhase(i,:,e), numSections, ImputeFromHDPhaseThresh)) then
+                    MissPhaseHD(PosHDInd,:,2), MissImputePhase(i,:,e), ImputeFromHDPhaseThresh)) then
                   GamB = 0
                 end if
 
@@ -1219,19 +1219,19 @@ end subroutine InternalParentPhaseElim
               PosHDInd=PosHD(RecPed(i,PedId))   ! Index of the individual in the HD phase information
 
               ! If there is one allele phased at least
-              if ((Section%BitCountAllelesImputed(MissImputePhase(i,:,1), numSections) + &
-                   Section%BitCountAllelesImputed(MissImputePhase(i,:,2), numSections)) > 0 .AND. PosHDInd>0) then
+              if ((Section%BitCountAllelesImputed(MissImputePhase(i,:,1)) + &
+                   Section%BitCountAllelesImputed(MissImputePhase(i,:,2))) > 0 .AND. PosHDInd>0) then
 
                 GamA=1
                 GamB=1
 
                 if (.NOT. Section%compareHaplotypeAllowMissing(BitPhaseHD(PosHDInd,:,1), BitImputePhase(i,:,e), &
-                    MissPhaseHD(PosHDInd,:,1), MissImputePhase(i,:,e), numSections, ImputeFromParentCountThresh)) then
+                    MissPhaseHD(PosHDInd,:,1), MissImputePhase(i,:,e), ImputeFromParentCountThresh)) then
                   GamA = 0
                 end if
 
                 if (.NOT. Section%compareHaplotypeAllowMissing(BitPhaseHD(PosHDInd,:,2), BitImputePhase(i,:,e), &
-                    MissPhaseHD(PosHDInd,:,2), MissImputePhase(i,:,e), numSections, ImputeFromHDPhaseThresh)) then
+                    MissPhaseHD(PosHDInd,:,2), MissImputePhase(i,:,e), ImputeFromHDPhaseThresh)) then
                   GamB = 0
                 end if
 
@@ -1488,10 +1488,10 @@ end subroutine InternalParentPhaseElim
             allocate(HapCand(nHap,2))
 
             PatMatDone=0
-            if ( Section%BitCompleteMissing(MissImputePhase(i,:,1), numSections) == .FALSE. ) then
+            if ( Section%BitCompleteMissing(MissImputePhase(i,:,1)) == .FALSE. ) then
               PatMatDone(1) = 1
             end if
-            if ( Section%BitCompleteMissing(MissImputePhase(i,:,2), numSections) == .FALSE. ) then
+            if ( Section%BitCompleteMissing(MissImputePhase(i,:,2)) == .FALSE. ) then
               PatMatDone(2) = 1
             end if
 
@@ -1508,11 +1508,11 @@ end subroutine InternalParentPhaseElim
 
               ! If haplotype is partially phased
               if ((PatMatDone(e)==1).and.&
-                  Section%BitCompletePhased(MissImputePhase(i,:,e), numSections) == .FALSE.) then
+                  Section%BitCompletePhased(MissImputePhase(i,:,e)) == .FALSE.) then
 
                 do f=1,nHap
-                  if ( .NOT. Section%compareHaplotypeAllowMissing(BitHapLib(f,:), BitImputePhase(i,:,e), &
-                    MissHapLib(f,:), MissImputePhase(i,:,e), numSections)) then
+                if ( .NOT. Section%compareHaplotypeAllowMissing(BitHapLib(f,:), BitImputePhase(i,:,e), &
+                    MissHapLib(f,:), MissImputePhase(i,:,e))) then
                     HapCand(f,e)=0
                   end if
                 enddo

@@ -178,17 +178,17 @@ CONTAINS
 !> @param[in]  thres  Number of alleles allow to differ
 !> @return     .TRUE. if haplotypes are the same, .FALSE. otherwise 
 !---------------------------------------------------------------------------  
-  FUNCTION compareHaplotypeThreshold(this,hap1, hap2, miss1, miss2, nSecs, thres) result(same)
+  FUNCTION compareHaplotypeThreshold(this,hap1, hap2, miss1, miss2, thres) result(same)
     class(BitSection) :: this
     integer(kind=int64), dimension(:), intent(in) :: hap1, hap2, miss1, miss2
-    integer, intent(in) :: nSecs, thres
+    integer, intent(in) :: thres
     logical :: same
 
     integer :: c, i
 
     c = 0
     same = .TRUE.
-    do i = 1, nSecs
+    do i = 1, this%numSections
       ! either hap(1) OR hap(2) (not both) and not miss(1) | miss(2)
       ! count the occurences of this
       c = c + POPCNT( IAND(IEOR(hap1(i), hap2(i)),&
@@ -222,14 +222,13 @@ CONTAINS
 !> @param[in]  nSecs  Number of elements of the bit-wise arrays
 !> @return     .TRUE. if haplotypes are the extrictly the same, .FALSE. otherwise 
 !---------------------------------------------------------------------------  
-  FUNCTION compareHaplotypeExtrict(this,hap1, hap2, miss1, miss2, nSecs) result(same)
+  FUNCTION compareHaplotypeExtrict(this,hap1, hap2, miss1, miss2) result(same)
     class(BitSection) :: this
     integer(kind=int64), dimension(:), intent(in) :: hap1, hap2, miss1, miss2
-    integer, intent(in) :: nSecs
     logical :: same
 
     same = .TRUE.
-    same = this%compareHaplotypeThreshold(hap1, hap2, miss1, miss2, nSecs, 1)
+    same = this%compareHaplotypeThreshold(hap1, hap2, miss1, miss2, 1)
 
   END FUNCTION compareHaplotypeExtrict
 
@@ -254,14 +253,13 @@ CONTAINS
 !> @param[in]  nSecs  Number of elements of the bit-wise arrays
 !> @return     .TRUE. if haplotypes are the extrictly the same, .FALSE. otherwise 
 !---------------------------------------------------------------------------  
-  FUNCTION compareHaplotypeAllowMissingExtrict(this,hap1, hap2, miss1, miss2, nSecs) result(same)
+  FUNCTION compareHaplotypeAllowMissingExtrict(this,hap1, hap2, miss1, miss2) result(same)
     class(BitSection) :: this
     integer(kind=int64), dimension(:), intent(in) :: hap1, hap2, miss1, miss2
-    integer, intent(in) :: nSecs
     logical :: same
 
     same = .TRUE.
-    same = this%compareHaplotypeAllowMissingThreshold(hap1, hap2, miss1, miss2, nSecs, 1)
+    same = this%compareHaplotypeAllowMissingThreshold(hap1, hap2, miss1, miss2, 1)
 
   END FUNCTION compareHaplotypeAllowMissingExtrict
 
@@ -287,10 +285,10 @@ CONTAINS
 !> @param[in]  thres  Number of alleles allow to differ
 !> @return     .TRUE. if haplotypes are the same, .FALSE. otherwise 
 !---------------------------------------------------------------------------  
-  FUNCTION compareHaplotypeAllowMissingThreshold(this,hap1, hap2, miss1, miss2, nSecs, thres) result(same)
+  FUNCTION compareHaplotypeAllowMissingThreshold(this,hap1, hap2, miss1, miss2, thres) result(same)
     class(BitSection) :: this
     integer(kind=int64), dimension(:), intent(in) :: hap1, hap2, miss1, miss2
-    integer, intent(in) :: nSecs, thres
+    integer, intent(in) :: thres
     logical :: same
 
     integer :: c
@@ -298,7 +296,7 @@ CONTAINS
 
     c = 0
     same = .TRUE.
-    do i = 1, nSecs
+    do i = 1, this%numSections
       c = c + POPCNT( IOR(                                                           &
                           IAND(IEOR(hap1(i), hap2(i)), NOT(IOR(miss1(i), miss2(i)))),&
                           IAND(NOT(miss2(i)), miss1(i))                              &
@@ -333,17 +331,17 @@ CONTAINS
 !> @param[in]  thres  Number of alleles allow to differ
 !> @return     .TRUE. if haplotypes are the same, .FALSE. otherwise
 !---------------------------------------------------------------------------
-  FUNCTION compareHaplotype2Threshold(this,hap1, hap2, miss, nSecs, thres) result(same)
+  FUNCTION compareHaplotype2Threshold(this,hap1, hap2, miss, thres) result(same)
     class(BitSection) :: this
     integer(kind=int64), dimension(:), intent(in) :: hap1, hap2, miss
-    integer, intent(in) :: nSecs, thres
+    integer, intent(in) :: thres
     logical :: same
 
     integer :: i, c
 
     c = 0
     same = .TRUE.
-    do i = 1, nSecs
+    do i = 1, this%numSections
       c = c + POPCNT( IAND( IEOR(hap1(i), hap2(i)),&
                             NOT(miss(i))))
       if ( c >= thres ) then
@@ -374,14 +372,13 @@ CONTAINS
 !> @param[in]  nSecs  Number of elements of the bit-wise arrays
 !> @return     .TRUE. if haplotypes are extrictly the same, .FALSE. otherwise
 !---------------------------------------------------------------------------
-  FUNCTION compareHaplotype2Extrict(this,hap1, hap2, miss, nSecs) result(same)
+  FUNCTION compareHaplotype2Extrict(this,hap1, hap2, miss) result(same)
     class(BitSection) :: this
     integer(kind=int64), dimension(:), intent(in) :: hap1, hap2, miss
-    integer, intent(in) :: nSecs
     logical :: same
 
     same = .TRUE.
-    same = this%compareHaplotype2Threshold(hap1, hap2, miss, nSecs, 1)
+    same = this%compareHaplotype2Threshold(hap1, hap2, miss, 1)
 
   END FUNCTION compareHaplotype2Extrict
 
@@ -408,17 +405,17 @@ CONTAINS
 !> @param[in]  thres  Number of alleles allow to differ
 !> @return     .TRUE. if haplotypes are the same, .FALSE. otherwise
 !---------------------------------------------------------------------------
-  FUNCTION compareHaplotypeAllowSimultaneousMissingThreshold(this,hap1, hap2, miss1, miss2, nSecs, thres) result(same)
+  FUNCTION compareHaplotypeAllowSimultaneousMissingThreshold(this,hap1, hap2, miss1, miss2, thres) result(same)
     class(BitSection) :: this
     integer(kind=int64), dimension(:), intent(in) :: hap1, hap2, miss1, miss2
-    integer, intent(in) :: nSecs, thres
+    integer, intent(in) :: thres
     logical :: same
 
     integer :: c, i
 
     c = 0
     same = .TRUE.
-    do i = 1, nSecs
+    do i = 1, this%numSections
       c = c + POPCNT( IAND(IEOR(hap1(i), hap2(i)),&
                            NOT(IAND(miss1(i), miss2(i)))))
       if ( c >= thres ) then
@@ -451,14 +448,13 @@ CONTAINS
 !> @param[in]  nSecs  Number of elements of the bit-wise arrays
 !> @return     .TRUE. if haplotypes are the extrictly the same, .FALSE. otherwise
 !---------------------------------------------------------------------------
-  FUNCTION compareHaplotypeAllowSimultaneousMissingExtrict(this,hap1, hap2, miss1, miss2, nSecs) result(same)
+  FUNCTION compareHaplotypeAllowSimultaneousMissingExtrict(this,hap1, hap2, miss1, miss2) result(same)
     class(BitSection) :: this
     integer(kind=int64), dimension(:), intent(in) :: hap1, hap2, miss1, miss2
-    integer, intent(in) :: nSecs
     logical :: same
 
     same = .TRUE.
-    same = this%compareHaplotypeAllowSimultaneousMissingThreshold(hap1, hap2, miss1, miss2, nSecs, 1)
+    same = this%compareHaplotypeAllowSimultaneousMissingThreshold(hap1, hap2, miss1, miss2, 1)
 
   END FUNCTION compareHaplotypeAllowSimultaneousMissingExtrict
 
@@ -480,17 +476,17 @@ CONTAINS
 !> @param[in]  nSecs  Number of elements of the bit-wise arrays
 !> @return     Number of markers phased
 !---------------------------------------------------------------------------
-  FUNCTION BitCountAllelesPhased(this,miss1, miss2, nSecs) result(c)
+  FUNCTION BitCountAllelesPhased(this,miss1, miss2) result(c)
     class(BitSection) :: this
     integer(kind=int64), dimension(:), intent(in) :: miss1, miss2
-    integer, intent(in) :: nSecs
     integer :: c
 
     integer :: i
 
     c = 0
-    do i = 1, nSecs
-      c = c + POPCNT(NOT(IOR(miss1(i),miss2(i))))
+    do i = 1, this%numSections
+      ! TODO DW check that this subtracting is correct
+      c = c + POPCNT(NOT(IOR(miss1(i),miss2(i)))) - this%overhang
     end do
 
   END FUNCTION BitCountAllelesPhased
@@ -510,17 +506,17 @@ CONTAINS
 !> @param[in]  nSecs  Number of elements of the bit-wise arrays
 !> @return     Number of alleles imputed
 !---------------------------------------------------------------------------
-  FUNCTION BitCountAllelesImputed(this,miss, nSecs) result(c)
+  FUNCTION BitCountAllelesImputed(this,miss) result(c)
     class(BitSection) :: this
     integer(kind=int64), dimension(:), intent(in) :: miss
-    integer, intent(in) :: nSecs
     integer :: c
 
     integer :: i
 
     c = 0
-    do i = 1, nSecs
-      c = c + POPCNT(NOT(miss(i)))
+    do i = 1, this%numSections
+      ! DW subtracted overhang fir not
+      c = c + POPCNT(NOT(miss(i))) - this%overhang
     end do
 
   END FUNCTION BitCountAllelesImputed
@@ -540,16 +536,15 @@ CONTAINS
 !> @param[in]  nSecs  Number of elements of the bit-wise arrays
 !> @return     Number of alleles missing
 !---------------------------------------------------------------------------
-  FUNCTION BitCountAllelesMissing(this,miss, nSecs) result(c)
+  FUNCTION BitCountAllelesMissing(this,miss) result(c)
     class(BitSection) :: this
     integer(kind=int64), dimension(:), intent(in) :: miss
-    integer, intent(in) :: nSecs
     integer :: c
 
     integer :: i
 
     c = 0
-    do i = 1, nSecs
+    do i = 1, this%numSections
       c = c + POPCNT(miss(i))
     end do
 
@@ -570,16 +565,15 @@ CONTAINS
 !> @param[in]  nSecs  Number of elements of the bit-wise arrays
 !> @return     .TRUE. if haplotype is phased, .FALSE. otherwise
 !---------------------------------------------------------------------------
-  FUNCTION BitCompletePhased(this,miss, nSecs) result(phased)
+  FUNCTION BitCompletePhased(this,miss) result(phased)
     class(BitSection) :: this
     integer(kind=int64), dimension(:), intent(in) :: miss
-    integer, intent(in) :: nSecs
     logical :: phased
 
     integer :: i
 
     phased = .TRUE.
-    do i = 1, nSecs
+    do i = 1, this%numSections
       if ( POPCNT(miss(i)) > 0) then
         phased = .FALSE.
         exit
@@ -603,17 +597,17 @@ CONTAINS
 !> @param[in]  nSecs  Number of elements of the bit-wise arrays
 !> @return     .TRUE. if haplotype is phased, .FALSE. otherwise
 !---------------------------------------------------------------------------
-  FUNCTION BitCompleteMissing(this,miss, nSecs) result(phased)
+  FUNCTION BitCompleteMissing(this,miss) result(phased)
     class(BitSection) :: this
     integer(kind=int64), dimension(:), intent(in) :: miss
-    integer, intent(in) :: nSecs
     logical :: phased
 
     integer :: i
 
     phased = .TRUE.
-    do i = 1, nSecs
-      if ( POPCNT(NOT(miss(i))) > 0) then
+    do i = 1, this%numSections
+      ! DW added subtracting of overhang to deal with false population
+      if ( (POPCNT(NOT(miss(i))) - this%overhang) > 0) then
         phased = .FALSE.
         exit
       end if
@@ -638,17 +632,17 @@ CONTAINS
 !> @param[in]  nSecs  Number of elements of the bit-wise arrays
 !> @return     Number of reference alleles
 !---------------------------------------------------------------------------
-  FUNCTION BitCountRefAlleles(this,hap, miss, nSecs) result(RefA)
+  FUNCTION BitCountRefAlleles(this,hap, miss) result(RefA)
     class(BitSection) :: this
     integer(kind=int64), dimension(:), intent(in) :: hap, miss
-    integer, intent(in) :: nSecs
     integer :: RefA
 
     integer :: i
 
     RefA = 0
-    do i = 1, nSecs
-      RefA = RefA + POPCNT(NOT(hap(i))) - POPCNT(miss(i))
+    do i = 1, this%numSections
+      ! DW added subtracting overhang to deal with notting of hap bits
+      RefA = RefA + POPCNT(NOT(hap(i))) - POPCNT(miss(i)) - this%overhang 
     end do
 
   END FUNCTION BitCountRefAlleles
@@ -668,16 +662,15 @@ CONTAINS
 !> @param[in]  nSecs  Number of elements of the bit-wise arrays
 !> @return     Number of reference alleles
 !---------------------------------------------------------------------------
-  FUNCTION BitCountAltAlleles(this,hap, nSecs) result(AltA)
+  FUNCTION BitCountAltAlleles(this,hap) result(AltA)
     class(BitSection) :: this
     integer(kind=int64), dimension(:), intent(in) :: hap
-    integer, intent(in) :: nSecs
     integer :: AltA
 
     integer :: i
 
     AltA = 0
-    do i = 1, nSecs
+    do i = 1, this%numSections
       AltA = AltA + POPCNT(hap(i))
     end do
 

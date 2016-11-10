@@ -1056,7 +1056,6 @@ allocate(ProbImputePhase(0:nAnisP,nSnpIterate,2))
 allocate(GPI(nAnisP,nSnpIterate))
 deallocate(GpIndex)
 
-print *,"nproce2", inputParams%nprocessors
 allocate(GpIndex(inputParams%nprocessors,2))
 
 ProbImputeGenos(0,:)=0.0
