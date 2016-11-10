@@ -1725,7 +1725,6 @@ else
 #endif
         if (inputParams%HMMOption/=RUN_HMM_NO) Then
             nSnpIterate=inputParams%nSnp
-            write(0,*) 'DEBUG: Alloc&dealloc ProbImputeGenos'
             if (allocated(ProbImputeGenos)) then
                 deallocate(ProbImputeGenos)
             end if
@@ -4179,7 +4178,6 @@ allocate(GenderRaw(nAnisRawPedigree))
 Genos(0,:)=9
 
 ! Read the pedigree information
-print *,"Nansiraw", nAnisRawPedigree
 rewind(inputParams%pedigreeFileUnit)
 do i=1,nAnisRawPedigree
     read(inputParams%pedigreeFileUnit,*) ped(i,:)

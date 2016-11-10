@@ -19,8 +19,8 @@ integer :: grainsize, count, secs, seed0
 type(AlphaImputeInput), pointer :: inputParams
 integer, allocatable, dimension(:,:) :: InbredHmmMaCH
 interface
-  subroutine ReadInbred(InbredFile, PhasedData, nInbred)
-    character (len=*), intent(in) :: InbredFile
+  subroutine ReadInbred(PhaseFileUnit, PhasedData, nInbred)
+    integer, intent(in) :: PhaseFileUnit
     integer, intent(out), allocatable, dimension(:,:) :: PhasedData
     integer, intent(out) :: nInbred
   end subroutine ReadInbred
@@ -43,8 +43,9 @@ nIndHmmMaCH=nAnisG
 #endif
 nAnisInbred = 0
 if ( (HMM==RUN_HMM_ONLY .OR. HMM==RUN_HMM_NGS) .AND. inputParams%InbredAnimalsFile/="None") then
-    call ReadInbred(trim(inputParams%InbredAnimalsFile), InbredHmmMaCH, nAnisInbred)
+    call ReadInbred(inputParams%prePhasedFileUnit, InbredHmmMaCH, nAnisInbred)
 end if
+
 
 ! Number of animals in the HMM
 nIndHmmMaCH = nAnisG + nAnisInbred
@@ -286,40 +287,48 @@ GlobalHmmHDInd(nGenotyped+1 : nGenotyped+nInbred) = 1
 end subroutine ParseMaCHPhased
 
 !######################################################################
-subroutine ReadInbred(InbredFile, PhasedData, nInbred)
+subroutine ReadInbred(PhaseFileUnit, PhasedData, nInbred)
 use ISO_Fortran_Env
 use Global
 use GlobalVariablesHmmMaCH
 
 implicit none
 
-character (len=*), intent(in) :: InbredFile
+integer, intent(inout) :: PhaseFileUnit
 integer, intent(out), allocatable, dimension(:,:) :: PhasedData
 integer, intent(out) :: nInbred
 
 integer :: i,k,dumC
-integer(kind=int32) :: UGenotypes
+logical :: opened, named
+character(len=300) :: InbredFile
 
-open(newunit=UGenotypes, file=InbredFile, status='unknown')
+
+inquire(unit=PhaseFileUnit, opened=opened, named=named, name=InbredFile)
+
+if (.NOT. opened .and. named) then
+    open(unit=PhaseFileUnit, file=InbredFile, status='unknown')
+else if (.NOT. named) then
+    write(0, *) "ERROR - Something went wrong when trying to read the file of pre-phased data"
+end if
 
 nInbred = 0
 do
-    read (UGenotypes,*,iostat=k) dumC
+    read (PhaseFileUnit,*,iostat=k) dumC
     nInbred=nInbred+1
     if (k/=0) then
         nInbred=nInbred-1
         exit            ! This forces to exit if an error is found
     endif
 enddo
-rewind(UGenotypes)
+rewind(PhaseFileUnit)
 
 allocate(AnimalsInbred(nInbred))
 allocate(PhasedData(nInbred,nSnpHmm))
 
 do i=1,nInbred
-    read (UGenotypes,*) AnimalsInbred(i), PhasedData(i,:)
+    read (PhaseFileUnit,*) AnimalsInbred(i), PhasedData(i,:)
 end do
-close(UGenotypes)
+close(PhaseFileUnit)
 
 end subroutine ReadInbred
 
