@@ -98,7 +98,10 @@ end if
 
 
 call Titles
-call ReadInParameterFile(SpecFile)
+
+! use default input, TODO this can be changed
+allocate(defaultInput)
+call defaultInput%ReadInParameterFile(SpecFile)
 
 inputParams => defaultInput
 

@@ -13,7 +13,7 @@ module testReadSpecAlphaImpute
     subroutine initialise
          implicit none
         
-        call readinparameterfile("AlphaImputeSpec.txt", input)   
+        call input%readinparameterfile("AlphaImputeSpec.txt")   
         
     end subroutine
 
