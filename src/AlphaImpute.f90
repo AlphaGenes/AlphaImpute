@@ -4192,8 +4192,8 @@ if (inputParams%hmmoption /= RUN_HMM_NGS) then
         Genos(i,:)=Temp(:)
     enddo
 endif
-close(2)
-close(3)
+close(inputParams%pedigreeFileUnit)
+close(inputParams%genotypeFileUnit)
 
 GenderRaw=9
 if (inputParams%SexOpt==1) then
