@@ -20,7 +20,7 @@ type(AlphaImputeInput), pointer :: inputParams
 integer, allocatable, dimension(:,:) :: InbredHmmMaCH
 interface
   subroutine ReadInbred(PhaseFileUnit, PhasedData, nInbred)
-    integer, intent(in) :: PhaseFileUnit
+    integer, intent(inout) :: PhaseFileUnit
     integer, intent(out), allocatable, dimension(:,:) :: PhasedData
     integer, intent(out) :: nInbred
   end subroutine ReadInbred

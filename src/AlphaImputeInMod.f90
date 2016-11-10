@@ -111,7 +111,6 @@ module AlphaImputeInMod
         integer :: unit,IOStatus,MultipleHDpanels,i
         character(len=*), intent(in) :: SpecFile
         class(AlphaImputeInput), optional, intent(inout),target :: this
-        type(AlphaImputeInput), pointer :: input
 
         character(len=300) :: first, line
         character(len=:), allocatable::tag
@@ -202,8 +201,9 @@ module AlphaImputeInMod
                 case("multiplehdpanels")
                     ! Get the information of Multiple HD chips
                     ! MultipleHDpanels
-                    read(second(1),*) MultipleHDpanels
-                    if (MultipleHDpanels/=0) this%MultiHD=MultipleHDpanels
+                    if (trim(toLower(second(1))) /= "no") then
+                        read(second(1),*) MultipleHDpanels
+                        if (MultipleHDpanels/=0) this%MultiHD=MultipleHDpanels
                     ! if ((trim(MultipleHDpanels)/='Yes').and.(trim(MultipleHDpanels)/='No')) then
                     !     write (*,*) "Please, provide a valid option,"
                     !     write (*,*) "MultipleHDpanels only acepts 'No' or 'Yes'"
@@ -214,7 +214,7 @@ module AlphaImputeInMod
                         deallocate(this%nSnpByChip)
                     endif
                         allocate(this%nSnpByChip(this%MultiHD))
-
+                    endif
                 case("numbersnpxchip")
                     do i=1,this%MultiHD
                          read(second(i),*) this%nSnpByChip(i)
