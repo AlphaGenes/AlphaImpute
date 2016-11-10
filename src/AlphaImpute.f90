@@ -102,7 +102,6 @@ call ReadInParameterFile(SpecFile)
 
 inputParams => defaultInput
 
-print *,"input", inputParams%nSnp
 if (inputParams%hmmoption /= RUN_HMM_NGS) then
     if (inputParams%restartOption<OPT_RESTART_PHASING) call MakeDirectories(RUN_HMM_NULL)
     call CountInData
@@ -1723,7 +1722,7 @@ else
 #endif
 
         if (inputParams%HMMOption/=RUN_HMM_NO) Then
-            nSnpIterate=nSnp
+            nSnpIterate=inputParams%nSnp
             write(0,*) 'DEBUG: Alloc&dealloc ProbImputeGenos'
             if (allocated(ProbImputeGenos)) then
                 deallocate(ProbImputeGenos)
@@ -3260,8 +3259,6 @@ inputParams => defaultInput
 allocate(TempCore(inputParams%nPhaseInternal))
 allocate(TempCplusT(inputParams%nPhaseInternal))
 
-
-print *,"nproc",inputParams%nprocessors
 allocate(GpIndex(inputParams%nprocessors,2))
 
 ! WARNING: This code is not necessary
