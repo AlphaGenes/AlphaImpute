@@ -297,8 +297,7 @@ CONTAINS
     c = 0
     same = .TRUE.
     do i = 1, this%numSections
-      c = c + POPCNT( IOR(                                                           &
-                          IAND(IEOR(hap1(i), hap2(i)), NOT(IOR(miss1(i), miss2(i)))),&
+      c = c + POPCNT( IOR(IAND(IEOR(hap1(i), hap2(i)), NOT(IOR(miss1(i), miss2(i)))),&
                           IAND(NOT(miss2(i)), miss1(i))                              &
                          ) )
 
