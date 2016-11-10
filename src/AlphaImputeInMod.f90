@@ -12,7 +12,7 @@
 !> @details     This MODULE contains a class which contains all input parameters read in from a spec file.
 !> It also contains the default container object for the spec file, defaultInput.
 !
-!> @author      Roberto Antolin, roberto.antolin@roslin.ed.ac.uk
+!> @author      David Wilson, david.wilson@roslin.ed.ac.uk
 !
 !> @date        Nov 07, 2016
 !
@@ -90,7 +90,19 @@ module AlphaImputeInMod
 
     contains
 
-
+!---------------------------------------------------------------------------
+! DESCRIPTION:
+!> @brief      Constructor for AlphaImputeInput object
+!
+!> @details    Initialise new Bit Haplotype
+!
+!> @author     David Wilson, david.wilson@roslin.ed.ac.uk
+!
+!> @date       Nov 07, 2016
+!
+! PARAMETERS:
+!> @param[in]  specfile - The path of the specfile
+!---------------------------------------------------------------------------
 
     subroutine ReadInParameterFile(this,SpecFile)
         use AlphaHouseMod, only: parseToFirstWhitespace,splitLineIntoTwoParts,toLower
