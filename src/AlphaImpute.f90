@@ -1495,7 +1495,7 @@ INTERFACE WriteProbabilities
     character(len=*), intent(IN) :: outFile
     integer, intent(IN) :: nSnps,nAnisG
     integer, intent(IN) :: Indexes(nAnisG)
-    
+
   END SUBROUTINE WriteProbabilitiesHMM
 
   SUBROUTINE WriteProbabilitiesGeneProb(outFile, GenosProbs, Ids, nExtraAnims, nAnisP, nSnps)
@@ -1722,20 +1722,16 @@ else
 #ifdef DEBUG
         write(0,*) 'DEBUG: Write HMM results [WriteOutResults]'
 #endif
-
         if (inputParams%HMMOption/=RUN_HMM_NO) Then
             nSnpIterate=inputParams%nSnp
-            write(0,*) 'DEBUG: Alloc&dealloc ProbImputeGenos'
             if (allocated(ProbImputeGenos)) then
                 deallocate(ProbImputeGenos)
             end if
             allocate(ProbImputeGenos(0:nAnisP,nSnpIterate))
-            write(0,*) 'DEBUG: Alloc&dealloc ProbImputePhase'
             if (allocated(ProbImputePhase)) then
                 deallocate(ProbImputePhase)
             end if
             allocate(ProbImputePhase(0:nAnisP,nSnpIterate,2))
-            write(0,*) 'DEBUG: Alloc&dealloc Maf'
             if (allocated(Maf)) then
                 deallocate(Maf)
             end if
@@ -1744,7 +1740,6 @@ else
             ProbImputePhase(1:nAnisP,:,:)= 9.0
         endif
 
-        ! Feed Impute and Phase probabilites
         l=0
         !do j=1,nSnpRaw
          !   if (SnpIncluded(j)==1) then
@@ -1762,7 +1757,6 @@ else
 #ifdef DEBUG
         write(0,*) 'DEBUG: Impute alleles and genotypes based on HMM genotypes probabilities [WriteOutResults]'
 #endif
-
         ! Impute the most likely genotypes. (Most frequent genotype)
         do i=1,nAnisG
             do j=1,nSnpIterate
@@ -1793,7 +1787,6 @@ else
 #ifdef DEBUG
     write(0,*) 'DEBUG: Write phase, genotypes and probabilities into files [WriteOutResults]'
 #endif
-
     ! call CheckImputationInconsistencies(ImputeGenos, ImputePhase, nAnisP, inputParams%nsnp)
     do i=inputParams%GlobalExtraAnimals+1,nAnisP
          write (53,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') Id(i),ImputePhase(i,:,1)
@@ -4184,7 +4177,6 @@ allocate(GenderRaw(nAnisRawPedigree))
 Genos(0,:)=9
 
 ! Read the pedigree information
-print *,"Nansiraw", nAnisRawPedigree
 rewind(inputParams%pedigreeFileUnit)
 do i=1,nAnisRawPedigree
     read(inputParams%pedigreeFileUnit,*) ped(i,:)
@@ -6110,7 +6102,7 @@ SUBROUTINE ClusterIndivByChip(nClusters)
   use alphaimputeinmod
   ! use GlobalClustering
   implicit none
-  
+
   type(AlphaImputeInput), pointer :: inputParams
   integer, intent(IN) :: nClusters              ! Number of different SNP chips
   ! integer, intent(OUT) :: ClusterMemberIndv(:), Centroid(:)

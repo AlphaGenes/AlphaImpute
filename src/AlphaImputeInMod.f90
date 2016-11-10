@@ -6,7 +6,7 @@
 !
 !> @file        AlphaImputeInMod.f90
 !
-! DESCRIPTION: 
+! DESCRIPTION:
 !> @brief       Module holding input parameters
 !>
 !> @details     This MODULE contains a class which contains all input parameters read in from a spec file.
@@ -107,7 +107,7 @@ module AlphaImputeInMod
     subroutine ReadInParameterFile(this,SpecFile)
         use AlphaHouseMod, only: parseToFirstWhitespace,splitLineIntoTwoParts,toLower
         use PARAMETERS
-        
+
         integer :: unit,IOStatus,MultipleHDpanels,i
         character(len=*), intent(in) :: SpecFile
         class(AlphaImputeInput), optional, intent(inout),target :: this
@@ -117,7 +117,7 @@ module AlphaImputeInMod
         character(len=:), allocatable::tag
         character(len=300),dimension(:),allocatable :: second
 
-    
+
         open(newunit=unit, file=SpecFile, action="read", status="old")
         IOStatus = 0
         READFILE: do while (IOStatus==0)
@@ -214,7 +214,7 @@ module AlphaImputeInMod
                         deallocate(this%nSnpByChip)
                     endif
                         allocate(this%nSnpByChip(this%MultiHD))
-                    
+
                 case("numbersnpxchip")
                     do i=1,this%MultiHD
                          read(second(i),*) this%nSnpByChip(i)
@@ -237,7 +237,7 @@ module AlphaImputeInMod
                         write(error_unit,*) "Please, considere to use only one HD panel or to disable internal editing"
                         stop 4001
                     endif
-                
+
                 case("editingparameters")
                     this%outopt=9
                     if (this%IntEditStat==1) then
@@ -269,7 +269,7 @@ module AlphaImputeInMod
                     ! box 5
                 case("numberphasingruns")
                     this%noPhasing = 1
-                    
+
                     if (ToLower(trim(second(1))) == "phasedone") then
                         if (size(second) /=3) then
                             goto 4051
@@ -287,7 +287,7 @@ module AlphaImputeInMod
                         this%managephaseon1off0 = 0
                     else
                         this%managephaseon1off0 = 1
-                        read(second(1),*) this%nPhaseExternal 
+                        read(second(1),*) this%nPhaseExternal
 
                         if (this%nPhaseExternal > 40) then
                             write(error_unit,*) "Error: Too many phasing runs required. The most that this program supports is 40."
@@ -339,7 +339,7 @@ module AlphaImputeInMod
                     enddo
 
                 case("pedigreefreephasing")
-                    if (this%nPhaseExternal /= 0) then 
+                    if (this%nPhaseExternal /= 0) then
                         if (ToLower(trim(second(1))) == "no") then
                             this%PedFreePhasing= 0
                         elseif (ToLower(trim(second(1))) == "yes") then
@@ -364,7 +364,7 @@ module AlphaImputeInMod
                         this%largedatasets=.true.
                         read(second(2),*) this%PhaseSubsetSize
                         read(second(3),*) this%PhaseNIterations
-                    else 
+                    else
                         this%largedatasets=.false.
 
                     endif
@@ -447,7 +447,6 @@ module AlphaImputeInMod
                     this%UserDefinedHD=0
                     if (second(1)/="None") then
                         this%UserDefinedHD=1
-                        this%InbredAnimalsFile = second(1)
                         open (newunit=this%AnimalFileUnit,file=trim(second(1)),status="old")
                     endif
 
@@ -456,11 +455,12 @@ module AlphaImputeInMod
                         this%PrePhased=0
                     else
                         this%PrePhased=1
+                        this%InbredAnimalsFile = second(1)
                         open (newunit=this%prePhasedFileUnit,file=trim(second(1)),status="old")
                     endif
                 case("bypassgeneprob")
                     if (trim(second(1))=="No") then
-                        this%BypassGeneProb=0             
+                        this%BypassGeneProb=0
                     else if (trim(second(1))=="Yes") then
                         this%BypassGeneProb=1
                     else if (trim(second(1))=="Probabilities") then
