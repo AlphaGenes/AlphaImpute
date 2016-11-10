@@ -3,10 +3,10 @@ SET(ALPHAIMPUTE_src
             ${SRCALPHAIMPUTE}global.f90
             ${SRCALPHAIMPUTE}HaplotypeBits.f90
             ${SRCALPHAIMPUTE}hmm.f90
-            ${SRCALPHAIMPUTE}output.f90
+            ${SRCALPHAIMPUTE}Output.f90
             ${SRCALPHAIMPUTE}hmmHaplotype.f90
             ${SRCALPHAIMPUTE}hmmvariables.f90
-            ${SRCALPHAIMPUTE}imputation.f90
+            ${SRCALPHAIMPUTE}Imputation.f90
             ${SRCALPHAIMPUTE}manageWindows.f90
             ${SRCALPHAIMPUTE}par_zig_mod.f90
             ${SRCALPHAIMPUTE}PhaseRounds.f90
