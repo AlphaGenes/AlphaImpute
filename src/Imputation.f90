@@ -18,6 +18,7 @@ CONTAINS
     use omp_lib
 
     integer :: i,j,loop
+    character(len=14) :: timeOut
 
     inputParams => defaultInput
     allocate(SireDam(0:nAnisP,2))
@@ -174,6 +175,7 @@ CONTAINS
               end if
               call GeneralFillIn
               print*, " "
+              CALL DATE_AND_TIME
               print*, " ","Internal imputation from parents haplotype completed"
 
               call InternalHapLibImputation           ! Major Sub-Step 6 (Hickey et al., 2012; Appendix A)
@@ -187,7 +189,8 @@ CONTAINS
               call RestrictedWorkLeftRight            ! Major Sub-Step 8 (Hickey et al., 2012; Appendix A)
               call GeneralFillIn
               print*, " "
-              print*, " ","Internal haplotype library imputation completed"
+              CALL DATE_AND_TIME(time=timeOut)
+              print*, " ","Internal haplotype library imputation completed at: ", timeOut
             enddo
 
             call ManageWorkLeftRight

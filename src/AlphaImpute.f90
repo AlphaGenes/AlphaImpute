@@ -55,7 +55,7 @@ implicit none
 integer :: markers
 double precision, allocatable :: GenosProbs(:,:,:)
 character(len=4096) :: cmd, SpecFile
-
+real :: start,finish
 INTERFACE WriteProbabilities
   SUBROUTINE WriteProbabilitiesHMM(outFile, Indexes, nAnisG, nSnps)
     character(len=*), intent(IN) :: outFile
@@ -107,15 +107,49 @@ inputParams => defaultInput
 
 if (inputParams%hmmoption /= RUN_HMM_NGS) then
     if (inputParams%restartOption<OPT_RESTART_PHASING) call MakeDirectories(RUN_HMM_NULL)
+
+    call cpu_time(start)  
     call CountInData
+    call cpu_time(finish)
+    print '("Time ReadInData= ",f6.3," seconds.")',finish-start
+
+    call cpu_time(start)       
     call ReadInData
+    call cpu_time(finish)
+    print '("Time ReadInData= ",f6.3," seconds.")',finish-start
+
+    call cpu_time(start)
     call SnpCallRate
+    call cpu_time(finish)
+    print '("Time SnpCallRate= ",f6.3," seconds.")',finish-start
+
+    call cpu_time(start)
     call CheckParentage
+    call cpu_time(finish)
+    print '("Time CheckParentage= ",f6.3," seconds.")',finish-start
+
     if (MultiHD/=0) call ClassifyAnimByChips
+    
+    call cpu_time(start)
     call FillInSnp
+    call cpu_time(finish)
+    print '("Time FillInSnp= ",f6.3," seconds.")',finish-start
+
+    call cpu_time(start)
     call FillInBasedOnOffspring
+    call cpu_time(finish)
+    print '("Time FillInBasedOnOffspring= ",f6.3," seconds.")',finish-start
+
+    call cpu_time(start)
     call InternalEdit
+    call cpu_time(finish)
+    print '("Time InternalEdit= ",f6.3," seconds.")',finish-start
+
+    call cpu_time(start)
     call MakeFiles
+    call cpu_time(finish)
+    print '("Time MakeFiles= ",f6.3," seconds.")',finish-start
+
 else
 
     call MakeDirectories(RUN_HMM_NGS)
@@ -173,7 +207,12 @@ else
                 call GeneProbManagement
 #endif
 #else
+                call cpu_time(start)
                 call GeneProbManagementWindows
+
+                call cpu_time(finish)
+                print '("Time GeneProbManagementWindows= ",f6.3," seconds.")',finish-start
+
 #endif
 
             endif
@@ -230,7 +269,10 @@ else
             call PhasingManagement
 #endif
 #else
+            call cpu_time(start)
             call PhasingManagementWindows
+            call cpu_time(finish)
+                print '("Time PhasingManagementWindows= ",f6.3," seconds.")',finish-start
 #endif
         endif
 
@@ -244,8 +286,8 @@ else
         endif
     endif
 
-    print*, " "
-    print*, " ","Phasing completed"
+    ! print*, " "
+    ! print*, " ","Phasing completed"
 
     ! This is not necessary, already output in subroutine PhasingManagement
     if ((inputParams%restartOption/=OPT_RESTART_ALL).and.(inputParams%restartOption<OPT_RESTART_IMPUTATION)) then
@@ -257,7 +299,10 @@ endif
 if (inputParams%hmmoption/=RUN_HMM_NGS) then
     ! If we only want to phase data, then skip all the imputation steps
     if (inputParams%PhaseTheDataOnly==0) Then
+        call cpu_time(start)
         call ImputationManagement
+        call cpu_time(finish)
+                print '("Time ImputationManagement= ",f6.3," seconds.")',finish-start
 
 #ifdef DEBUG
         write(0,*) 'DEBUG: Write results'
@@ -277,11 +322,19 @@ if (inputParams%hmmoption/=RUN_HMM_NGS) then
         write(0,*) 'DEBUG: Final Checker'
 #endif
 
-        if (TrueGenos1None0==1) call FinalChecker
+        if (TrueGenos1None0==1) then
+            call cpu_time(start)
+            call FinalChecker
+            call cpu_time(finish)
+                print '("Time FinalChecker= ",f6.3," seconds.")',finish-start
+        endif
         ! call Cleaner
     endif
 endif
+call cpu_time(start)
 call PrintTimerTitles
+call cpu_time(finish)
+                print '("Time call PrintTimerTitles= ",f6.3," seconds.")',finish-start
 
 if (inputParams%restartOption > OPT_RESTART_IMPUTATION) then
     call system(RM // " Tmp2345678.txt")
@@ -4192,8 +4245,8 @@ if (inputParams%hmmoption /= RUN_HMM_NGS) then
         Genos(i,:)=Temp(:)
     enddo
 endif
-close(2)
-close(3)
+close(inputParams%pedigreeFileUnit)
+close(inputParams%genotypeFileUnit)
 
 GenderRaw=9
 if (inputParams%SexOpt==1) then
