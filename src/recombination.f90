@@ -6,6 +6,7 @@ CONTAINS
 subroutine ModelRecombSegment(nSnpBegin,nSnpFinal,nRecomb)
 use Global
 use GlobalPedigree
+use AlphaImputeInMod
 implicit none
 
 INTEGER, INTENT(IN) :: nSnpBegin,nSnpFinal
@@ -21,7 +22,11 @@ integer,allocatable,dimension(:) :: WorkLeft,WorkRight,TempVec,StR,EnR,StRNarrow
 real,allocatable,dimension(:) :: LengthVec
 real,allocatable,dimension(:,:) :: PatAlleleProb,MatAlleleProb,GeneProbWork
 character(len=7) :: cm
-write(cm,'(I7)') nSnpRaw !for formatting
+type(AlphaImputeInput), pointer :: inputParams
+
+inputParams => defaultInput
+
+write(cm,'(I7)') inputParams%nSnpRaw !for formatting
 cm = adjustl(cm)
 
 dimSnps=nSnpFinal-nSnpBegin+1
@@ -71,7 +76,7 @@ do i=1,nAnisP
         CountLeftSwitch=0
         CountRightSwitch=0
         PedId=RecPed(i,SireDamRL)
-        if ((SexOpt==1).and.(RecGender(PedId)==HetGameticStatus)) cycle
+        if ((inputParams%SexOpt==1).and.(RecGender(PedId)==HetGameticStatus)) cycle
         if ((PedId>0).and.((float(count(ImputePhase(PedId,:,:)==9))/(2*dimSnps))<0.30)) then          !(RecIdHDIndex(PedId)==1)
             WorkRight=9
             RSide=9
@@ -255,19 +260,22 @@ subroutine RemoveRecombinationForSegment
 use Global
 use GlobalVariablesHmmMaCH
 use Utils
+use AlphaImputeInMod
 
 implicit none
 integer :: StartSnp, StopSnp, nSegments, SegmentSize
 integer,allocatable :: nRecomb(:)
 integer :: i,k,indv
+type(AlphaImputeInput), pointer :: inputParams
 
+inputParams => defaultInput
 
 allocate(nRecomb(nAnisP))
 StartSnp=1
 StopSnp=nSnpHmm
-nSegments=nSnpHmm/windowLength
-if (MOD(nSnpHmm,windowLength)/=0) nSegments=nSegments+1
-SegmentSize=windowLength
+nSegments=nSnpHmm/inputParams%windowLength
+if (MOD(nSnpHmm,inputParams%windowLength)/=0) nSegments=nSegments+1
+SegmentSize=inputParams%windowLength
 
 do i=1,nSegments
     nRecomb=0

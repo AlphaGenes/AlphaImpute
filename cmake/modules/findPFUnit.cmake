@@ -66,11 +66,7 @@ endforeach()
 
 set_source_files_properties(${PFUNIT_DIR}/include/driver.F90 PROPERTIES GENERATED 1)
 
-SET(testDeps ${SRCALPHASIM}/AlphaSimInputModule.f90
-    ${SRCALPHASIM}/GenomeModule.f90   
-    ${SRCALPHASIM}/HaplotypesModule.f90   
-        ${SRCALPHASIM}/AlphaSimIndividualModule.f90      
-)
+
 # file(GLOB testDeps "${SRC}/*.f90")
 add_executable(
     pftest_alltests
@@ -86,7 +82,6 @@ target_link_libraries(
     )
 
 TARGET_LINK_LIBRARIES(pftest_alltests ${AHLIB})
-TARGET_LINK_LIBRARIES(pftest_alltests ${MACSLIB})
 
 add_test(pftest_alltests ${BIN}/pftest_alltests)
 INSTALL(TARGETS pftest_alltests RUNTIME DESTINATION bin)

@@ -8,9 +8,10 @@ MODULE Imputation
   use Global
   use GlobalPedigree
   use GlobalVariablesHmmMaCH
-  use GlobalFiles, only :GenotypeFile
+  use AlphaImputeInMod
   implicit none
 
+  type(AlphaImputeInput), pointer :: inputParams
 CONTAINS
 
   SUBROUTINE ImputationManagement
@@ -18,6 +19,7 @@ CONTAINS
 
     integer :: i,j,loop
 
+    inputParams => defaultInput
     allocate(SireDam(0:nAnisP,2))
     SireDam=0
     do i=1,nAnisP
@@ -28,7 +30,7 @@ CONTAINS
 
     ! WARNING: Need to discuss this part of code with John. Nonsense going on here!
 
-    if (HMMOption==RUN_HMM_ONLY) then ! Avoid any adulteration of genotypes with imputation subroutines
+    if (inputParams%HMMOption==RUN_HMM_ONLY) then ! Avoid any adulteration of genotypes with imputation subroutines
 
 #ifdef DEBUG
       write(0,*) 'DEBUG: Allocate memory for genotypes and haplotypes'
@@ -41,11 +43,11 @@ CONTAINS
       if (allocated(ImputeGenos)) Then
           deallocate(ImputeGenos)
       endif
-      allocate(ImputeGenos(0:nAnisP,nSnp))
+      allocate(ImputeGenos(0:nAnisP,inputParams%nsnp))
       if (allocated(ImputePhase)) Then
           deallocate(ImputePhase)
       endif
-      allocate(ImputePhase(0:nAnisP,nSnp,2))
+      allocate(ImputePhase(0:nAnisP,inputParams%nsnp,2))
       ImputeGenos=9
       ImputePhase=9
 
@@ -56,7 +58,7 @@ CONTAINS
       write(0,*) 'DEBUG: Read Genotypes'
 #endif
 
-      call ReadGenos(GenotypeFile)
+      call ReadGenos(inputParams%GenotypeFile)
 
       ! Impute observed genotypes to animals in the pedigree
       do i=1,nAnisG
@@ -71,7 +73,7 @@ CONTAINS
       write(0,*) 'DEBUG: Call Mach'
 #endif
 
-      call MaCHController(HMMOption)
+      call MaCHController(inputParams%HMMOption)
       call FromHMM2ImputePhase
 
 #ifdef DEBUG
@@ -80,16 +82,16 @@ CONTAINS
 
     else
 
-      if (RestartOption==4) then
-        allocate(ImputeGenos(0:nAnisP,nSnp))
-        allocate(ImputePhase(0:nAnisP,nSnp,2))
+      if (inputParams%RestartOption==4) then
+        allocate(ImputeGenos(0:nAnisP,inputParams%nsnp))
+        allocate(ImputePhase(0:nAnisP,inputParams%nsnp,2))
       else
-        if (SexOpt==0) then
+        if (inputParams%sexopt==0) then
           ! Impute initial genotypes from calculated genotype probabilities
-          if (BypassGeneProb==0) then
-            allocate(ImputeGenos(0:nAnisP,nSnp))
-            allocate(ImputePhase(0:nAnisP,nSnp,2))
-            allocate(GlobalWorkPhase(0:nAnisP,nSnp,2))
+          if (inputParams%BypassGeneProb==0) then
+            allocate(ImputeGenos(0:nAnisP,inputParams%nsnp))
+            allocate(ImputePhase(0:nAnisP,inputParams%nsnp,2))
+            allocate(GlobalWorkPhase(0:nAnisP,inputParams%nsnp,2))
             call ReReadGeneProbs
           else
             ! Phase in the homozygous case for the SEX CHROMOSOME
@@ -105,30 +107,30 @@ CONTAINS
           MSTermInfo=0
         endif
 
-        if (NoPhasing==1) then
+        if (inputParams%NoPhasing==1) then
           ! Major sub-step 2 as explained in Hickey et al. (2012; Appendix A)
           call BaseAnimalFillIn
 
           ! Impute phase whenever a pre-phase file exists
-          if (PrePhased==1) call ReadInPrePhasedData
+          if (inputParams%PrePhased==1) call ReadInPrePhasedData
 
           ! Impute phase in the sex chromosome
-          if (SexOpt==1) call EnsureHetGametic
+          if (inputParams%sexopt==1) call EnsureHetGametic
 
           ! General imputation procedures
           call GeneralFillIn
 
-          if (HMMOption==RUN_HMM_PREPHASE) Then
-            call MaCHController(HMMOption)
+          if (inputParams%HMMOption==RUN_HMM_PREPHASE) Then
+            call MaCHController(inputParams%HMMOption)
           else
             print*, " "
             print*, " ","Imputation of base animals completed"
-            do loop=1,InternalIterations
+            do loop=1,inputParams%InternalIterations
               print*, " "
               print*, "Performing imputation loop",loop
 
               call PhaseElimination                   ! Major Sub-Step 5 (Hickey et al., 2012; Appendix A)
-              if (SexOpt==1) then
+              if (inputParams%sexopt==1) then
                 call EnsureHetGametic
               end if
               call GeneralFillIn
@@ -136,12 +138,12 @@ CONTAINS
               print*, " ","Parent of origin assigmnent of high density haplotypes completed"
 
               call ParentPhaseElimination             ! Major Sub-Step 4 (Hickey et al., 2012; Appendix A)
-              if (SexOpt==1) then
+              if (inputParams%sexopt==1) then
                 call EnsureHetGametic
               end if
               call GeneralFillIn
               call RestrictedWorkLeftRight            ! Major Sub-Step 8 (Hickey et al., 2012; Appendix A)
-              if (SexOpt==1) then
+              if (inputParams%sexopt==1) then
                 call EnsureHetGametic
               end if
               call GeneralFillIn
@@ -149,12 +151,12 @@ CONTAINS
               print*, " ","Imputation from high-density parents completed"
 
               call ImputeFromHDLibrary                ! Major Sub-Step 3 (Hickey et al., 2012; Appendix A)
-              if (SexOpt==1) then
+              if (inputParams%sexopt==1) then
                 call EnsureHetGametic
               end if
               call GeneralFillIn
               call RestrictedWorkLeftRight            ! Major Sub-Step 8 (Hickey et al., 2012; Appendix A)
-              if (SexOpt==1) then
+              if (inputParams%sexopt==1) then
                 call EnsureHetGametic
               end if
               call GeneralFillIn
@@ -162,12 +164,12 @@ CONTAINS
               print*, " ","Haplotype library imputation completed"
 
               call InternalParentPhaseElim            ! Major Sub-Step 7 (Hickey et al., 2012; Appendix A)
-              if (SexOpt==1) then
+              if (inputParams%sexopt==1) then
                 call EnsureHetGametic
               end if
               call GeneralFillIn
               call RestrictedWorkLeftRight            ! Major Sub-Step 8 (Hickey et al., 2012; Appendix A)
-              if (SexOpt==1) then
+              if (inputParams%sexopt==1) then
                 call EnsureHetGametic
               end if
               call GeneralFillIn
@@ -175,11 +177,11 @@ CONTAINS
               print*, " ","Internal imputation from parents haplotype completed"
 
               call InternalHapLibImputation           ! Major Sub-Step 6 (Hickey et al., 2012; Appendix A)
-              if (SexOpt==1) then
+              if (inputParams%sexopt==1) then
                 call EnsureHetGametic
               end if
               call GeneralFillIn
-              if (SexOpt==1) then
+              if (inputParams%sexopt==1) then
                 call EnsureHetGametic
               end if
               call RestrictedWorkLeftRight            ! Major Sub-Step 8 (Hickey et al., 2012; Appendix A)
@@ -193,13 +195,13 @@ CONTAINS
           endif
         endif
 
-        if (SexOpt==1) then
+        if (inputParams%sexopt==1) then
           call EnsureHetGametic
         end if
         call GeneralFillIn
 
-        if (HMMOption==RUN_HMM_YES) Then
-          call MaCHController(HMMOption)
+        if (inputParams%HMMOption==RUN_HMM_YES) Then
+          call MaCHController(inputParams%HMMOption)
           call FromHMM2ImputePhase
         endif
         deallocate(GlobalWorkPhase)
@@ -240,6 +242,8 @@ CONTAINS
     type(BitSection) :: Section
     integer :: numSections, curSection, curPos,l
 
+
+    inputParams => defaultInput
     ! WARNING: This should go in a function since it is the same code as InternalParentPhaseElim subroutine
     nGlobalLoop=25
 
@@ -254,15 +258,15 @@ CONTAINS
     ! LoopStart indicates which is the first loop the algorithm should treat. The bigger the number of
     ! SNPs, the more the loops to be considered
 
-    LoopStart = getLoopStart(nSnp)
+    LoopStart = getLoopStart(inputParams%nsnp)
     if (LoopStart == 0) return
 
     ! Assumed that LoopIndex(:,1) are the numbers of cores for each phase step, LoopIndex):,2) are the core lengths
     do i=1,nGlobalLoop
-      LoopIndex(i,2)=int(float(nSnp)/LoopIndex(i,1))
+      LoopIndex(i,2)=int(float(inputParams%nsnp)/LoopIndex(i,1))
     enddo
 
-    allocate(Temp(nAnisP,nSnp,2,2))
+    allocate(Temp(nAnisP,inputParams%nsnp,2,2))
     Temp=0
     AnimalOn=0
 
@@ -273,20 +277,20 @@ CONTAINS
 
         ! Simulate phase without shift
         if (m==1) then
-          nCore=nSnp/LoopIndex(l,2)
+          nCore=inputParams%nsnp/LoopIndex(l,2)
           CoreStart=1
           CoreEnd=LoopIndex(l,2)
         else ! Simulate phase with shift
           OffSet=int(float(LoopIndex(l,2))/2)
-          nCore=(nSnp-(2*OffSet))/LoopIndex(l,2)
+          nCore=(inputParams%nsnp-(2*OffSet))/LoopIndex(l,2)
           CoreStart=1+Offset
           CoreEnd=LoopIndex(l,2)+Offset
         endif
 
         do g=1,nCore
           ! Make sure that cores ends correctly
-          if ((m==1).and.(g==nCore)) CoreEnd=nSnp
-          if ((m==2).and.(g==nCore)) CoreEnd=nSnp-OffSet
+          if ((m==1).and.(g==nCore)) CoreEnd=inputParams%nsnp
+          if ((m==2).and.(g==nCore)) CoreEnd=inputParams%nsnp-OffSet
 
           ! Exit if the corelength is too small
           CoreLength=(CoreEnd-CoreStart)+1
@@ -333,7 +337,7 @@ CONTAINS
           do i=1,nAnisP
             do e=1,2
               ! Skip if, in the case of sex chromosome, me and my parent are heterogametic
-              if ((SexOpt==1).and.(RecGender(i)==HetGameticStatus).and.(RecGender(RecPed(i,e+1))==HetGameticStatus)) cycle
+              if ((inputParams%sexopt==1).and.(RecGender(i)==HetGameticStatus).and.(RecGender(RecPed(i,e+1))==HetGameticStatus)) cycle
 
               ! If not a Base Animal
               if (RecPed(i,e+1)>0) then
@@ -433,14 +437,14 @@ CONTAINS
 ! If all alleles across the cores and across the internal phasing steps have been phased the same way, impute
     ! The individual has two haplotypes
     do e=1,2
-      do j=1,nSnp
+      do j=1,inputParams%nsnp
         do i=1,nAnisP
           if (AnimalOn(i,e)==1) then
-              if ((SexOpt==0).or.(RecGender(i)==HomGameticStatus)) then
+              if ((inputParams%sexopt==0).or.(RecGender(i)==HomGameticStatus)) then
 
                 if (ImputePhase(i,j,e)==9) then
-                    if ((Temp(i,j,e,1)>nAgreeInternalHapLibElim).and.(Temp(i,j,e,2)==0)) ImputePhase(i,j,e)=0
-                    if ((Temp(i,j,e,1)==0).and.(Temp(i,j,e,2)>nAgreeInternalHapLibElim)) ImputePhase(i,j,e)=1
+                    if ((Temp(i,j,e,1)>inputParams%nAgreeInternalHapLibElim).and.(Temp(i,j,e,2)==0)) ImputePhase(i,j,e)=0
+                    if ((Temp(i,j,e,1)==0).and.(Temp(i,j,e,2)>inputParams%nAgreeInternalHapLibElim)) ImputePhase(i,j,e)=1
                 endif
               end if
           endif
@@ -449,14 +453,14 @@ CONTAINS
     enddo
 
     ! The individual is has one haplotype: In Sex Chromosome, the heterogametic case
-    do j=1,nSnp
+    do j=1,inputParams%nsnp
       do i =1, nAnisP
-        if ((SexOpt==1).and.(RecGender(i)==HetGameticStatus)) then
+        if ((inputParams%sexopt==1).and.(RecGender(i)==HetGameticStatus)) then
           if (AnimalOn(i,HomGameticStatus)==1) then
             if (ImputePhase(i,j,HomGameticStatus)==9) then
-                if ((Temp(i,j,HomGameticStatus,1)>nAgreeInternalHapLibElim).and.(Temp(i,j,HomGameticStatus,2)==0))&
+                if ((Temp(i,j,HomGameticStatus,1)>inputParams%nAgreeInternalHapLibElim).and.(Temp(i,j,HomGameticStatus,2)==0))&
                     ImputePhase(i,j,:)=0
-                if ((Temp(i,j,HomGameticStatus,1)==0).and.(Temp(i,j,HomGameticStatus,2)>nAgreeInternalHapLibElim))&
+                if ((Temp(i,j,HomGameticStatus,1)==0).and.(Temp(i,j,HomGameticStatus,2)>inputParams%nAgreeInternalHapLibElim))&
                     ImputePhase(i,j,:)=1
             endif
           end if
@@ -491,6 +495,7 @@ end subroutine InternalParentPhaseElim
 
     use Global
     use HaplotypeBits
+    use alphaimputeinmod
     implicit none
 
     integer :: f,e,h,g,i,j,l,nCore,nHap,nGlobalLoop,CoreLength,CoreStart,CoreEnd,InLib,Count0,Count1
@@ -507,6 +512,7 @@ end subroutine InternalParentPhaseElim
     integer :: numSections, curSection, curPos
     integer :: BitGeno
 
+     inputParams => defaultInput
     ! WARNING: This should go in a function since it is the same code as InternalParentPhaseElim subroutine
     nGlobalLoop=25
 
@@ -518,15 +524,15 @@ end subroutine InternalParentPhaseElim
 
     ! LoopStart indicates which is the first loop the algorithm should treat. The bigger the number of
     ! SNPs, the more the loops to be considered
-    LoopStart = getLoopStart(nSnp)
+    LoopStart = getLoopStart(inputParams%nsnp)
     if (LoopStart == 0) return
 
     ! Assumed that LoopIndex(:,1) are the numbers of cores for each phase step, LoopIndex):,2) are the core lengths
     do i=LoopStart,nGlobalLoop
-        LoopIndex(i,2)=int(float(nSnp)/LoopIndex(i,1))
+        LoopIndex(i,2)=int(float(inputParams%nsnp)/LoopIndex(i,1))
     enddo
 
-    allocate(Temp(nAnisP,nSnp,2,2))
+    allocate(Temp(nAnisP,inputParams%nsnp,2,2))
     Temp=0
     AnimalOn=0
 
@@ -534,25 +540,25 @@ end subroutine InternalParentPhaseElim
     ! f is a variable to simulate shift or no-shift phasing
     do f=1,2
       ! Allocate the Internal Haplotype Library
-      allocate(HapLib(nAnisP*2,nSnp))
+      allocate(HapLib(nAnisP*2,inputParams%nsnp))
       do l=LoopStart,nGlobalLoop
 
         ! Simulate phase without shift
         if (f==1) then
-          nCore=nSnp/LoopIndex(l,2)
+          nCore=inputParams%nsnp/LoopIndex(l,2)
           CoreStart=1
           CoreEnd=LoopIndex(l,2)
         else ! Simulate phase with shift
           OffSet=int(float(LoopIndex(l,2))/2)
-          nCore=(nSnp-(2*OffSet))/LoopIndex(l,2)
+          nCore=(inputParams%nsnp-(2*OffSet))/LoopIndex(l,2)
           CoreStart=1+Offset
           CoreEnd=LoopIndex(l,2)+Offset
         endif
 
         do g=1,nCore
           ! Make sure that cores ends correctly
-          if ((f==1).and.(g==nCore)) CoreEnd=nSnp
-          if ((f==2).and.(g==nCore)) CoreEnd=nSnp-OffSet
+          if ((f==1).and.(g==nCore)) CoreEnd=inputParams%nsnp
+          if ((f==2).and.(g==nCore)) CoreEnd=inputParams%nsnp-OffSet
 
           ! Exit if the corelength is too small
           CoreLength=(CoreEnd-CoreStart)+1
@@ -614,7 +620,7 @@ end subroutine InternalParentPhaseElim
               ! If GeneProbPhase has been executed, that is, if not considering the Sex Chromosome, then MSTermInfo={0,1}.
               ! Else, if Sex Chromosome, then MSTermInfo is 0 always
               ! So, if a Conservative imputation of haplotypes is selected, this DO statement will do nothing
-              if ((ConservativeHapLibImputation==1).and.(MSTermInfo(i,e)==0)) cycle
+              if ((inputParams%ConservativeHapLibImputation==1).and.(MSTermInfo(i,e)==0)) cycle
 
               ! Check if the haplotype for this core is completely phased and populate HapLib
               if ( BitCompletePhased(MissImputePhase(i,:,e), numSections) ) then
@@ -670,7 +676,7 @@ end subroutine InternalParentPhaseElim
               ! If GeneProbPhase has been executed, that is, if not considering the Sex Chromosome, then MSTermInfo={0,1}.
               ! Else, if Sex Chromosome, then MSTermInfo is 0 always
               ! So, if a Conservative imputation of haplotypes is selected, this DO statement will do nothing
-              if ((ConservativeHapLibImputation==1).and.(MSTermInfo(i,e)==0)) cycle
+              if ((inputParams%ConservativeHapLibImputation==1).and.(MSTermInfo(i,e)==0)) cycle
 
               ! If haplotype is partially phased
               if ( (BitCompletePhased(MissImputePhase(i,:,e), numSections) == .FALSE.) .AND. &
@@ -766,7 +772,7 @@ end subroutine InternalParentPhaseElim
             ! allele across the cores and across the internal phasing steps
             ! This implies occurrences across all the haplotype libraries of the different internal phasing steps
             do e=1,2
-              if ((ConservativeHapLibImputation==1).and.(MSTermInfo(i,e)==0)) cycle
+              if ((inputParams%ConservativeHapLibImputation==1).and.(MSTermInfo(i,e)==0)) cycle
               if (Ban(e)==1) then
                 AnimalOn(i,e)=1
                 curPos = 1
@@ -809,20 +815,20 @@ end subroutine InternalParentPhaseElim
     !$OMP PARALLEL DEFAULT(SHARED)
     do e=1,2
       !$OMP DO PRIVATE(i,j)
-      do j=1,nSnp
+      do j=1,inputParams%nsnp
         do i=1,nAnisP
           ! If GeneProbPhase has been executed, that is, if not considering the Sex Chromosome, then MSTermInfo={0,1}.
           ! Else, if Sex Chromosome, then MSTermInfo is 0 always
           ! So, if a Conservative imputation of haplotypes is selected, this DO statement will do nothing
-          if ((ConservativeHapLibImputation==1).and.(MSTermInfo(i,e)==0)) cycle
+          if ((inputParams%ConservativeHapLibImputation==1).and.(MSTermInfo(i,e)==0)) cycle
 
           ! If all alleles across the cores and across the internal phasing steps have been phased the same way, impute
           if (AnimalOn(i,e)==1) then
             if (ImputePhase(i,j,e)==9) then
-              if ((Temp(i,j,e,1)>nAgreeInternalHapLibElim).and.(Temp(i,j,e,2)==0)) then
+              if ((Temp(i,j,e,1)>inputParams%nAgreeInternalHapLibElim).and.(Temp(i,j,e,2)==0)) then
                 ImputePhase(i,j,e)=0
               end if
-              if ((Temp(i,j,e,1)==0).and.(Temp(i,j,e,2)>nAgreeInternalHapLibElim)) then
+              if ((Temp(i,j,e,1)==0).and.(Temp(i,j,e,2)>inputParams%nAgreeInternalHapLibElim)) then
                 ImputePhase(i,j,e)=1
               end if
             endif
@@ -862,7 +868,7 @@ end subroutine InternalParentPhaseElim
     use PhaseRounds
     use Utils
     use HaplotypeBits
-    use GlobalFiles, only : PhasePath
+    use alphaimputeinmod
     implicit none
 
     integer :: e,g,h,i,j,GamA,GamB,nAnisHD,PosHDInd
@@ -878,24 +884,25 @@ end subroutine InternalParentPhaseElim
 
     integer :: numSections, curSection, curPos
 
+    inputParams => defaultInput
     ! Number of animals that have been HD phased
     nAnisHD=(count(Setter(:)==1))
 
-    allocate(Temp(nAnisP,nSnp,2,2))
-    allocate(PhaseHD(nAnisHD,nSnp,2))
+    allocate(Temp(nAnisP,inputParams%nsnp,2,2))
+    allocate(PhaseHD(nAnisHD,inputParams%nsnp,2))
     allocate(PosHD(nAnisP))
     PosHD=0
     Temp=0
     AnimalOn=0
     ! FOR EACH CORE OF EACH ROUND OF THE LRPHLI
-    do h=1,nPhaseInternal
+    do h=1,inputParams%nPhaseInternal
       ! Get HIGH DENSITY phase information of this phasing step and information
       ! of core indexes
       FileName=""
       FileNamePhase=""
-      if (ManagePhaseOn1Off0==0) then
-        FileName = getFileNameCoreIndex(trim(PhasePath),h)
-        FileNamePhase = getFileNameFinalPhase(trim(PhasePath),h)
+      if (inputParams%ManagePhaseOn1Off0==0) then
+        FileName = getFileNameCoreIndex(trim(inputParams%phasePath),h)
+        FileNamePhase = getFileNameFinalPhase(trim(inputParams%phasePath),h)
       else
         FileName = getFileNameCoreIndex(h)
         FileNamePhase = getFileNameFinalPhase(h)
@@ -1055,16 +1062,16 @@ end subroutine InternalParentPhaseElim
     enddo
 
     do e=1,2
-      do j=1,nSnp
+      do j=1,inputParams%nsnp
         do i=1,nAnisP
           if (AnimalOn(i,e)==1) then
             if (ImputePhase(i,j,e)==9) then
               ! Impute phase allele with the most significant code for that allele across haplotypes
               ! only if the other codification never happens
-              if ((Temp(i,j,e,1)>nAgreeInternalHapLibElim).and.(Temp(i,j,e,2)==0)) then
+              if ((Temp(i,j,e,1)>inputParams%nAgreeInternalHapLibElim).and.(Temp(i,j,e,2)==0)) then
                 ImputePhase(i,j,e)=0
               end if
-              if ((Temp(i,j,e,1)==0).and.(Temp(i,j,e,2)>nAgreeInternalHapLibElim)) then
+              if ((Temp(i,j,e,1)==0).and.(Temp(i,j,e,2)>inputParams%nAgreeInternalHapLibElim)) then
                 ImputePhase(i,j,e)=1
               end if
             endif
@@ -1101,7 +1108,7 @@ end subroutine InternalParentPhaseElim
     use PhaseRounds
     use HaplotypeBits
     use Utils
-    use GlobalFiles, only : PhasePath
+    use alphaimputeinmod
     implicit none
 
     integer :: e,g,h,i,j,PedId,GamA,GamB,nAnisHD,PosHDInd
@@ -1109,7 +1116,6 @@ end subroutine InternalParentPhaseElim
     integer,allocatable,dimension (:) :: PosHD
     integer,allocatable,dimension (:,:,:) :: PhaseHD
     integer(kind=1),allocatable,dimension (:,:,:,:) :: Temp
-
     integer(kind=8), allocatable, dimension(:,:,:) :: BitPhaseHD, BitImputePhase, MissPhaseHD, MissImputePhase
 
     character(len=1000) :: FileName,FileNamePhase
@@ -1117,21 +1123,22 @@ end subroutine InternalParentPhaseElim
     type(BitSection) :: Section
     integer :: numSections, curSection, curPos
 
+    inputParams => defaultInput
     nAnisHD=(count(Setter(:)==1))
 
-    allocate(Temp(nAnisP,nSnp,2,2))
-    allocate(PhaseHD(nAnisHD,nSnp,2))
+    allocate(Temp(nAnisP,inputParams%nsnp,2,2))
+    allocate(PhaseHD(nAnisHD,inputParams%nsnp,2))
     allocate(PosHD(nAnisP))
     PosHD=0
     Temp=0
     AnimalOn=0
 
-    do h=1,nPhaseInternal
+    do h=1,inputParams%nPhaseInternal
       ! Get HIGH DENSITY phase information of this phasing step and information
       ! of core indexes
-      if (ManagePhaseOn1Off0==0) then
-        FileName = getFileNameCoreIndex(trim(PhasePath),h)
-        FileNamePhase = getFileNameFinalPhase(trim(PhasePath),h)
+      if (inputParams%ManagePhaseOn1Off0==0) then
+        FileName = getFileNameCoreIndex(trim(inputParams%phasePath),h)
+        FileNamePhase = getFileNameFinalPhase(trim(inputParams%phasePath),h)
       else
         FileName = getFileNameCoreIndex(h)
         FileNamePhase = getFileNameFinalPhase(h)
@@ -1200,7 +1207,7 @@ end subroutine InternalParentPhaseElim
           do e=1,2
             PedId=e+1
             ! Skip if, in the case of sex chromosome, me and my parent are heterogametic
-            if ((SexOpt==1).and.(RecGender(i)==HetGameticStatus).and.&
+            if ((inputParams%sexopt==1).and.(RecGender(i)==HetGameticStatus).and.&
                 (RecGender(RecPed(i,PedId))==HetGameticStatus)) then
                   cycle
             end if
@@ -1286,17 +1293,17 @@ end subroutine InternalParentPhaseElim
     enddo
 
     do e=1,2
-      do j=1,nSnp
+      do j=1,inputParams%nsnp
         do i=1,nAnisP
           if (AnimalOn(i,e)==1) then
-            if ((SexOpt==0).or.(RecGender(i)==HomGameticStatus)) then
+            if ((inputParams%sexopt==0).or.(RecGender(i)==HomGameticStatus)) then
               if (ImputePhase(i,j,e)==9) then
                 ! Impute phase allele with the most significant code for that allele across haplotypes
                 ! only if the other codification never happens
-                if ((Temp(i,j,e,1)>nAgreeInternalHapLibElim).and.(Temp(i,j,e,2)==0)) then
+                if ((Temp(i,j,e,1)>inputParams%nAgreeInternalHapLibElim).and.(Temp(i,j,e,2)==0)) then
                   ImputePhase(i,j,e)=0
                 end if
-                if ((Temp(i,j,e,1)==0).and.(Temp(i,j,e,2)>nAgreeInternalHapLibElim)) then
+                if ((Temp(i,j,e,1)==0).and.(Temp(i,j,e,2)>inputParams%nAgreeInternalHapLibElim)) then
                   ImputePhase(i,j,e)=1
                 end if
               end if
@@ -1306,20 +1313,20 @@ end subroutine InternalParentPhaseElim
       end do
     end do
 
-    do j=1,nSnp
+    do j=1,inputParams%nsnp
       do i = 1, nAnisP
-        if ((SexOpt==1).and.(RecGender(i)==HetGameticStatus)) then
+        if ((inputParams%sexopt==1).and.(RecGender(i)==HetGameticStatus)) then
           if (AnimalOn(i,HomGameticStatus)==1) then
 
             if (ImputePhase(i,j,HomGameticStatus)==9) then
               ! Impute phase allele with the most significant code for that allele across haplotypes
               ! only if the other codification never happens
-              if ((Temp(i,j,HomGameticStatus,1)>nAgreeInternalHapLibElim).and.&
+              if ((Temp(i,j,HomGameticStatus,1)>inputParams%nAgreeInternalHapLibElim).and.&
                   (Temp(i,j,HomGameticStatus,2)==0)) then
                     ImputePhase(i,j,:)=0
               end if
               if ((Temp(i,j,HomGameticStatus,1)==0).and.&
-                  (Temp(i,j,HomGameticStatus,2)>nAgreeInternalHapLibElim)) then
+                  (Temp(i,j,HomGameticStatus,2)>inputParams%nAgreeInternalHapLibElim)) then
                     ImputePhase(i,j,:)=1
               end if
             endif
@@ -1355,10 +1362,11 @@ end subroutine InternalParentPhaseElim
     use PhaseRounds
     use Utils
     use HaplotypeBits
-    use GlobalFiles, only : PhasePath
+    use alphaimputeinmod
     implicit none
 
-    integer :: l,i,j,k,h,e,f,g,CoreLength,nHap,CountAB(nSnp,0:1),Work(nSnp,2),TempCount
+
+    integer :: l,i,j,k,h,e,f,g,CoreLength,nHap,CountAB(inputParams%nsnp,0:1),Work(inputParams%nsnp,2),TempCount
     integer :: StartSnp,EndSnp,PatMatDone(2),Counter,BanBoth(2),Ban(2),AnimalOn(nAnisP,2)
     integer,allocatable,dimension (:,:,:,:) :: Temp
     integer(kind=1),allocatable,dimension (:,:) :: HapLib,HapCand
@@ -1373,17 +1381,18 @@ end subroutine InternalParentPhaseElim
     type(BitSection) :: Section
     integer :: numSections, curSection, curPos
 
-    ! Temp(nAnisP, nSNPs, PatHap, Phase)
-    allocate(Temp(0:nAnisP,nSnp,2,2))
+    inputParams => defaultInput
+    ! Temp(nAnisP, inputParams%nsnps, PatHap, Phase)
+    allocate(Temp(0:nAnisP,inputParams%nsnp,2,2))
     Temp=0
 
     AnimalOn=0
 
-    do h=1,nPhaseInternal
+    do h=1,inputParams%nPhaseInternal
       ! Get HIGH DENSITY phase information of this phasing step and information
       ! of core indexes
-      if (ManagePhaseOn1Off0==0) then
-        FileName = getFileNameCoreIndex(trim(PhasePath),h)
+      if (inputParams%ManagePhaseOn1Off0==0) then
+        FileName = getFileNameCoreIndex(trim(inputParams%phasePath),h)
       else
         FileName = getFileNameCoreIndex(h)
       end if
@@ -1427,8 +1436,8 @@ end subroutine InternalParentPhaseElim
           end do
         end do
 
-        if (ManagePhaseOn1Off0==0) then
-          FileName = getFileNameHapLib(trim(PhasePath),h,g)
+        if (inputParams%ManagePhaseOn1Off0==0) then
+          FileName = getFileNameHapLib(trim(inputParams%phasePath),h,g)
         else
           FileName = getFileNameHapLib(h,g)
         end if
@@ -1495,7 +1504,7 @@ end subroutine InternalParentPhaseElim
               ! If GeneProbPhase has been executed, that is, if not considering the Sex Chromosome, then MSTermInfo={0,1}.
               ! Else, if Sex Chromosome, then MSTermInfo is 0 always
               ! So, if a Conservative imputation of haplotypes is selected, this DO statement will do nothing
-              if ((ConservativeHapLibImputation==1).and.(MSTermInfo(i,e)==0)) cycle
+              if ((inputParams%ConservativeHapLibImputation==1).and.(MSTermInfo(i,e)==0)) cycle
 
               ! If haplotype is partially phased
               if ((PatMatDone(e)==1).and.&
@@ -1508,7 +1517,7 @@ end subroutine InternalParentPhaseElim
                   end if
                 enddo
 
-                ! CountAB(nSNPs,0:1) matrix indicating how many haplotypes has been phased as 0
+                ! CountAB(inputParams%nsnps,0:1) matrix indicating how many haplotypes has been phased as 0
                 ! or 1 in a particular allele
                 CountAB=0
 
@@ -1576,7 +1585,7 @@ end subroutine InternalParentPhaseElim
                 ! If GeneProbPhase has been executed, that is, if not considering the Sex Chromosome, then MSTermInfo={0,1}.
                 ! Else, if Sex Chromosome, then MSTermInfo is 0 always
                 ! So, if a Conservative imputation of haplotypes is selected, this DO statement will do nothing
-                if ((ConservativeHapLibImputation==1).and.(MSTermInfo(i,e)==0)) cycle
+                if ((inputParams%ConservativeHapLibImputation==1).and.(MSTermInfo(i,e)==0)) cycle
                 if (Ban(e)==1) then
                   AnimalOn(i,e)=1
                   do j=StartSnp,EndSnp
@@ -1599,21 +1608,21 @@ end subroutine InternalParentPhaseElim
     enddo
 
     do e=1,2
-      do j=1,nSnp
+      do j=1,inputParams%nsnp
         do i=1,nAnisP
           ! If GeneProbPhase has been executed, that is, if not considering the Sex Chromosome, then MSTermInfo={0,1}.
           ! Else, if Sex Chromosome, then MSTermInfo is 0 always
           ! So, if a Conservative imputation of haplotypes is selected, this DO statement will do nothing
-          if ((ConservativeHapLibImputation==1).and.(MSTermInfo(i,e)==0)) cycle
+          if ((inputParams%ConservativeHapLibImputation==1).and.(MSTermInfo(i,e)==0)) cycle
 
           ! If all alleles across the cores across the internal phasing steps have been phased the
           ! same way, impute
           if (AnimalOn(i,e)==1) then
             if (ImputePhase(i,j,e)==9) then
-              if ((Temp(i,j,e,1)>nAgreeInternalHapLibElim).and.(Temp(i,j,e,2)==0)) then
+              if ((Temp(i,j,e,1)>inputParams%nAgreeInternalHapLibElim).and.(Temp(i,j,e,2)==0)) then
                 ImputePhase(i,j,e)=0
               end if
-              if ((Temp(i,j,e,1)==0).and.(Temp(i,j,e,2)>nAgreeInternalHapLibElim)) then
+              if ((Temp(i,j,e,1)==0).and.(Temp(i,j,e,2)>inputParams%nAgreeInternalHapLibElim)) then
                 ImputePhase(i,j,e)=1
               end if
             endif
@@ -1644,7 +1653,7 @@ end subroutine InternalParentPhaseElim
     use GlobalPedigree
     use PhaseRounds
     use Utils
-    use GlobalFiles, only : PhasePath
+    use alphaimputeinmod
 
     implicit none
 
@@ -1655,24 +1664,24 @@ end subroutine InternalParentPhaseElim
     ! integer,allocatable,dimension (:,:) :: CoreIndexA,CoreIndexB,AnimRecomb
     integer,allocatable,dimension (:,:) :: AnimRecomb
     integer,allocatable,dimension (:,:,:,:) :: PhaseHD
-
     character(len=1000) :: FileName,dumC
     type(CoreIndex) :: CoreIA, CoreIB
 
+    inputParams => defaultInput
     nAnisHD=(count(Setter(:)==1))
 
-    allocate(PhaseHD(nAnisHD,nSnp,2,2))     ! HIGH DENSITY PHASING: PhaseHD = (Animals, SNPs, Haplotypes, Nonshifted and Shifted phasing)
+    allocate(PhaseHD(nAnisHD,inputParams%nsnp,2,2))     ! HIGH DENSITY PHASING: PhaseHD = (Animals, SNPs, Haplotypes, Nonshifted and Shifted phasing)
     allocate(AnimRecomb(nAnisP,2))
     allocate(PosHD(nAnisP))
     AnimRecomb=0
     PosHD=0
 
     ! Select the phasing in the middle
-    MiddlePhaseRun=(int(nPhaseInternal)/4)
+    MiddlePhaseRun=(int(inputParams%nPhaseInternal)/4)
     if (MiddlePhaseRun==0) then
       MiddlePhaseRun=1
     end if
-    CompJump=int(nPhaseInternal)/2
+    CompJump=int(inputParams%nPhaseInternal)/2
     if (CompJump==0) then
       CompJump=1             ! This is only possible if no phasing info is available
     end if
@@ -1683,8 +1692,8 @@ end subroutine InternalParentPhaseElim
 
     ! Get HIGH DENSITY phase information of this phasing step and information
     ! of core indexes
-    if (ManagePhaseOn1Off0==0) then
-      FileName = getFileNameCoreIndex(trim(PhasePath),MiddlePhaseRun)
+    if (inputParams%ManagePhaseOn1Off0==0) then
+      FileName = getFileNameCoreIndex(trim(inputParams%phasePath),MiddlePhaseRun)
     else
       FileName = getFileNameCoreIndex(MiddlePhaseRun)
     end if
@@ -1698,8 +1707,8 @@ end subroutine InternalParentPhaseElim
 
     ! Get HIGH DENSITY phase information of this phasing step and information
     ! of core indexes
-    if (ManagePhaseOn1Off0==0) then
-      FileName = getFileNameCoreIndex(trim(PhasePath),CompPhaseRun)
+    if (inputParams%ManagePhaseOn1Off0==0) then
+      FileName = getFileNameCoreIndex(trim(inputParams%phasePath),CompPhaseRun)
     else
       FileName = getFileNameCoreIndex(CompPhaseRun)
     end if
@@ -1714,14 +1723,14 @@ end subroutine InternalParentPhaseElim
     ! Get HIGH DENSITY phase information of this phasing step
     ! WARNING: If I only want to phase base animals, why do I need to read the whole file?
 #ifdef OS_UNIX
-if (ManagePhaseOn1Off0==0) then
-    write (FileName,'(a,"Phase",i0,"/PhasingResults/FinalPhase.txt")') trim(PhasePath),MiddlePhaseRun
+if (inputParams%ManagePhaseOn1Off0==0) then
+    write (FileName,'(a,"Phase",i0,"/PhasingResults/FinalPhase.txt")') trim(inputParams%phasePath),MiddlePhaseRun
 else
     write (FileName,'("./Phasing/Phase",i0,"/PhasingResults/FinalPhase.txt")')MiddlePhaseRun
 endif
 #else
-if (ManagePhaseOn1Off0==0) then
-    write (FileName,'(a,"Phase",i0,"\PhasingResults\FinalPhase.txt")') trim(PhasePath),MiddlePhaseRun
+if (inputParams%ManagePhaseOn1Off0==0) then
+    write (FileName,'(a,"Phase",i0,"\PhasingResults\FinalPhase.txt")') trim(inputParams%phasePath),MiddlePhaseRun
 else
     write (FileName,'(".\Phasing\Phase",i0,"\PhasingResults\FinalPhase.txt")')MiddlePhaseRun
 endif
@@ -1742,14 +1751,14 @@ endif
     close(2001)
 
 #ifdef OS_UNIX
-if (ManagePhaseOn1Off0==0) then
-    write (FileName,'(a,"Phase",i0,"/PhasingResults/FinalPhase.txt")') trim(PhasePath),CompPhaseRun
+if (inputParams%ManagePhaseOn1Off0==0) then
+    write (FileName,'(a,"Phase",i0,"/PhasingResults/FinalPhase.txt")') trim(inputParams%phasePath),CompPhaseRun
 else
     write (FileName,'("./Phasing/Phase",i0,"/PhasingResults/FinalPhase.txt")')CompPhaseRun
 endif
 #else
-if (ManagePhaseOn1Off0==0) then
-    write (FileName,'(a,"Phase",i0,"\PhasingResults\FinalPhase.txt")') trim(PhasePath),CompPhaseRun
+if (inputParams%ManagePhaseOn1Off0==0) then
+    write (FileName,'(a,"Phase",i0,"\PhasingResults\FinalPhase.txt")') trim(inputParams%phasePath),CompPhaseRun
 else
     write (FileName,'(".\Phasing\Phase",i0,"\PhasingResults\FinalPhase.txt")')CompPhaseRun
 endif
@@ -1962,7 +1971,7 @@ endif
 
         ! Exit condition
         if (e==1) then
-          if (UpToSnp>=nSnp) exit     ! Exit if we've reached the last SNP
+          if (UpToSnp>=inputParams%nsnp) exit     ! Exit if we've reached the last SNP
         else
           if (UpToSnp<=1) exit        ! Exit if we've reached the first SNP
         endif
@@ -1978,21 +1987,21 @@ endif
 
   subroutine InitialiseArrays
     ! Impute phase information for homozygous cases
-    ! use Global
+    use alphaimputeinmod
     implicit none
 
     integer :: i,j,dum
 
     ImputeGenos=9
     ImputePhase=9
-
+    inputParams => defaultInput
     ! Get information from RecodedGeneProbInput.txt which has been created in Makefiles subroutine
     ! WARNING: Why don't read information from Geno(:,:) that has been used to feed RecodedGeneProbInput.txt instead??
     !          Read from file is always slower!
     open (unit=43,file='.' // DASH // 'InputFiles' // DASH // 'RecodedGeneProbInput.txt',status='old')
     do i=1,nAnisP
       read (43,*) dum,dum,dum,ImputeGenos(i,:)
-      do j=1,nSnp
+      do j=1,inputParams%nsnp
         if (ImputeGenos(i,j)==0) ImputePhase(i,j,:)=0
         if (ImputeGenos(i,j)==2) ImputePhase(i,j,:)=1
       enddo
@@ -2026,11 +2035,14 @@ endif
   SUBROUTINE EnsureHetGametic
     ! Impute phase to Y chromosome from X chromosome for heterogametic individuals
     use Global
+    use alphaimputeinmod
     implicit none
 
     integer :: i,j
 
-    do j=1,nSnp
+    inputParams => defaultInput
+
+    do j=1,inputParams%nsnp
       do i=1,nAnisP
         if (RecGender(i)==HetGameticStatus) then
           if ((ImputePhase(i,j,1)==9).and.(ImputePhase(i,j,2)/=9)) then
@@ -2051,11 +2063,14 @@ endif
     ! Any individual that has a missing genotype information but has both alleles
     ! known, has its genotype filled in as the sum of the two alleles
     use Global
+    use alphaimputeinmod
+    
     implicit none
 
     integer :: i,j
 
-    do j=1,nSnp
+    inputParams => defaultInput
+    do j=1,inputParams%nsnp
       do i=1,nAnisP
         if (ImputeGenos(i,j)==9) then
           if ((ImputePhase(i,j,1)/=9).and.(ImputePhase(i,j,2)/=9)) then
@@ -2080,7 +2095,7 @@ endif
 
     integer :: i,j
 
-    do j=1,nSnp
+    do j=1,inputParams%nsnp
       do i=1,nAnisP
         if (ImputeGenos(i,j)/=9) then
             if ((ImputePhase(i,j,1)/=9).and.(ImputePhase(i,j,2)==9)) then
@@ -2104,15 +2119,17 @@ endif
     ! Fill in the allele of an offspring of a parent that has both its
     ! alleles filled in and has a resulting genotype that is homozygous
     use Global
+    use alphaimputeinmod
     implicit none
 
     integer :: e,i,j,ParId
 
+    inputParams => defaultInput
     do i=1,nAnisP
-      if (SexOpt==0 .or. (SexOpt==1 .and. RecGender(i)/=HetGameticStatus) ) then     ! If individual is homogametic
+      if (inputParams%sexopt==0 .or. (inputParams%sexopt==1 .and. RecGender(i)/=HetGameticStatus) ) then     ! If individual is homogametic
         do e=1,2
           ParId=RecPed(i,e+1)
-          do j=1,nSnp
+          do j=1,inputParams%nsnp
             if (ImputePhase(i,j,e)==9) then                 ! Always that the SNP is not genotyped
               if ((ImputePhase(ParId,j,1)==ImputePhase(ParId,j,2)).and. &
                   (ImputePhase(ParId,j,1)/=9)) then
@@ -2124,7 +2141,7 @@ endif
         enddo
       else
         ParId=RecPed(i,HomGameticStatus+1)      ! The homogametic parent
-        do j=1,nSnp
+        do j=1,inputParams%nsnp
           if (ImputePhase(i,j,1)==9) then !Comment from John Hickey see analogous iterate subroutine
             if ((ImputePhase(ParId,j,1)==ImputePhase(ParId,j,2)).and. &
                 (ImputePhase(ParId,j,1)/=9)) then
@@ -2147,18 +2164,19 @@ endif
   ! in the missing allele in the parent if, at least, one of its offspring
   ! is known to carry an allele that does not match the known allele in the parent
     use Global
+    use alphaimputeinmod
 
     implicit none
 
     integer :: i,j,k,l,Count1,Count0
-
+    inputParams => defaultInput
     do i=1,nAnisP
       do j=1,2
         if (SireDam(i,j)==1) then       ! We are only interested in sires because they have more progeny
 
           ! Sex chromosome
-          if (SexOpt==1) then
-            do k=1,nSnp
+          if (inputParams%sexopt==1) then
+            do k=1,inputParams%nsnp
 
               ! Mat gamete missing -> fill if offspring suggest heterozygous
               ! WARNING: This was comment the other way around in the original version of the code
@@ -2171,7 +2189,7 @@ endif
                 ! Look for the individual progeny and count their phase
                 do l=1,nAnisP
 
-                  ! This is the only difference with the SexOpt=0 code below. Duplicating
+                  ! This is the only difference with the inputParams%sexopt=0 code below. Duplicating
                   ! the code can be avoided by including the IF statement here instead than
                   ! outside the SNPs loop.
                   if ((RecGender(i)==HetGameticStatus).and.(RecGender(l)==HetGameticStatus)) cycle
@@ -2197,7 +2215,7 @@ endif
                 if (ImputePhase(i,k,2)==0) Count0=1
                 do l=1,nAnisP
 
-                  ! This is the only difference with the SexOpt=0 code below. Duplicating
+                  ! This is the only difference with the inputParams%sexopt=0 code below. Duplicating
                   ! the code can be avoided by including the IF statement here instead than
                   ! outside the SNPs loop.
                   if ((RecGender(i)==HetGameticStatus).and.(RecGender(l)==HetGameticStatus)) cycle
@@ -2217,7 +2235,7 @@ endif
 
           ! Generic chromosome
           else
-            do k=1,nSnp
+            do k=1,inputParams%nsnp
               if ((ImputePhase(i,k,1)/=9).and.(ImputePhase(i,k,2)==9)) then               !Pat gamete missing fill if offspring suggest heterozygous
                 Count1=0
                 Count0=0
@@ -2277,16 +2295,19 @@ endif
 
     use Global
     use GlobalPedigree
+    use alphaimputeinmod
+
     implicit none
 
     integer :: h,i,j,k,m,dum,StSnp,EnSnp
-    real :: PatAlleleProb(nSnp,2),MatAlleleProb(nSnp,2),HetProb(nSnp),GeneProbWork(nSnp,4)
-    integer :: Informativeness(nSnp,6),TmpInfor(nSnp,6),GrandPar
+    real :: PatAlleleProb(inputParams%nsnp,2),MatAlleleProb(inputParams%nsnp,2),HetProb(inputParams%nsnp),GeneProbWork(inputParams%nsnp,4)
+    integer :: Informativeness(inputParams%nsnp,6),TmpInfor(inputParams%nsnp,6),GrandPar
     character(len=300) :: filout
 
-    if (BypassGeneProb==0) then
+    inputParams => defaultInput
+    if (inputParams%BypassGeneProb==0) then
     ! Get information from GeneProb
-      do h=1,nProcessors
+      do h=1,inputParams%nProcessors
 #ifdef OS_UNIX
         write (filout,'("./GeneProb/GeneProb"i0,"/GeneProbs.txt")')h            !here
 #else
@@ -2337,7 +2358,7 @@ endif
       Informativeness(:,:)=9 ! What the hell is this variable for??
       j=0
       ! Check whether my parents and grandparents are heterozygous
-      do m=1,nSnpRaw
+      do m=1,inputParams%nsnpRaw
         if (SnpIncluded(m)==1) then                     ! Whether to consider this SNP
           j=j+1                                       ! Number of SNPs included so far
           if (ImputeGenos(i,j)==1) then               ! If heterozygous
@@ -2423,33 +2444,35 @@ endif
   ! Major sub-step 8 is iterated a number of times with increasingly relaxed
   ! restrictions. After each iteration, the minor sub-steps are also carried out.
     use Global
+    use alphaimputeinmod
 
     implicit none
 
+    inputParams => defaultInput
     MaxLeftRightSwitch=4; MinSpan=200
     call WorkLeftRight
-    if (SexOpt==1) then
+    if (inputParams%sexopt==1) then
       call EnsureHetGametic
     end if
     call GeneralFillIn
 
     MaxLeftRightSwitch=3; MinSpan=200
     call WorkLeftRight
-    if (SexOpt==1) then
+    if (inputParams%sexopt==1) then
       call EnsureHetGametic
     end if
     call GeneralFillIn
 
     MaxLeftRightSwitch=4; MinSpan=100
     call WorkLeftRight
-    if (SexOpt==1) then
+    if (inputParams%sexopt==1) then
       call EnsureHetGametic
     end if
     call GeneralFillIn
 
     MaxLeftRightSwitch=4; MinSpan=50
     call WorkLeftRight
-    if (SexOpt==1) then
+    if (inputParams%sexopt==1) then
       call EnsureHetGametic
     end if
     call GeneralFillIn

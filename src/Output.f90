@@ -14,23 +14,24 @@ INTERFACE
 END INTERFACE
 end module Output
 
+
+
 ! subroutine WriteProbabilitiesHMM(outFile, Indexes, Ids, nAnims, nSnps)
 subroutine WriteProbabilitiesHMM(outFile, Indexes, nAnims, nSnps)
 use GlobalPedigree
 use GlobalVariablesHmmMaCH
-
+use alphaimputeinmod
 character(len=*), intent(IN) :: outFile
 integer, intent(IN) :: nAnims, nSnps
 integer, intent(IN) :: Indexes(nAnims)
-
+type(AlphaImputeInput), pointer :: inputParams
 ! character*(20), intent(IN) :: Ids(:)
-
-
 ! Local variables
 integer :: i,j, n0, n1, n2
 real :: d
 real, allocatable :: Probs0(:), Probs1(:)
 
+inputParams => defaultInput
 open (unit=55,file=outFile,status="unknown")
 
 allocate(Probs0(nSnps))
@@ -45,7 +46,7 @@ do i=1,nAnims
     do j=1,nSnps
         n1 = GenosCounts(i,j,1)                           ! Heterozygous
         n2 = GenosCounts(i,j,2)                           ! Homozygous: 2 case
-        n0 = (GlobalRoundHmm-HmmBurnInRound) - n1 - n2     ! Homozygous: 0 case
+        n0 = (GlobalRoundHmm-inputParams%HmmBurnInRound) - n1 - n2     ! Homozygous: 0 case
         d = n0 + n1 + n2
         Probs0(j)=n0/d
         Probs1(j)=n1/d
@@ -95,20 +96,22 @@ subroutine ReReadIterateGeneProbs(GenosProbs, IterGeneProb, nAnis)
 ! G00, and the heterozygous genotype, Gh = G10 + G01. The homozygous genotype for the alternative allele can be inferred
 ! from the these two as G11 = 1 - G00 - Gh
 use Global
-
+use alphaimputeinmod
 implicit none
 
 logical, intent(IN) :: IterGeneProb
 integer, intent(IN) :: nAnis
 !double precision, dimension(:,:,:), intent(INOUT) :: GenosProbs(nAnis,markers,2)
 double precision, dimension(:,:,:), intent(INOUT) :: GenosProbs
-
+type(AlphaImputeInput), pointer :: inputParams
 ! Local variables
 integer :: h,i,j,dum,StSnp,EnSnp
 double precision, allocatable :: GeneProbWork(:,:)
 character(len=300) :: inFile
 
-do h=1,nProcessors
+inputParams => defaultInput
+
+do h=1,inputParams%nProcessors
     if (IterGeneProb) then
       write (inFile,'("IterateGeneProb/GeneProb"i0,"/GeneProbs.txt")')h          !here
     else

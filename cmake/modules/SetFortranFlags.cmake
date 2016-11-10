@@ -59,7 +59,10 @@ IF(APPLE)
 ELSE()
     SET(GNUNATIVE "-march=native")
 ENDIF()
+
+
 if (WIN32)
+    message("Environment set to OS_WIN")
     add_definitions(-DOS_WIN)
      SET_COMPILE_FLAG(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS}"              
                 Fortran "/libs:static"
@@ -68,6 +71,7 @@ if (WIN32)
                  Fortran "/static"
                 )
 else()
+    message("Environment set to OS_UNIX")
     add_definitions(-DOS_UNIX) 
 endif()
 
@@ -141,6 +145,12 @@ SET_COMPILE_FLAG(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG}"
                          "-fcheck=bounds" # GNU (New style)
                          "-fbounds-check" # GNU (Old style)
                          "-Mbounds"       # Portland Group
+                )
+
+SET_COMPILE_FLAG(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG}"
+                 Fortran "-check all"  # Intel
+                         "/check:all"  # Intel Windows
+
                 )
 
 #####################

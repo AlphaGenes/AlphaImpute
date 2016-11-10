@@ -120,20 +120,24 @@ FUNCTION CountPhasedGametes RESULT( gametesPhased )
 
 USE Global
 USE GlobalVariablesHmmMaCH
+use alphaimputeinmod
 
 INTEGER :: gametesPhased, ind
 INTEGER(KIND=1), ALLOCATABLE :: gamete(:)
+type(AlphaImputeInput), pointer :: inputParams
+
+inputParams => defaultInput
 
 allocate(gamete(nSnpHmm))
 gametesPhased=0
 do ind=1,nAnisP
     gamete=ImputePhase(ind,:,1)
-    if (float(count(gamete(:)==1 .OR. gamete(:)==0))/nSnpHmm >= imputedThreshold/100.0) then
+    if (float(count(gamete(:)==1 .OR. gamete(:)==0))/nSnpHmm >= inputParams%imputedThreshold/100.0) then
         gametesPhased=gametesPhased+1
     endif
 
     gamete=ImputePhase(ind,:,2)
-    if (float(count(gamete(:)==1 .OR. gamete(:)==0))/nSnpHmm >= imputedThreshold/100.0) then
+    if (float(count(gamete(:)==1 .OR. gamete(:)==0))/nSnpHmm >= inputParams%imputedThreshold/100.0) then
         gametesPhased=gametesPhased+1
     endif
 enddo

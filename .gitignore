@@ -10,10 +10,8 @@ bin/
 *.i90
 *.dwarf
 *.F90
-AlphaImpute
 AlphaImpute_*
 AlphaImpute1*
-AlphaImpute*v*
 GeneProbForAlphaImpute
 proj*
 penmp
