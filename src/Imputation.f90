@@ -9,6 +9,7 @@ MODULE Imputation
   use GlobalPedigree
   use GlobalVariablesHmmMaCH
   use AlphaImputeInMod
+  use InputMod
   implicit none
 
   type(AlphaImputeInput), pointer :: inputParams
@@ -58,7 +59,7 @@ CONTAINS
       write(0,*) 'DEBUG: Read Genotypes'
 #endif
 
-      call ReadGenos(inputParams%GenotypeFile)
+      call ReadGenos(inputParams%GenotypeFileUnit)
 
       ! Impute observed genotypes to animals in the pedigree
       do i=1,nAnisG
@@ -2064,7 +2065,7 @@ endif
     ! known, has its genotype filled in as the sum of the two alleles
     use Global
     use alphaimputeinmod
-    
+
     implicit none
 
     integer :: i,j

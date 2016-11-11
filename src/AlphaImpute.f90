@@ -50,6 +50,7 @@ use GlobalVariablesHmmMaCH
 use Output
 use AlphaImputeInMod
 use Imputation
+use InputMod
 implicit none
 
 integer :: markers
@@ -127,7 +128,7 @@ else
     allocate(ImputePhase(0:nAnisG,inputParams%nsnp,2))
     allocate(SnpIncluded(inputParams%nsnp))
     call CheckParentage
-    call ReadSeq(inputParams%GenotypeFile)
+    call ReadSeq(inputParams%GenotypeFileUnit)
 endif
 
 if (inputParams%hmmoption == RUN_HMM_NGS) then
@@ -4098,232 +4099,232 @@ end subroutine CheckParentage
 
 !#############################################################################################################################################################################################################################
 
-subroutine CountInData
-! Count the number of individuals genotyped and the number of individuals in the pedigree.
-! If no pedigree information is available, then these to counts are equal to the number of
-! individuals genotyped.
+! subroutine CountInData
+! ! Count the number of individuals genotyped and the number of individuals in the pedigree.
+! ! If no pedigree information is available, then these to counts are equal to the number of
+! ! individuals genotyped.
 
-use Global
-use GlobalVariablesHmmMaCH
-use alphaimputeinmod
-implicit none
+! use Global
+! use GlobalVariablesHmmMaCH
+! use alphaimputeinmod
+! implicit none
 
-integer :: k
-character (len=300) :: dumC
-type(AlphaImputeInput), pointer :: inputParams
+! integer :: k
+! character (len=300) :: dumC
+! type(AlphaImputeInput), pointer :: inputParams
 
-inputParams => defaultInput
-do
-    read (inputParams%pedigreeFileUnit,*,iostat=k) dumC
-    nAnisRawPedigree=nAnisRawPedigree+1
-    if (k/=0) then
-        nAnisRawPedigree=nAnisRawPedigree-1
-        exit            ! This forces to exit if an error is found
-    endif
-enddo
-rewind(2)
+! inputParams => defaultInput
+! do
+!     read (inputParams%pedigreeFileUnit,*,iostat=k) dumC
+!     nAnisRawPedigree=nAnisRawPedigree+1
+!     if (k/=0) then
+!         nAnisRawPedigree=nAnisRawPedigree-1
+!         exit            ! This forces to exit if an error is found
+!     endif
+! enddo
+! rewind(2)
 
-print*, " ",nAnisRawPedigree," individuals in the pedigree file"
-nObsDataRaw=nAnisRawPedigree
+! print*, " ",nAnisRawPedigree," individuals in the pedigree file"
+! nObsDataRaw=nAnisRawPedigree
 
-do
-    read (inputParams%genotypeFileUnit,*,iostat=k) dumC
-    nAnisG=nAnisG+1
-    if (k/=0) then
-        nAnisG=nAnisG-1
-        exit
-    endif
-enddo
+! do
+!     read (inputParams%genotypeFileUnit,*,iostat=k) dumC
+!     nAnisG=nAnisG+1
+!     if (k/=0) then
+!         nAnisG=nAnisG-1
+!         exit
+!     endif
+! enddo
 
-rewind(3)
+! rewind(3)
 
-if (inputParams%hmmoption == RUN_HMM_NGS) then
-    if(mod(nAnisG,2)==0) then
-        nAnisG=nAnisG/2
-    else
-        write(0,*) "Error: The number of lines in the file of reads is not even. Is the file corrupt?"
-        write(0,*) "The program will now stop"
-        stop
-    endif
-endif
+! if (inputParams%hmmoption == RUN_HMM_NGS) then
+!     if(mod(nAnisG,2)==0) then
+!         nAnisG=nAnisG/2
+!     else
+!         write(0,*) "Error: The number of lines in the file of reads is not even. Is the file corrupt?"
+!         write(0,*) "The program will now stop"
+!         stop
+!     endif
+! endif
 
-print*, " ",nAnisG," individuals in the genotype file"
+! print*, " ",nAnisG," individuals in the genotype file"
 
-! This is incoherent with functions ReadInData and ReadInParameterFile
-if (trim(inputParams%PedigreeFile)=="NoPedigree") nAnisRawPedigree=nAnisG
+! ! This is incoherent with functions ReadInData and ReadInParameterFile
+! if (trim(inputParams%PedigreeFile)=="NoPedigree") nAnisRawPedigree=nAnisG
 
-end subroutine CountInData
-
-!#############################################################################################################################################################################################################################
-
-subroutine ReadInData
-use GlobalPedigree
-use Global
-use AlphaImputeInMod
-implicit none
-
-integer :: i,j,k,CountLinesGender,GenCode,AnimalPresent
-character(len=300) :: dumC
-type(AlphaImputeInput), pointer :: inputParams
-integer, allocatable, dimension(:) :: Temp
-inputParams=> defaultInput
-
-allocate(Temp(inputParams%nsnp))
-allocate(GenotypeId(nAnisG))
-allocate(Ped(nAnisRawPedigree,3))
-allocate(Genos(0:nAnisG,inputParams%nsnp))
-allocate(GenderId(nAnisRawPedigree))
-allocate(GenderRaw(nAnisRawPedigree))
-
-Genos(0,:)=9
-
-! Read the pedigree information
-rewind(inputParams%pedigreeFileUnit)
-do i=1,nAnisRawPedigree
-    read(inputParams%pedigreeFileUnit,*) ped(i,:)
-enddo
-
-if (inputParams%hmmoption /= RUN_HMM_NGS) then
-    rewind(inputParams%genotypeFileUnit)
-    do i=1,nAnisG
-        read (inputParams%genotypeFileUnit,*) GenotypeId(i),Temp(:)
-        do j=1,inputParams%nsnp
-            if ((Temp(j)<0).or.(Temp(j)>2)) Temp(j)=9
-        enddo
-        Genos(i,:)=Temp(:)
-    enddo
-endif
-close(2)
-close(3)
-
-GenderRaw=9
-if (inputParams%SexOpt==1) then
-    CountLinesGender=0
-    do
-        read (inputParams%GenderFileUnit,*,iostat=k) dumC
-        CountLinesGender=CountLinesGender+1
-        if (k/=0) then
-            CountLinesGender=CountLinesGender-1
-            exit
-        endif
-    enddo
-    rewind(inputParams%GenderFileUnit)
-    nAnisInGenderFile=CountLinesGender
-    if (CountLinesGender/=nAnisRawPedigree) then
-        print*, "Warning - number of lines in Gender file not the same as in pedigree file"
-        stop
-    endif
-    do j=1,nAnisRawPedigree                 ! For each individual in the file
-        read (inputParams%GenderFileUnit,*) dumC,GenCode
-        if ((GenCode/=1).and.(GenCode/=2)) then
-            print*, "Warning - Gender code incorrect for at least one animal"
-            stop
-        endif
-        AnimalPresent=0
-        do i=1,nAnisRawPedigree             ! For each individual in the pedigree
-            if (trim(dumC)==trim(ped(i,1))) then
-                GenderId(i)=dumC
-                GenderRaw(i)=GenCode
-                AnimalPresent=1
-                exit
-            endif
-        enddo
-        if (AnimalPresent==0) then
-            print*, "Warning - Animal missing in gender file"
-            stop
-        endif
-    enddo
-endif
-
-deallocate(temp)
-end subroutine ReadInData
+! end subroutine CountInData
 
 !#############################################################################################################################################################################################################################
-subroutine ReadSeq(readsFileName)
-use GlobalPedigree
-use Global
-use alphaimputeinmod
-implicit none
 
-character(len=300), intent(in) :: readsFileName
-integer :: i,j
+! subroutine ReadInData
+! use GlobalPedigree
+! use Global
+! use AlphaImputeInMod
+! implicit none
 
-type(AlphaImputeInput), pointer :: inputParams
-integer, allocatable,dimension (:) :: ReferAlleleLine, AlterAlleleLine
+! integer :: i,j,k,CountLinesGender,GenCode,AnimalPresent
+! character(len=300) :: dumC
+! type(AlphaImputeInput), pointer :: inputParams
+! integer, allocatable, dimension(:) :: Temp
+! inputParams=> defaultInput
 
-inputParams => defaultInput
-allocate(ReferAllele(0:nAnisG,inputParams%nsnp))
-allocate(AlterAllele(0:nAnisG,inputParams%nsnp))
-allocate(ReferAlleleLine(inputParams%nsnp))
-allocate(AlterAlleleLine(inputParams%nsnp))
+! allocate(Temp(inputParams%nsnp))
+! allocate(GenotypeId(nAnisG))
+! allocate(Ped(nAnisRawPedigree,3))
+! allocate(Genos(0:nAnisG,inputParams%nsnp))
+! allocate(GenderId(nAnisRawPedigree))
+! allocate(GenderRaw(nAnisRawPedigree))
 
-Reads=0
+! Genos(0,:)=9
 
-#ifdef DEBUG
-    write(0,*) "DEBUG: [ReadSeq] Reads size=", size(Reads,1)
-#endif
+! ! Read the pedigree information
+! rewind(inputParams%pedigreeFileUnit)
+! do i=1,nAnisRawPedigree
+!     read(inputParams%pedigreeFileUnit,*) ped(i,:)
+! enddo
 
-open (unit=3,file=trim(readsFileName),status="old")
+! if (inputParams%hmmoption /= RUN_HMM_NGS) then
+!     rewind(inputParams%genotypeFileUnit)
+!     do i=1,nAnisG
+!         read (inputParams%genotypeFileUnit,*) GenotypeId(i),Temp(:)
+!         do j=1,inputParams%nsnp
+!             if ((Temp(j)<0).or.(Temp(j)>2)) Temp(j)=9
+!         enddo
+!         Genos(i,:)=Temp(:)
+!     enddo
+! endif
+! close(2)
+! close(3)
 
-#ifdef DEBUG
-    write(0,*) "DEBUG: [ReadSeq] Reading sequence data..."
-#endif
+! GenderRaw=9
+! if (inputParams%SexOpt==1) then
+!     CountLinesGender=0
+!     do
+!         read (inputParams%GenderFileUnit,*,iostat=k) dumC
+!         CountLinesGender=CountLinesGender+1
+!         if (k/=0) then
+!             CountLinesGender=CountLinesGender-1
+!             exit
+!         endif
+!     enddo
+!     rewind(inputParams%GenderFileUnit)
+!     nAnisInGenderFile=CountLinesGender
+!     if (CountLinesGender/=nAnisRawPedigree) then
+!         print*, "Warning - number of lines in Gender file not the same as in pedigree file"
+!         stop
+!     endif
+!     do j=1,nAnisRawPedigree                 ! For each individual in the file
+!         read (inputParams%GenderFileUnit,*) dumC,GenCode
+!         if ((GenCode/=1).and.(GenCode/=2)) then
+!             print*, "Warning - Gender code incorrect for at least one animal"
+!             stop
+!         endif
+!         AnimalPresent=0
+!         do i=1,nAnisRawPedigree             ! For each individual in the pedigree
+!             if (trim(dumC)==trim(ped(i,1))) then
+!                 GenderId(i)=dumC
+!                 GenderRaw(i)=GenCode
+!                 AnimalPresent=1
+!                 exit
+!             endif
+!         enddo
+!         if (AnimalPresent==0) then
+!             print*, "Warning - Animal missing in gender file"
+!             stop
+!         endif
+!     enddo
+! endif
 
-do i=1,nAnisG
-    read (3,*) GenotypeId(i), ReferAlleleLine(:)
-    read (3,*) GenotypeId(i), AlterAlleleLine(:)
-    ReferAllele(i,:) = ReferAlleleLine
-    AlterAllele(i,:) = AlterAlleleLine
-    do j=1,inputParams%nsnp
-        if (ReferAllele(i,j)>=MAX_READS_COUNT) ReferAllele(i,j)=MAX_READS_COUNT-1
-        if (AlterAllele(i,j)>=MAX_READS_COUNT) AlterAllele(i,j)=MAX_READS_COUNT-1
-        Reads(i,j)=AlterAllele(i,j)+ReferAllele(i,j)
-    enddo
-enddo
+! deallocate(temp)
+! end subroutine ReadInData
 
-#ifdef DEBUG
-    write(0,*) "DEBUG: [ReadSeq] Sequence data read"
-#endif
+! !#############################################################################################################################################################################################################################
+! subroutine ReadSeq(readsFileName)
+! use GlobalPedigree
+! use Global
+! use alphaimputeinmod
+! implicit none
 
-close(3)
+! character(len=300), intent(in) :: readsFileName
+! integer :: i,j
 
-end subroutine ReadSeq
+! type(AlphaImputeInput), pointer :: inputParams
+! integer, allocatable,dimension (:) :: ReferAlleleLine, AlterAlleleLine
 
-!#############################################################################################################################################################################################################################
-subroutine ReadGenos(genosFileName)
-use GlobalPedigree
-use Global
-use alphaimputeinmod
-implicit none
+! inputParams => defaultInput
+! allocate(ReferAllele(0:nAnisG,inputParams%nsnp))
+! allocate(AlterAllele(0:nAnisG,inputParams%nsnp))
+! allocate(ReferAlleleLine(inputParams%nsnp))
+! allocate(AlterAlleleLine(inputParams%nsnp))
 
-character(len=300), intent(in) :: genosFileName
-integer :: i,j
-integer,allocatable,dimension(:) :: temp
-type(AlphaImputeInput), pointer :: inputParams
+! Reads=0
 
-inputParams => defaultInput
+! #ifdef DEBUG
+!     write(0,*) "DEBUG: [ReadSeq] Reads size=", size(Reads,1)
+! #endif
 
-allocate(temp(inputParams%nSnp))
-! TODO: This hack avoids mem allocation problems with Genos allocated
-!       somewhere else up in the code (ReadInData). Should be improved
+! open (unit=3,file=trim(readsFileName),status="old")
 
-if (allocated(Genos)) then
-    deallocate(Genos)
-endif
-allocate(Genos(0:nAnisG,inputParams%nsnp))
-Genos(0,:)=9
+! #ifdef DEBUG
+!     write(0,*) "DEBUG: [ReadSeq] Reading sequence data..."
+! #endif
 
-open (unit=3,file=trim(genosFileName),status="old")
-do i=1,nAnisG
-    read (3,*) GenotypeId(i),Temp(:)
-    do j=1,inputParams%nsnp
-        if ((Temp(j)<0).or.(Temp(j)>2)) Temp(j)=9
-    enddo
-    Genos(i,:)=Temp(:)
-enddo
-close(3)
-deallocate(temp)
-end subroutine ReadGenos
+! do i=1,nAnisG
+!     read (3,*) GenotypeId(i), ReferAlleleLine(:)
+!     read (3,*) GenotypeId(i), AlterAlleleLine(:)
+!     ReferAllele(i,:) = ReferAlleleLine
+!     AlterAllele(i,:) = AlterAlleleLine
+!     do j=1,inputParams%nsnp
+!         if (ReferAllele(i,j)>=MAX_READS_COUNT) ReferAllele(i,j)=MAX_READS_COUNT-1
+!         if (AlterAllele(i,j)>=MAX_READS_COUNT) AlterAllele(i,j)=MAX_READS_COUNT-1
+!         Reads(i,j)=AlterAllele(i,j)+ReferAllele(i,j)
+!     enddo
+! enddo
+
+! #ifdef DEBUG
+!     write(0,*) "DEBUG: [ReadSeq] Sequence data read"
+! #endif
+
+! close(3)
+
+! end subroutine ReadSeq
+
+! !#############################################################################################################################################################################################################################
+! subroutine ReadGenos(genosFileName)
+! use GlobalPedigree
+! use Global
+! use alphaimputeinmod
+! implicit none
+
+! character(len=300), intent(in) :: genosFileName
+! integer :: i,j
+! integer,allocatable,dimension(:) :: temp
+! type(AlphaImputeInput), pointer :: inputParams
+
+! inputParams => defaultInput
+
+! allocate(temp(inputParams%nSnp))
+! ! TODO: This hack avoids mem allocation problems with Genos allocated
+! !       somewhere else up in the code (ReadInData). Should be improved
+
+! if (allocated(Genos)) then
+!     deallocate(Genos)
+! endif
+! allocate(Genos(0:nAnisG,inputParams%nsnp))
+! Genos(0,:)=9
+
+! open (unit=3,file=trim(genosFileName),status="old")
+! do i=1,nAnisG
+!     read (3,*) GenotypeId(i),Temp(:)
+!     do j=1,inputParams%nsnp
+!         if ((Temp(j)<0).or.(Temp(j)>2)) Temp(j)=9
+!     enddo
+!     Genos(i,:)=Temp(:)
+! enddo
+! close(3)
+! deallocate(temp)
+! end subroutine ReadGenos
 
 !#############################################################################################################################################################################################################################
 
