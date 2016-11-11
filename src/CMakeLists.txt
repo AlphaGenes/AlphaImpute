@@ -16,6 +16,8 @@ SET(ALPHAIMPUTE_src
             ${SRCALPHAIMPUTE}AlphaImpute.f90
 
 )
+
+add_definitions(-D COMMIT=${VERSION})
 ADD_EXECUTABLE(${ALPHAIMPUTEEXE} ${ALPHAIMPUTE_src})
 
 SET(GENEPROB_src ${SRCALPHAIMPUTE}GeneProbForAlphaImpute.f90)

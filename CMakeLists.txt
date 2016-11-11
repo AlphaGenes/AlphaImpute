@@ -7,7 +7,15 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8.5)
 PROJECT(AlphaImpute)
 enable_language (Fortran)
-SET(VERSION 1.6)
+
+if (WIN32)
+	execute_process(COMMAND CMD git rev-parse --short HEAD OUTPUT_VARIABLE SUBVERSION)
+	execute_process(COMMAND CMD git describe --abbrev=0 --tags OUTPUT_VARIABLE VERSION)
+else()
+	execute_process(COMMAND git rev-parse --short HEAD OUTPUT_VARIABLE SUBVERSION)
+	execute_process(COMMAND git describe --tag OUTPUT_VARIABLE VERSION)
+endif()
+
 
 OPTION(RUN_TESTS "Run and compile tests"
     OFF)
@@ -27,7 +35,8 @@ add_definitions(-DCLUSTER=${CLUSTER})
 ############################################################
 
 # Define the executable name
-SET(ALPHAIMPUTEEXE AlphaImpute${VERSION})
+SET(ALPHAIMPUTEEXE AlphaImpute)
+MESSAGE("Prog name ${ALPHAIMPUTEEXE}")
 SET(GENEPROBEXE GeneProbForAlphaImpute)
 # Define the library name
 SET(AHLIB alphahouse)
