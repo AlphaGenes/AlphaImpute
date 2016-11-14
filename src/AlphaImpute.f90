@@ -1743,18 +1743,16 @@ else
         endif
 
         l=0
-        !do j=1,nSnpRaw
-         !   if (SnpIncluded(j)==1) then
-         !       l=l+1
+        do j=1,nSnpRaw
+           if (SnpIncluded(j)==1) then
+               l=l+1
                 do i=1,nAnisG
-                    !if (mod(i,10)==0) print*, i
-                    !if (i==nAnisG) print*, 'Ciao!!'
-                    ProbImputeGenos(GlobalHmmID(i),:)   = ProbImputeGenosHmm(i,:)
-                    ProbImputePhase(GlobalHmmID(i),:,1) = ProbImputePhaseHmm(i,:,1)
-                    ProbImputePhase(GlobalHmmID(i),:,2) = ProbImputePhaseHmm(i,:,2)
+                    ProbImputeGenos(GlobalHmmID(i),j)   = ProbImputeGenosHmm(i,j)
+                    ProbImputePhase(GlobalHmmID(i),j,1) = ProbImputePhaseHmm(i,j,1)
+                    ProbImputePhase(GlobalHmmID(i),j,2) = ProbImputePhaseHmm(i,j,2)
                 enddo
-            !endif
-        !enddo
+            endif
+        enddo
 
 #ifdef DEBUG
         write(0,*) 'DEBUG: Impute alleles and genotypes based on HMM genotypes probabilities [WriteOutResults]'
