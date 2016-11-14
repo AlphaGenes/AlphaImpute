@@ -331,7 +331,6 @@ module InputMod
   if (.NOT. opened .and. named) then
     open(unit=GenoFileUnit, file=GenoFile, status='unknown')
   else if (.NOT. named) then
-    ! write(0, *) "ERROR - Something went wrong when trying to read the file of pre-phased data"
     open(newunit=GenoFileUnit, file=inputParams%GenotypeFile)
   end if
 
@@ -349,6 +348,5 @@ module InputMod
   deallocate(temp)
 
   end subroutine ReadPlink
-
 
 end module InputMod
