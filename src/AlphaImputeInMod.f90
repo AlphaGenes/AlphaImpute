@@ -146,11 +146,13 @@ module AlphaImputeInMod
                         write(*, "(A,A)") "No genotype file specified. Using default filename: ", this%Genotypefile
                     else
                         write(this%Genotypefile, "(A)") second(1)
-                        if (trim(toLower(second(2)))=='plink') then
-                            this%PlinkFormat = .TRUE.
-                        else
+                        if (size(second) >1) then
                             this%PlinkFormat = .FALSE.
+                            if (trim(toLower(second(2)))=='plink') then
+                                this%PlinkFormat = .TRUE.
+                            endif
                         endif
+
                     endif
                 case("truegenotypefile")
                      if (.not. allocated(second)) then

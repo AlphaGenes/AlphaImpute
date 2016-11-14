@@ -1206,7 +1206,9 @@ if (inputParams%restartOption/=4) then
 #endif
     close (109)
 
+    print *,"HEREEEE",OPT_RESTART_IMPUTATION
     if (inputParams%restartOption==OPT_RESTART_IMPUTATION) then
+        print *,"test"
         open (unit=109,file="Tmp2345678.txt",status="unknown")
         do i=1,nAnisP
             write (109,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ImputePhase(i,:,1)
@@ -1743,7 +1745,7 @@ else
         endif
 
         l=0
-        do j=1,nSnpRaw
+        do j=1,inputParams%nSnpRaw
            if (SnpIncluded(j)==1) then
                l=l+1
                 do i=1,nAnisG

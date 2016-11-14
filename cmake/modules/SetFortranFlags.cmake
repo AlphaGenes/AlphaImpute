@@ -151,11 +151,11 @@ SET_COMPILE_FLAG(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG}"
                          "-Mbounds"       # Portland Group
                 )
 
-SET_COMPILE_FLAG(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG}"
-                 Fortran "-check all"  # Intel
-                         "/check:all"  # Intel Windows
+# SET_COMPILE_FLAG(CMAKE_Fortran_FLAGS_DEBUG "${CMAKE_Fortran_FLAGS_DEBUG}"
+#                  Fortran "-check all"  # Intel
+#                          "/check:all"  # Intel Windows
 
-                )
+#                 )
 
 #####################
 ### TESTING FLAGS ###

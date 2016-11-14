@@ -146,7 +146,7 @@ module InputMod
   ! Read the genotype file
   if (inputParams%hmmoption /= RUN_HMM_NGS) then
       rewind(inputParams%genotypeFileUnit)
-      if (inputParams%PlinkFormat) then
+      if (.not. inputParams%PlinkFormat) then
         call ReadGenos(inputParams%genotypeFileUnit)
       else
         call ReadPlink(inputParams%genotypeFileUnit)
