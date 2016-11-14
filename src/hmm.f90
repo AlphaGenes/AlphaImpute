@@ -570,13 +570,13 @@ if (GlobalRoundHmm>inputParams%hmmburninround) then
         endif
         ! GenosCounts(CurrentInd,i,1)=(GlobalRoundHmm-inputParams%hmmburninround) - GenosCounts(CurrentInd,i,2) - GenosCounts(CurrentInd,i,3)
     enddo
-endif
+! endif
 
-! Cumulative genotype probabilities through hmm processes
-#if DEBUG.EQ.1
-    write(0,*) 'DEBUG: Calculate genotype dosages [MaCHForInd]'
-#endif
-if (GlobalRoundHmm>inputParams%hmmburninround) then
+! ! Cumulative genotype probabilities through hmm processes
+! #if DEBUG.EQ.1
+!     write(0,*) 'DEBUG: Calculate genotype dosages [MaCHForInd]'
+! #endif
+! if (GlobalRoundHmm>inputParams%hmmburninround) then
     ProbImputeGenosHmm(CurrentInd,:)=ProbImputeGenosHmm(CurrentInd,:)&
         +FullH(CurrentInd,:,1)+FullH(CurrentInd,:,2)
     ProbImputePhaseHmm(CurrentInd,:,1)=ProbImputePhaseHmm(CurrentInd,:,1)&
