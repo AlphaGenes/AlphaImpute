@@ -1,4 +1,4 @@
-SET(ALPHAIMPUTE_src 
+SET(ALPHAIMPUTE_src
             ${SRCALPHAIMPUTE}AlphaImputeInMod.f90
             ${SRCALPHAIMPUTE}global.f90
             ${SRCALPHAIMPUTE}HaplotypeBits.f90
@@ -7,6 +7,7 @@ SET(ALPHAIMPUTE_src
             ${SRCALPHAIMPUTE}hmmHaplotype.f90
             ${SRCALPHAIMPUTE}hmmvariables.f90
             ${SRCALPHAIMPUTE}Imputation.f90
+            ${SRCALPHAIMPUTE}InputMod.f90
             ${SRCALPHAIMPUTE}manageWindows.f90
             ${SRCALPHAIMPUTE}par_zig_mod.f90
             ${SRCALPHAIMPUTE}PhaseRounds.f90

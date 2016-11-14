@@ -1,9 +1,3 @@
-# CMak project file for FOO
-
-##################################################
-# Define the project and the depencies that it has
-##################################################
-
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8.5)
 PROJECT(AlphaImpute)
 enable_language (Fortran)
@@ -30,10 +24,6 @@ set(CMAKE_MACOSX_RPATH 0)
 
 add_definitions(-DCLUSTER=${CLUSTER})
 
-############################################################
-# Define the actual files and folders that make up the build
-############################################################
-
 # Define the executable name
 SET(ALPHAIMPUTEEXE AlphaImpute)
 MESSAGE("Prog name ${ALPHAIMPUTEEXE}")
@@ -51,9 +41,9 @@ SET(SRCALPHAIMPUTE ${SRC}/)
 # Defined libary source
 
 # Uncomment if it is required that Fortran 90 is supported
-#IF(NOT CMAKE_Fortran_COMPILER_SUPPORTS_F90)
-#    MESSAGE(FATAL_ERROR "Fortran compiler does not support F90")
-#ENDIF(NOT CMAKE_Fortran_COMPILER_SUPPORTS_F90)
+IF(NOT CMAKE_Fortran_COMPILER_SUPPORTS_F90)
+   MESSAGE(FATAL_ERROR "Fortran compiler does not support F90")
+ENDIF(NOT CMAKE_Fortran_COMPILER_SUPPORTS_F90)
 
 # Set some options the user may choose
 # Uncomment the below if you want the user to choose a parallelization library
@@ -63,25 +53,23 @@ OPTION(USE_OPENMP "Use OpenMP for parallelization" ON)
 
 if (${RUN_TESTS})
 SET(testDeps ${SRC}/AlphaImputeInMod.f90
-${SRC}/global.f90      
+${SRC}/global.f90
 )
 endif (${RUN_TESTS})
 
 INCLUDE(${CMAKE_MODULE_PATH}/SetParallelizationLibrary.cmake)
-# Locate and set parallelization libraries.  There are some CMake peculiarities
-# taken care of here, such as the fact that the FindOpenMP routine doesn't know
-# about Fortran.
+
 INCLUDE(${CMAKE_MODULE_PATH}/findMKL.cmake)
 # Setup the LAPACK libraries.  This also takes care of peculiarities, such as
 # the fact the searching for MKL requires a C compiler, and that the results
-# are not stored in the cache. 
+# are not stored in the cache.
 #INCLUDE(${CMAKE_MODULE_PATH}/SetUpLAPACK.cmake)
 if (${USE_HDF5})
 	INCLUDE(${CMAKE_MODULE_PATH}/findHDF5.cmake)
-endif(${USE_HDF5}) 
+endif(${USE_HDF5})
 
 # This INCLUDE statement executes code that sets the compile flags for DEBUG,
-# RELEASE, and TESTING.  You should  review this file and make sure the flags 
+# RELEASE, and TESTING.  You should  review this file and make sure the flags
 # are to your liking.
 INCLUDE(${CMAKE_MODULE_PATH}/SetFortranFlags.cmake)
 SET(SRCAH ../alphahouse/src/)
@@ -97,14 +85,10 @@ ADD_SUBDIRECTORY(${SRCAH} ${LIB}/AH)
 ADD_SUBDIRECTORY(${SRCALPHAIMPUTE} ${BIN})
 
 # Add a distclean target to the Makefile
-ADD_CUSTOM_TARGET(distclean 
+ADD_CUSTOM_TARGET(distclean
     COMMAND ${CMAKE_COMMAND} -P ${CMAKE_SOURCE_DIR}/distclean.cmake
 )
 
 if (${RUN_TESTS})
-	INCLUDE(${CMAKE_MODULE_PATH}/findPFUnit.cmake) 
+	INCLUDE(${CMAKE_MODULE_PATH}/findPFUnit.cmake)
 endif(${RUN_TESTS})
-
-# ADD_CUSTOM_TARGET(tests 
-#     COMMAND ${CMAKE_COMMAND} -P ${CMAKE_SOURCE_DIR}/t.cmake
-# )
