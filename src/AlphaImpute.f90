@@ -3342,67 +3342,63 @@ endif
 
 ! Create AlphaPhaseSpec file
 do i=1,inputParams%nPhaseInternal           ! Phasing is done in parallel
-    if (WindowsLinux==1) then
-        ! WARNING: Apparently, AlphaImpute does not work for Windows systems
+#ifdef OS_UNIX
+    write (filout,'("./Phasing/Phase"i0,"/AlphaPhaseSpec.txt")')i
+#else
+    write (filout,'(".\Phasing\Phase"i0,"\AlphaPhaseSpec.txt")')i
+#endif
+    open (unit=106,file=trim(filout),status='unknown')
+    if (inputParams%PedFreePhasing==0) then
+#ifdef OS_UNIX
+        if (inputParams%SexOpt==0) write (106,*) 'PedigreeFile              ,"../../InputFiles/AlphaPhaseInputPedigree.txt"'
+#else
+        if (inputParams%SexOpt==0) write (106,*) 'PedigreeFile              ,"..\..\InputFiles\AlphaPhaseInputPedigree.txt"'
+#endif
     else
-#ifdef OS_UNIX
-        write (filout,'("./Phasing/Phase"i0,"/AlphaPhaseSpec.txt")')i
-#else
-        write (filout,'(".\Phasing\Phase"i0,"\AlphaPhaseSpec.txt")')i
-#endif
-        open (unit=106,file=trim(filout),status='unknown')
-        if (inputParams%PedFreePhasing==0) then
-#ifdef OS_UNIX
-            if (inputParams%SexOpt==0) write (106,*) 'PedigreeFile              ,"../../InputFiles/AlphaPhaseInputPedigree.txt"'
-#else
-            if (inputParams%SexOpt==0) write (106,*) 'PedigreeFile              ,"..\..\InputFiles\AlphaPhaseInputPedigree.txt"'
-#endif
-        else
-            if (inputParams%SexOpt==0) write (106,*) 'PedigreeFile                      ,"NoPedigree"'
-        endif
-        if (inputParams%SexOpt==1) write (106,*) 'PedigreeFile                      ,"NoPedigree"'
-#ifdef OS_UNIX
-        write (106,'(a100)') &
-                'GenotypeFile                   ,"../../InputFiles/AlphaPhaseInputGenotypes.txt",GenotypeFormat'
-#else
-        write (106,'(a100)') &
-                'GenotypeFile                   ,"..\..\InputFiles\AlphaPhaseInputGenotypes.txt",GenotypeFormat'
-#endif
-
-        write (106,*) 'NumberOfSnp                      ,',inputParams%nsnp
-        write (106,*) 'GeneralCoreAndTailLength         ,',TempCplusT(i)
-        if(i<=inputParams%nPhaseInternal/2) then
-            write (106,*) 'GeneralCoreLength            ,',TempCore(i),',Offset'
-        else
-            write (106,*) 'GeneralCoreLength            ,',TempCore(i),',NotOffset'
-        endif
-        write (106,*) 'UseThisNumberOfSurrogates        ,',10
-        write (106,*) 'PercentageSurrDisagree           ,',10.00
-        write (106,*) 'PercentageGenoHaploDisagree      ,',inputParams%GenotypeErrorPhase
-        write (106,*) 'GenotypeMissingErrorPercentage   ,',0.00
-        write (106,*) 'NrmThresh                        ,',0.00
-        write (106,*) 'FullOutput                       ,0'
-        write (106,*) 'Graphics                         ,0'
-        write (106,*) 'Simulation                       ,0'
-        write (106,*) 'TruePhaseFile                    ,None'
-        write (106,*) 'CoreAtTime                       ,0'
-        if (inputParams%largeDatasets) then
-          write (106,*) 'IterateMethod                    ,RandomOrder'
-        else
-          write (106,*) 'IterateMethod                    ,Off'
-        end if
-        write (106,*) 'IterateSubsetSize                ,',inputParams%PhaseSubsetSize
-        write (106,*) 'IterateIterations                ,',inputParams%PhaseNIterations
-        write (106,*) 'Cores                            ,1,Combine'
-        write (106,*) 'MinHapFreq                       ,1'
-        write (106,*) 'Library                          ,None'
-
-        call flush(106)
-        close(106)
-        write (filout,'("Phase"i0)')i
-        ! if (AlphaPhasePresent==1) call system ("cp AlphaPhase Phasing/" // filout)
-        if (AlphaPhasePresent==1) call system (COPY // " AlphaPhase" // EXE // " Phasing" // DASH // filout // NULL)
+        if (inputParams%SexOpt==0) write (106,*) 'PedigreeFile                      ,"NoPedigree"'
     endif
+    if (inputParams%SexOpt==1) write (106,*) 'PedigreeFile                      ,"NoPedigree"'
+#ifdef OS_UNIX
+    write (106,'(a100)') &
+            'GenotypeFile                   ,"../../InputFiles/AlphaPhaseInputGenotypes.txt",GenotypeFormat'
+#else
+    write (106,'(a100)') &
+            'GenotypeFile                   ,"..\..\InputFiles\AlphaPhaseInputGenotypes.txt",GenotypeFormat'
+#endif
+
+    write (106,*) 'NumberOfSnp                      ,',inputParams%nsnp
+    write (106,*) 'GeneralCoreAndTailLength         ,',TempCplusT(i)
+    if(i<=inputParams%nPhaseInternal/2) then
+        write (106,*) 'GeneralCoreLength            ,',TempCore(i),',Offset'
+    else
+        write (106,*) 'GeneralCoreLength            ,',TempCore(i),',NotOffset'
+    endif
+    write (106,*) 'UseThisNumberOfSurrogates        ,',10
+    write (106,*) 'PercentageSurrDisagree           ,',10.00
+    write (106,*) 'PercentageGenoHaploDisagree      ,',inputParams%GenotypeErrorPhase
+    write (106,*) 'GenotypeMissingErrorPercentage   ,',0.00
+    write (106,*) 'NrmThresh                        ,',0.00
+    write (106,*) 'FullOutput                       ,0'
+    write (106,*) 'Graphics                         ,0'
+    write (106,*) 'Simulation                       ,0'
+    write (106,*) 'TruePhaseFile                    ,None'
+    write (106,*) 'CoreAtTime                       ,0'
+    if (inputParams%largeDatasets) then
+      write (106,*) 'IterateMethod                    ,RandomOrder'
+    else
+      write (106,*) 'IterateMethod                    ,Off'
+    end if
+    write (106,*) 'IterateSubsetSize                ,',inputParams%PhaseSubsetSize
+    write (106,*) 'IterateIterations                ,',inputParams%PhaseNIterations
+    write (106,*) 'Cores                            ,1,Combine'
+    write (106,*) 'MinHapFreq                       ,1'
+    write (106,*) 'Library                          ,None'
+
+    call flush(106)
+    close(106)
+    write (filout,'("Phase"i0)')i
+    ! if (AlphaPhasePresent==1) call system ("cp AlphaPhase Phasing/" // filout)
+    if (AlphaPhasePresent==1) call system (COPY // " AlphaPhase" // EXE // " Phasing" // DASH // filout // NULL)
 enddo
 
 Tmp=int(float(inputParams%nsnp)/inputParams%nprocessors)

@@ -2173,7 +2173,7 @@ endif
     inputParams => defaultInput
     do i=1,nAnisP
       do j=1,2
-        if (SireDam(i,j)==1) then       ! We are only interested in sires because they have more progeny
+        if (SireDam(i,j)==1) then       ! check that animal i,j is a sire or a dam
 
           ! Sex chromosome
           if (inputParams%sexopt==1) then
@@ -2193,7 +2193,7 @@ endif
                   ! This is the only difference with the inputParams%sexopt=0 code below. Duplicating
                   ! the code can be avoided by including the IF statement here instead than
                   ! outside the SNPs loop.
-                  if ((RecGender(i)==HetGameticStatus).and.(RecGender(l)==HetGameticStatus)) cycle
+                  if ((RecGender(i)==HetGameticStatus).and.(RecGender(l)==HetGameticStatus)) cycle 
 
                   if (RecPed(l,j+1)==i) then
                     if (ImputePhase(l,k,j)==0) Count0=Count0+1
@@ -2221,7 +2221,7 @@ endif
                   ! outside the SNPs loop.
                   if ((RecGender(i)==HetGameticStatus).and.(RecGender(l)==HetGameticStatus)) cycle
 
-                  if (RecPed(l,j+1)==i) then
+                  if (RecPed(l,j+1)==i) then !if parents then do this
                     if (ImputePhase(l,k,j)==0) Count0=Count0+1
                     if (ImputePhase(l,k,j)==1) Count1=Count1+1
                   endif

@@ -15,8 +15,6 @@ module PARAMETERS
 
     integer, parameter :: MAX_READS_COUNT=100 ! Maximum number of reads for reference and alternative alleles
 
-    integer,parameter :: WindowsLinux=0     !If 1 then compile for Windows / If 0 then compile for Linux
-
     integer,parameter :: TestVersion=0      !If 1 then this is a development version with intermediate checking, if 0 it is not
 
     logical,parameter :: PicVersion=.FALSE. !If 1 then this is a PIC version with suitability for their system, if 0 it is not
