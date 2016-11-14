@@ -12,32 +12,36 @@ STRING(TOUPPER "${CMAKE_BUILD_TYPE}" BT)
 
 IF(BT STREQUAL "RELEASE")
     SET(CMAKE_BUILD_TYPE RELEASE CACHE STRING
-      "Choose the type of build, options are DEBUG, RELEASE, or TESTING."
+      "Choose the type of build, options are DEBUG, RELEASE,PROFILE or TESTING."
       FORCE)
 ELSEIF(BT STREQUAL "DEBUG")
     SET (CMAKE_BUILD_TYPE DEBUG CACHE STRING
-      "Choose the type of build, options are DEBUG, RELEASE, or TESTING."
+      "Choose the type of build, options are DEBUG, RELEASE,PROFILE or TESTING."
       FORCE)
 ELSEIF(BT STREQUAL "TESTING")
     SET (CMAKE_BUILD_TYPE TESTING CACHE STRING
-      "Choose the type of build, options are DEBUG, RELEASE, or TESTING."
+      "Choose the type of build, options are DEBUG, RELEASE,PROFILE or TESTING."
+      FORCE)
+ELSEIF(BT STREQUAL "PROFILE")
+    SET (CMAKE_BUILD_TYPE PROFILING CACHE STRING
+      "Choose the type of build, options are DEBUG, RELEASE,PROFILE or TESTING."
       FORCE)
 ELSEIF(NOT BT)
     SET(CMAKE_BUILD_TYPE RELEASE CACHE STRING
-      "Choose the type of build, options are DEBUG, RELEASE, or TESTING."
+      "Choose the type of build, options are DEBUG, RELEASE,PROFILE or TESTING."
       FORCE)
     MESSAGE(STATUS "CMAKE_BUILD_TYPE not given, defaulting to RELEASE")
 ELSE()
-    MESSAGE(FATAL_ERROR "CMAKE_BUILD_TYPE not valid, choices are DEBUG, RELEASE, or TESTING")
+    MESSAGE(FATAL_ERROR "CMAKE_BUILD_TYPE not valid, choices are DEBUG, RELEASE, PROFILE or TESTING")
 ENDIF(BT STREQUAL "RELEASE")
 
 #########################################################
 # If the compiler flags have already been set, return now
 #########################################################
 
-IF(CMAKE_Fortran_FLAGS_RELEASE AND CMAKE_Fortran_FLAGS_TESTING AND CMAKE_Fortran_FLAGS_DEBUG)
+IF(CMAKE_Fortran_FLAGS_RELEASE AND CMAKE_Fortran_FLAGS_TESTING AND CMAKE_Fortran_FLAGS_DEBUG AND CMAKE_Fortran_FLAGS_PROFILE)
     RETURN ()
-ENDIF(CMAKE_Fortran_FLAGS_RELEASE AND CMAKE_Fortran_FLAGS_TESTING AND CMAKE_Fortran_FLAGS_DEBUG)
+ENDIF(CMAKE_Fortran_FLAGS_RELEASE AND CMAKE_Fortran_FLAGS_TESTING AND CMAKE_Fortran_FLAGS_DEBUG AND CMAKE_Fortran_FLAGS_PROFILE)
 
 ########################################################################
 # Determine the appropriate flags for this compiler for each build type.
@@ -163,6 +167,13 @@ SET_COMPILE_FLAG(CMAKE_Fortran_FLAGS_TESTING "${CMAKE_Fortran_FLAGS_TESTING}"
                                   "/O2" # Intel Windows
                 )
 
+
+
+#####################
+### PROFILEFLAGS ###
+#####################
+SET_COMPILE_FLAG(CMAKE_Fortran_FLAGS_PROFILE "${CMAKE_Fortran_FLAGS_PROFILE}"
+                 Fortran "-p")
 #####################
 ### RELEASE FLAGS ###
 #####################

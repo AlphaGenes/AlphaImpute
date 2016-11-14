@@ -35,12 +35,9 @@ module common_GP
   REAL(KIND=8), ALLOCATABLE :: POST(:,:)
 end module
 
-module length_of_ID
-      INTEGER, PARAMETER :: lengan=16  ! needs to be big enough to handle the internally generated dummy IDs, eg DUM00001 => 8 digits.  Line~814
-end module
-
 module commonbits
- use length_of_ID
+ 
+ INTEGER, PARAMETER :: lengan=16  ! needs to be big enough to handle the internally generated dummy IDs, eg DUM00001 => 8 digits.  Line~814
  CHARACTER*(lengan), allocatable:: id(:),sire(:),dam(:)
  INTEGER, allocatable:: seqid(:),seqsire(:),seqdam(:),passedorder(:),phenhold(:)
  INTEGER :: nobs,Imprinting,PauseAtEnd,nfreq_max,phenotypes,maxfs,maxmates,nfamilies
@@ -167,15 +164,6 @@ subroutine preprocessGeneprob
     phenotype(1) = 0
     phenotype(2) = 1
     phenotype(3) = 2
-    !g(1,0) = 1.0
-    !g(1,1) = 0.0
-    !g(1,2) = 0.0
-    !g(2,0) = 0.0
-    !g(2,1) = 1.0
-    !g(2,2) = 0.0
-    !g(3,0) = 0.0
-    !g(3,1) = 0.0
-    !g(3,2) = 1.0
 
     g(1,0) = 0.99
     g(1,1) = 0.005
@@ -193,22 +181,19 @@ subroutine preprocessGeneprob
     do i=1,nobs
         read (19,*) seqid(i), seqsire(i), seqdam(i), tmpInputGenos(i,:)
         passedorder(i) = i
-    end do
-
-    do i=1,nobs
-        do j=1,nSnp
-            if(tmpInputGenos(i,j)==3) tmpInputGenos(i,j)=9
-        end do
-    end do
-
-    do i=1,nobs
         k=1
         do j=startSnp,endSnp
-            InputGenos(i,k)=tmpInputGenos(i,j)
+            if(tmpInputGenos(i,j)==3) then
+              InputGenos(i,k) = 9
+            else              
+              InputGenos(i,k)=tmpInputGenos(i,j)
+            endif
             k=k+1
         end do
     end do
 
+
+    deallocate(tmpInputGenos)
     call GetMaxFS!!(maxfs, maxmates, nfamilies)
 
 end subroutine preprocessGeneprob
@@ -225,8 +210,8 @@ subroutine geneprob(currentSnp)
       integer               :: ia, is, idd, ifreq_iterate, maxint, maxiter, itersused, kl, kc, kd, kj, nfams, last
       integer               :: nf, im, ns, mf, iaa, ii, ms, m, n, maxvalspost, ierrors, iflag, nwritten
       integer               :: f,ff,nonzed(3,3),ntype(3,3,3)
-      integer               :: maxRegpoints,LeastPositive, LeastNegative, HoldInt, LimitAnimals, LimitNumber
-
+      integer               :: maxRegpoints,LeastPositive, LeastNegative, HoldInt, LimitNumber
+      integer(kind=1)       :: LimitAnimals
       real (kind=8)         :: tsum, prod, SumFreq, IMPratio, p12, p21, LeastPositiveValue, LeastNegativeValue
       REAL (KIND=8)         :: spost(3),dpost(3),fpost(3),tpost(3),temp(3),sum1(3),sum2(3),sum3(3),pt(3,3,3)
       REAL (KIND=8)         :: phethw,phomhw,probindex  ! this is needed for info - or compile with dble.  Don't know why!
@@ -292,99 +277,6 @@ LimitNumber = 250
       nonzed(3,3)=1
       ntype(3,3,1)=3
 
-!!PRINT*, ''
-!!PRINT*, 'Program GENEPROB Version 2.7'
-!!PRINT*, 'Written by Brian Kinghorn and Richard Kerr'
-!!PRINT*, 'Copyright Authors/University of New England'
-!!PRINT*, 'Please do not provide a copy of this program to other parties.'
-!!
-!!
-!!if (LimitAnimals==1) then
-!!  PRINT*, ''
-!!  PRINT*, '******************************************************************************'
-!!  PRINT*, '     This is a demonstration version. Commercial use is prohibited.'
-!!  PRINT*, '  It is limited to results on ', LimitNumber, ' animals, including unlisted parents.'
-!!  PRINT*, '******************************************************************************'
-!!  PRINT*, ''
-!!endif
-!!
-!!PRINT*, 'This version expects ID fields of maximum length ',lengan
-!!
-!!***** call getcl(cl_arg) !only supported by Lahey
-!!   call getarg(2,cl_arg) !PGI command - actually shoudn't need this, there won't be any commands
-!!    cl_arg = TRIM(cl_arg)
-!!
-!!     infile=''
-!!     outfile=''
-!!     HoldStr=''
-!!     j=1
-!!     k=1
-!!     DO i=1, LEN_TRIM(cl_arg)
-!!        if (cl_arg(i:i)==',' .or. cl_arg(i:i)==';') then
-!!          infile=TRIM(HoldStr)
-!!          j=j+1
-!!          IF(j>2) STOP ' Too many command line arguments - Stopping now.'
-!!          HoldStr=''
-!!          k=1
-!!         else
-!!          if ( .NOT. (k==1 .and. cl_arg(i:i)==' ') ) then    !ignore leading spaces
-!!            HoldStr(k:k)=cl_arg(i:i)
-!!            k=k+1
-!!          end if
-!!         end if
-!!     ENDDO
-!!     outfile=TRIM(HoldStr)
-!!
-!!     PRINT'(1x,a10,a60)', ' Infile: ', infile
-!!     PRINT'(1x,a10,a60)', 'Outfile: ', outfile
-
-
-!!    open(3,file=infile,status='unknown')
-
-!!call system_clock(iticks1,i2,i3)
-!!   read(3,*)
-!!    read(3,*)
-!!    read(3,*) pprior,phenotypes, Imprinting, PauseAtEnd
-
-!!    nobs=0
-!!101 READ(3,'(a13)',END=102) HoldStr
-!!    nobs=nobs+1
-!!    GOTO 101
-!!
-!!102  nobs=nobs-(4+phenotypes)  ! to account for header lines
-
-!!write(*,*) ' Number of records: ',nobs
-
-!!ALLOCATE(id(0:nobs),sire(nobs),dam(nobs),seqid(nobs),&
-!!         seqsire(nobs),seqdam(nobs),phenhold(0:nobs)) !,passedorder(nobs)
-!!
-!!REWIND(3)
-!!
-!!       read(3,*)
-!!       read(3,*)
-!!       read(3,*) pprior,phenotypes
-!!       read(3,*)
-!!
-!!        qprior=1-pprior
-!!
-!!       do i = 1, phenotypes
-!!        read(3,*) phenotype(i), g(i, 0), g(i, 1), g(i, 2)
-!!!       write(*,*) phenotype(i), g(i, 0), g(i, 1), g(i, 2)
-!!       enddo
-!!
-!!       read(3,*) nfreq_max
-!!       read(3,*) StopCrit
-!!
-!!       if (StopCrit < 0.000001) StopCrit = 0.000001  ! The regression get wobbly below this because of low X variance
-!!
-!!       read(3,*)
-!!
-!!
-!!! 1    read(3,*,end=9) ia,is,idd,tag,phen(ia)
-!!do i=1,nobs
-!!  read(3,*) id(i),sire(i),dam(i),phenhold(i)
-!!enddo
-!!CLOSE(3)
 
 !!****************************************************************
 !!MC: set all parameters that are normally in the input file
@@ -496,23 +388,7 @@ do ia=1,nobs
     enddo
 end do
 
-!!PRINT'(a32,i6)', ' Number of phenotyped animals: ', j
-
-if (phenotypes==3) then
-  if(g(1,0)>.99999 .and. g(2,1)>.99999 .and.g(3,2)>.99999) then   ! Identity - eg DNA test
-    if(j>0)then
-!!      PRINT'(a32,f12.8)', ' Raw observed frequency: ', SumFreq/(2.*float(j))
-    else
-!!      PRINT'(a32,a36)', ' Raw observed frequency: ', ' No genotypes/incidence observed'
-    endif
-  endif
-end if
-
 maxRegpoints=5
-!!PRINT'(a32,i6)', ' Max Regression points: ', maxRegpoints
-!!PRINT*, ' Segregation analysis ...'
-!!IF(nfreq_max>0) PRINT'(2a8,5a12)', 'iter','Shells','Prior used', 'Result', 'Difference', 'Next prior'
-
 
 ifreq_iterate = -1
 if (nfreq_max==1) nfreq_max=2
@@ -569,7 +445,7 @@ do WHILE (ifreq_iterate < nfreq_max-1)
       maxint=9999999
        maxiter=7
        itersUsed=maxiter
- 888  format(3(f9.2,1x,f9.2,3x))
+888   format(3(f9.2,1x,f9.2,3x))
       do kl=1,maxiter
 !!      IF(nfreq_max==0) print*,'  Iteration number ',kl
       !print*,'  Iteration number ',kl
@@ -946,14 +822,6 @@ elseif (ifreq_iterate>1) then
         areg  = meanY - breg*meanX
         pHold(ifreq_iterate+1)= -1*areg/breg
         !print'(2i4,3f12.8)', j, ifreq_iterate+1, areg, breg, pHold(ifreq_iterate+1)
-
-    if(pHold(ifreq_iterate+1) < pHold(LeastPositive) .or. pHold(ifreq_iterate+1) > pHold(LeastNegative)) then ! outside the best bound, probably curlivilear.
-      pHold(ifreq_iterate+1) = pHold(LeastPositive) + (pHold(LeastNegative)-pHold(LeastPositive))&
-      *   pDev(LeastPositive)/(pDev(LeastPositive)-pDev(LeastNegative))
-      !print*,' '
-      !print'(2i3,ff12.8)', LeastPositive , LeastNegative,    pDev(LeastPositive)/(pDev(LeastPositive)-pDev(LeastNegative)), pHold(ifreq_iterate+1)
-    endif
-
 end if
 
 if (ifreq_iterate>=1) then
@@ -965,11 +833,6 @@ if (ifreq_iterate>=1) then
 !!     PRINT*, 'Unstable projection - taking current prior ...'
    endif
 endif
-
-
-!!IF(nfreq_max>0) PRINT'(2i8,5f12.8)', ifreq_iterate, itersused, pHold(ifreq_iterate), pResult(ifreq_iterate), pDev(ifreq_iterate), pHold(ifreq_iterate+1)
-
-!print'(2f20.15)', pHold(ifreq_iterate)-pHold(ifreq_iterate+1) , StopCrit
 
 if(nfreq_max>0) then
  IF ( ABS(pHold(ifreq_iterate)-pHold(ifreq_iterate+1)) < StopCrit ) ifreq_iterate=nfreq_max
@@ -1127,15 +990,17 @@ deallocate(work)
 deallocate(term)
 !print *,'***5'
 
-deALLOCATE (pHold, pResult, pDev)
+deallocate (pHold, pResult, pDev)
 
 end subroutine geneprob
 
-
+!subroutine changes
+! nn,mm,next,ifirst
 SUBROUTINE LNKLST(I,J,NP,IFLAG)
       use common_GP
-      integer :: i,j, ir,ip,k,iflag,nused,np
-!      integer prog(0:2*MXANEQ)
+      integer(kind=1),intent(in) :: iflag
+      integer,intent(in) :: i,j, np
+      integer :: ir,ip,k,nused
 
       IF (I.le.0.or.J.le.0) RETURN
 

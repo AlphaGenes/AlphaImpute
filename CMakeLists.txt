@@ -12,7 +12,7 @@ endif()
 
 
 OPTION(RUN_TESTS "Run and compile tests"
-    OFF)
+    ON)
 OPTION(USE_HDF5 "Use hdf"
        OFF)
 

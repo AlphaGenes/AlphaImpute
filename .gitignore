@@ -9,13 +9,11 @@ bin/
 *.obj
 *.i90
 *.dwarf
-*.F90
 AlphaImpute_*
 AlphaImpute1*
 GeneProbForAlphaImpute
 proj*
 penmp
-hmmErrors.f90
 nbproject
 .cproject
 .project
