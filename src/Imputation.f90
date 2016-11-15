@@ -63,8 +63,11 @@ CONTAINS
       call ReadGenos(inputParams%GenotypeFileUnit)
 
       ! Impute observed genotypes to animals in the pedigree
+
+      ! loop trough all genotyped animalds
       do i=1,nAnisG
-        do j=1,nAnisP
+        do j=1,nAnisP ! feel like this should also be nAnisG
+          ! could probably remove used
           if (Id(j)==GenotypeId(i)) ImputeGenos(j,:)=Genos(i,:)
         enddo
       enddo
@@ -176,8 +179,8 @@ CONTAINS
               end if
               call GeneralFillIn
               print*, " "
-              CALL DATE_AND_TIME
-              print*, " ","Internal imputation from parents haplotype completed"
+              CALL DATE_AND_TIME(time=timeOut)
+              print*, " ","Internal imputation from parents haplotype completed at: ",timeOut
 
               call InternalHapLibImputation           ! Major Sub-Step 6 (Hickey et al., 2012; Appendix A)
               if (inputParams%sexopt==1) then
@@ -1492,10 +1495,10 @@ end subroutine InternalParentPhaseElim
             allocate(HapCand(nHap,2))
 
             PatMatDone=0
-            if ( Section%BitCompleteMissing(MissImputePhase(i,:,1)) == .FALSE. ) then
+            if (.not. Section%BitCompleteMissing(MissImputePhase(i,:,1))) then
               PatMatDone(1) = 1
             end if
-            if ( Section%BitCompleteMissing(MissImputePhase(i,:,2)) == .FALSE. ) then
+            if (.not. Section%BitCompleteMissing(MissImputePhase(i,:,2))) then
               PatMatDone(2) = 1
             end if
 
@@ -1515,7 +1518,7 @@ end subroutine InternalParentPhaseElim
                   Section%BitCompletePhased(MissImputePhase(i,:,e)) == .FALSE.) then
 
                 do f=1,nHap
-                if ( .NOT. Section%compareHaplotypeAllowMissing(BitHapLib(f,:), BitImputePhase(i,:,e), &
+                if (.not. Section%compareHaplotypeAllowMissing(BitHapLib(f,:), BitImputePhase(i,:,e), &
                     MissHapLib(f,:), MissImputePhase(i,:,e))) then
                     HapCand(f,e)=0
                   end if
@@ -1613,25 +1616,26 @@ end subroutine InternalParentPhaseElim
 
     do e=1,2
       do j=1,inputParams%nsnp
-        do i=1,nAnisP
-          ! If GeneProbPhase has been executed, that is, if not considering the Sex Chromosome, then MSTermInfo={0,1}.
-          ! Else, if Sex Chromosome, then MSTermInfo is 0 always
-          ! So, if a Conservative imputation of haplotypes is selected, this DO statement will do nothing
-          if ((inputParams%ConservativeHapLibImputation==1).and.(MSTermInfo(i,e)==0)) cycle
-
-          ! If all alleles across the cores across the internal phasing steps have been phased the
-          ! same way, impute
-          if (AnimalOn(i,e)==1) then
-            if (ImputePhase(i,j,e)==9) then
-              if ((Temp(i,j,e,1)>inputParams%nAgreeInternalHapLibElim).and.(Temp(i,j,e,2)==0)) then
-                ImputePhase(i,j,e)=0
-              end if
-              if ((Temp(i,j,e,1)==0).and.(Temp(i,j,e,2)>inputParams%nAgreeInternalHapLibElim)) then
-                ImputePhase(i,j,e)=1
-              end if
-            endif
+               ! If GeneProbPhase has been executed, that is, if not considering the Sex Chromosome, then MSTermInfo={0,1}.
+        ! Else, if Sex Chromosome, then MSTermInfo is 0 always
+        ! So, if a Conservative imputation of haplotypes is selected, this DO statement will do nothing
+        if ((inputParams%ConservativeHapLibImputation==1).and.(MSTermInfo(i,e)==0)) cycle
+        if (AnimalOn(i,e)==1) then
+          do i=1,nAnisP
+   
+            ! If all alleles across the cores across the internal phasing steps have been phased the
+            ! same way, impute
+            
+              if (ImputePhase(i,j,e)==9) then
+                if ((Temp(i,j,e,1)>inputParams%nAgreeInternalHapLibElim).and.(Temp(i,j,e,2)==0)) then
+                  ImputePhase(i,j,e)=0
+                end if
+                if ((Temp(i,j,e,1)==0).and.(Temp(i,j,e,2)>inputParams%nAgreeInternalHapLibElim)) then
+                  ImputePhase(i,j,e)=1
+                end if
+              endif
+            end do
           end if
-        end do
       enddo
     enddo
     deallocate(Temp)
