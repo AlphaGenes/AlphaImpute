@@ -19,7 +19,7 @@ CONTAINS
     use omp_lib
 
     integer :: i,j,loop
-    character(len=14) :: timeOut
+    character(len=150) :: timeOut
 
     inputParams => defaultInput
     allocate(SireDam(0:nAnisP,2))
@@ -153,7 +153,8 @@ CONTAINS
               end if
               call GeneralFillIn
               print*, " "
-              print*, " ","Imputation from high-density parents completed"
+              CALL DATE_AND_TIME(time=timeOut)
+              print*, " ","Imputation from high-density parents completed at: ",trim(timeOut)
 
               call ImputeFromHDLibrary                ! Major Sub-Step 3 (Hickey et al., 2012; Appendix A)
               if (inputParams%sexopt==1) then
@@ -165,8 +166,9 @@ CONTAINS
                 call EnsureHetGametic
               end if
               call GeneralFillIn
+               CALL DATE_AND_TIME(time=timeOut)
               print*, " "
-              print*, " ","Haplotype library imputation completed"
+              print*, " ","Haplotype library imputation completed at: ",trim(timeOut)
 
               call InternalParentPhaseElim            ! Major Sub-Step 7 (Hickey et al., 2012; Appendix A)
               if (inputParams%sexopt==1) then
