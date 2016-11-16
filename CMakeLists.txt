@@ -18,7 +18,7 @@ OPTION(USE_HDF5 "Use hdf"
 
 set(CLUSTER 0 CACHE STRING "cluster size")
 # Add our local modlues to the module path
-SET(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules")
+SET(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/../alphacmakefiles/cmake/modules")
 set(CMAKE_MACOSX_RPATH 0)
 
 
@@ -33,7 +33,7 @@ SET(AHLIB alphahouse)
 
 # Define some directories
 SET(SRC ${CMAKE_SOURCE_DIR}/src)
-SET(LIB ${CMAKE_SOURCE_DIR}/objs)
+SET(OBJ ${CMAKE_SOURCE_DIR}/objs)
 SET(BIN ${CMAKE_SOURCE_DIR}/bin)
 SET(TESTS ${CMAKE_SOURCE_DIR}/tests)
 SET(SRCALPHAIMPUTE ${SRC}/)
@@ -57,6 +57,9 @@ ${SRC}/global.f90
 )
 endif (${RUN_TESTS})
 
+# set(_files "test.pf")
+
+
 INCLUDE(${CMAKE_MODULE_PATH}/SetParallelizationLibrary.cmake)
 
 INCLUDE(${CMAKE_MODULE_PATH}/findMKL.cmake)
@@ -74,11 +77,11 @@ endif(${USE_HDF5})
 INCLUDE(${CMAKE_MODULE_PATH}/SetFortranFlags.cmake)
 SET(SRCAH ../alphahouse/src/)
 
-# Have the .mod files placed in the lib folder
-SET(CMAKE_Fortran_MODULE_DIRECTORY ${LIB})
+# Have the .mod files placed in the OBJ folder
+SET(CMAKE_Fortran_MODULE_DIRECTORY ${OBJ})
 
-# The source for the BAR library and have it placed in the lib folder
-ADD_SUBDIRECTORY(${SRCAH} ${LIB}/AH)
+# The source for the BAR library and have it placed in the OBJ folder
+ADD_SUBDIRECTORY(${SRCAH} ${OBJ}/AH)
 
 
 # TODO add tests to correct location
@@ -86,7 +89,7 @@ ADD_SUBDIRECTORY(${SRCALPHAIMPUTE} ${BIN})
 
 # Add a distclean target to the Makefile
 ADD_CUSTOM_TARGET(distclean
-    COMMAND ${CMAKE_COMMAND} -P ${CMAKE_SOURCE_DIR}/distclean.cmake
+    COMMAND ${CMAKE_COMMAND} -P ${CMAKE_MODULE_PATH}/distclean.cmake
 )
 
 if (${RUN_TESTS})
