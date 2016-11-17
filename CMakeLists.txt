@@ -80,7 +80,7 @@ SET(SRCAH ../alphahouse/src/)
 # Have the .mod files placed in the OBJ folder
 SET(CMAKE_Fortran_MODULE_DIRECTORY ${OBJ})
 
-# The source for the BAR library and have it placed in the OBJ folder
+
 ADD_SUBDIRECTORY(${SRCAH} ${OBJ}/AH)
 
 
