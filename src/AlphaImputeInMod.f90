@@ -112,7 +112,6 @@ module AlphaImputeInMod
         integer :: unit,IOStatus,MultipleHDpanels,i
         character(len=*), intent(in) :: SpecFile
         class(AlphaImputeInput), optional, intent(inout),target :: this
-        type(AlphaImputeInput), pointer :: input
 
         character(len=300) :: first, line
         character(len=:), allocatable::tag
