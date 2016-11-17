@@ -35,7 +35,7 @@ module AlphaImputeInMod
         ! box 1
         character(len=300):: PedigreeFile = "Pedigree.txt",GenotypeFile="Genotypes.txt",TrueGenotypeFile="TrueGenotypes.txt",GenderFile="None",InbredAnimalsFile="None"
         integer(kind=1) :: TrueGenos1None0
-        logical :: PlinkFormat
+        logical :: PlinkFormat, VCFFormat
 
         ! box 2
         integer(kind=1) :: SexOpt,HetGameticStatus,HomGameticStatus
@@ -145,13 +145,16 @@ module AlphaImputeInMod
                         write(*, "(A,A)") "No genotype file specified. Using default filename: ", this%Genotypefile
                     else
                         write(this%Genotypefile, "(A)") second(1)
+                        this%PlinkFormat = .FALSE.
+                        this%VCFFormat = .FALSE.
                         if (size(second) >1) then
-                            this%PlinkFormat = .FALSE.
-                            if (trim(toLower(second(2)))=='plink') then
-                                this%PlinkFormat = .TRUE.
-                            endif
+                          select case(trim(toLower(second(2))))
+                            case('plink')
+                              this%PlinkFormat = .TRUE.
+                            case('vcf')
+                              this%VCFFormat = .TRUE.
+                          end select
                         endif
-
                     endif
                 case("truegenotypefile")
                      if (.not. allocated(second)) then
