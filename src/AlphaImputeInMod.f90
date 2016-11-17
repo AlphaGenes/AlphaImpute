@@ -33,7 +33,7 @@ module AlphaImputeInMod
 
     type AlphaImputeInput
         ! box 1
-        character(len=300):: PedigreeFile = "Pedigree.txt",GenotypeFile="Genotypes.txt",TrueGenotypeFile="TrueGenotypes.txt",GenderFile,InbredAnimalsFile
+        character(len=300):: PedigreeFile = "Pedigree.txt",GenotypeFile="Genotypes.txt",TrueGenotypeFile="TrueGenotypes.txt",GenderFile="None",InbredAnimalsFile="None"
         integer(kind=1) :: TrueGenos1None0
         logical :: PlinkFormat
 
