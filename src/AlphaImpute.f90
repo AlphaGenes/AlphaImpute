@@ -136,7 +136,6 @@ if (inputParams%hmmoption == RUN_HMM_NGS) then
 #ifdef DEBUG
     write(0,*) 'DEBUG: HMM NGS'
 #endif
-
     call MaCHController(inputParams%hmmoption)
     call FromHMM2ImputePhase
     call WriteOutResults
@@ -1642,7 +1641,6 @@ else
 
     call CheckImputationInconsistencies(ImputeGenos, ImputePhase, nAnisP, inputParams%nsnp)
 
-    open (unit=42,file=trim(inputParams%GenotypeFile),status='old')
     allocate(TmpGenos(0:nAnisP,inputParams%nSnpRaw))
     allocate(TmpPhase(0:nAnisP,inputParams%nSnpRaw,2))
     TmpGenos=9
@@ -1660,28 +1658,31 @@ else
         endif
     enddo
 
-    do i=1,nAnisG
-        read (42,*) TmpId,WorkTmp(:)
-        do k=1,nAnisP
-            if (trim(Id(k))==trim(TmpId)) then
-                do j=1,inputParams%nSnpRaw
-                    if (SnpIncluded(j)==0) then
-                        if (WorkTmp(j)==1) TmpGenos(k,j)=1
-                        if (WorkTmp(j)==0) then
-                            TmpPhase(k,j,:)=0
-                            TmpGenos(k,j)=0
+    if (inputParams%inteditstat == 1) then
+        open (unit=42,file=trim(inputParams%GenotypeFile),status='old')
+        do i=1,nAnisG
+            read (42,*) TmpId,WorkTmp(:)
+            do k=1,nAnisP
+                if (trim(Id(k))==trim(TmpId)) then
+                    do j=1,inputParams%nSnpRaw
+                        if (SnpIncluded(j)==0) then
+                            if (WorkTmp(j)==1) TmpGenos(k,j)=1
+                            if (WorkTmp(j)==0) then
+                                TmpPhase(k,j,:)=0
+                                TmpGenos(k,j)=0
+                            endif
+                            if (WorkTmp(j)==2) then
+                                TmpPhase(k,j,:)=1
+                                TmpGenos(k,j)=2
+                            endif
                         endif
-                        if (WorkTmp(j)==2) then
-                            TmpPhase(k,j,:)=1
-                            TmpGenos(k,j)=2
-                        endif
-                    endif
-                enddo
-                exit
-            endif
+                    enddo
+                    exit
+                endif
+            enddo
         enddo
-    enddo
-    close(42)
+        close(42)
+    end if
 
     call CheckImputationInconsistencies(TmpGenos, TmpPhase, nAnisP, inputParams%nsnp)
     do i=inputParams%GlobalExtraAnimals+1,nAnisP
