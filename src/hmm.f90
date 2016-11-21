@@ -230,13 +230,18 @@ end subroutine MaCHController
 subroutine ParseMaCHData(HMM, PhasedData, nGenotyped, nInbred)
 use Global
 use GlobalVariablesHmmMaCH
+use AlphaImputeInMod
 
 implicit none
+
 integer(kind=1),intent(in) :: HMM
 integer, intent(in) :: nGenotyped, nInbred
 integer, intent(in) :: PhasedData(nGenotyped+nInbred, nSnpHmm)
 
 integer :: maxHaps
+type(AlphaImputeInput), pointer :: inputParams
+
+inputParams => defaultInput
 
 allocate(GlobalInbredInd(nGenotyped+nInbred))
 GlobalInbredInd=.FALSE.
@@ -252,10 +257,11 @@ endif
 
 ! Check if the number of Haplotypes the user has considered in the
 ! Spec file, Sub H (MaCH paper: Li et al. 2010), is reached.
-maxHaps = 2 * sum(GlobalHmmHDInd(1:nGenotyped)) + nInbred
-if (nHapInSubH > maxHaps) then
+maxHaps = 2 * (sum(GlobalHmmHDInd(1:nGenotyped))-1) + nInbred
+if (inputParams%nhapinsubh > maxHaps) then
+    print*, ""
     print*, "WARNING! Number of individuals highly-covered is too small"
-    print*, "         for the number of Haplotypes in Sub H specified."
+    print*, "         for the number of Haplotypes specified."
     print*, "         Reference haplotypes will be taken from the whole population"
     GlobalHmmHDInd=1
     ! stop
@@ -508,12 +514,12 @@ StopSnp=nSnpHmm
 if (HMM==RUN_HMM_ONLY .OR. HMM==RUN_HMM_NGS) then
 
     if (GlobalInbredInd(CurrentInd)==.TRUE.) then
-        allocate(ForwardProbs(nHapInSubH,nSnpHmm))
+        allocate(ForwardProbs(inputParams%nhapinsubh,nSnpHmm))
         call ForwardAlgorithmForSegmentHaplotype(CurrentInd,1,1,nSnpHmm)     ! Paternal haplotype
         call SampleSegmentHaplotypeSource(CurrentInd,1,1,nSnpHmm)
 
         deallocate(ForwardProbs)
-        allocate(ForwardProbs(nHapInSubH,nSnpHmm))
+        allocate(ForwardProbs(inputParams%nhapinsubh,nSnpHmm))
         call ForwardAlgorithmForSegmentHaplotype(CurrentInd,2,1,nSnpHmm)     ! Maternal haplotype
         call SampleSegmentHaplotypeSource(CurrentInd,2,1,nSnpHmm)
     else
@@ -1308,7 +1314,7 @@ else
         enddo
     endif
 
-    do i=1,nHapInSubH
+    do i=1, inputParams%nhapinsubh
         if (inputParams%HMMOption /= RUN_HMM_NGS .OR. GlobalInbredInd(CurrentInd)==.TRUE.) then
             ! Probability to observe genotype SubH(i) being the true
             ! genotype GenosHmmMaCH in locus Marker
