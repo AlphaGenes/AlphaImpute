@@ -197,7 +197,7 @@ else
             write(0,*) 'DEBUG: Calculate Genotype Probabilites'
 #endif
 
-            if (inputParams%restartOption<OPT_RESTART_PHASING) Then
+            if (inputParams%restartOption== OPT_RESTART_ALL .or. inputParams%restartOption== OPT_RESTART_GENEPROB) Then
 
 #ifdef OS_UNIX
 #if CLUSTER==2
