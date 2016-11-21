@@ -197,7 +197,7 @@ integer,intent(IN) :: CurrentInd, hap, StartSnp, StopSnp
 
 ! Local variables
 integer :: i, state, marker, Thread, Hapi, sampleHap, FromMarker, tmpMarker
-type(AlphaImputeInput), pointer :: inputParams 
+type(AlphaImputeInput), pointer :: inputParams
 
 ! double precision :: Probs(inputParams%nHapInSubH*(inputParams%nHapInSubH+1)/2)
 double precision, allocatable, dimension(:) :: Probs
@@ -446,13 +446,31 @@ integer(kind=1),intent(IN) :: allele
 
 ! Local variables
 integer :: i
+integer :: RefAll, AltAll
 double precision :: factors(0:1), ErrorRate
+double precision :: posterior_11, posterior_12, posterior_22, summ
 type(AlphaImputeInput), pointer :: inputParams
+
 inputParams => defaultInput
 
-call GetErrorRatebyMarker(Marker, ErrorRate)
-factors(0) = ErrorRate
-factors(1) = 1.0 - factors(0)
+if (defaultInput%HMMOption==RUN_HMM_NGS .AND. GlobalInbredInd(CurrentInd)==.FALSE.) then
+    RefAll = ReferAllele(CurrentInd,Marker)
+    AltAll = AlterAllele(CurrentInd,Marker)
+    posterior_11 = shotgunErrorMatrix(0,RefAll,AltAll)
+    posterior_12 = shotgunErrorMatrix(1,RefAll,AltAll)
+    posterior_22 = shotgunErrorMatrix(2,RefAll,AltAll)
+
+    factors(0) = (posterior_11 + posterior_12) * 0.5
+    factors(1) = (posterior_22 + posterior_12) * 0.5
+
+    summ = factors(0) + factors(1)
+    factors(0) = factors(0) / summ
+    factors(1) = factors(1) / summ
+else
+    call GetErrorRatebyMarker(Marker, ErrorRate)
+    factors(0) = ErrorRate
+    factors(1) = 1.0 - factors(0)
+endif
 
 do i=1,inputParams%nHapInSubH
     if (allele==SubH(i,Marker)) then
