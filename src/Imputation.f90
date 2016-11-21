@@ -22,13 +22,8 @@ CONTAINS
     character(len=150) :: timeOut
 
     inputParams => defaultInput
-    allocate(SireDam(0:nAnisP,2))
-    SireDam=0
-    do i=1,nAnisP
-      do j=1,2
-        SireDam(RecPed(i,j+1),j)=1 ! SireDam tells if individuals are Sires or Dams
-      enddo
-    enddo
+
+
 
     ! WARNING: Need to discuss this part of code with John. Nonsense going on here!
 
@@ -42,15 +37,11 @@ CONTAINS
       !       up in the code: at InsteadOfGeneProb in MakeFiles subroutine.
       !       Something has to be done with InsteadOfGeneProb cos' it is causing lots
       !       of problems!!
-      if (allocated(ImputeGenos)) Then
-          deallocate(ImputeGenos)
-      endif
-      allocate(ImputeGenos(0:nAnisP,inputParams%nsnp))
+
       if (allocated(ImputePhase)) Then
           deallocate(ImputePhase)
       endif
       allocate(ImputePhase(0:nAnisP,inputParams%nsnp,2))
-      ImputeGenos=9
       ImputePhase=9
 
       allocate(GlobalTmpCountInf(nAnisP,8))
@@ -60,19 +51,9 @@ CONTAINS
       write(0,*) 'DEBUG: Read Genotypes'
 #endif
 
-      call ReadGenos(inputParams%GenotypeFileUnit)
+      call ped%addGenotypeInformation(inputParams%GenotypeFile,inputParams%nsnp,NanisG)
 
-      ! Impute observed genotypes to animals in the pedigree
 
-      ! loop trough all genotyped animalds
-      do i=1,nAnisG
-        do j=1,nAnisP ! feel like this should also be nAnisG
-          ! could probably remove used
-          if (Id(j)==GenotypeId(i)) ImputeGenos(j,:)=Genos(i,:)
-        enddo
-      enddo
-
-      deallocate(Genos)
 
 #ifdef DEBUG
       write(0,*) 'DEBUG: Call Mach'
@@ -88,13 +69,11 @@ CONTAINS
     else
 
       if (inputParams%RestartOption==4) then
-        allocate(ImputeGenos(0:nAnisP,inputParams%nsnp))
         allocate(ImputePhase(0:nAnisP,inputParams%nsnp,2))
       else
         if (inputParams%sexopt==0) then
           ! Impute initial genotypes from calculated genotype probabilities
           if (inputParams%BypassGeneProb==0) then
-            allocate(ImputeGenos(0:nAnisP,inputParams%nsnp))
             allocate(ImputePhase(0:nAnisP,inputParams%nsnp,2))
             allocate(GlobalWorkPhase(0:nAnisP,inputParams%nsnp,2))
             call ReReadGeneProbs
@@ -921,7 +900,7 @@ end subroutine InternalParentPhaseElim
       CoreI = ReadCores(FileName)
 
       ! Get phase information
-      call ReadPhased(nAnisHD, nAnisP, FileNamePhase, Id, PhaseHD, PosHD)
+      call ReadPhased(nAnisHD, nAnisP, FileNamePhase, Ped, PhaseHD, PosHD)
 
       do g=1,CoreI%nCores
         ! Initialize Start and End snps of the cores
@@ -1157,7 +1136,7 @@ end subroutine InternalParentPhaseElim
       CoreI = ReadCores(FileName)
 
       ! Get phase information
-      call ReadPhased(nAnisHD, nAnisP, FileNamePhase, Id, PhaseHD, PosHD)
+      call ReadPhased(nAnisHD, nAnisP, FileNamePhase, ped, PhaseHD, PosHD)
 
       do g=1,CoreI%nCores
         ! Initialize Start and End snps of the cores
@@ -1216,13 +1195,13 @@ end subroutine InternalParentPhaseElim
           do e=1,2
             PedId=e+1
             ! Skip if, in the case of sex chromosome, me and my parent are heterogametic
-            if ((inputParams%sexopt==1).and.(RecGender(i)==HetGameticStatus).and.&
-                (RecGender(RecPed(i,PedId))==HetGameticStatus)) then
+            if ((inputParams%sexopt==1).and.(ped%pedigree(i)%gender==HetGameticStatus).and.&
+              if (ped%pedigree(i)%getSireDamObjectByIndex(pedId)%gender == HetGameticStatus) then
                   cycle
             end if
 
             ! We look for gamete through those individuals that have parents with HD genotype information
-            if (RecPed(i,PedId)>0) then
+            if (associated(ped%pedigree(i)%getSireDamObjectByIndex(pedId))) then
               ! We look for possible gametes within the haplotypes identified to each of the
               ! individual's parents constructed during the phasing step
               PosHDInd=PosHD(RecPed(i,PedId))   ! Index of the individual in the HD phase information
