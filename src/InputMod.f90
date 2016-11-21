@@ -250,7 +250,6 @@ module InputMod
 
   allocate(Temp(inputParams%nsnp))
   allocate(GenotypeId(nAnisG))
-  allocate(Ped(nAnisRawPedigree,3))
   allocate(Genos(0:nAnisG,inputParams%nsnp))
   allocate(GenderId(nAnisRawPedigree))
   allocate(GenderRaw(nAnisRawPedigree))
@@ -258,11 +257,8 @@ module InputMod
   Genos(0,:)=9
 
   ! Read the pedigree information
-  rewind(inputParams%pedigreeFileUnit)
-  do i=1,nAnisRawPedigree
-      read(inputParams%pedigreeFileUnit,*) ped(i,:)
-  enddo
-
+  
+  ped = initPedigree(inputParams%pedigreefile, nAnisRawPedigree)
   ! Read the genotype file
   if (inputParams%hmmoption /= RUN_HMM_NGS) then
       rewind(inputParams%genotypeFileUnit)
@@ -276,45 +272,11 @@ module InputMod
   close(inputParams%genotypeFileUnit)
 
   ! Read the gender file if imputing the sex chromosome
-  GenderRaw=9
   if (inputParams%SexOpt==1) then
-      CountLinesGender=0
-      do
-          read (inputParams%GenderFileUnit,*,iostat=k) dumC
-          CountLinesGender=CountLinesGender+1
-          if (k/=0) then
-              CountLinesGender=CountLinesGender-1
-              exit
-          endif
-      enddo
-      rewind(inputParams%GenderFileUnit)
-      nAnisInGenderFile=CountLinesGender
-      if (CountLinesGender/=nAnisRawPedigree) then
-          print*, "Warning - number of lines in Gender file not the same as in pedigree file"
-          stop
-      endif
-      do j=1,nAnisRawPedigree                 ! For each individual in the file
-          read (inputParams%GenderFileUnit,*) dumC,GenCode
-          if ((GenCode/=1).and.(GenCode/=2)) then
-              print*, "Warning - Gender code incorrect for at least one animal"
-              stop
-          endif
-          AnimalPresent=0
-          do i=1,nAnisRawPedigree             ! For each individual in the pedigree
-              if (trim(dumC)==trim(ped(i,1))) then
-                  GenderId(i)=dumC
-                  GenderRaw(i)=GenCode
-                  AnimalPresent=1
-                  exit
-              endif
-          enddo
-          if (AnimalPresent==0) then
-              print*, "Warning - Animal missing in gender file"
-              stop
-          endif
-      enddo
+    ped = initPedigree(inputParams%pedigreefile, nAnisRawPedigree,inputParams%genderFile)
+  else 
+    ped = initPedigree(inputParams%pedigreefile, nAnisRawPedigree)
   endif
-
   deallocate(temp)
   end subroutine ReadInData
 

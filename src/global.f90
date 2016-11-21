@@ -63,13 +63,14 @@ end module Global
 
 
 module GlobalPedigree
-use Global
+use PedigreeModule
 implicit none
 
 real(kind=4),allocatable :: xnumrelmatHold(:)
 integer :: NRMmem, shell, shellmax, shellWarning
 integer,allocatable:: seqid(:),seqsire(:),seqdam(:),RecodeGenotypeId(:),passedorder(:)
-character*(lengan),allocatable :: ped(:,:),Id(:),sire(:),dam(:)
+! character*(lengan),allocatable :: ped(:,:),Id(:),sire(:),dam(:)
+type(PedigreeHolder) :: ped !TODO move out of global
 
 
 end module GlobalPedigree
