@@ -6,7 +6,7 @@
 
 MODULE Imputation
   use Global
-  use GlobalPedigree
+  
   use GlobalVariablesHmmMaCH
   use AlphaImputeInMod
   use InputMod
@@ -857,7 +857,7 @@ end subroutine InternalParentPhaseElim
 
     use ISO_Fortran_Env
     use Global
-    use GlobalPedigree
+    
     use PhaseRounds
     use Utils
     use HaplotypeBits
@@ -1097,7 +1097,7 @@ end subroutine InternalParentPhaseElim
     ! This subroutine corresponds to Major sub-step 4 from Hickey et al., 2012 (Appendix A)
 
     use Global
-    use GlobalPedigree
+    
     use PhaseRounds
     use HaplotypeBits
     use Utils
@@ -1650,7 +1650,7 @@ end subroutine InternalParentPhaseElim
 
     use Global
     use ISO_Fortran_Env
-    use GlobalPedigree
+    
     use PhaseRounds
     use Utils
     use alphaimputeinmod
@@ -2298,7 +2298,7 @@ endif
   !!   * IndividualMendelianInformativeness.txt
 
     use Global
-    use GlobalPedigree
+    
     use alphaimputeinmod
 
     implicit none

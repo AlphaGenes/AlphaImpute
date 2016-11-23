@@ -237,7 +237,7 @@ module InputMod
 !> @param[in]
 !---------------------------------------------------------------------------
   subroutine ReadInData
-  use GlobalPedigree
+  
   use Global
   use AlphaImputeInMod
   implicit none
@@ -282,7 +282,7 @@ module InputMod
 
   !#############################################################################################################################################################################################################################
   subroutine ReadSeq(ReadsFileUnit)
-  use GlobalPedigree
+  
   use Global
   use alphaimputeinmod
   implicit none
@@ -355,7 +355,7 @@ module InputMod
 !#############################################################################################################################################################################################################################
   subroutine readVCF(ReadsFileUnit, Ids, RefAll, AltAll, nSnpIn, SnpUsed, StartSnp, EndSnp, nIndivIn)
     ! subroutine readRogerData(filename, Ids, position, quality, SequenceData, nSnpIn, SnpUsed, StartSnp, EndSnp, nIndivIn)
-    use GlobalPedigree
+    
     use Global
     use AlphaImputeInMod
     use omp_lib
@@ -434,7 +434,7 @@ module InputMod
 
   !#############################################################################################################################################################################################################################
   subroutine ReadGenos(GenoFileUnit)
-  use GlobalPedigree
+  
   use Global
   use alphaimputeinmod
   implicit none
@@ -477,7 +477,7 @@ module InputMod
 
   !#############################################################################################################################################################################################################################
   subroutine ReadPlink(GenoFileUnit)
-  use GlobalPedigree
+  
   use Global
   use alphaimputeinmod
   implicit none

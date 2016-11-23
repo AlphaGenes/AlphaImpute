@@ -5,7 +5,7 @@ CONTAINS
 !#############################################################################################################################################################################################################################
 subroutine ModelRecombSegment(nSnpBegin,nSnpFinal,nRecomb)
 use Global
-use GlobalPedigree
+
 use AlphaImputeInMod
 implicit none
 

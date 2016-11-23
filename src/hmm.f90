@@ -373,7 +373,7 @@ end subroutine ParseMaCHDataNGS
 subroutine ParseMaCHDataGenos(nGenotyped)
 ! subroutine ParseMaCHData
 use Global
-use GlobalPedigree
+
 use GlobalVariablesHmmMaCH
 use Utils
 use AlphaImputeInMod
@@ -1610,7 +1610,7 @@ subroutine SetUpEquationsReads(nGenotyped)
 ! Li et al. 2010, Appendix
 
 use Global
-use GlobalPedigree
+
 use GlobalVariablesHmmMaCH
 use random
 use AlphaImputeInMod
