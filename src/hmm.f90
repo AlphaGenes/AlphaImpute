@@ -403,7 +403,7 @@ nIndvG=0
 
 do j = 1, nGenotyped
     do i = 1, nAnisP
-        if (trim(Id(i)) == trim(GenotypeID(j))) then
+        if (trim(ped%pedigree(i)%originalID) == trim(GenotypeID(j))) then
             GlobalHmmID(j) = i
         end if
     end do

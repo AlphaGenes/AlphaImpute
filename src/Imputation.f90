@@ -318,102 +318,107 @@ CONTAINS
               end do
             end do
           end do
+          block
+            use individualModule
+            type(individual), pointer :: parent
+            !$OMP PARALLEL DO &
+            !$OMP DEFAULT(SHARED) &
+            !$OMP PRIVATE(i,j,e,CompPhase,GamA,GamB,curPos,curSection)
+            do i=1,nAnisP
+              do e=1,2
+                
+                  
+                  parent => ped%pedigree(i)%getSireDamObjectByIndex(e+1)
+                ! Skip if, in the case of sex chromosome, me and my parent are heterogametic
+                if ((inputParams%sexopt==1).and.(ped%pedigree(i)%gender==HetGameticStatus).and.(parent%gender==HetGameticStatus)) cycle
+                ! If not a Base Animal
+                if (associated(parent)) then
+                  CompPhase=1
+                  ! If the haplotype for this core is not completely phased
+                  if (Section%BitCompletePhased(MissImputePhase(:,e,i)) == .FALSE.) then
+                    ! Check is this haplotype is the very same that the paternal haplotype
+                    ! of the parent of the individual
+                    GamA=1
+                    if (.NOT. Section%compareHaplotype(BitImputePhase(:,1,parent%id), BitImputePhase(:,e,i), &
+                        MissImputePhase(:,1,parent%id), MissImputePhase(:,e,i)) ) then
+                      GamA = 0
+                    end if
 
-          !$OMP PARALLEL DO &
-          !$OMP DEFAULT(SHARED) &
-          !$OMP PRIVATE(i,j,e,CompPhase,GamA,GamB,curPos,curSection)
-          do i=1,nAnisP
-            do e=1,2
-              ! Skip if, in the case of sex chromosome, me and my parent are heterogametic
-              if ((inputParams%sexopt==1).and.(RecGender(i)==HetGameticStatus).and.(RecGender(RecPed(i,e+1))==HetGameticStatus)) cycle
+                    ! Check is this haplotype is the very same that the maternal haplotype
+                    ! of the parent of the individual
+                    GamB=1
+                    if (.NOT. Section%compareHaplotype(BitImputePhase(:,2,parent%id), BitImputePhase(:,e,i), &
+                        MissImputePhase(:,2,parent%id), MissImputePhase(:,e,i))) then
+                      GamB = 0
+                    end if
 
-              ! If not a Base Animal
-              if (RecPed(i,e+1)>0) then
-                CompPhase=1
-                ! If the haplotype for this core is not completely phased
-                if (Section%BitCompletePhased(MissImputePhase(:,e,i)) == .FALSE.) then
-                  ! Check is this haplotype is the very same that the paternal haplotype
-                  ! of the parent of the individual
-                  GamA=1
-                  if (.NOT. Section%compareHaplotype(BitImputePhase(:,1,RecPed(i,e+1)), BitImputePhase(:,e,i), &
-                      MissImputePhase(:,1,RecPed(i,e+1)), MissImputePhase(:,e,i)) ) then
-                    GamA = 0
-                  end if
+                    ! This haplotype is the paternal haplotype of the individual's parent
+                    ! Then count the number of occurrences a particular phase is impute in a
+                    ! a particular allele across the cores and across the internal phasing steps
+                    if ((GamA==1).and.(GamB==0)) then
+                      AnimalOn(i,e)=1
+                      curPos = 1
+                      curSection = 1
 
-                  ! Check is this haplotype is the very same that the maternal haplotype
-                  ! of the parent of the individual
-                  GamB=1
-                  if (.NOT. Section%compareHaplotype(BitImputePhase(:,2,RecPed(i,e+1)), BitImputePhase(:,e,i), &
-                      MissImputePhase(:,2,RecPed(i,e+1)), MissImputePhase(:,e,i)) ) then
-                    GamB = 0
-                  end if
+                      do j=CoreStart,CoreEnd
+                          if ( BTEST(MissImputePhase(curSection,e,i), curPos) == .TRUE. ) then
+                            if ( BTEST(BitImputePhase(curSection,1,parent%id), curPos) == .FALSE. .AND. &
+                                 BTEST(MissImputePhase(curSection,1,parent%id), curPos)  == .FALSE. ) then
+                              !$OMP ATOMIC
+                              Temp(i,j,e,1)=Temp(i,j,e,1)+1
+                            end if
 
-                  ! This haplotype is the paternal haplotype of the individual's parent
-                  ! Then count the number of occurrences a particular phase is impute in a
-                  ! a particular allele across the cores and across the internal phasing steps
-                  if ((GamA==1).and.(GamB==0)) then
-                    AnimalOn(i,e)=1
-                    curPos = 1
-                    curSection = 1
-
-                    do j=CoreStart,CoreEnd
-                        if ( BTEST(MissImputePhase(curSection,e,i), curPos) == .TRUE. ) then
-                          if ( BTEST(BitImputePhase(curSection,1,RecPed(i,e+1)), curPos) == .FALSE. .AND. &
-                               BTEST(MissImputePhase(curSection,1,RecPed(i,e+1)), curPos)  == .FALSE. ) then
-                            !$OMP ATOMIC
-                            Temp(i,j,e,1)=Temp(i,j,e,1)+1
+                            if ( BTEST(BitImputePhase(curSection,1,parent%id), curPos) == .TRUE. ) then
+                              !$OMP ATOMIC
+                              Temp(i,j,e,2)=Temp(i,j,e,2)+1
+                            end if
                           end if
 
-                          if ( BTEST(BitImputePhase(curSection,1,RecPed(i,e+1)), curPos) == .TRUE. ) then
-                            !$OMP ATOMIC
-                            Temp(i,j,e,2)=Temp(i,j,e,2)+1
-                          end if
+                          curPos = curPos + 1
+                        if (curPos == 65) then
+                          curPos = 1
+                          curSection = curSection + 1
                         end if
+                      enddo
 
-                        curPos = curPos + 1
-                      if (curPos == 65) then
-                        curPos = 1
-                        curSection = curSection + 1
-                      end if
-                    enddo
+                    endif
 
-                  endif
+                    ! This haplotype is the maternal haplotype of the individual's parent
+                    ! Then count the number of occurrences a particular phase is impute in a
+                    ! a particular allele across the cores and across the internal phasing steps
+                    if ((GamA==0).and.(GamB==1)) then
+                      AnimalOn(i,e)=1
+                      curPos = 1
+                      curSection = 1
+                      do j=CoreStart,CoreEnd
 
-                  ! This haplotype is the maternal haplotype of the individual's parent
-                  ! Then count the number of occurrences a particular phase is impute in a
-                  ! a particular allele across the cores and across the internal phasing steps
-                  if ((GamA==0).and.(GamB==1)) then
-                    AnimalOn(i,e)=1
-                    curPos = 1
-                    curSection = 1
-                    do j=CoreStart,CoreEnd
+                          if ( BTEST(MissImputePhase(curSection,e,i), curPos) == .TRUE. ) then
+                            if ( BTEST(BitImputePhase(curSection,2,parent%id), curPos) == .FALSE. .AND. &
+                                 BTEST(MissImputePhase(curSection,2,parent%id), curPos) == .FALSE. ) then
+                              !$OMP ATOMIC
+                              Temp(i,j,e,1)=Temp(i,j,e,1)+1
+                            end if
 
-                        if ( BTEST(MissImputePhase(curSection,e,i), curPos) == .TRUE. ) then
-                          if ( BTEST(BitImputePhase(curSection,2,RecPed(i,e+1)), curPos) == .FALSE. .AND. &
-                               BTEST(MissImputePhase(curSection,2,RecPed(i,e+1)), curPos) == .FALSE. ) then
-                            !$OMP ATOMIC
-                            Temp(i,j,e,1)=Temp(i,j,e,1)+1
+                            if ( BTEST(BitImputePhase(curSection,2, parent%id), curPos) == .TRUE. ) then
+                              !$OMP ATOMIC
+                              Temp(i,j,e,2)=Temp(i,j,e,2)+1
+                            end if
                           end if
 
-                          if ( BTEST(BitImputePhase(curSection,2,RecPed(i,e+1)), curPos) == .TRUE. ) then
-                            !$OMP ATOMIC
-                            Temp(i,j,e,2)=Temp(i,j,e,2)+1
-                          end if
+                          curPos = curPos + 1
+                        if (curPos == 65) then
+                          curPos = 1
+                          curSection = curSection + 1
                         end if
-
-                        curPos = curPos + 1
-                      if (curPos == 65) then
-                        curPos = 1
-                        curSection = curSection + 1
-                      end if
-                    enddo
+                      enddo
+                    endif
                   endif
                 endif
-              endif
+              
+              enddo
             enddo
-          enddo
-          !$OMP END PARALLEL DO
-
+            !$OMP END PARALLEL DO
+          end block
           ! Prepare the core for the next cycle
           CoreStart=CoreStart+LoopIndex(l,2)
           CoreEnd=CoreEnd+LoopIndex(l,2)
@@ -428,7 +433,7 @@ CONTAINS
       do j=1,inputParams%nsnp
         do i=1,nAnisP
           if (AnimalOn(i,e)==1) then
-              if ((inputParams%sexopt==0).or.(RecGender(i)==HomGameticStatus)) then
+              if ((inputParams%sexopt==0).or.(ped%pedigree(i)%gender==HomGameticStatus)) then
 
                 if (ImputePhase(i,j,e)==9) then
                     if ((Temp(i,j,e,1)>inputParams%nAgreeInternalHapLibElim).and.(Temp(i,j,e,2)==0)) ImputePhase(i,j,e)=0
@@ -443,7 +448,7 @@ CONTAINS
     ! The individual is has one haplotype: In Sex Chromosome, the heterogametic case
     do j=1,inputParams%nsnp
       do i =1, nAnisP
-        if ((inputParams%sexopt==1).and.(RecGender(i)==HetGameticStatus)) then
+        if ((inputParams%sexopt==1).and.(ped%pedigree(i)%gender==HetGameticStatus)) then
           if (AnimalOn(i,HomGameticStatus)==1) then
             if (ImputePhase(i,j,HomGameticStatus)==9) then
                 if ((Temp(i,j,HomGameticStatus,1)>inputParams%nAgreeInternalHapLibElim).and.(Temp(i,j,HomGameticStatus,2)==0))&
@@ -958,7 +963,7 @@ end subroutine InternalParentPhaseElim
         do i=1,nAnisP
           ! Look for possible gametes through the Haplotype
           ! Library constructed during the phasing step
-          PosHDInd=PosHD(RecPed(i,1))         ! Index of the individual in the HD phase information
+          PosHDInd=PosHD(i)         ! Index of the individual in the HD phase information
 
           ! If there is one allele phased at least
           if ((Section%BitCountAllelesImputed(MissImputePhase(i,:,1)) + &
@@ -1188,90 +1193,95 @@ end subroutine InternalParentPhaseElim
           end do
         end do
 
-        !$OMP PARALLEL DO &
-        !$OMP DEFAULT(SHARED) &
-        !$OMP PRIVATE(i,j,e,PedId,PosHDInd,GamA,GamB)
-        do i=1,nAnisP
-          do e=1,2
-            PedId=e+1
-            ! Skip if, in the case of sex chromosome, me and my parent are heterogametic
-            if ((inputParams%sexopt==1).and.(ped%pedigree(i)%gender==HetGameticStatus).and.&
-              if (ped%pedigree(i)%getSireDamObjectByIndex(pedId)%gender == HetGameticStatus) then
-                  cycle
-            end if
+        block
+          use individualModule
+          type(individual) ,pointer :: parent
+          !$OMP PARALLEL DO &
+          !$OMP DEFAULT(SHARED) &
+          !$OMP PRIVATE(i,j,e,PedId,PosHDInd,GamA,GamB)
+          do i=1,nAnisP
+            do e=1,2
+              PedId=e+1
+              parent => ped%pedigree(i)%getSireDamObjectByIndex(pedId)
+              ! Skip if, in the case of sex chromosome, me and my parent are heterogametic
+              if ((inputParams%sexopt==1).and.(ped%pedigree(i)%gender==HetGameticStatus).and.&
+                (parent%gender == HetGameticStatus)) then
+                    cycle
+              end if
 
-            ! We look for gamete through those individuals that have parents with HD genotype information
-            if (associated(ped%pedigree(i)%getSireDamObjectByIndex(pedId))) then
-              ! We look for possible gametes within the haplotypes identified to each of the
-              ! individual's parents constructed during the phasing step
-              PosHDInd=PosHD(RecPed(i,PedId))   ! Index of the individual in the HD phase information
+              ! We look for gamete through those individuals that have parents with HD genotype information
+              if (associated(parent)) then
+                ! We look for possible gametes within the haplotypes identified to each of the
+                ! individual's parents constructed during the phasing step
+                PosHDInd=PosHD(parent%id)   ! Index of the parent in the HD phase information 
+                !TODO check- SHOULD THIS BE INDIVIDUAL id (above) rather than parent ID?
 
-              ! If there is one allele phased at least
-              if ((Section%BitCountAllelesImputed(MissImputePhase(i,:,1)) + &
-                   Section%BitCountAllelesImputed(MissImputePhase(i,:,2))) > 0 .AND. PosHDInd>0) then
+                ! If there is one allele phased at least
+                if ((Section%BitCountAllelesImputed(MissImputePhase(i,:,1)) + &
+                     Section%BitCountAllelesImputed(MissImputePhase(i,:,2))) > 0 .AND. PosHDInd>0) then
 
-                GamA=1
-                GamB=1
+                  GamA=1
+                  GamB=1
 
-                if (.NOT. Section%compareHaplotypeAllowMissing(BitPhaseHD(PosHDInd,:,1), BitImputePhase(i,:,e), &
-                    MissPhaseHD(PosHDInd,:,1), MissImputePhase(i,:,e), ImputeFromParentCountThresh)) then
-                  GamA = 0
-                end if
+                  if (.NOT. Section%compareHaplotypeAllowMissing(BitPhaseHD(PosHDInd,:,1), BitImputePhase(i,:,e), &
+                      MissPhaseHD(PosHDInd,:,1), MissImputePhase(i,:,e), ImputeFromParentCountThresh)) then
+                    GamA = 0
+                  end if
 
-                if (.NOT. Section%compareHaplotypeAllowMissing(BitPhaseHD(PosHDInd,:,2), BitImputePhase(i,:,e), &
-                    MissPhaseHD(PosHDInd,:,2), MissImputePhase(i,:,e), ImputeFromHDPhaseThresh)) then
-                  GamB = 0
-                end if
+                  if (.NOT. Section%compareHaplotypeAllowMissing(BitPhaseHD(PosHDInd,:,2), BitImputePhase(i,:,e), &
+                      MissPhaseHD(PosHDInd,:,2), MissImputePhase(i,:,e), ImputeFromHDPhaseThresh)) then
+                    GamB = 0
+                  end if
 
 
-                ! NOTE: [..."and the candidate haplotypes for each individual's gametes are restricted
-                !       to the two haplotypes that have been identified for each of its parents..."]
-                !   If GamA==0, then the haplotype is different from individual's paternal haplotype
-                !   If GamB==0, then the haplotype is different from individual's maternal haplotype
+                  ! NOTE: [..."and the candidate haplotypes for each individual's gametes are restricted
+                  !       to the two haplotypes that have been identified for each of its parents..."]
+                  !   If GamA==0, then the haplotype is different from individual's paternal haplotype
+                  !   If GamB==0, then the haplotype is different from individual's maternal haplotype
 
-                ! e is the individual's paternal haplotype
-                if ((GamA==1).and.(GamB==0)) then
-                  ! Consider the haplotype of this animal in further steps
-                  AnimalOn(i,e)=1
-                  do j=StartSnp,EndSnp
-                    ! Count the number of alleles coded with 0 and 1
-                    if (ImputePhase(i,j,e)==9) then
-                      if(PhaseHD(PosHDInd,j,1)==0) then
-                        !$OMP ATOMIC
-                        Temp(i,j,e,1)=Temp(i,j,e,1)+1
-                      end if
-                      if(PhaseHD(PosHDInd,j,1)==1) then
-                        !$OMP ATOMIC
-                        Temp(i,j,e,2)=Temp(i,j,e,2)+1
-                      end if
-                    endif
-                  enddo
-                endif
+                  ! e is the individual's paternal haplotype
+                  if ((GamA==1).and.(GamB==0)) then
+                    ! Consider the haplotype of this animal in further steps
+                    AnimalOn(i,e)=1
+                    do j=StartSnp,EndSnp
+                      ! Count the number of alleles coded with 0 and 1
+                      if (ImputePhase(i,j,e)==9) then
+                        if(PhaseHD(PosHDInd,j,1)==0) then
+                          !$OMP ATOMIC
+                          Temp(i,j,e,1)=Temp(i,j,e,1)+1
+                        end if
+                        if(PhaseHD(PosHDInd,j,1)==1) then
+                          !$OMP ATOMIC
+                          Temp(i,j,e,2)=Temp(i,j,e,2)+1
+                        end if
+                      endif
+                    enddo
+                  endif
 
-                ! e is the individual's maternal haplotype
-                if ((GamA==0).and.(GamB==1)) then
-                  ! Consider the haplotype of this animal in further steps
-                  AnimalOn(i,e)=1
-                  do j=StartSnp,EndSnp
-                    ! Count the number of alleles coded with 0 and 1
-                    if (ImputePhase(i,j,e)==9) then
-                      if(PhaseHD(PosHDInd,j,2)==0) then
-                        !$OMP ATOMIC
-                        Temp(i,j,e,1)=Temp(i,j,e,1)+1
-                      end if
-                      if(PhaseHD(PosHDInd,j,2)==1) then
-                        !$OMP ATOMIC
-                        Temp(i,j,e,2)=Temp(i,j,e,2)+1
-                      end if
-                    endif
-                  enddo
+                  ! e is the individual's maternal haplotype
+                  if ((GamA==0).and.(GamB==1)) then
+                    ! Consider the haplotype of this animal in further steps
+                    AnimalOn(i,e)=1
+                    do j=StartSnp,EndSnp
+                      ! Count the number of alleles coded with 0 and 1
+                      if (ImputePhase(i,j,e)==9) then
+                        if(PhaseHD(PosHDInd,j,2)==0) then
+                          !$OMP ATOMIC
+                          Temp(i,j,e,1)=Temp(i,j,e,1)+1
+                        end if
+                        if(PhaseHD(PosHDInd,j,2)==1) then
+                          !$OMP ATOMIC
+                          Temp(i,j,e,2)=Temp(i,j,e,2)+1
+                        end if
+                      endif
+                    enddo
+                  endif
                 endif
               endif
-            endif
+            enddo
           enddo
-        enddo
-        !$OMP END PARALLEL DO
-
+          !$OMP END PARALLEL DO
+        end block
         deallocate(BitPhaseHD)
         deallocate(BitImputePhase)
         deallocate(MissPhaseHD)
@@ -1284,7 +1294,7 @@ end subroutine InternalParentPhaseElim
       do j=1,inputParams%nsnp
         do i=1,nAnisP
           if (AnimalOn(i,e)==1) then
-            if ((inputParams%sexopt==0).or.(RecGender(i)==HomGameticStatus)) then
+            if ((inputParams%sexopt==0).or.(ped%pedigree(i)%gender==HomGameticStatus)) then
               if (ImputePhase(i,j,e)==9) then
                 ! Impute phase allele with the most significant code for that allele across haplotypes
                 ! only if the other codification never happens
@@ -1303,7 +1313,7 @@ end subroutine InternalParentPhaseElim
 
     do j=1,inputParams%nsnp
       do i = 1, nAnisP
-        if ((inputParams%sexopt==1).and.(RecGender(i)==HetGameticStatus)) then
+        if ((inputParams%sexopt==1).and.(ped%pedigree(i)%gender==HetGameticStatus)) then
           if (AnimalOn(i,HomGameticStatus)==1) then
 
             if (ImputePhase(i,j,HomGameticStatus)==9) then
@@ -1639,6 +1649,7 @@ end subroutine InternalParentPhaseElim
     ! recombination in that haplotype.
 
     use Global
+    use ISO_Fortran_Env
     use GlobalPedigree
     use PhaseRounds
     use Utils
@@ -1724,19 +1735,22 @@ else
     write (FileName,'(".\Phasing\Phase",i0,"\PhasingResults\FinalPhase.txt")')MiddlePhaseRun
 endif
 #endif
+    block
+      integer :: tmpIndex
+      open (unit=2001,file=trim(FileName),status="old")
+      do i=1,nAnisHD
+        read (2001,*) dumC,PhaseHD(i,:,1,1)
+        read (2001,*) dumC,PhaseHD(i,:,2,1)
 
-    open (unit=2001,file=trim(FileName),status="old")
-    do i=1,nAnisHD
-      read (2001,*) dumC,PhaseHD(i,:,1,1)
-      read (2001,*) dumC,PhaseHD(i,:,2,1)
-      do j=1,nAnisP
-        ! Match individuals with high density phase information in the FinalPhase output file
-        if (trim(dumC)==trim(Id(j))) then
-          PosHD(j)=i
-          exit
-        endif
+        tmpIndex = ped%dictionary%getValue(dumC)
+        if (tmpIndex /= DICT_NULL) then
+          PosHD(j)=tmpIndex        
+
+        else 
+          write(error_unit,*) "WARNING - HD Phase information for animal not in the pedigree"
+        endif 
       enddo
-    enddo
+    endblock
     close(2001)
 
 #ifdef OS_UNIX
@@ -1842,7 +1856,7 @@ endif
           CompLength=abs(UpToSnp-StartSnp)+1
 
           do i=1,nAnisP
-            if ((RecPed(i,2)==0).and.(RecPed(i,3)==0).and.(PosHD(i)/=0).and.(AnimRecomb(i,RL)==0)) then
+            if (ped%pedigree(i)%founder .and.(PosHD(i)/=0).and.(AnimRecomb(i,RL)==0)) then
               C1=0
               C2=0
               C3=0
@@ -1917,7 +1931,7 @@ endif
           endif
           CompLength=abs(UpToSnp-StartSnp)+1
           do i=1,nAnisP
-            if ((RecPed(i,2)==0).and.(RecPed(i,3)==0).and.(PosHD(i)/=0).and.(AnimRecomb(i,RL)==0)) then
+            if ( ped%pedigree(i)%founder .and.(PosHD(i)/=0).and.(AnimRecomb(i,RL)==0)) then
               C1=0
               C2=0
               C3=0
@@ -2033,7 +2047,7 @@ endif
 
     do j=1,inputParams%nsnp
       do i=1,nAnisP
-        if (RecGender(i)==HetGameticStatus) then
+        if (ped%pedigree(i)%gender==HetGameticStatus) then
           if ((ImputePhase(i,j,1)==9).and.(ImputePhase(i,j,2)/=9)) then
             ImputePhase(i,j,1)=ImputePhase(i,j,2)
           end if
@@ -2115,9 +2129,9 @@ endif
 
     inputParams => defaultInput
     do i=1,nAnisP
-      if (inputParams%sexopt==0 .or. (inputParams%sexopt==1 .and. RecGender(i)/=HetGameticStatus) ) then     ! If individual is homogametic
+      if (inputParams%sexopt==0 .or. (inputParams%sexopt==1 .and. ped%pedigree(i)%gender/=HetGameticStatus) ) then     ! If individual is homogametic
         do e=1,2
-          ParId=RecPed(i,e+1)
+          ParId=ped%pedigree(i)%getSireDamNewIDByIndex(e+1)
           do j=1,inputParams%nsnp
             if (ImputePhase(i,j,e)==9) then                 ! Always that the SNP is not genotyped
               if ((ImputePhase(ParId,j,1)==ImputePhase(ParId,j,2)).and. &
@@ -2129,7 +2143,7 @@ endif
           enddo
         enddo
       else
-        ParId=RecPed(i,HomGameticStatus+1)      ! The homogametic parent
+        ParId= ped%pedigree(i)%getSireDamNewIDByIndex(HomGameticStatus+1) !the homogametic parent
         do j=1,inputParams%nsnp
           if (ImputePhase(i,j,1)==9) then !Comment from John Hickey see analogous iterate subroutine
             if ((ImputePhase(ParId,j,1)==ImputePhase(ParId,j,2)).and. &
@@ -2154,14 +2168,15 @@ endif
   ! is known to carry an allele that does not match the known allele in the parent
     use Global
     use alphaimputeinmod
-
+    use individualModule
     implicit none
 
     integer :: i,j,k,l,Count1,Count0
+    type(individual), pointer :: tmpChild
     inputParams => defaultInput
     do i=1,nAnisP
       do j=1,2
-        if (SireDam(i,j)==1) then       ! check that animal i,j is a sire or a dam
+        if (ped%pedigree(i)%nOffs /= 0) then       ! check that animal i,j is a sire or a dam
 
           ! Sex chromosome
           if (inputParams%sexopt==1) then
@@ -2176,22 +2191,21 @@ endif
                 if (ImputePhase(i,k,1)==0) Count0=1
 
                 ! Look for the individual progeny and count their phase
-                do l=1,nAnisP
+                do l=1,ped%pedigree(i)%nOffs
 
+                  tmpChild => ped%pedigree(i)%offsprings(l)%p
                   ! This is the only difference with the inputParams%sexopt=0 code below. Duplicating
                   ! the code can be avoided by including the IF statement here instead than
                   ! outside the SNPs loop.
-                  if ((RecGender(i)==HetGameticStatus).and.(RecGender(l)==HetGameticStatus)) cycle 
-
-                  if (RecPed(l,j+1)==i) then
-                    if (ImputePhase(l,k,j)==0) Count0=Count0+1
-                    if (ImputePhase(l,k,j)==1) Count1=Count1+1
-                  endif
-                  if ((Count0>0).and.(Count1>0)) then                 !Consider increasing the number of offspring required to all ow for genotyping error
-                    if (ImputePhase(i,k,1)==0) ImputePhase(i,k,2)=1
-                    if (ImputePhase(i,k,1)==1) ImputePhase(i,k,2)=0
-                    exit
-                  endif
+                    if ((ped%pedigree(i)%gender ==HetGameticStatus).and.(tmpChild%gender==HetGameticStatus)) cycle 
+                    if (ImputePhase(tmpChild%id,k,j)==0) Count0=Count0+1
+                    if (ImputePhase(tmpChild%id,k,j)==1) Count1=Count1+1
+            
+                    if ((Count0>0).and.(Count1>0)) then                 !Consider increasing the number of offspring required to all ow for genotyping error
+                      if (ImputePhase(i,k,1)==0) ImputePhase(i,k,2)=1
+                      if (ImputePhase(i,k,1)==1) ImputePhase(i,k,2)=0
+                      exit
+                    endif
                 enddo
               endif
 
@@ -2202,17 +2216,18 @@ endif
                 Count0=0
                 if (ImputePhase(i,k,2)==1) Count1=1
                 if (ImputePhase(i,k,2)==0) Count0=1
-                do l=1,nAnisP
+
+                do l=1,ped%pedigree(i)%nOffs
+
+                  tmpChild => ped%pedigree(i)%offsprings(l)%p
 
                   ! This is the only difference with the inputParams%sexopt=0 code below. Duplicating
                   ! the code can be avoided by including the IF statement here instead than
                   ! outside the SNPs loop.
-                  if ((RecGender(i)==HetGameticStatus).and.(RecGender(l)==HetGameticStatus)) cycle
+                  if ((ped%pedigree(i)%gender ==HetGameticStatus).and.(tmpChild%gender==HetGameticStatus)) cycle 
+                  if (ImputePhase(tmpChild%id,k,j)==0) Count0=Count0+1
+                  if (ImputePhase(tmpChild%id,k,j)==1) Count1=Count1+1
 
-                  if (RecPed(l,j+1)==i) then !if parents then do this
-                    if (ImputePhase(l,k,j)==0) Count0=Count0+1
-                    if (ImputePhase(l,k,j)==1) Count1=Count1+1
-                  endif
                   if ((Count0>0).and.(Count1>0)) then                 !Consider increasing the number of offspring required to all ow for genotyping error
                     if (ImputePhase(i,k,2)==0) ImputePhase(i,k,1)=1
                     if (ImputePhase(i,k,2)==1) ImputePhase(i,k,1)=0
@@ -2230,16 +2245,16 @@ endif
                 Count0=0
                 if (ImputePhase(i,k,1)==1) Count1=1
                 if (ImputePhase(i,k,1)==0) Count0=1
-                do l=1,nAnisP
-                  if (RecPed(l,j+1)==i) then
-                    if (ImputePhase(l,k,j)==0) Count0=Count0+1
-                    if (ImputePhase(l,k,j)==1) Count1=Count1+1
-                  endif
-                  if ((Count0>0).and.(Count1>0)) then                 !Consider increasing the number of offspring required to all ow for genotyping error
-                    if (ImputePhase(i,k,1)==0) ImputePhase(i,k,2)=1
-                    if (ImputePhase(i,k,1)==1) ImputePhase(i,k,2)=0
-                    exit
-                  endif
+
+                do l=1,ped%pedigree(i)%nOffs
+                    tmpChild => ped%pedigree(i)%offsprings(l)%p
+                    if (ImputePhase(tmpChild%id,k,j)==0) Count0=Count0+1
+                    if (ImputePhase(tmpChild%id,k,j)==1) Count1=Count1+1
+                    if ((Count0>0).and.(Count1>0)) then                 !Consider increasing the number of offspring required to all ow for genotyping error
+                        if (ImputePhase(i,k,1)==0) ImputePhase(i,k,2)=1
+                        if (ImputePhase(i,k,1)==1) ImputePhase(i,k,2)=0
+                        exit
+                    endif
                 enddo
               endif
 
@@ -2248,11 +2263,11 @@ endif
                 Count0=0
                 if (ImputePhase(i,k,2)==1) Count1=1
                 if (ImputePhase(i,k,2)==0) Count0=1
-                do l=1,nAnisP
-                  if (RecPed(l,j+1)==i) then
-                    if (ImputePhase(l,k,j)==0) Count0=Count0+1
-                    if (ImputePhase(l,k,j)==1) Count1=Count1+1
-                  endif
+                do l=1,ped%pedigree(i)%nOffs
+                  tmpChild => ped%pedigree(i)%offsprings(l)%p
+                  if (ImputePhase(Tmpchild%id,k,j)==0) Count0=Count0+1
+                  if (ImputePhase(Tmpchild%id,k,j)==1) Count1=Count1+1
+                
                   if ((Count0>0).and.(Count1>0)) then                 !Consider increasing the number of offspring required to all ow for genotyping error
                     if (ImputePhase(i,k,2)==0) ImputePhase(i,k,1)=1
                     if (ImputePhase(i,k,2)==1) ImputePhase(i,k,1)=0
@@ -2353,7 +2368,7 @@ endif
           if (ImputeGenos(i,j)==1) then               ! If heterozygous
 
             ! My father is heterozygous
-            if (ImputeGenos(RecPed(i,2),j)==1) then
+            if (ImputeGenos(ped%pedigree(i)%sirePointer%id,j)==1) then
               ! And have my father haplotype phased
               if ((ImputePhase(i,j,1)==0).or.(ImputePhase(i,j,1)==1)) then
                 Informativeness(j,1)=1
@@ -2363,7 +2378,7 @@ endif
             endif
 
             ! My mother is heterozygous
-            if (ImputeGenos(RecPed(i,3),j)==1) then
+            if (ImputeGenos(ped%pedigree(i)%damPointer%id,j)==1) then
               ! And have my mother haplotype phased
               if ((ImputePhase(i,j,2)==0).or.(ImputePhase(i,j,2)==1)) then
                 Informativeness(j,2)=1
@@ -2375,14 +2390,14 @@ endif
             ! My father haplotype is phased
             if ((ImputePhase(i,j,1)==0).or.(ImputePhase(i,j,1)==1)) then
               ! If my paternal GranSire is heterozygous
-              GrandPar=RecPed(RecPed(i,2),2)
+              GrandPar=ped%pedigree(i)%sirePointer%sirePointer%id
               if (ImputeGenos(GrandPar,j)==1) then
                 Informativeness(j,3)=1
                 GlobalTmpCountInf(i,3)=GlobalTmpCountInf(i,3)+1
                 TmpInfor(GlobalTmpCountInf(i,3),3)=j
               endif
               ! If my maternal GranDam is heterozygous
-              GrandPar=RecPed(RecPed(i,2),3)
+              GrandPar= ped%pedigree(i)%sirePointer%damPointer%id
               if (ImputeGenos(GrandPar,j)==1) then
                 Informativeness(j,4)=1
                 GlobalTmpCountInf(i,4)=GlobalTmpCountInf(i,4)+1
@@ -2393,14 +2408,14 @@ endif
             ! My mother haplotype is phased
             if ((ImputePhase(i,j,2)==0).or.(ImputePhase(i,j,2)==1)) then
               ! If my maternal GranSire is heterozygous
-              GrandPar=RecPed(RecPed(i,3),2)
+              GrandPar= ped%pedigree(i)%damPointer%sirepointer%id
               if (ImputeGenos(GrandPar,j)==1) then
                 Informativeness(j,5)=1
                 GlobalTmpCountInf(i,5)=GlobalTmpCountInf(i,5)+1
                 TmpInfor(GlobalTmpCountInf(i,5),5)=j
               endif
               ! If my maternal GranDam is heterozygous
-              GrandPar=RecPed(RecPed(i,3),3)
+              GrandPar=ped%pedigree(i)%damPointer%dampointer%id
               if (ImputeGenos(GrandPar,j)==1) then
                 Informativeness(j,6)=1
                 GlobalTmpCountInf(i,6)=GlobalTmpCountInf(i,6)+1
@@ -2416,11 +2431,11 @@ endif
       if (GlobalTmpCountInf(i,1)>0) MSTermInfo(i,1)=1             ! If the paternal haplotype is phased
       if (GlobalTmpCountInf(i,2)>0) MSTermInfo(i,2)=1             ! If the maternal haplotype is phased
       do k=1,6
-        write(102,'(a20,i2,i7,20000i7,20000i7,20000i7,20000i7,20000i7,20000i7,20000i7,20000i7,20000i7,20000i7)') Id(i), Setter(i), GlobalTmpCountInf(i,k), TmpInfor(1:GlobalTmpCountInf(i,k),k)
+        write(102,'(a20,i2,i7,20000i7,20000i7,20000i7,20000i7,20000i7,20000i7,20000i7,20000i7,20000i7,20000i7)') ped%pedigree(i)%originalID, Setter(i), GlobalTmpCountInf(i,k), TmpInfor(1:GlobalTmpCountInf(i,k),k)
       enddo
-      write(102,'(a20,i2,i7,20000i7,20000i7,20000i7,20000i7,20000i7,20000i7,20000i7,20000i7,20000i7,20000i7)') Id(i), Setter(i), GlobalTmpCountInf(i,7)
-      write(102,'(a20,i2,i7,20000i7,20000i7,20000i7,20000i7,20000i7,20000i7,20000i7,20000i7,20000i7,20000i7)') Id(i), Setter(i), GlobalTmpCountInf(i,8)
-      write(103,'(a20,2i10)') Id(i), MSTermInfo(i,:)
+      write(102,'(a20,i2,i7,20000i7,20000i7,20000i7,20000i7,20000i7,20000i7,20000i7,20000i7,20000i7,20000i7)') ped%pedigree(i)%originalID, Setter(i), GlobalTmpCountInf(i,7)
+      write(102,'(a20,i2,i7,20000i7,20000i7,20000i7,20000i7,20000i7,20000i7,20000i7,20000i7,20000i7,20000i7)') ped%pedigree(i)%originalID, Setter(i), GlobalTmpCountInf(i,8)
+      write(103,'(a20,2i10)') ped%pedigree(i)%id, MSTermInfo(i,:)
     enddo
     close(102)
     close(103)

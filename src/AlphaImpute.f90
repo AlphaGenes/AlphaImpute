@@ -64,7 +64,7 @@ INTERFACE WriteProbabilities
     integer, intent(IN) :: Indexes(nAnisG)
   END SUBROUTINE WriteProbabilitiesHMM
 
-  SUBROUTINE WriteProbabilitiesGeneProb(outFile, GenosProbs, Ids, nExtraAnims, nAnisP, nSnps)
+SUBROUTINE WriteProbabilitiesGeneProb(outFile, GenosProbs, Ids, nExtraAnims, nAnisP, nSnps)
     character(len=*), intent(IN) :: outFile
     integer, intent(IN) :: nExtraAnims, nAnisP, nSnps
     double precision, intent(IN) :: GenosProbs(nAnisP,nSnps,2)
@@ -223,7 +223,7 @@ else
             end if
             allocate(GenosProbs(inputParams%GlobalExtraAnimals + nAnisP, markers, 2))
             call ReReadIterateGeneProbs(GenosProbs, .FALSE., nAnisP)
-            call WriteProbabilities("./Results/GenotypeProbabilities.txt", GenosProbs, Id, inputParams%GlobalExtraAnimals, nAnisP, inputParams%nsnp)
+            call WriteProbabilities("./Results/GenotypeProbabilities.txt", GenosProbs, ped, inputParams%GlobalExtraAnimals, nAnisP, inputParams%nsnp)
             deallocate(GenosProbs)
 
             if (inputParams%restartOption==OPT_RESTART_GENEPROB) then
@@ -244,7 +244,7 @@ else
           end if
           allocate(GenosProbs(inputParams%GlobalExtraAnimals + nAnisP, markers, 2))
           call ReReadIterateGeneProbs(GenosProbs, .FALSE., nAnisP)
-          call WriteProbabilities("./Results/GenotypeProbabilities.txt", GenosProbs, Id, inputParams%GlobalExtraAnimals, nAnisP, inputParams%nsnp)
+          call WriteProbabilities("./Results/GenotypeProbabilities.txt", GenosProbs, ped, inputParams%GlobalExtraAnimals, nAnisP, inputParams%nsnp)
           deallocate(GenosProbs)
           write(6,*) "Restart option 1 stops program after genotype probabilities have been outputted"
           stop
@@ -838,7 +838,7 @@ use Global
 use GlobalPedigree
 use AlphaImputeInMod
 
-integer :: h,i,j,k,nAnisPrePhased,CountPrePhased
+integer :: h,i,j,k,nAnisPrePhased,CountPrePhased,tmpID
 integer, allocatable,dimension(:,:) :: WorkPhase
 character(len=300) :: dumC
 type(AlphaImputeInput), pointer :: inputParams
@@ -862,21 +862,22 @@ CountPrePhased=0
 do k=1,nAnisPrePhased
     read (47,*) dumC,WorkPhase(:,1)     ! Paternal haplotype
     read (47,*) dumC,WorkPhase(:,2)     ! Maternal haplotype
-    do i=1,nAnisP
-        if (trim(dumC)==trim(Id(i))) then   ! Check if any animal in the file agrees with the animals in the pedigree
-            h=0
-            do j=1,inputParams%nSnpRaw
-                if (SnpIncluded(j)==1) then ! Check if this SNP has to be considered (may be it has been removed during the edition step)
-                    h=h+1
-                    ! Impute phase only if this locus is phased (in the PrePhased file)
-                    if ((WorkPhase(j,1)==0).or.(WorkPhase(j,1)==1)) ImputePhase(i,h,1)=WorkPhase(j,1)
-                    if ((WorkPhase(j,2)==0).or.(WorkPhase(j,2)==1)) ImputePhase(i,h,2)=WorkPhase(j,2)
-                endif
-            enddo
-            CountPrePhased=CountPrePhased+1
-            exit
-        endif
-    enddo
+
+    tmpID = ped%dictionary%getValue(trim(dumC))
+    if (tmpID /= DICT_NULL) then   ! Check if any animal in the file agrees with the animals in the pedigree
+        h=0
+        do j=1,inputParams%nSnpRaw
+            if (SnpIncluded(j)==1) then ! Check if this SNP has to be considered (may be it has been removed during the edition step)
+                h=h+1
+                ! Impute phase only if this locus is phased (in the PrePhased file)
+                if ((WorkPhase(j,1)==0).or.(WorkPhase(j,1)==1)) ImputePhase(tmpID,h,1)=WorkPhase(j,1)
+                if ((WorkPhase(j,2)==0).or.(WorkPhase(j,2)==1)) ImputePhase(tmpID,h,2)=WorkPhase(j,2)
+            endif
+        enddo
+        CountPrePhased=CountPrePhased+1
+    else
+
+    endif
 enddo
 
 print*, " "
@@ -1358,13 +1359,13 @@ if (inputParams%SexOpt==1) then
 
     do i=1,nAnisP
         do e=1,2
-            ParId=RecPed(i,e+1)
+            parId = ped%pedigree(i)%getSireDamNewIDByIndex(e+1)
             if (ParId==0) then
                 do j=1,nSnpIterate
                     if (ImputePhase(i,j,e)==9) ProbImputePhase(i,j,e)=TempAlleleFreq(j)
                 enddo
             endif
-            if (RecGender(i)==HomGameticStatus) then
+            if (ped%pedigree(i)%gender==HomGameticStatus) then
                 do j=1,nSnpIterate
                     if (ImputePhase(i,j,e)==9) then
                         ProbImputePhase(i,j,e)=(sum(ProbImputePhase(ParId,j,:))/2)
@@ -1372,8 +1373,8 @@ if (inputParams%SexOpt==1) then
                 enddo
             endif
         enddo
-        if (RecGender(i)==HetGameticStatus) then
-            ParId=RecPed(i,HomGameticStatus+1)
+        if (ped%pedigree(i)%gender==HetGameticStatus) then
+            ParId=ped%pedigree(i)%getSireDamNewIDByIndex(HetGameticStatus+1)
             do j=1,nSnpIterate
                 if (ImputePhase(i,j,1)==9) then
                     ProbImputePhase(i,j,:)=(sum(ProbImputePhase(ParId,j,:))/2)
@@ -1397,7 +1398,7 @@ if (inputParams%SexOpt==1) then
 
     if (inputParams%SexOpt==1) then
         do i=1,nAnisP
-            if (RecGender(i)==HetGameticStatus) then
+            if (ped%pedigree(i)%gender==HetGameticStatus) then
                 do j=1,nSnpIterate
                     if ((ImputePhase(i,j,1)==9).and.(ImputePhase(i,j,2)/=9)) ImputePhase(i,j,1)=ImputePhase(i,j,2)
                     if ((ImputePhase(i,j,2)==9).and.(ImputePhase(i,j,1)/=9)) ImputePhase(i,j,2)=ImputePhase(i,j,1)
@@ -1472,8 +1473,8 @@ else
     enddo
 
     do i=1,nAnisP
-        do e=1,2
-            ParId=RecPed(i,e+1)
+        do e=1,2            
+            parID=ped%pedigree(i)%getSireDamNewIDByIndex(e+1)
             if (ParId==0) then
                 do j=1,nSnpIterate
                     if (ImputePhase(i,j,e)==9) ProbImputePhase(i,j,e)=TempAlleleFreq(j)
@@ -1553,11 +1554,12 @@ INTERFACE WriteProbabilities
 
   END SUBROUTINE WriteProbabilitiesHMM
 
-  SUBROUTINE WriteProbabilitiesGeneProb(outFile, GenosProbs, Ids, nExtraAnims, nAnisP, nSnps)
+  SUBROUTINE WriteProbabilitiesGeneProb(outFile, GenosProbs, ped, nExtraAnims, nAnisP, nSnps)
+    use pedigreeModule
     character(len=*), intent(IN) :: outFile
     integer, intent(IN) :: nExtraAnims, nAnisP, nSnps
     double precision, intent(IN) :: GenosProbs(nAnisP,nSnps,2)
-    character*(20), intent(IN) :: Ids(nAnisP)
+    type(PedigreeHolder), intent(in) :: ped
   END SUBROUTINE WriteProbabilitiesGeneProb
 END INTERFACE
 
@@ -1582,9 +1584,6 @@ allocate(WorkTmp(inputParams%nSnpRaw))
 if (inputParams%hmmoption==RUN_HMM_NGS) then
     nAnisP = nAnisG
     inputParams%GlobalExtraAnimals=0
-    deallocate(Id)
-    allocate(Id(nAnisG))
-    Id = GenotypeId
 endif
 
 write(cm,'(I7)') inputParams%nSnpRaw !for formatting
@@ -1615,7 +1614,7 @@ if (inputParams%outopt==0) then
 
         open (unit=39, file="IterateGeneProb" // DASH // "IterateGeneProbInput.txt")
         do i=1,nAnisP
-            write (39,'(3i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') RecPed(i,:),ImputeGenos(i,:)
+            write (39,'(3i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%id,ped%pedigree(i)%sirePointer%id,ped%pedigree(i)%dampointer%id,ImputeGenos(i,:)
         enddo
         call flush(39)
         ! close (39)
@@ -1635,13 +1634,13 @@ if (inputParams%outopt==0) then
     call CheckImputationInconsistencies(ImputeGenos, ImputePhase, nAnisP, inputParams%nsnp)
 
     do i=inputParams%GlobalExtraAnimals+1,nAnisP
-         write (33,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') Id(i),ImputePhase(i,:,1)
-         write (33,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') Id(i),ImputePhase(i,:,2)
-         write (34,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') Id(i),ImputeGenos(i,:)
-         write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') Id(i),ProbImputePhase(i,:,1)
-         write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') Id(i),ProbImputePhase(i,:,2)
-         write (41,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') Id(i),ProbImputeGenos(i,:)
-         write (60,'(a20,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4)') Id(i),GPI(i,:)
+         write (33,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%originalID,ImputePhase(i,:,1)
+         write (33,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%originalID,ImputePhase(i,:,2)
+         write (34,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%originalID,ImputeGenos(i,:)
+         write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(i)%originalID,ProbImputePhase(i,:,1)
+         write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(i)%originalID,ProbImputePhase(i,:,2)
+         write (41,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(i)%originalID,ProbImputeGenos(i,:)
+         write (60,'(a20,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4)') ped%pedigree(i)%originalID,GPI(i,:)
     enddo
 
     if (inputParams%SexOpt==1) then
@@ -2049,8 +2048,8 @@ do i=1,nAnisP
         SireDamRL=e+1
         CountLeftSwitch=0
         CountRightSwitch=0
-        PedId=RecPed(i,SireDamRL)
-        if ((inputParams%SexOpt==1).and.(RecGender(PedId)==HetGameticStatus)) cycle
+        pedID=ped%pedigree(i)%getSireDamNewIDByIndex(SireDamRL)
+        if ((inputParams%SexOpt==1).and.(ped%pedigree(PedId)%gender==HetGameticStatus)) cycle
         if ((PedId>0).and.((float(count(ImputePhase(PedId,:,:)==9))/(2*nSnpFinal))<0.30)) then          !(RecIdHDIndex(PedId)==1)
             WorkRight=9
             RSide=9
@@ -2423,7 +2422,7 @@ use Global
 use alphaimputeinmod
 implicit none
 
-integer :: e,i,j,PedLoc
+integer :: e,i,j,PedLoc, id
 type(AlphaImputeInput), pointer :: inputParams
 
 inputParams => defaultInput
@@ -2434,29 +2433,30 @@ if (inputParams%SexOpt==0) then
             PedLoc=e+1
             do j=1,nSnpIterate
                 if (ImputePhase(i,j,e)==9) then
-                    if ((ImputePhase(RecPed(i,PedLoc),j,1)==ImputePhase(RecPed(i,PedLoc),j,2)).and.&
-                        (ImputePhase(RecPed(i,PedLoc),j,1)/=9)) ImputePhase(i,j,e)=ImputePhase(RecPed(i,PedLoc),j,1)
+                    id = ped%pedigree(i)%getSireDamNewIDByIndex(pedLoc)
+                    if ((ImputePhase(id,j,1)==ImputePhase(id,j,2)).and.&
+                        (ImputePhase(id,j,1)/=9)) ImputePhase(i,j,e)=ImputePhase(id,j,1)
                 endif
             enddo
         enddo
     enddo
 else
     do i=1,nAnisP
-        if (RecGender(i)==HomGameticStatus) then
+        if (ped%pedigree(i)%gender==HomGameticStatus) then
             do e=1,2
-                PedLoc=RecPed(i,e+1)
+                id = ped%pedigree(i)%getSireDamNewIDByIndex(e+1)
                 do j=1,nSnpIterate
                     if (ImputePhase(i,j,e)==9) then
-                        if ((ImputePhase(PedLoc,j,1)==ImputePhase(PedLoc,j,2)).and.(ImputePhase(PedLoc,j,1)/=9)) ImputePhase(i,j,e)=ImputePhase(PedLoc,j,1)
+                        if ((ImputePhase(id,j,1)==ImputePhase(id,j,2)).and.(ImputePhase(id,j,1)/=9)) ImputePhase(i,j,e)=ImputePhase(id,j,1)
                     endif
                 enddo
             enddo
         else
-            PedLoc=RecPed(i,HomGameticStatus+1)
+            id = ped%pedigree(i)%getSireDamNewIDByIndex(HomGameticStatus+1)
             do j=1,nSnpIterate
                 if (ImputePhase(i,j,1)==9) then     !Comment From John Hickey I changed what was indexed e to 1 I think it is ok same thing in analogous routine
                                                     !There is no do loop for e here
-                    if ((ImputePhase(PedLoc,j,1)==ImputePhase(PedLoc,j,2)).and.(ImputePhase(PedLoc,j,1)/=9)) ImputePhase(i,j,:)=ImputePhase(PedLoc,j,1)
+                    if ((ImputePhase(id,j,1)==ImputePhase(id,j,2)).and.(ImputePhase(id,j,1)/=9)) ImputePhase(i,j,:)=ImputePhase(id,j,1)
                 endif
             enddo
         endif
@@ -2553,16 +2553,16 @@ if (defaultInput%SexOpt==1) then                                         ! Sex c
             if (Genos(i,j)==0) GlobalWorkPhase(i,j,:)=0
             if (Genos(i,j)==2) GlobalWorkPhase(i,j,:)=1
         enddo
-        if (RecGender(i)/=HetGameticStatus) then
+        if (ped%pedigree(i)%gender/=HetGameticStatus) then
             do e=1,2                                                    ! Phase alleles for homogametic individuals in the homozygous case
-                ParId=RecPed(i,e+1)
+                ParId=ped%pedigree(i)%getSireDamNewIDByIndex(e+1)
                 do j=1,inputParams%nsnp
                     if (Genos(ParId,j)==0) GlobalWorkPhase(i,j,e)=0
                     if (Genos(ParId,j)==2) GlobalWorkPhase(i,j,e)=1
                 enddo
             enddo
         else
-            ParId=RecPed(i,HomGameticStatus+1)                          ! Phase alleles for heterogametic individuals in the homozygous case
+            ParId=ped%pedigree(i)%getSireDamNewIDByIndex(HomGameticStatus+1)                          ! Phase alleles for heterogametic individuals in the homozygous case
             do j=1,inputParams%nsnp
                 if (Genos(ParId,j)==0) GlobalWorkPhase(i,j,:)=0
                 if (Genos(ParId,j)==2) GlobalWorkPhase(i,j,:)=1
@@ -2600,16 +2600,16 @@ if (inputParams%SexOpt==1) then                                                 
             if (Genos(i,j)==0) GlobalWorkPhase(i,j,:)=0
             if (Genos(i,j)==2) GlobalWorkPhase(i,j,:)=1
         enddo
-        if (RecGender(i)/=HetGameticStatus) then                        ! Am I homogametic?
+        if (ped%pedigree(i)%gender/=HetGameticStatus) then                        ! Am I homogametic?
             do e=1,2                                                    ! Phase a single haplotype whenever my parents are homozygous
-                ParId=RecPed(i,e+1)
+                ParId=ped%pedigree(i)%getSireDamNewIDByIndex(e+1)
                 do j=1,inputParams%nsnp
                     if (Genos(ParId,j)==0) GlobalWorkPhase(i,j,e)=0
                     if (Genos(ParId,j)==2) GlobalWorkPhase(i,j,e)=1
                 enddo
             enddo
         else                                                            ! Am I heterogametic?
-            ParId=RecPed(i,HomGameticStatus+1)
+            ParId=ped%pedigree(i)%getSireDamNewIDByIndex(HomGameticStatus+1)
             do j=1,inputParams%nsnp                                                 ! Phase the two haplotypes whenever my homogametic parent is homozygous
                 if (Genos(ParId,j)==0) GlobalWorkPhase(i,j,:)=0
                 if (Genos(ParId,j)==2) GlobalWorkPhase(i,j,:)=1
@@ -2638,12 +2638,12 @@ else                                                                    ! Other 
             if (Genos(i,j)==0) GlobalWorkPhase(i,j,:)=0
             if (Genos(i,j)==2) GlobalWorkPhase(i,j,:)=1
         enddo
-        ParId=RecPed(i,2)
+        ParId=ped%pedigree(i)%sirePointer%id
         do j=1,inputParams%nsnp                                                     ! Phase if my father is homozygous
             if (Genos(ParId,j)==0) GlobalWorkPhase(i,j,1)=0
             if (Genos(ParId,j)==2) GlobalWorkPhase(i,j,1)=1
         enddo
-        ParId=RecPed(i,3)
+        ParId=ped%pedigree(i)%damPointer%id
         do j=1,inputParams%nsnp                                                     ! Phase if my mother is homozygous
             if (Genos(ParId,j)==0) GlobalWorkPhase(i,j,2)=0
             if (Genos(ParId,j)==2) GlobalWorkPhase(i,j,2)=1
@@ -2719,10 +2719,10 @@ do i=1,nAnisP
         SireDamRL=e+1
         CountLeftSwitch=0
         CountRightSwitch=0
-        PedId=RecPed(i,SireDamRL)
+        PedId=ped%pedigree(i)%getSireDamNewIDByIndex(SireDamRL)
 
         ! Skip if, in the case of sex chromosome, me and my parent are heterogametic
-        if ((inputParams%SexOpt==1).and.(RecGender(i)==HetGameticStatus).and.(RecGender(PedId)==HetGameticStatus)) cycle
+        if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==HetGameticStatus).and.(ped%pedigree(pedId)%gender==HetGameticStatus)) cycle
 
         !! SCAN HAPLOTYPE IN TWO DIRECTIONS: L->R AND R->L
         ! If not a base animal and the number of unphased alleles is lower than a threshold
@@ -2948,7 +2948,7 @@ enddo
 
 ! Impute phase for the Heterogametic chromosome from the Homogametic one, which has been already phased
 do i=1,nAnisP
-    if ((inputParams%SexOpt==1).and.(RecGender(i)==HetGameticStatus)) then
+    if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==HetGameticStatus)) then
         ImputePhase(i,:,HetGameticStatus)=ImputePhase(i,:,HomGameticStatus)     !JohnHickey changed the j to :
         GlobalWorkPhase(i,:,:)=ImputePhase(i,:,:)
     endif
@@ -2984,13 +2984,14 @@ subroutine WorkLeftRight
 
 use Global
 use alphaimputeinmod
+use GlobalPedigree, only :ped
 implicit none
 
 integer :: e,i,j,HetEnd,HetStart,RSide,LSide,PatMat,SireDamRL
 integer,dimension(:), allocatable :: WorkRight,WorkLeft
 integer :: CountRightSwitch,CountLeftSwitch,StartPt,EndPt,PedId
 
-integer :: StartDis,EndDis,StartJ,k
+integer :: StartDis,EndDis,StartJ,k,ParId
 integer,allocatable,dimension(:) :: TempVec
 real,allocatable,dimension(:) :: LengthVec
 type(AlphaImputeInput), pointer :: inputParams
@@ -3017,10 +3018,10 @@ do i=1,nAnisP
         SireDamRL=e+1
         CountLeftSwitch=0
         CountRightSwitch=0
-        PedId=RecPed(i,SireDamRL)
+        pedID=ped%pedigree(i)%getSireDamNewIDByIndex(SireDamRL)
 
         ! Skip if, in the case of sex chromosome, me and my parent are heterogametic
-        if ((inputParams%SexOpt==1).and.(RecGender(i)==HetGameticStatus).and.(RecGender(PedId)==HetGameticStatus)) cycle
+        if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==HetGameticStatus).and.(ped%pedigree(PedId)%gender==HetGameticStatus)) cycle
 
         !! SCAN HAPLOTYPE IN TWO DIRECTIONS: L->R AND R->L
         ! If not a base animal
@@ -3245,7 +3246,7 @@ enddo
 
 ! Impute phase for the Heterogametic chromosome from the Homogametic one, which has been already phased
 do i=1,nAnisP
-    if ((inputParams%SexOpt==1).and.(RecGender(i)==HetGameticStatus)) then
+    if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==HetGameticStatus)) then
         !ImputePhase(i,j,HetGameticStatus)=ImputePhase(i,j,HomGameticStatus)
         ImputePhase(i,:,HetGameticStatus)=ImputePhase(i,:,HomGameticStatus)     !JohnHickey changed the j to :
         GlobalWorkPhase(i,:,:)=ImputePhase(i,:,:)
@@ -3344,7 +3345,7 @@ close(105)
 CountRawGenos=count(Genos(:,:)/=9)
 
 do i=1,nObsDataRaw
-    write (103,'(4a20)') Ped(i,:)
+    write (103,'(4a20)') Ped%pedigree(i)%originalID,Ped%pedigree(i)%sireID,Ped%pedigree(i)%damID 
 enddo
 call flush(103)
 close(103)
@@ -3771,7 +3772,7 @@ implicit none
 integer :: i,j,k
 integer, allocatable, dimension(:) :: count0,count1,count2
 type(AlphaImputeInput), pointer :: inputParams
-
+type(individual) ,pointer :: tmpOff
 inputParams => defaultInput
 
 allocate(Count0(inputParams%nsnp))
@@ -3783,24 +3784,24 @@ do i=1,nAnisP ! These are parents
     Count0=0
     Count1=0
     Count2=0
-    do j=1,nAnisP ! These are offsprings
-        if ((RecPed(j,2)==i).or.(RecPed(j,3)==i)) then
-            if ((inputParams%SexOpt==1).and.(RecGender(i)==HetGameticStatus).and.(RecGender(j)==HetGameticStatus)) cycle
-            do k=1,inputParams%nsnp
-                if (TempGenos(i,k)==9) then ! If my parent is not genotyped
-                    if (TempGenos(j,k)==0) Count0(k)=Count0(k)+1    ! Number of offspring genotype as 0
-                    if (TempGenos(j,k)==1) Count1(k)=Count1(k)+1    ! Number of offspring genotype as 1
-                    if (TempGenos(j,k)==2) Count2(k)=Count2(k)+1    ! Number of offspring genotype as 2
-                endif
-            enddo
-        endif
+    do j=1,ped%pedigree(i)%nOffs ! These are offsprings
+        tmpOff => ped%pedigree(i)%offsprings(j)%p
+        if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==HetGameticStatus).and.(tmpOff%gender==HetGameticStatus)) cycle
+        do k=1,inputParams%nsnp
+            if (TempGenos(i,k)==9) then ! If my parent is not genotyped
+                if (TempGenos(tmpOff%id,k)==0) Count0(k)=Count0(k)+1    ! Number of offspring genotype as 0
+                if (TempGenos(tmpOff%id,k)==1) Count1(k)=Count1(k)+1    ! Number of offspring genotype as 1
+                if (TempGenos(tmpOff%id,k)==2) Count2(k)=Count2(k)+1    ! Number of offspring genotype as 2
+            endif
+        enddo
+    
     enddo
 
     do k=1,inputParams%nsnp
         if ((Count0(k)+Count1(k)+Count2(k))>OffspringFillMin) then
             if (Count0(k)==0) TempGenos(i,k)=2                       ! This is the most likely thing, but it might be not true
             if (Count2(k)==0) TempGenos(i,k)=0                       ! This is the most likely thing, but it might be not true
-            if ((inputParams%SexOpt==1).and.(RecGender(i)==HetGameticStatus)) cycle
+            if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==HetGameticStatus)) cycle
             if ((Count0(k)>2).and.(Count2(k)>2)) TempGenos(i,k)=1    ! This is the most likely thing, but it might be not true
         endif
     enddo
@@ -3818,25 +3819,28 @@ implicit none
 
 integer :: i,j,k,TurnOn
 type(AlphaImputeInput), pointer :: inputParams
-
+type(Individual) ,pointer :: tmpParent
 inputParams => defaultInput
 do i=1,nAnisP
     do k=2,3
         TurnOn=1
+        tmpParent => ped%pedigree(i)%getSireDamObjectByIndex(k)
         ! if the proband is heterogametic, and
         ! considering the heterogametic parent, then avoid!!
-        if ((inputParams%SexOpt==1).and.(RecGender(i)==HetGameticStatus).and.((k-1)==HetGameticStatus)) TurnOn=0
+        if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==HetGameticStatus).and. ((k-1)==HetGameticStatus)) TurnOn=0
+        ! TODO check value of k here
 
+        ! if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==HetGameticStatus).and. (pedigree%(i)%parent(k-1)%gender==HetGameticStatus)) TurnOn=0
         ! Homogametic individuals and the homogametic parent of a heterogametic individual
         if (TurnOn==1) then
             do j=1,inputParams%nsnp
-                if ((TempGenos(i,j)==0).and.(TempGenos(RecPed(i,k),j)==2)) then
+                if ((TempGenos(i,j)==0).and.(TempGenos(tmpParent%id,j)==2)) then
                     TempGenos(i,j)=9
                     TempGenos(RecPed(i,k),j)=9
                 endif
-                if ((TempGenos(i,j)==2).and.(TempGenos(RecPed(i,k),j)==0)) then
+                if ((TempGenos(i,j)==2).and.(TempGenos(tmpParent%id,j)==0)) then
                     TempGenos(i,j)=9
-                    TempGenos(RecPed(i,k),j)=9
+                    TempGenos(tmpParent%id,j)=9
                 endif
             enddo
         endif
@@ -3847,20 +3851,24 @@ enddo
 do i=1,nAnisP
     do j=1,inputParams%nsnp
         if (TempGenos(i,j)==9) then
-            if ((TempGenos(RecPed(i,2),j)==0).and.(TempGenos(RecPed(i,3),j)==0)) TempGenos(i,j)=0
-            if ((TempGenos(RecPed(i,2),j)==2).and.(TempGenos(RecPed(i,3),j)==2)) TempGenos(i,j)=2
+            if ((TempGenos(ped%pedigree(i)%sirePointer%id,j)==0).and.(TempGenos(ped%pedigree(i)%damPointer%id,j)==0)) then
+                TempGenos(i,j)=0
+            else if ((TempGenos(ped%pedigree(i)%sirePointer%id,j)==2).and.(TempGenos(ped%pedigree(i)%damPointer%id,j)==2)) then
+                TempGenos(i,j)=2
+            endif
             if (inputParams%SexOpt==1) then
-                if (RecGender(i)/=HetGameticStatus) then
-                    if ((TempGenos(RecPed(i,2),j)==0).and.(TempGenos(RecPed(i,3),j)==2)) TempGenos(i,j)=1
-                    if ((TempGenos(RecPed(i,2),j)==2).and.(TempGenos(RecPed(i,3),j)==0)) TempGenos(i,j)=1
+                if (ped%pedigree(i)%gender/=HetGameticStatus) then
+                    if ((TempGenos(ped%pedigree(i)%sirePointer%id,j)==0).and.(TempGenos(ped%pedigree(i)%damPointer%id,j)==2)) TempGenos(i,j)=1
+                    if ((TempGenos(ped%pedigree(i)%sirePointer%id,j)==2).and.(TempGenos(ped%pedigree(i)%damPointer%id,j)==0)) TempGenos(i,j)=1
                 else
                     ! HomGameticSatus(1 or 2) +1 = sire (2) or dam (3)
-                    if (TempGenos(RecPed(i,(HomGameticStatus+1)),j)==0) TempGenos(i,j)=0
-                    if (TempGenos(RecPed(i,(HomGameticStatus+1)),j)==2) TempGenos(i,j)=2
+                    ped%pedigree(i)%getSireDamNewIDByIndex(HomGameticStatus+1)
+                    if (TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(HomGameticStatus+1)),j)==0) TempGenos(i,j)=0
+                    if (TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(HomGameticStatus+1)),j)==2) TempGenos(i,j)=2
                 endif
             else
-                if ((TempGenos(RecPed(i,2),j)==0).and.(TempGenos(RecPed(i,3),j)==2)) TempGenos(i,j)=1
-                if ((TempGenos(RecPed(i,2),j)==2).and.(TempGenos(RecPed(i,3),j)==0)) TempGenos(i,j)=1
+                if ((TempGenos(ped%pedigree(i)%sirePointer%id,j)==0).and.(TempGenos(ped%pedigree(i)%damPointer%id,j)==2)) TempGenos(i,j)=1
+                if ((TempGenos(ped%pedigree(i)%sirePointer%id,j)==2).and.(TempGenos(ped%pedigree(i)%damPointer%id,j)==0)) TempGenos(i,j)=1
             endif
         endif
     enddo
@@ -3868,6 +3876,7 @@ enddo
 
 end subroutine FillInSnp
 
+!#############################################################################################################################################################################################################################
 !#############################################################################################################################################################################################################################
 
 subroutine CheckParentage
@@ -3880,39 +3889,26 @@ use Global
 
 implicit none
 
-integer :: e,i,j,k,CountBothGeno,CountDisagree,CountChanges,GenoYesNo(nAnisRawPedigree,3),IndId,ParId,flag,SumPruned,ParPos
+integer :: e,i,j,k,CountBothGeno,CountDisagree,CountChanges,,IndId,ParId,flag,SumPruned,ParPos
 integer :: TurnOn
 integer,allocatable,dimension (:) :: Genotyped,Pruned
 logical,allocatable,dimension (:) :: IsParent
 type(AlphaImputeInput), pointer :: inputParams
+integer :: tmpID, tmpSireID, tmpDamId
 integer :: nHomoParent, nBothHomo
 
 
 inputParams => defaultInput
 open (unit=101,file="." // DASH // "Miscellaneous" // DASH // "PedigreeMistakes.txt",status="unknown")
 
-GenoYesNo=0         ! Matrix (nAnisRawPedigree x 3).
-                    ! It basically says which is the proband's genotype (GenoYesNo(:,1)) but also
-                    ! the genotype of proband's sire (GenoYesNo(:,2)) and dam (GenoYesNo(:,3))
-do i=1,nAnisRawPedigree
-    do j=1,nAnisG
-        if (trim(GenotypeId(j))==trim(Ped(i,1))) then
-            GenoYesNo(i,1)=j
-            exit
-        endif
-    enddo
-    do j=1,nAnisG
-        if (trim(GenotypeId(j))==trim(Ped(i,2))) then
-            GenoYesNo(i,2)=j
-            exit
-        endif
-    enddo
-    do j=1,nAnisG
-        if (trim(GenotypeId(j))==trim(Ped(i,3))) then
-            GenoYesNo(i,3)=j
-            exit
-        endif
-    enddo
+
+do j=1,nAnisG
+
+
+    tmpID = ped%dictionary%getValue(trim(GenotypeId(j)))
+    if (tmpID /= DICT_NULL) then
+        ped%pedigree(tmpID)%Genotyped = .true.
+    endif
 enddo
 
 CountChanges=0
@@ -3929,7 +3925,7 @@ do e=1,2                    ! Do whatever this does, first on males and then on 
         ! if the proband is heterogametic, and
         ! I am considering the heterogametic parent, then avoid!!
         ! That is, avoid males and their sires (hetero=1), or females and their dams (hetero=2)
-        if ((inputParams%SexOpt==1).and.(GenderRaw(i)==HetGameticStatus).and.((ParPos-1)==HetGameticStatus)) TurnOn=0
+        if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==HetGameticStatus).and.((ParPos-1)==HetGameticStatus)) TurnOn=0
 
         ! Consider the Homogametic probands and the heterogametic proband with homogametic parent
         if ((IndId/=0).and.(ParId/=0).and.(TurnOn==1)) then
@@ -3981,35 +3977,27 @@ close (101)
 print*, " ",CountChanges," errors in the pedigree due to Mendelian inconsistencies"
 
 ! Sort sires and dams, and look for mistakes (bisexuality,...).
-call PVseq(nAnisRawPedigree,nAnisP)
+! call PVseq(nAnisRawPedigree,nAnisP) ! TODO had to remove this 
 
-allocate(RecPed(0:nAnisP,3))
 allocate(RecIdHDIndex(0:nAnisP))
-allocate(RecGender(0:nAnisP))
 allocate(IndivIsGenotyped(nAnisP))
 
 RecIdHDIndex=0
-RecPed(0,:)=0
-do i=1,nAnisP
-    RecPed(i,1)=i
-enddo
-RecPed(1:nAnisP,2)=seqsire(1:nAnisP)
-RecPed(1:nAnisP,3)=seqdam(1:nAnisP)
+! RecPed(0,:)=0
+! do i=1,nAnisP
+!     RecPed(i,1)=i
+! enddo
+! RecPed(1:nAnisP,2)=seqsire(1:nAnisP)
+! RecPed(1:nAnisP,3)=seqdam(1:nAnisP)
 
-open (unit=101,file="." // DASH // "Miscellaneous" // DASH // "InternalDataRecoding.txt",status="unknown")
+ped%outputSortedPedigreeInAlphaImputeFormat("." // DASH // "Miscellaneous" // DASH // "InternalDataRecoding.txt")
 
-do i=1,nAnisP
-    write (101,'(3i20,a20)') RecPed(i,:),trim(Id(i))
-enddo
-close (101)
-
-RecGender=9     ! It basically says the gender of the individual
 if (inputParams%SexOpt==1) then
     do i=1,nAnisP
         TurnOn=1
         do j=1,nAnisInGenderFile
             if (trim(Id(i))==trim(GenderId(j))) then
-                RecGender(i)=GenderRaw(j)
+                ped%pedigree(i)%gender=GenderRaw(j)
                 TurnOn=0
                 exit
             endif
@@ -4017,11 +4005,11 @@ if (inputParams%SexOpt==1) then
         if (TurnOn==1) then
             do j=1,nAnisP
                 if (i==RecPed(j,2)) then
-                    RecGender(i)=1
+                    ped%pedigree(i)%gender=1
                     exit
                 endif
                 if (i==RecPed(j,3)) then
-                    RecGender(i)=2
+                    ped%pedigree(i)%gender=2
                     exit
                 endif
             enddo
@@ -4029,9 +4017,6 @@ if (inputParams%SexOpt==1) then
     enddo
 endif
 
-deallocate(seqid)
-deallocate(seqsire)
-deallocate(seqdam)
 allocate(Genotyped(nAnisP))
 allocate(Pruned(0:nAnisP))
 allocate(IsParent(nAnisP))
@@ -4145,236 +4130,6 @@ do i=1,nAnisP
 enddo
 
 end subroutine CheckParentage
-
-!#############################################################################################################################################################################################################################
-
-! subroutine CountInData
-! ! Count the number of individuals genotyped and the number of individuals in the pedigree.
-! ! If no pedigree information is available, then these to counts are equal to the number of
-! ! individuals genotyped.
-
-! use Global
-! use GlobalVariablesHmmMaCH
-! use alphaimputeinmod
-! implicit none
-
-! integer :: k
-! character (len=300) :: dumC
-! type(AlphaImputeInput), pointer :: inputParams
-
-! inputParams => defaultInput
-! do
-!     read (inputParams%pedigreeFileUnit,*,iostat=k) dumC
-!     nAnisRawPedigree=nAnisRawPedigree+1
-!     if (k/=0) then
-!         nAnisRawPedigree=nAnisRawPedigree-1
-!         exit            ! This forces to exit if an error is found
-!     endif
-! enddo
-! rewind(2)
-
-! print*, " ",nAnisRawPedigree," individuals in the pedigree file"
-! nObsDataRaw=nAnisRawPedigree
-
-! do
-!     read (inputParams%genotypeFileUnit,*,iostat=k) dumC
-!     nAnisG=nAnisG+1
-!     if (k/=0) then
-!         nAnisG=nAnisG-1
-!         exit
-!     endif
-! enddo
-
-! rewind(3)
-
-! if (inputParams%hmmoption == RUN_HMM_NGS) then
-!     if(mod(nAnisG,2)==0) then
-!         nAnisG=nAnisG/2
-!     else
-!         write(0,*) "Error: The number of lines in the file of reads is not even. Is the file corrupt?"
-!         write(0,*) "The program will now stop"
-!         stop
-!     endif
-! endif
-
-! print*, " ",nAnisG," individuals in the genotype file"
-
-! ! This is incoherent with functions ReadInData and ReadInParameterFile
-! if (trim(inputParams%PedigreeFile)=="NoPedigree") nAnisRawPedigree=nAnisG
-
-! end subroutine CountInData
-
-!#############################################################################################################################################################################################################################
-
-! subroutine ReadInData
-! use GlobalPedigree
-! use Global
-! use AlphaImputeInMod
-! implicit none
-
-! integer :: i,j,k,CountLinesGender,GenCode,AnimalPresent
-! character(len=300) :: dumC
-! type(AlphaImputeInput), pointer :: inputParams
-! integer, allocatable, dimension(:) :: Temp
-! inputParams=> defaultInput
-
-! allocate(Temp(inputParams%nsnp))
-! allocate(GenotypeId(nAnisG))
-! allocate(Ped(nAnisRawPedigree,3))
-! allocate(Genos(0:nAnisG,inputParams%nsnp))
-! allocate(GenderId(nAnisRawPedigree))
-! allocate(GenderRaw(nAnisRawPedigree))
-
-! Genos(0,:)=9
-
-! ! Read the pedigree information
-! rewind(inputParams%pedigreeFileUnit)
-! do i=1,nAnisRawPedigree
-!     read(inputParams%pedigreeFileUnit,*) ped(i,:)
-! enddo
-
-! if (inputParams%hmmoption /= RUN_HMM_NGS) then
-!     rewind(inputParams%genotypeFileUnit)
-!     do i=1,nAnisG
-!         read (inputParams%genotypeFileUnit,*) GenotypeId(i),Temp(:)
-!         do j=1,inputParams%nsnp
-!             if ((Temp(j)<0).or.(Temp(j)>2)) Temp(j)=9
-!         enddo
-!         Genos(i,:)=Temp(:)
-!     enddo
-! endif
-! close(2)
-! close(3)
-
-! GenderRaw=9
-! if (inputParams%SexOpt==1) then
-!     CountLinesGender=0
-!     do
-!         read (inputParams%GenderFileUnit,*,iostat=k) dumC
-!         CountLinesGender=CountLinesGender+1
-!         if (k/=0) then
-!             CountLinesGender=CountLinesGender-1
-!             exit
-!         endif
-!     enddo
-!     rewind(inputParams%GenderFileUnit)
-!     nAnisInGenderFile=CountLinesGender
-!     if (CountLinesGender/=nAnisRawPedigree) then
-!         print*, "Warning - number of lines in Gender file not the same as in pedigree file"
-!         stop
-!     endif
-!     do j=1,nAnisRawPedigree                 ! For each individual in the file
-!         read (inputParams%GenderFileUnit,*) dumC,GenCode
-!         if ((GenCode/=1).and.(GenCode/=2)) then
-!             print*, "Warning - Gender code incorrect for at least one animal"
-!             stop
-!         endif
-!         AnimalPresent=0
-!         do i=1,nAnisRawPedigree             ! For each individual in the pedigree
-!             if (trim(dumC)==trim(ped(i,1))) then
-!                 GenderId(i)=dumC
-!                 GenderRaw(i)=GenCode
-!                 AnimalPresent=1
-!                 exit
-!             endif
-!         enddo
-!         if (AnimalPresent==0) then
-!             print*, "Warning - Animal missing in gender file"
-!             stop
-!         endif
-!     enddo
-! endif
-
-! deallocate(temp)
-! end subroutine ReadInData
-
-! !#############################################################################################################################################################################################################################
-! subroutine ReadSeq(readsFileName)
-! use GlobalPedigree
-! use Global
-! use alphaimputeinmod
-! implicit none
-
-! character(len=300), intent(in) :: readsFileName
-! integer :: i,j
-
-! type(AlphaImputeInput), pointer :: inputParams
-! integer, allocatable,dimension (:) :: ReferAlleleLine, AlterAlleleLine
-
-! inputParams => defaultInput
-! allocate(ReferAllele(0:nAnisG,inputParams%nsnp))
-! allocate(AlterAllele(0:nAnisG,inputParams%nsnp))
-! allocate(ReferAlleleLine(inputParams%nsnp))
-! allocate(AlterAlleleLine(inputParams%nsnp))
-
-! Reads=0
-
-! #ifdef DEBUG
-!     write(0,*) "DEBUG: [ReadSeq] Reads size=", size(Reads,1)
-! #endif
-
-! open (unit=3,file=trim(readsFileName),status="old")
-
-! #ifdef DEBUG
-!     write(0,*) "DEBUG: [ReadSeq] Reading sequence data..."
-! #endif
-
-! do i=1,nAnisG
-!     read (3,*) GenotypeId(i), ReferAlleleLine(:)
-!     read (3,*) GenotypeId(i), AlterAlleleLine(:)
-!     ReferAllele(i,:) = ReferAlleleLine
-!     AlterAllele(i,:) = AlterAlleleLine
-!     do j=1,inputParams%nsnp
-!         if (ReferAllele(i,j)>=MAX_READS_COUNT) ReferAllele(i,j)=MAX_READS_COUNT-1
-!         if (AlterAllele(i,j)>=MAX_READS_COUNT) AlterAllele(i,j)=MAX_READS_COUNT-1
-!         Reads(i,j)=AlterAllele(i,j)+ReferAllele(i,j)
-!     enddo
-! enddo
-
-! #ifdef DEBUG
-!     write(0,*) "DEBUG: [ReadSeq] Sequence data read"
-! #endif
-
-! close(3)
-
-! end subroutine ReadSeq
-
-! !#############################################################################################################################################################################################################################
-! subroutine ReadGenos(genosFileName)
-! use GlobalPedigree
-! use Global
-! use alphaimputeinmod
-! implicit none
-
-! character(len=300), intent(in) :: genosFileName
-! integer :: i,j
-! integer,allocatable,dimension(:) :: temp
-! type(AlphaImputeInput), pointer :: inputParams
-
-! inputParams => defaultInput
-
-! allocate(temp(inputParams%nSnp))
-! ! TODO: This hack avoids mem allocation problems with Genos allocated
-! !       somewhere else up in the code (ReadInData). Should be improved
-
-! if (allocated(Genos)) then
-!     deallocate(Genos)
-! endif
-! allocate(Genos(0:nAnisG,inputParams%nsnp))
-! Genos(0,:)=9
-
-! open (unit=3,file=trim(genosFileName),status="old")
-! do i=1,nAnisG
-!     read (3,*) GenotypeId(i),Temp(:)
-!     do j=1,inputParams%nsnp
-!         if ((Temp(j)<0).or.(Temp(j)>2)) Temp(j)=9
-!     enddo
-!     Genos(i,:)=Temp(:)
-! enddo
-! close(3)
-! deallocate(temp)
-! end subroutine ReadGenos
-
 !#############################################################################################################################################################################################################################
 
 subroutine MakeDirectories(HMM)
