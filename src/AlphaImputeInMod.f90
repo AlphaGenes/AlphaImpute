@@ -33,7 +33,7 @@ module AlphaImputeInMod
 
     type AlphaImputeInput
         ! box 1
-        character(len=300):: PedigreeFile = "Pedigree.txt",GenotypeFile="Genotypes.txt",TrueGenotypeFile="TrueGenotypes.txt",GenderFile="None",InbredAnimalsFile="None"
+        character(len=300):: PedigreeFile = "Pedigree.txt",GenotypeFile="Genotypes.txt",TrueGenotypeFile="TrueGenotypes.txt",GenderFile="None",InbredAnimalsFile="None", HapListFile="None"
         integer(kind=1) :: TrueGenos1None0
         logical :: PlinkFormat, VCFFormat
 
@@ -67,7 +67,9 @@ module AlphaImputeInMod
         ! box 7
         ! idum is seed
         integer(kind=int32) :: idum
-        integer(kind=int32) :: nHapInSubH,useProcs,nRoundsHmm,HmmBurnInRound,windowLength
+        integer(kind=int32) :: nHapInSubH,useProcs,nRoundsHmm,HmmBurnInRound
+        real(kind=real32) :: phasedThreshold,imputedThreshold
+        logical :: HapList=.FALSE.
         integer(kind=1) :: HMMOption
 
         ! box 8
@@ -77,12 +79,11 @@ module AlphaImputeInMod
 
         integer(kind=1) :: UserDefinedHD,PrePhased,BypassGeneProb,RestartOption
 
-        integer :: AnimalFileUnit, prePhasedFileUnit, pedigreeFileUnit,genotypeFileUnit,GenderFileUnit
+        integer :: AnimalFileUnit, prePhasedFileUnit, pedigreeFileUnit,genotypeFileUnit,GenderFileUnit,HapListUnit
 
         ! other
         integer(kind=int32) :: nSnpRaw,nAgreeImputeHDLib,nAgreeParentPhaseElim,nAgreeGrandParentPhaseElim,nAgreePhaseElim,nAgreeInternalHapLibElim
         integer(kind=int32) :: GlobalExtraAnimals
-        real(kind=real64) :: phasedThreshold,imputedThreshold
         contains
             procedure :: ReadInParameterFile
     end type AlphaImputeInput
@@ -396,12 +397,13 @@ module AlphaImputeInMod
                 case("wellphasedthreshold")
                     read(second(1),*) this%WellPhasedThresh
 
+                    ! box 7
                 case("hmmoption")
                     this%hmmoption=RUN_HMM_NULL
                     if (toLower(trim(second(1)))=='no') this%hmmoption=RUN_HMM_NO
                     if (toLower(trim(second(1)))=='yes') this%hmmoption=RUN_HMM_YES
                     if (toLower(trim(second(1)))=='only') this%hmmoption=RUN_HMM_ONLY
-                    if (toLower(trim(second(1)))=='Prephase') this%hmmoption=RUN_HMM_PREPHASE
+                    if (toLower(trim(second(1)))=='prephase') this%hmmoption=RUN_HMM_PREPHASE
                     if (toLower(trim(second(1)))=="ngs") this%hmmoption=RUN_HMM_NGS
                     if (this%hmmoption==RUN_HMM_NULL) then
                         write(error_unit,*), "this%hmmoption not correctly specified"
@@ -423,10 +425,20 @@ module AlphaImputeInMod
                     read(second(1), *) this%useProcs
                 case("seed")
                     read(second(1), *)this%idum
-                case("thresholdformissingalleles")
+                case("phasedanimalsthreshold")
                     read(second(1), *) this%phasedThreshold
-                case("thresholdimputed")
+                case("wellimputedthreshold")
                     read(second(1), *) this%imputedThreshold
+                case("haplotypeslist")
+                    if (.not. allocated(second)) then
+                        write(*, "(A,A)") "No list of haploytpes specified"
+                    else
+                        if (trim(second(1)) /= "None") then
+                            this%HapList = .TRUE.
+                            this%HapListFile = trim(second(1))
+                            open (newunit=this%HapListUnit, file=this%HapListFile, status='old')
+                        endif
+                    endif
 
                     !  box 8
 
