@@ -18,7 +18,7 @@ end module Output
 
 ! subroutine WriteProbabilitiesHMM(outFile, Indexes, Ids, nAnims, nSnps)
 subroutine WriteProbabilitiesHMM(outFile, Indexes, nAnims, nSnps)
-use GlobalPedigree
+use global
 use GlobalVariablesHmmMaCH
 use alphaimputeinmod
 character(len=*), intent(IN) :: outFile
@@ -51,8 +51,8 @@ do i=1,nAnims
         Probs0(j)=n0/d
         Probs1(j)=n1/d
     enddo
-    write (55,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ID(Indexes(i)),Probs0(:)
-    write (55,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ID(Indexes(i)),Probs1(:)
+    write (55,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%Pedigree(indexes(i))%originalID,Probs0(:)
+    write (55,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%Pedigree(indexes(i))%originalID,Probs1(:)
     n0=0
     n1=0
     n2=0
@@ -63,12 +63,12 @@ close(55)
 ! write(0,*) "Wrote out file", outFile, "with genotype probabilities"
 end subroutine WriteProbabilitiesHMM
 
-subroutine WriteProbabilitiesGeneProb(outFile, GenosProbs, Ids, nExtraAnims, nAnisP, nSnps)
-
+subroutine WriteProbabilitiesGeneProb(outFile, GenosProbs, ped, nExtraAnims, nAnisP, nSnps)
+use PedigreeModule
 character(len=*), intent(IN) :: outFile
 integer, intent(IN) :: nExtraAnims, nAnisP, nSnps
 double precision, intent(IN) :: GenosProbs(nAnisP,nSnps,2)
-character*(20), intent(IN) :: Ids(nAnisP)
+type(pedigreeHolder), intent(IN) :: ped
 
 ! Local Variable
 integer :: i,k!,j,k, n0, n1, n2
@@ -81,8 +81,8 @@ open (unit=55,file=outFile,status="unknown")
 
 do i=nExtraAnims+1,nAnisP
     k=i-nExtraAnims
-    write (55,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') Ids(i),GenosProbs(k,:,1)
-    write (55,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') Ids(i),GenosProbs(k,:,2)
+    write (55,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%Pedigree(i)%originalID,GenosProbs(k,:,1)
+    write (55,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%Pedigree(i)%originalID,GenosProbs(k,:,2)
     ! enddo
 enddo
 end subroutine WriteProbabilitiesGeneProb

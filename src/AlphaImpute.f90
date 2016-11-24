@@ -56,7 +56,6 @@ implicit none
 integer :: markers
 double precision, allocatable :: GenosProbs(:,:,:)
 character(len=4096) :: cmd, SpecFile
-real :: start,finish
 INTERFACE WriteProbabilities
   SUBROUTINE WriteProbabilitiesHMM(outFile, Indexes, nAnisG, nSnps)
     character(len=*), intent(IN) :: outFile
@@ -839,7 +838,7 @@ use Global
 
 use AlphaImputeInMod
 
-integer :: h,i,j,k,nAnisPrePhased,CountPrePhased,tmpID
+integer :: h,j,k,nAnisPrePhased,CountPrePhased,tmpID
 integer, allocatable,dimension(:,:) :: WorkPhase
 character(len=300) :: dumC
 type(AlphaImputeInput), pointer :: inputParams
@@ -1865,13 +1864,13 @@ else
         if (ped%pedigree(i)%isDummy) then
             cycle
         endif
-         write (53,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') Id(i),ImputePhase(i,:,1)
-         write (53,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') Id(i),ImputePhase(i,:,2)
-         write (54,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') Id(i),ImputeGenos(i,:)
+         write (53,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%originalID,ImputePhase(i,:,1)
+         write (53,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%originalID,ImputePhase(i,:,2)
+         write (54,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%originalID,ImputeGenos(i,:)
 
-         write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') Id(i),ProbImputePhase(i,:,1)
-         write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') Id(i),ProbImputePhase(i,:,2)
-         write (41,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') Id(i),ProbImputeGenos(i,:)
+         write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(i)%originalID,ProbImputePhase(i,:,1)
+         write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(i)%originalID,ProbImputePhase(i,:,2)
+         write (41,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(i)%originalID,ProbImputeGenos(i,:)
     enddo
 
     if (allocated(GPI)) then
@@ -1879,7 +1878,7 @@ else
         if (ped%pedigree(i)%isDummy) then
             cycle
         endif
-          write (60,'(a20,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4)') Id(i),GPI(i,:)
+          write (60,'(a20,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4)') ped%pedigree(i)%originalID,GPI(i,:)
         end do
         deallocate(GPI)
     end if
@@ -1891,7 +1890,7 @@ else
         if (inputParams%bypassgeneprob==0) then
             allocate(GenosProbs(nAnisP,nSnpIterate,2))
             call ReReadIterateGeneProbs(GenosProbs, .TRUE., nAnisP)
-            call WriteProbabilities("./Results/GenotypeProbabilities.txt", GenosProbs, Id, inputParams%GlobalExtraAnimals, nAnisP, inputParams%nsnp)
+            call WriteProbabilities("./Results/GenotypeProbabilities.txt", GenosProbs, ped, inputParams%GlobalExtraAnimals, nAnisP, inputParams%nsnp)
         endif
     endif
 
@@ -1936,7 +1935,7 @@ else
         ImputationQuality(i,4)=float(inputParams%nSnpRaw-count(ImputePhase(i,:,2)==9))/inputParams%nSnpRaw
         ImputationQuality(i,5)=(ImputationQuality(i,3)+ImputationQuality(i,4))/2
         ImputationQuality(i,6)=float(inputParams%nSnpRaw-count(ImputeGenos(i,:)==9))/inputParams%nSnpRaw
-        write (50,'(a20,20000f7.2)') Id(i),ImputationQuality(i,:)
+        write (50,'(a20,20000f7.2)') ped%pedigree(i)%originalID,ImputationQuality(i,:)
     enddo
 
 #ifdef DEBUG
@@ -1954,8 +1953,8 @@ else
             cycle
         endif
         if (ImputationQuality(i,5)>=inputParams%WellPhasedThresh) then
-            write (52,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') Id(i),TmpPhase(i,:,1)
-            write (52,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') Id(i),TmpPhase(i,:,2)
+            write (52,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%originalID,TmpPhase(i,:,1)
+            write (52,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%originalID,TmpPhase(i,:,2)
         endif
     enddo
 endif
@@ -2264,11 +2263,11 @@ do i=1,nAnisP
             write (42,'(a20,20000i20)') ped%pedigree(i)%originalID,nRec,StR(1:nRec)
             write (42,'(a20,20000i20)') ped%pedigree(i)%originalID,nRec,EnR(1:nRec)
 !
-!           write (43,'(a20,20000i20)') Id(i),nRec,StRNarrow(1:nRec)
-!           write (43,'(a20,20000i20)') Id(i),nRec,EnRNarrow(1:nRec)
+!           write (43,'(a20,20000i20)') ped%pedigree(i)%originalID,nRec,StRNarrow(1:nRec)
+!           write (43,'(a20,20000i20)') ped%pedigree(i)%originalID,nRec,EnRNarrow(1:nRec)
             do j=1,nRec
                 write (45,'(a20,20000i20)') ped%pedigree(i)%originalID,e,StR(j),EnR(j)
-!               write (46,'(a20,20000i20)') Id(i),e,StRNarrow(j),EnRNarrow(j)
+!               write (46,'(a20,20000i20)') ped%pedigree(i)%originalID,e,StRNarrow(j),EnRNarrow(j)
             enddo
 
         endif
@@ -3025,7 +3024,7 @@ integer :: e,i,j,HetEnd,HetStart,RSide,LSide,PatMat,SireDamRL
 integer,dimension(:), allocatable :: WorkRight,WorkLeft
 integer :: CountRightSwitch,CountLeftSwitch,StartPt,EndPt,PedId
 
-integer :: StartDis,EndDis,StartJ,k,ParId
+integer :: StartDis,EndDis,StartJ,k
 integer,allocatable,dimension(:) :: TempVec
 real,allocatable,dimension(:) :: LengthVec
 type(AlphaImputeInput), pointer :: inputParams
@@ -3369,7 +3368,7 @@ open(unit=105,file="." // DASH // "InputFiles" // DASH // "AlphaPhaseInputGenoty
 
 do i=1,nAnisP
      write (104,'(i16,1x,i16,1x,i16,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%getIntegerVectorOfRecodedIds(),Genos(i,:)
-     if (Setter(i)==1) write (105,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') Id(i),Genos(i,:)
+     if (Setter(i)==1) write (105,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%originalID,Genos(i,:)
 enddo
 call flush(104)
 call flush(105)
@@ -3874,7 +3873,7 @@ do i=1,nAnisP
             do j=1,inputParams%nsnp
                 if ((TempGenos(i,j)==0).and.(TempGenos(tmpParent%id,j)==2)) then
                     TempGenos(i,j)=9
-                    TempGenos(RecPed(i,k),j)=9
+                    TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(k),j)=9
                 endif
                 if ((TempGenos(i,j)==2).and.(TempGenos(tmpParent%id,j)==0)) then
                     TempGenos(i,j)=9
@@ -3900,9 +3899,8 @@ do i=1,nAnisP
                     if ((TempGenos(ped%pedigree(i)%sirePointer%id,j)==2).and.(TempGenos(ped%pedigree(i)%damPointer%id,j)==0)) TempGenos(i,j)=1
                 else
                     ! HomGameticSatus(1 or 2) +1 = sire (2) or dam (3)
-                    ped%pedigree(i)%getSireDamNewIDByIndex(HomGameticStatus+1)
-                    if (TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(HomGameticStatus+1)),j)==0) TempGenos(i,j)=0
-                    if (TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(HomGameticStatus+1)),j)==2) TempGenos(i,j)=2
+                    if (TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(HomGameticStatus+1),j)==0) TempGenos(i,j)=0
+                    if (TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(HomGameticStatus+1),j)==2) TempGenos(i,j)=2
                 endif
             else
                 if ((TempGenos(ped%pedigree(i)%sirePointer%id,j)==0).and.(TempGenos(ped%pedigree(i)%damPointer%id,j)==2)) TempGenos(i,j)=1
@@ -3927,12 +3925,11 @@ use Global
 
 implicit none
 
-integer :: e,i,j,k,CountBothGeno,CountDisagree,CountChanges,IndId,ParId,flag,SumPruned,ParPos
+integer :: e,i,j,CountBothGeno,CountDisagree,CountChanges,IndId,ParId,ParPos
 integer :: TurnOn
 integer,allocatable,dimension (:) :: Genotyped,Pruned
-logical,allocatable,dimension (:) :: IsParent
 type(AlphaImputeInput), pointer :: inputParams
-integer :: tmpID, tmpSireID, tmpDamId
+integer :: tmpID
 integer :: nHomoParent, nBothHomo
 
 
@@ -3953,8 +3950,8 @@ nBothHomo = 0
 do e=1,2                    ! Do whatever this does, first on males and then on females
     ParPos=e+1              ! Index in the Genotype and Pedigree matrices for sires and dams
     do i=1,nAnisRawPedigree
-        IndId=GenoYesNo(i,1)            ! My Id
-        ParId=GenoYesNo(i,ParPos)       ! Paternal Id,
+        IndId=i            ! My Id
+        ParId=ped%pedigree(i)%getSireDamNewIDByIndex(e+1)       ! Paternal Id,
         TurnOn=1
         ! GenderRaw: Says whether the proband is a male or a female
         ! If there are sex cromosome information, and
@@ -3986,10 +3983,16 @@ do e=1,2                    ! Do whatever this does, first on males and then on 
             enddo
             if ((float(CountDisagree)/CountBothGeno)>DisagreeThreshold) then ! Mendelenian error
                 write (101,'(2a20,4I,3f5.3)') &
-                    Ped(i,1), Ped(i,ParPos), CountDisagree, CountBothGeno, nHomoParent, nBothHomo, &
+                    Ped%pedigree(i)%originalID, Ped%pedigree(i)%getSireDamByIndex(ParPos), CountDisagree, CountBothGeno, nHomoParent, nBothHomo, &
                     float(CountDisagree)/CountBothGeno, float(CountDisagree)/nHomoParent, float(CountDisagree)/nBothHomo
                 CountChanges=CountChanges+1
-                Ped(i,ParPos)='0'
+                if (parPos == 2) then
+                    ped%pedigree(i)%sirePointer => null()
+                    ped%pedigree(i)%sireID = '0'
+                else if (parPos == 3) then
+                    ped%pedigree(i)%damPointer => null()
+                    ped%pedigree(i)%damId = '0'
+                endif
             else
                 ! Remove genotype of proband and parent
                 do j=1,inputParams%nsnp
@@ -4019,44 +4022,24 @@ allocate(RecIdHDIndex(0:nAnisP))
 allocate(IndivIsGenotyped(nAnisP))
 
 RecIdHDIndex=0
-! RecPed(0,:)=0
-! do i=1,nAnisP
-!     RecPed(i,1)=i
-! enddo
-! RecPed(1:nAnisP,2)=seqsire(1:nAnisP)
-! RecPed(1:nAnisP,3)=seqdam(1:nAnisP)
 
-ped%outputSortedPedigreeInAlphaImputeFormat("." // DASH // "Miscellaneous" // DASH // "InternalDataRecoding.txt")
+
+call ped%outputSortedPedigreeInAlphaImputeFormat("." // DASH // "Miscellaneous" // DASH // "InternalDataRecoding.txt")
 
 if (inputParams%SexOpt==1) then
-    do i=1,nAnisP
-        TurnOn=1
         do j=1,nAnisInGenderFile
-            if (trim(Id(i))==trim(GenderId(j))) then
-                ped%pedigree(i)%gender=GenderRaw(j)
+
+            tmpId = ped%dictionary%getValue(genderId(j))
+            if (tmpID /= dict_null) then
+                ped%pedigree(tmpId)%gender=GenderRaw(j)
                 TurnOn=0
                 exit
             endif
         enddo
-        if (TurnOn==1) then
-            do j=1,nAnisP
-                if (i==RecPed(j,2)) then
-                    ped%pedigree(i)%gender=1
-                    exit
-                endif
-                if (i==RecPed(j,3)) then
-                    ped%pedigree(i)%gender=2
-                    exit
-                endif
-            enddo
-        endif
-    enddo
 endif
 
 allocate(Genotyped(nAnisP))
 allocate(Pruned(0:nAnisP))
-allocate(IsParent(nAnisP))
-allocate(BaseAnimals(nAnisP))
 allocate(TempGenos(0:nAnisP,inputParams%nsnp))
 
 TempGenos=9
@@ -4065,7 +4048,7 @@ Pruned=0
 Pruned(0)=1
 do i=1,nAnisG
     do j=1,nAnisP
-        if (trim(GenotypeId(i))==trim(Id(j))) then
+        if (trim(GenotypeId(i))==trim(ped%pedigree(j)%originalID)) then
             TempGenos(j,:)=Genos(i,:)
             if (count(TempGenos(j,:)/=9)>0) Genotyped(j)=1
             exit
@@ -4074,96 +4057,6 @@ do i=1,nAnisG
 enddo
 deallocate(Genos)
 IndivIsGenotyped(:)=Genotyped(:)
-
-Pruned=0
-do i=1,nAnisP
-    If(RecPed(i,2)==0 .and. RecPed(i,3)==0 .and. Genotyped(RecPed(i,1))==0 ) Pruned(RecPed(i,1)) = 1
-enddo
-SumPruned=Sum(Pruned)
-flag=1
-k=0
-do while (flag==1)
-    flag=0
-    k=k+1
-    do i=1,nAnisP
-        If(RecPed(i,2)==0 .and. Pruned(RecPed(i,3))==1 .and. Genotyped(RecPed(i,1))==0 ) Pruned(RecPed(i,1)) = 1
-        If(RecPed(i,3)==0 .and. Pruned(RecPed(i,2))==1 .and. Genotyped(RecPed(i,1))==0 ) Pruned(RecPed(i,1)) = 1
-    enddo
-    if(sum(Pruned)>SumPruned) flag=1
-    SumPruned=Sum(Pruned)
-enddo
-
-IsParent=.false.
-do i=1,nAnisP
-    If(RecPed(i,2)>0) IsParent(RecPed(i,2))=.true.
-    If(RecPed(i,3)>0) IsParent(RecPed(i,3))=.true.
-enddo
-
-flag=1
-k=0
-do while (flag==1)
-    flag=0
-    k=k+1
-    do i=1,nAnisP
-        If(.not. IsParent(RecPed(i,1)) .and. Genotyped(RecPed(i,1))==0 ) Pruned(RecPed(i,1)) = 1
-    enddo
-    if(sum(Pruned)>SumPruned) then
-        flag=1
-        SumPruned=Sum(Pruned)
-        IsParent=.false.
-        do i=1,nAnisP
-            if(Pruned(RecPed(i,1))==0) then
-                If(RecPed(i,2)>0) IsParent(RecPed(i,2))=.true.
-                If(RecPed(i,3)>0) IsParent(RecPed(i,3))=.true.
-            endif
-        enddo
-    endif
-enddo
-
-BaseAnimals=0
-
-! Some cases are considered twice, i.e.:
-!       if (RecPed(i,2)==0) then
-!         if (RecPed(i,3)==0) BaseAnimals(i)=1
-! and:
-!       if (RecPed(i,3)==0) then
-!         if (RecPed(i,2)==0) BaseAnimals(i)=1
-! can be transformed into:
-! if (RecPed(i,3)==0.and.RecPed(i,2)==0) BaseAnimals(i)=1
-
-! Determine whether an animal is a base animals (==without parents)
-do i=1,nAnisP
-    if (Genotyped(i)==1) then                               ! If genotyped
-        ! If no sire
-        if (RecPed(i,2)==0) then
-            ! If no dam
-            if (RecPed(i,3)==0) BaseAnimals(i)=1
-            ! If dam has been pruned
-            if (Pruned(RecPed(i,3))==1) BaseAnimals(i)=1
-        endif
-        ! If sire has been pruned
-        if (Pruned(RecPed(i,2))==1) then
-            ! If no dam
-            if (RecPed(i,3)==0) BaseAnimals(i)=1
-            ! If dam has been pruned
-            if (Pruned(RecPed(i,3))==1) BaseAnimals(i)=1
-        endif
-        ! If no dam
-        if (RecPed(i,3)==0) then
-            ! If no sire
-            if (RecPed(i,2)==0) BaseAnimals(i)=1
-            ! If sire has been pruned
-            if (Pruned(RecPed(i,2))==1) BaseAnimals(i)=1
-        endif
-        ! If dam has been pruned
-        if (Pruned(RecPed(i,3))==1) then
-            ! If no sire
-            if (RecPed(i,2)==0) BaseAnimals(i)=1
-            ! If sire has been pruned
-            if (Pruned(RecPed(i,2))==1) BaseAnimals(i)=1
-        endif
-    endif
-enddo
 
 end subroutine CheckParentage
 !#############################################################################################################################################################################################################################
@@ -4194,13 +4087,6 @@ if (HMM == RUN_HMM_NGS) then
 
 else
     print*, ""
-
-    ! call rmdir("Miscellaneous")
-    ! call rmdir("Phasing")
-    ! call rmdir("Results")
-    ! call rmdir("InputFiles")
-    ! call rmdir("GeneProb")      !here
-    ! call rmdir("IterateGeneProb")   !here
     call system(RMDIR // " Miscellaneous")
     call system(RMDIR // " Phasing")
     call system(RMDIR // " Results")
@@ -4208,23 +4094,12 @@ else
     call system(RMDIR // " GeneProb")
     call system(RMDIR // " IterateGeneProb")
 
-    ! call system("mkdir Phasing")
-    ! call system("mkdir Miscellaneous")
-    ! call system("mkdir Results")
-    ! call system("mkdir InputFiles")
-    ! call system("mkdir GeneProb")       !here
-    ! call system("mkdir IterateGeneProb")    !here
     call system(MD // " Phasing")
     call system(MD // " Miscellaneous")
     call system(MD // " Results")
     call system(MD // " InputFiles")
     call system(MD // " GeneProb")
     call system(MD // " IterateGeneProb")
-
-
-    ! if (WindowsLinux==1) then
-
-    ! else
 
         do i=1,inputParams%nprocessors
             write (FolderName,'("GeneProb"i0)')i
@@ -4241,612 +4116,11 @@ else
             ! call system ("mkdir IterateGeneProb/" // FolderName)    !here
             call system(MD // " IterateGeneProb" // DASH // FolderName)
         enddo
-    ! endif
 endif
 
 
 end subroutine MakeDirectories
 
-!#############################################################################################################################################################################################################################
-
-! subroutine PVseq(nObs,nAnisPedigree)
-
-
-! use alphaimputeinmod
-
-! implicit none
-! type(AlphaImputeInput), pointer :: inputParams
-! character (LEN=lengan), ALLOCATABLE :: holdsireid(:), holddamid(:)
-! character (LEN=lengan), ALLOCATABLE :: holdid(:), SortedId(:), SortedSire(:), SortedDam(:)
-! character (LEN=lengan)              :: IDhold
-! integer, ALLOCATABLE                :: SortedIdIndex(:), SortedSireIndex(:), SortedDamIndex(:)
-! integer, ALLOCATABLE                :: OldN(:), NewN(:), holdsire(:), holddam(:)
-! INTEGER :: mode    ! mode=1 to generate dummy ids where one parent known.  Geneprob->1  Matesel->0
-! INTEGER :: i, j, newid, itth, itho, ihun, iten, iunit
-! integer :: nsires, ndams, newsires, newdams, nbisexuals, flag
-! INTEGER :: iextra, oldnobs, kn, kb, oldkn, ks, kd
-! INTEGER :: Noffset, Limit, Switch, ihold, ipoint
-! integer :: nObs,nAnisPedigree,verbose
-! character (LEN=lengan) :: path
-
-! inputParams => defaultInput
-! mode=1
-! allocate(id(0:nobs),sire(nobs),dam(nobs),seqid(nobs),seqsire(nobs),seqdam(nobs))
-
-! do i=1,nobs
-!         id(i)=ped(i,1)
-!         sire(i)=ped(i,2)
-!         dam(i)=ped(i,3)
-! end do
-
-! nAnisPedigree=nObs
-! path=".\\"
-! Verbose=1
-
-! ! Initialize and standarize
-! do j = 1, nobs
-!   If (dam(j) == ''.or. dam(j) == '0'.or. dam(j) == '#'.or. dam(j) == '*' .or. dam(j) == '.') Then
-!     dam(j) = '0'
-!     seqdam(j)=0
-!   endif
-!   If (sire(j) == ''.or.sire(j) == '0'.or.sire(j) == '#'.or.sire(j) == '*'.or.sire(j) == '.') Then
-!     sire(j) = '0'
-!     seqsire(j)=0
-!   endif
-! enddo
-
-! ! Insert dummy IDs (mode=1)
-! if(mode.eq.1) then
-!   !PRINT*,  ' Inserting dummy IDs ... '
-!   newid=0
-!   do j = 1, nobs
-!     ! Count individuals with a single parent
-!     if(((sire(j)=='0').and.(dam(j).ne.'0')).or.((sire(j).ne.'0').and.(dam(j)=='0'))) then
-!        newid=newid+1
-
-!        if(newid.gt.99999) then
-!        !         PRINT*, newid, ' ...'
-!            stop 'too many dummy single parent IDs'
-!        endif
-
-!        ! Give dummy Id to missing parents
-!        itth=int(newid/10000)
-!        itho=int(newid/1000)-10*itth
-!        ihun=int(newid/100)-10*itho-100*itth
-!        iten=int(newid/10)-10*ihun-100*itho-1000*itth
-!        iunit=newid-10*iten-100*ihun-1000*itho-10000*itth
-!        if(sire(j)=='0') sire(j)='dum'//achar(48+itth)//achar(48+itho)//achar(48+ihun)//achar(48+iten)//achar(48+iunit)
-!        if( dam(j)=='0')  dam(j)='dum'//achar(48+itth)//achar(48+itho)//achar(48+ihun)//achar(48+iten)//achar(48+iunit)
-!     endif
-!   enddo
-! endif
-
-! !PRINT*,  ' Sorting Sires ... '
-! ALLOCATE  (SortedId(nobs), SortedIdIndex(nobs))
-! SortedId(1:nobs) = Sire(1:nobs)
-! Noffset = INT(nobs/2)
-! DO WHILE (Noffset>0)
-!     Limit = nobs - Noffset
-!     switch=1
-!     DO WHILE (Switch.ne.0)
-!        Switch = 0
-!        do i = 1, Limit
-!           IF (SortedId(i).gt.SortedId(i + Noffset)) THEN
-!                IDhold=SortedId(i)
-!                SortedId(i)=SortedId(i + Noffset)
-!                SortedId(i + Noffset)=IDhold
-!                Switch = i
-!           endif
-!        enddo
-!        Limit = Switch - Noffset
-!     enddo
-!     Noffset = INT(Noffset/2)
-! enddo
-
-! ! Count the number of sires
-! nsires=0
-! IF(SortedId(1) /= '0') nsires=1
-! do i=2,nobs
-!     IF(SortedId(i) /= SortedId(i-1) .and. SortedId(i) /= '0') nsires=nsires+1
-! end do
-
-! ALLOCATE (SortedSire(0:nsires), SortedSireIndex(nsires))
-
-! ! Sort sires
-! SortedSire(0)='0'
-! nsires=0
-! IF(SortedId(1) /= '0') THEN
-!     nsires=1
-!     SortedSire(1) = SortedId(1)
-! ENDIF
-! do i=2,nobs
-!   IF(SortedId(i) /= SortedId(i-1) .and. SortedId(i) /= '0') then
-!    nsires=nsires+1
-!    SortedSire(nsires) = SortedId(i)
-!   ENDIF
-! end do
-
-! !PRINT*,  ' Sorting Dams ... '
-! SortedId(1:nobs) = Dam(1:nobs)
-!   Noffset = INT(nobs/2)
-!   DO WHILE (Noffset>0)
-!       Limit = nobs - Noffset
-!       switch=1
-!     DO WHILE (Switch.ne.0)
-!        Switch = 0
-!        do i = 1, Limit
-!           IF (SortedId(i).gt.SortedId(i + Noffset)) THEN
-!                IDhold=SortedId(i)
-!                SortedId(i)=SortedId(i + Noffset)
-!                SortedId(i + Noffset)=IDhold
-!                Switch = i
-!           endif
-!        enddo
-!        Limit = Switch - Noffset
-!     enddo
-!     Noffset = INT(Noffset/2)
-!   enddo
-
-! ! Count the number of dams
-! nDams=0
-! IF(SortedId(1) /= '0') nDams=1
-! do i=2,nobs
-!   IF(SortedId(i) /= SortedId(i-1) .and. SortedId(i) /= '0') nDams=nDams+1
-! end do
-
-! ALLOCATE (SortedDam(0:nDams), SortedDamIndex(ndams))
-
-! ! Sort sires
-! SortedDam(0)='0'
-! nDams=0
-
-! IF(SortedId(1) /= '0') THEN
-!  nDams=1
-!  SortedDam(1) = SortedId(1)
-! ENDIF
-! do i=2,nobs
-!   IF(SortedId(i) /= SortedId(i-1) .and. SortedId(i) /= '0') then
-!    nDams=nDams+1
-!    SortedDam(nDams) = SortedId(i)
-!   ENDIF
-! end do
-! ! NOTE: Have to go through the number of Observations several times.
-! !       We must find a way to avoid this and do it only a few times
-
-! !PRINT*,  ' Sorting IDs ... '
-! SortedId(1:nobs) = ID(1:nobs)
-! do i=1,nobs
-!  SortedIdIndex(i) = i
-! end do
-
-! Noffset = INT(nobs/2)
-! DO WHILE (Noffset>0)
-!     Limit=nobs-Noffset
-!     switch=1
-!     DO WHILE (Switch.ne.0)
-!         Switch=0
-!         do i=1,Limit
-!             IF (SortedId(i).gt.SortedId(i + Noffset)) THEN
-!                IDhold=SortedId(i)
-!                SortedId(i)=SortedId(i + Noffset)
-!                SortedId(i + Noffset)=IDhold
-!                ihold=SortedIdIndex(i)
-!                SortedIdIndex(i)=SortedIdIndex(i + Noffset)
-!                SortedIdIndex(i + Noffset)=ihold
-!                Switch = i
-!             endif
-!         enddo
-!         Limit = Switch - Noffset
-!     enddo
-!     Noffset = INT(Noffset/2)
-! enddo
-
-! !PRINT*,  ' Check for duplicate IDs ... '
-! flag = -1
-! Do i = 2, nobs
-!   If (SortedID(i) == SortedID(i - 1)) Then
-!    If (flag == -1) Then
-!      open (1,FILE='ID_err.txt',STATUS = 'unknown')
-!      WRITE(1,*) 'Duplicated IDs ...'
-!      flag = 0
-!    End If
-!    WRITE(1,*) SortedID(i)
-!    flag = flag + 1
-!   End If
-! enddo
-! If (flag > -1) Then
-!   Close (1)
-!   ! PRINT*, flag,' case(s) of duplicate ID. See ID_ERR.TXT        <------------ WARNING !!!'
-! End If
-
-
-! !PRINT*,  ' Males ... '
-! !PRINT*,  '  Find or set sire indices ... '
-! newsires = 0
-! do j=1,nsires
-!    ! check if already listed as an individual (Dichotomic search!)
-!    ipoint=INT(nobs/2)
-!    Noffset = INT(ipoint/2)
-!    do while (Noffset>1)
-!      IF (SortedSire(j).lt.SortedId(ipoint)) THEN
-!        ipoint = ipoint-Noffset
-!        Noffset = INT(Noffset/2)
-!      else
-!        ipoint = ipoint+Noffset
-!        Noffset = INT(Noffset/2)
-!      endif
-!    enddo
-
-!    kn=0
-!    if (SortedSire(j)==SortedId(ipoint)) kn=1 ! We've found j is listed as individual
-
-!    ! This is nosense! The Dichotomic search should be implemented in such a way that this search
-!    ! should not be necessary
-!    ! Looking forwards
-!    do while (ipoint<nobs.and.(kn==0).and.SortedSire(j)>SortedId(ipoint))
-!      ipoint=ipoint+1
-!    enddo
-
-!    if (SortedSire(j)==SortedId(ipoint)) kn=1    ! Found?
-
-!    ! Looking backwards
-!    do while ((ipoint>1).and.(kn==0).and.SortedSire(j)<SortedId(ipoint))
-!      ipoint=ipoint-1
-!    enddo
-
-!    if (SortedSire(j)==SortedId(ipoint)) kn=1    ! Found?
-
-!    ! If found, set sire index
-!    IF(kn==1) then
-!      SortedSireIndex(j) = SortedIdIndex(ipoint)
-!    else    ! otherwise, sire is unlisted base sire: Found a new sire
-!      newsires = newsires + 1
-!      SortedSireIndex(j) = nobs + newsires ! for now.
-!    endif
-! end do !j
-
-! ALLOCATE  (holdsireid(newsires))
-! kn=0
-!   do j=1,nsires
-!     if (SortedSireIndex(j) > nobs) then
-!       kn=kn+1
-!       holdsireid(SortedSireIndex(j)-nobs) = SortedSire(j)
-!     end if
-!   enddo
-! IF(kn /= newsires) stop'newsires error'
-
-! !PRINT*,  '  Find seqsire ... '
-! do j = 1, nobs
-!   If (sire(j) == '0') Then
-!     seqsire(j)=0
-!   else
-!     ! Find sire (dichotomic search)
-!     ipoint=INT(nsires/2)
-!     Noffset = INT(ipoint/2)
-!     do while (Noffset>1)
-!       IF (Sire(j).lt.SortedSire(ipoint)) THEN
-!         ipoint = ipoint - Noffset
-!         Noffset = INT(Noffset/2)
-!       else
-!         ipoint = ipoint + Noffset
-!         Noffset = INT(Noffset/2)
-!       endif
-!     enddo
-!     kn=0
-!     if (Sire(j)==SortedSire(ipoint)) kn=1
-!       do while (ipoint<nsires .and. kn==0 .and. Sire(j) > SortedSire(ipoint))
-!         ipoint=ipoint+1
-!       enddo
-!       if (Sire(j)==SortedSire(ipoint)) kn=1
-!       do while (ipoint>1 .and. kn==0 .and. Sire(j) < SortedSire(ipoint))
-!         ipoint=ipoint-1
-!       enddo
-!       if (Sire(j)==SortedSire(ipoint)) kn=1
-!       IF(kn==1) then
-!         seqsire(j) = SortedSireIndex(ipoint)
-!       else
-!       !PRINT*, ' Error: Sire missing: ', Sire(j)
-!       stop
-!     endif
-!   endif
-! ENDDO !j
-
-! !PRINT*,  '  Sires: ',newsires,' unlisted, ',nsires,' in total'
-! !PRINT*,  ' Females ... '
-! !PRINT*,  '  Find or set dam indices ... '
-
-! newdams = 0
-! nbisexuals = 0
-! do j=1,ndams
-! ! check if already listed as an individual
-!    ipoint=INT(nobs/2)
-!    Noffset = INT(ipoint/2)
-!    do while (Noffset>1)
-!     IF (Sorteddam(j).lt.SortedId(ipoint)) THEN
-!      ipoint = ipoint - Noffset
-!      Noffset = INT(Noffset/2)
-!     else
-!      ipoint = ipoint + Noffset
-!      Noffset = INT(Noffset/2)
-!     endif
-!    enddo
-!     kn=0
-!     if (Sorteddam(j)==SortedId(ipoint)) kn=ipoint  ! store ipoint here as ipoint can change with bisexuals
-!     do while (ipoint<nobs .and. kn==0 .and. Sorteddam(j) > SortedId(ipoint))
-!      ipoint=ipoint+1
-!     enddo
-!     if (Sorteddam(j)==SortedId(ipoint)) kn=ipoint
-!     do while (ipoint>1 .and. kn==0 .and. Sorteddam(j) < SortedId(ipoint))
-!      ipoint=ipoint-1
-!     enddo
-!     if (Sorteddam(j)==SortedId(ipoint)) kn=ipoint
-! ! check if already listed as a sire (and therefore bisexual)
-!    ipoint=INT(nsires/2)
-!    Noffset = INT(ipoint/2)
-!    do while (Noffset>1)
-!     IF (SortedDam(j).lt.SortedSire(ipoint)) THEN
-!      ipoint = ipoint - Noffset
-!      Noffset = INT(Noffset/2)
-!     else
-!      ipoint = ipoint + Noffset
-!      Noffset = INT(Noffset/2)
-!     endif
-!    enddo
-!     kb=0
-!     if (SortedDam(j)==SortedSire(ipoint)) kb=1
-!     do while (ipoint<nsires .and. kb==0 .and. SortedDam(j) > SortedSire(ipoint))
-!      ipoint=ipoint+1
-!     enddo
-!     if (SortedDam(j)==SortedSire(ipoint)) kb=1
-!     do while (ipoint>1 .and. kb==0 .and. SortedDam(j) < SortedSire(ipoint))
-!      ipoint=ipoint-1
-!     enddo
-!     if (SortedDam(j)==SortedSire(ipoint)) kb=1
-
-!     IF(kb==1) then
-!       nbisexuals = nbisexuals + 1
-!       open (1,FILE='bisex.txt',position = 'append')
-!        WRITE(1,*) SortedDam(j)
-!       close(1)
-!     endif
-!     if (kb==1) then
-!      SorteddamIndex(j) = SortedSireIndex(ipoint)
-!     elseif (kn>=1) then
-!      SorteddamIndex(j) = SortedIdIndex(kn)
-!     else    ! dam is unlisted base dam
-!      newdams = newdams + 1
-!      SorteddamIndex(j) = nobs + newsires + newdams ! for now
-!     endif
-! end do !j
-
-! If (nbisexuals > 0)  PRINT*, nbisexuals,' bisexual parent(s) found. See file bisex.txt.  <------------ WARNING !!!'
-!  ALLOCATE  (holddamid(newdams))
-!  kn=0
-!  do j=1,ndams
-!   if (SortedDamIndex(j) > nobs+newsires) then
-!    kn=kn+1
-!    holddamid(SortedDamIndex(j)-nobs-newsires) = SortedDam(j)
-!   end if
-!  enddo
-!  IF(kn /= newdams) stop'newdams error'
-
-! !PRINT*,  '  Find seqdam ... '
-! do j = 1, nobs
-!   If (dam(j) == '0') Then
-!     seqdam(j)=0
-!   else
-!     ipoint=INT(ndams/2)
-!     Noffset = INT(ipoint/2)
-!    do while (Noffset>1)
-!     IF (dam(j).lt.Sorteddam(ipoint)) THEN
-!      ipoint = ipoint - Noffset
-!      Noffset = INT(Noffset/2)
-!     else
-!      ipoint = ipoint + Noffset
-!      Noffset = INT(Noffset/2)
-!     endif
-!    enddo
-!     kn=0
-!     if (dam(j)==Sorteddam(ipoint)) kn=1
-!     do while (ipoint<ndams .and. kn==0 .and. dam(j) > Sorteddam(ipoint))
-!      ipoint=ipoint+1
-!     enddo
-!     if (dam(j)==Sorteddam(ipoint)) kn=1
-!     do while (ipoint>1 .and. kn==0 .and. dam(j) < Sorteddam(ipoint))
-!      ipoint=ipoint-1
-!     enddo
-!     if (dam(j)==Sorteddam(ipoint)) kn=1
-!     IF(kn==1) then
-!      seqdam(j) = SorteddamIndex(ipoint)
-!     else
-!     ! PRINT*, ' Error: dam missing: ', dam(j)
-!      stop
-!     endif
-!   endif
-! ENDDO !j
-
-! !PRINT*,  '  Dams: ',newdams,' unlisted, ',ndams,' in total'
-! !PRINT*,  ' Arranging unlisted base parents ... '
-! iextra = newsires + newdams
-! If (iextra > 0) then
-!      ! PRINT*, ' ', iextra, ' unlisted base parents found.'
-!  ! SortedId and SortedIdIndex just used as a holder while redimensioning
-!  SortedId(1:nobs)=id(1:nobs)
-!  deallocate (id)
-!  ALLOCATE(id(nobs+iextra))
-!  id(1+iextra:nobs+iextra)=SortedId(1:nobs)
-
-!  SortedId(1:nobs)=sire(1:nobs)
-!  deallocate (sire)
-!  ALLOCATE(sire(nobs+iextra))
-!  sire(1+iextra:nobs+iextra)=SortedId(1:nobs)
-
-!  SortedId(1:nobs)=dam(1:nobs)
-!  deallocate (dam)
-!  ALLOCATE(dam(nobs+iextra))
-!  dam(1+iextra:nobs+iextra)=SortedId(1:nobs)
-
-!  SortedIdIndex(1:nobs)=seqsire(1:nobs)
-!  deallocate (seqsire)
-!  ALLOCATE(seqsire(nobs+iextra))
-!  seqsire(1+iextra:nobs+iextra)=SortedIdIndex(1:nobs)
-
-!  SortedIdIndex(1:nobs)=seqdam(1:nobs)
-!  deallocate (seqdam)
-!  ALLOCATE(seqdam(nobs+iextra))
-!  seqdam(1+iextra:nobs+iextra)=SortedIdIndex(1:nobs)
-! endif
-
-! !PRINT*, ' Inserting unlisted base parents ...'
-
-! oldnobs = nobs
-! nobs = nobs + iextra
-! !PRINT*, ' Total number of animals = ',nobs
-
-! ALLOCATE (passedorder(nobs))
-! passedorder=0
-
-! do i = 1+iextra, nobs
-!  passedorder(i)= i-iextra
-
-!  If (sire(i) == '0')then
-!    seqsire(i) = 0
-!  Else
-!    seqsire(i) = iextra + seqsire(i)
-!    If (seqsire(i) > nobs)  seqsire(i) = seqsire(i) - nobs  ! for unlisted sires
-!  End If
-
-!  If (dam(i) == '0') Then
-!    seqdam(i) = 0
-!   Else
-!    seqdam(i) = iextra + seqdam(i)
-!    If (seqdam(i) > nobs)  seqdam(i) = seqdam(i) - nobs
-!   End If
-! ENDDO !i
-
-! do i = 1, newsires
-!  ID(i) = holdsireid(i)
-!  passedorder(i)=0
-!  seqsire(i) = 0
-!  seqdam(i) = 0
-! ENDDO !i
-! do i = newsires + 1, newsires + newdams
-!  ID(i) = holddamid(i - newsires)
-!  passedorder(i)=0
-!  seqsire(i) = 0
-!  seqdam(i) = 0
-! ENDDO !i
-
-! DEALLOCATE(holdsireid, holddamid, SortedIdIndex, SortedId)
-
-! flag = 0
-! Do i = 1, nobs
-! If (i <= seqsire(i) .Or. i <= seqdam(i) ) flag = 1
-! enddo !i
-! !If (flag == 0) !PRINT*, 'not needed'!return
-
-! !PRINT*, ' Re-Ordering pedigree ...'
-
-
-! Allocate ( OldN(0:nobs), NewN(0:nobs) )
-! ALLOCATE ( holdid(0:nobs), holdsire(nobs), holddam(nobs) )
-
-! OldN(0) = 0
-! NewN=0
-! !seqsire(0) = 0 !not needed !
-! !seqdam(0) = 0
-
-! holdid(1:nobs) = ID(1:nobs)
-! holdsire = seqsire
-! holddam = seqdam
-
-! !Find base ancestors ...
-! kn = 0
-! do i = 1, nobs
-!  If (seqsire(i) == 0 .And. seqdam(i) == 0) Then
-!       kn = kn + 1
-!       NewN(i) = kn
-!       OldN(kn) = i
-!  End If
-! ENDDO !i
-
-! !Re-order pedigree ...
-! NewN(0) = nobs + 1
-! flag = 0
-! Do While (kn < nobs)
-!  oldkn = kn
-!  do i = 1, nobs
-!   If (NewN(i) == 0) Then !And ID(i) <> 'UniqueNULL' Then
-!     Ks = seqsire(i)
-!     Kd = seqdam(i)
-!     If (NewN(Ks) > 0 .And. NewN(Kd) > 0) Then
-!       kn = kn + 1
-!       NewN(i) = kn
-!       OldN(kn) = i
-!     End If
-!   End If
-!  enddo !i
-
-!  ! to avoid hang on unexpected problem ...
-!  If (kn == oldkn) Then
-!   flag = flag + 1
-!  Else
-!   flag = 0
-!  endif
-
-!  If (flag > 10) Then
-!    open(1,file='ped_err.txt',status='unknown')
-!    write(1,*) 'Pedigree errors found involving two or more of the following relationships ...'
-!    write(1,*)
-!    write(1,*) '       Index numbers are followed by names.'
-!    write(1,*) '       Index number 0 means unknown, whence name is blank.'
-!    write(1,*)
-!    do i = 1, nobs
-!     If (NewN(i) == 0) Then
-!      write(1,*) 'Individual:',          i, ':  ', ID(i)
-!      write(1,*) '    Father:', seqsire(i), ':  ', ID(seqsire(i))
-!      write(1,*) '    Mother:',  seqdam(i), ':  ', ID(seqdam(i))
-!      write(1,*)
-!     End If
-!    ENDDO !i
-!    Close (1)
-!    PRINT*,  'Logical error when re-ordering pedigree - see details in file PED_ERR.TXT'
-!    stop
-!  End If
-! ENDDO !while
-
-! NewN(0) = 0
-
-! do i = 1, nobs
-!  ID(i) = holdid(OldN(i))
-! enddo
-
-! do i = 1, nobs
-! seqsire(i) = NewN(holdsire(OldN(i)))
-! seqdam(i) = NewN(holddam(OldN(i)))
-! If (i <= NewN(holdsire(OldN(i))) .Or. i <= NewN(holddam(OldN(i)))) then
-!    !PRINT*,  'out of order'
-!    stop
-! endif
-! ENDDO !i
-
-! DO i = 1, nobs
-!   holdsire(i) = passedorder(i)  ! holdsire just because it is free
-! enddo
-
-! DO i = 1, nobs
-!   passedorder(i) = holdsire(OldN(i))
-! enddo
-
-! deallocate ( OldN, NewN, holdid, holdsire, holddam) ! holdrec)
-
-! !do i = 1, nobs
-! ! PRINT'(3i5,2x,3a4,i5)', i, seqsire(i), seqdam(i), id(i), sire(i), dam(i), passedorder(i)
-! !enddo
-! nAnisPedigree=nObs
-! inputParams%GlobalExtraAnimals=iextra   !Change John Hickey
-
-! end subroutine PVseq
 !#############################################################################################################################################################################################################################
 
 subroutine rmdir(tmpdir)
@@ -4864,6 +4138,7 @@ call system("./.rmdirsh")
 call system("rm .rmdirsh")
 
 end subroutine rmdir
+
 !#############################################################################################################################################################################################################################
 
 subroutine Checker
@@ -4896,12 +4171,6 @@ FileName=trim(inputParams%TrueGenotypeFile)
 ! call CountLines(FileName,nAnisTest)
 nAnisTest = CountLines(FileName)
 
-! if (WindowsLinux==1) then
-!     call system("rmdir /s /q TempTestAlphaImpute")
-! else
-!     call rmdir("TempTestAlphaImpute")
-! endif
-! call system("mkdir TempTestAlphaImpute")
 call system(RMDIR // " TempTestAlphaImpute")
 call system(MD // " TempTestAlphaImpute")
 
@@ -4997,17 +4266,17 @@ if (inputParams%outopt==0) then
             GenoStratIndex(i)=6
             if (FinalSetter(ped%pedigree(i)%getSireDamNewIDByIndex(3))==1) then
                 GenoStratIndex(i)=5
-                if (FinalSetter(RecPed(RecPed(i,2),2))==1) then
+                if (FinalSetter(ped%Pedigree(i)%getPaternalGrandDamRecodedIndex())==1) then
                     GenoStratIndex(i)=3
                 endif
             endif
-            if (FinalSetter(RecPed(i,2))==1) then
+            if (FinalSetter(ped%pedigree(i)%getSireDamNewIDByIndex(2))==1) then
                 GenoStratIndex(i)=4
-                if (FinalSetter(RecPed(RecPed(i,3),2))==1) then
+                if (FinalSetter(ped%Pedigree(i)%getMaternalGrandDamRecodedIndex())==1) then
                     GenoStratIndex(i)=2
                 endif
             endif
-            if ((FinalSetter(RecPed(i,2))==1).and.(FinalSetter(RecPed(i,3))==1)) then
+            if ((FinalSetter(ped%pedigree(i)%getSireDamNewIDByIndex(2))==1).and.(FinalSetter(ped%pedigree(i)%getSireDamNewIDByIndex(3))==1)) then
                 GenoStratIndex(i)=1
             endif
         endif
@@ -5095,7 +4364,7 @@ if (inputParams%outopt==0) then
         if (ped%pedigree(i)%isDummy) then
             cycle
         endif
-        write (45,'(a25,i3,2f7.2)') Id(i),FinalSetter(i),float(count(ImputePhase(i,:,1)/=9))/inputParams%nsnp &
+        write (45,'(a25,i3,2f7.2)') ped%pedigree(i)%originalID,FinalSetter(i),float(count(ImputePhase(i,:,1)/=9))/inputParams%nsnp &
                             ,float(count(ImputePhase(i,:,2)/=9))/inputParams%nsnp
     enddo
 else
@@ -5112,7 +4381,7 @@ else
 
     do i=1,nAnisTest
         do j=1,nAnisP
-            if (trim(TrueGenosId(i))==trim((Id(j)))) then
+            if (trim(TrueGenosId(i))==trim((ped%pedigree(j)%originalID))) then
                 RecTestId(i)=j
                 exit
             endif
@@ -5132,19 +4401,19 @@ else
     do i=1,nAnisP
         if (FinalSetter(i)/=1) then
             GenoStratIndex(i)=6
-            if (FinalSetter(RecPed(i,3))==1) then
+            if (FinalSetter(ped%pedigree(i)%getSireDamNewIDByIndex(3))==1) then
                 GenoStratIndex(i)=5
-                if (FinalSetter(RecPed(RecPed(i,2),2))==1) then
+                if (FinalSetter(ped%pedigree(i)%getPaternalGrandSireRecodedIndex())==1) then
                     GenoStratIndex(i)=3
                 endif
             endif
-            if (FinalSetter(RecPed(i,2))==1) then
+            if (FinalSetter(ped%pedigree(i)%getSireDamNewIDByIndex(2))==1) then
                 GenoStratIndex(i)=4
-                if (FinalSetter(RecPed(RecPed(i,3),2))==1) then
+                if (FinalSetter(ped%pedigree(i)%getMaternalGrandSireRecodedIndex())==1) then
                     GenoStratIndex(i)=2
                 endif
             endif
-            if ((FinalSetter(RecPed(i,2))==1).and.(FinalSetter(RecPed(i,3))==1)) then
+            if ((FinalSetter(ped%pedigree(i)%getSireDamNewIDByIndex(2))==1).and.(FinalSetter(ped%pedigree(i)%getSireDamNewIDByIndex(3))==1)) then
                 GenoStratIndex(i)=1
             endif
         endif
@@ -5233,7 +4502,7 @@ else
         if (ped%pedigree(i)%isDummy) then
             cycle
         endif
-        write (45,'(a25,i3,2f7.2)') Id(i),FinalSetter(i),float(count(ImputePhase(i,:,1)/=9))/inputParams%nSnpRaw &
+        write (45,'(a25,i3,2f7.2)') ped%pedigree(i)%originalID,FinalSetter(i),float(count(ImputePhase(i,:,1)/=9))/inputParams%nSnpRaw &
                             ,float(count(ImputePhase(i,:,2)/=9))/inputParams%nSnpRaw
     enddo
 
@@ -5261,7 +4530,7 @@ use Utils
 use alphaimputeinmod
 implicit none
 
-integer :: h,i,j,k,l,nAnisTest,CountCatTest(6)
+integer :: h,i,j,k,l,nAnisTest,CountCatTest(6),tmpIDInt
 integer :: SummaryStats(3,6),Div,CountLen,Counter,Top1,Top2,Top3,Top4,Bot,ContSnpCor,CountValAnim(6)
 double precision :: SummaryProps(3,6),SumPat(6),SumMat(6),MeanCorPerInd(6),StdDevPerGrp(6),AveCategoryInformativeness(6,6)
 double precision :: Tmpave,Tmpadev,Tmpvar,Tmpskew,Tmpcurt
@@ -5326,12 +4595,12 @@ do i=1,nAnisG
         if ((WorkTmp(j)>=0).and.(WorkTmp(j)<=2)) Counter=Counter+1
     enddo
     if (float(Counter)>(float(inputParams%nSnpRaw)/2)) then
-        do k=1,nAnisP
-            if (trim(Id(k))==dumC) then
-                FinalSetter(k)=1
-                exit
-            endif
-        enddo
+        tmpIDInt = ped%dictionary%getValue(dumC)
+        if (tmpIDInt /= DICT_NULL) then
+            FinalSetter(k)=1
+            exit
+        endif
+        
     endif
 enddo
 rewind(36)
@@ -5366,7 +4635,7 @@ if (inputParams%outopt==0) then
     RecTestId(:)=-99
     do i=1,nAnisTest
         do j=1,nAnisP
-            if (trim(TrueGenosId(i))==trim((Id(j)))) then
+            if (trim(TrueGenosId(i))==trim((ped%pedigree(j)%originalID))) then
                 RecTestId(i)=j
                 TestAnimInformativeness(i,:)=GlobalTmpCountInf(j,1:6)
                 exit
@@ -5395,19 +4664,19 @@ if (inputParams%outopt==0) then
     do i=1,nAnisP
         if (FinalSetter(i)/=1) then
             GenoStratIndex(i)=6
-            if (FinalSetter(RecPed(i,3))==1) then
+            if (FinalSetter(ped%pedigree(i)%getSireDamNewIDByIndex(3))==1) then
                 GenoStratIndex(i)=5
-                if (FinalSetter(RecPed(RecPed(i,2),2))==1) then
+                if (FinalSetter(ped%pedigree(i)%getPaternalGrandSireRecodedIndex())==1) then
                     GenoStratIndex(i)=3
                 endif
             endif
-            if (FinalSetter(RecPed(i,2))==1) then
+            if (FinalSetter(ped%pedigree(i)%getSireDamNewIDByIndex(2))==1) then
                 GenoStratIndex(i)=4
-                if (FinalSetter(RecPed(RecPed(i,3),2))==1) then
+                if (FinalSetter(ped%pedigree(i)%getMaternalGrandSireRecodedIndex())==1) then
                     GenoStratIndex(i)=2
                 endif
             endif
-            if ((FinalSetter(RecPed(i,2))==1).and.(FinalSetter(RecPed(i,3))==1)) then
+            if ((FinalSetter(ped%pedigree(i)%getSireDamNewIDByIndex(2))==1).and.(FinalSetter(ped%pedigree(i)%getSireDamNewIDByIndex(2))==1)) then
                 GenoStratIndex(i)=1
             endif
         endif
@@ -5544,7 +4813,7 @@ if (inputParams%outopt==0) then
         if (ped%pedigree(i)%isDummy) then
             cycle
         endif
-        write (45,'(a25,i3,2f7.2)') Id(i),FinalSetter(i),float(count(ImputePhase(i,:,1)/=9))/inputParams%nsnp &
+        write (45,'(a25,i3,2f7.2)') ped%pedigree(i)%originalID,FinalSetter(i),float(count(ImputePhase(i,:,1)/=9))/inputParams%nsnp &
                             ,float(count(ImputePhase(i,:,2)/=9))/inputParams%nsnp
     enddo
 
@@ -5582,8 +4851,8 @@ else
     RecTestId(:)=-99
     do i=1,nAnisTest
         do j=1,nAnisP
-            ! print *, i,j, TrueGenosId(i), Id(j)
-            if (trim(TrueGenosId(i))==trim((Id(j)))) then
+            ! print *, i,j, TrueGenosId(i), ped%pedigree(j)%originalID
+            if (trim(TrueGenosId(i))==trim((ped%pedigree(j)%originalID))) then
                 RecTestId(i)=j
                 TestAnimInformativeness(i,:)=GlobalTmpCountInf(j,1:6)
                 exit
@@ -5605,19 +4874,19 @@ else
     do i=1,nAnisP
         if (FinalSetter(i)/=1) then
             GenoStratIndex(i)=6
-            if (FinalSetter(RecPed(i,3))==1) then
+            if (FinalSetter(ped%pedigree(i)%getSireDamNewIDByIndex(3))==1) then
                 GenoStratIndex(i)=5
-                if (FinalSetter(RecPed(RecPed(i,2),2))==1) then
+                if (FinalSetter(ped%pedigree(i)%getPaternalGrandSireRecodedIndex())==1) then
                     GenoStratIndex(i)=3
                 endif
             endif
-            if (FinalSetter(RecPed(i,2))==1) then
+            if (FinalSetter(ped%pedigree(i)%getSireDamNewIDByIndex(2))==1) then
                 GenoStratIndex(i)=4
-                if (FinalSetter(RecPed(RecPed(i,3),2))==1) then
+                if (FinalSetter(ped%pedigree(i)%getMaternalGrandSireRecodedIndex())==1) then
                     GenoStratIndex(i)=2
                 endif
             endif
-            if ((FinalSetter(RecPed(i,2))==1).and.(FinalSetter(RecPed(i,3))==1)) then
+            if ((FinalSetter(ped%pedigree(i)%getSireDamNewIDByIndex(2))==1).and.(FinalSetter(ped%pedigree(i)%getSireDamNewIDByIndex(3))==1)) then
                 GenoStratIndex(i)=1
             endif
         endif
@@ -5753,7 +5022,7 @@ else
         if (ped%pedigree(i)%isDummy) then
             cycle
         endif
-        write (45,'(a25,i3,2f7.2)') Id(i),FinalSetter(i),float(count(ImputePhase(i,:,1)/=9))/inputParams%nSnpRaw &
+        write (45,'(a25,i3,2f7.2)') ped%pedigree(i)%originalID,FinalSetter(i),float(count(ImputePhase(i,:,1)/=9))/inputParams%nSnpRaw &
                             ,float(count(ImputePhase(i,:,2)/=9))/inputParams%nSnpRaw
     enddo
 
