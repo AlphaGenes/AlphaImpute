@@ -286,7 +286,7 @@ do i=1,nSegments
     call ModelRecombSegment(StartSnp, StopSnp, nRecomb)
     k=0
     do indv=1,nAnisP
-        if (IndivIsGenotyped(indv)==1 .AND. nRecomb(indv)>1) then
+        if (ped%pedigree(i)%genotyped==1 .AND. nRecomb(indv)>1) then
             k=k+1
 
             call RemoveGenotypeInformationIndividualSegment(k,StartSnp,StopSnp)

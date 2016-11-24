@@ -15,7 +15,7 @@ character(len=300) :: GenotypeFileName,CheckPhaseFileName,CheckGenoFileName
 character*(20), allocatable, dimension(:) :: AnimalsInbred,GlobalHmmMachID
 integer :: nIndHmmMaCH,GlobalRoundHmm,nSnpHmm,nGametesPhased,nAnimPhased,nAnisInbred
 integer :: nHapInSubH,useProcs,nRoundsHmm,HmmBurnInRound,idum,windowLength
-real 	:: phasedThreshold,imputedThreshold
+real    :: phasedThreshold,imputedThreshold
 logical :: segmentOverlap
 integer,allocatable,dimension(:,:) :: GenosHmmMaCH,SubH
 integer(kind=1),allocatable,dimension(:,:,:) :: PhaseHmmMaCH,FullH

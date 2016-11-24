@@ -242,8 +242,6 @@ module InputMod
   use AlphaImputeInMod
   implicit none
 
-  integer :: i,j,k,CountLinesGender,GenCode,AnimalPresent
-  character(len=300) :: dumC
   type(AlphaImputeInput), pointer :: inputParams
   integer, allocatable, dimension(:) :: Temp
   inputParams=> defaultInput

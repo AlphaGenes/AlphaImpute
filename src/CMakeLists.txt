@@ -4,8 +4,8 @@ SET(ALPHAIMPUTE_src
             ${SRCALPHAIMPUTE}HaplotypeBits.f90
             ${SRCALPHAIMPUTE}hmm.f90
             ${SRCALPHAIMPUTE}Output.f90
-            ${SRCALPHAIMPUTE}hmmHaplotype.f90
             ${SRCALPHAIMPUTE}hmmvariables.f90
+            ${SRCALPHAIMPUTE}hmmHaplotype.f90          
             ${SRCALPHAIMPUTE}Imputation.f90
             ${SRCALPHAIMPUTE}InputMod.f90
             ${SRCALPHAIMPUTE}manageWindows.f90

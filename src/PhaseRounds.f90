@@ -321,11 +321,10 @@ CONTAINS
   END FUNCTION getFileNameHapLib_NoPath
 
 
-  SUBROUTINE ReadPhased(nAnis, nAnisPed, FileName, ped, PhaseHD, PosHD)
+  SUBROUTINE ReadPhased(nAnis, FileName, ped, PhaseHD, PosHD)
     use PedigreeModule
     use ISO_Fortran_Env
     integer, intent(in)                     :: nAnis
-    integer, intent(in)                     :: nAnisPed
     character(len=*), intent(in)            :: FileName
     type(pedigreeHolder)                    ::  ped
     integer, dimension (:), intent(out)     :: PosHD
@@ -345,7 +344,7 @@ CONTAINS
         tmp = ped%dictionary%getValue(trim(dumC))
         ! Match HD phase information with individuals
         if (tmp /= dict_null) then
-                PosHD(j)=tmp
+                PosHD(tmp)=i
         else
           write(error_unit,*) "Error - phasing data has generated info for an animal that does not exist"
         endif

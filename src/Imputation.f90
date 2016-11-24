@@ -24,7 +24,6 @@ CONTAINS
     inputParams => defaultInput
 
 
-
     ! WARNING: Need to discuss this part of code with John. Nonsense going on here!
 
     if (inputParams%HMMOption==RUN_HMM_ONLY) then ! Avoid any adulteration of genotypes with imputation subroutines
@@ -37,7 +36,10 @@ CONTAINS
       !       up in the code: at InsteadOfGeneProb in MakeFiles subroutine.
       !       Something has to be done with InsteadOfGeneProb cos' it is causing lots
       !       of problems!!
-
+      if (allocated(ImputeGenos)) Then
+          deallocate(ImputeGenos)
+      endif
+      allocate(ImputeGenos(0:nAnisP,inputParams%nsnp))
       if (allocated(ImputePhase)) Then
           deallocate(ImputePhase)
       endif
@@ -45,6 +47,7 @@ CONTAINS
       ImputePhase=9
 
       allocate(GlobalTmpCountInf(nAnisP,8))
+
       allocate(MSTermInfo(nAnisP,2))
 
 #ifdef DEBUG
@@ -69,11 +72,13 @@ CONTAINS
     else
 
       if (inputParams%RestartOption==4) then
+        allocate(ImputeGenos(0:nAnisP,inputParams%nsnp))
         allocate(ImputePhase(0:nAnisP,inputParams%nsnp,2))
       else
         if (inputParams%sexopt==0) then
           ! Impute initial genotypes from calculated genotype probabilities
           if (inputParams%BypassGeneProb==0) then
+            allocate(ImputeGenos(0:nAnisP,inputParams%nsnp))
             allocate(ImputePhase(0:nAnisP,inputParams%nsnp,2))
             allocate(GlobalWorkPhase(0:nAnisP,inputParams%nsnp,2))
             call ReReadGeneProbs
@@ -905,7 +910,7 @@ end subroutine InternalParentPhaseElim
       CoreI = ReadCores(FileName)
 
       ! Get phase information
-      call ReadPhased(nAnisHD, nAnisP, FileNamePhase, Ped, PhaseHD, PosHD)
+      call ReadPhased(nAnisHD, FileNamePhase, Ped, PhaseHD, PosHD)
 
       do g=1,CoreI%nCores
         ! Initialize Start and End snps of the cores
@@ -1141,7 +1146,7 @@ end subroutine InternalParentPhaseElim
       CoreI = ReadCores(FileName)
 
       ! Get phase information
-      call ReadPhased(nAnisHD, nAnisP, FileNamePhase, ped, PhaseHD, PosHD)
+      call ReadPhased(nAnisHD, FileNamePhase, ped, PhaseHD, PosHD)
 
       do g=1,CoreI%nCores
         ! Initialize Start and End snps of the cores
@@ -1198,7 +1203,7 @@ end subroutine InternalParentPhaseElim
           type(individual) ,pointer :: parent
           !$OMP PARALLEL DO &
           !$OMP DEFAULT(SHARED) &
-          !$OMP PRIVATE(i,j,e,PedId,PosHDInd,GamA,GamB)
+          !$OMP PRIVATE(i,j,e,PedId,PosHDInd,GamA,GamB,parent)
           do i=1,nAnisP
             do e=1,2
               PedId=e+1
@@ -1744,7 +1749,7 @@ endif
 
         tmpIndex = ped%dictionary%getValue(dumC)
         if (tmpIndex /= DICT_NULL) then
-          PosHD(j)=tmpIndex        
+          PosHD(tmpIndex)=i        
 
         else 
           write(error_unit,*) "WARNING - HD Phase information for animal not in the pedigree"
@@ -1783,7 +1788,7 @@ endif
       CoreLength=(EndSnp-StartSnp)+1
       do i=1,nAnisP
         ! If I have no parents and if I am somebody
-        if ((BaseAnimals(i)==1).and.(PosHD(i)/=0)) then
+        if (ped%pedigree(i)%founder .and.(PosHD(i)/=0)) then
           CountDisagree=0
           ! Check if the two haplotypes are equal
           do j=StartSnp,EndSnp
@@ -2350,13 +2355,12 @@ endif
     open(unit=102,file="." // DASH // "Miscellaneous" // "IndividualSnpInformativeness.txt", status="unknown")
     open(unit=103,file="." // DASH // "Miscellaneous" // "IndividualMendelianInformativeness.txt", status="unknown")
 
-
     allocate(GlobalTmpCountInf(nAnisP,8))
     allocate(MSTermInfo(nAnisP,2))
 
     MSTermInfo=0
     do i=1,nAnisP
-      if (IndivIsGenotyped(i)==1) MSTermInfo(i,:)=1
+      if (ped%pedigree(i)%Genotyped) MSTermInfo(i,:)=1
       TmpInfor(:,:)=-99
       GlobalTmpCountInf(i,:)=0
       Informativeness(:,:)=9 ! What the hell is this variable for??
@@ -2368,7 +2372,7 @@ endif
           if (ImputeGenos(i,j)==1) then               ! If heterozygous
 
             ! My father is heterozygous
-            if (ImputeGenos(ped%pedigree(i)%sirePointer%id,j)==1) then
+            if (ImputeGenos(ped%pedigree(i)%getSireDamNewIDByIndex(2),j)==1) then
               ! And have my father haplotype phased
               if ((ImputePhase(i,j,1)==0).or.(ImputePhase(i,j,1)==1)) then
                 Informativeness(j,1)=1
@@ -2378,7 +2382,7 @@ endif
             endif
 
             ! My mother is heterozygous
-            if (ImputeGenos(ped%pedigree(i)%damPointer%id,j)==1) then
+            if (ImputeGenos(ped%pedigree(i)%getSireDamNewIDByIndex(3),j)==1) then
               ! And have my mother haplotype phased
               if ((ImputePhase(i,j,2)==0).or.(ImputePhase(i,j,2)==1)) then
                 Informativeness(j,2)=1
@@ -2390,14 +2394,14 @@ endif
             ! My father haplotype is phased
             if ((ImputePhase(i,j,1)==0).or.(ImputePhase(i,j,1)==1)) then
               ! If my paternal GranSire is heterozygous
-              GrandPar=ped%pedigree(i)%sirePointer%sirePointer%id
+              GrandPar=ped%pedigree(i)%getPaternalGrandSireRecodedIndex()
               if (ImputeGenos(GrandPar,j)==1) then
                 Informativeness(j,3)=1
                 GlobalTmpCountInf(i,3)=GlobalTmpCountInf(i,3)+1
                 TmpInfor(GlobalTmpCountInf(i,3),3)=j
               endif
               ! If my maternal GranDam is heterozygous
-              GrandPar= ped%pedigree(i)%sirePointer%damPointer%id
+              GrandPar=ped%pedigree(i)%getPaternalGrandDamRecodedIndex()
               if (ImputeGenos(GrandPar,j)==1) then
                 Informativeness(j,4)=1
                 GlobalTmpCountInf(i,4)=GlobalTmpCountInf(i,4)+1
@@ -2408,14 +2412,14 @@ endif
             ! My mother haplotype is phased
             if ((ImputePhase(i,j,2)==0).or.(ImputePhase(i,j,2)==1)) then
               ! If my maternal GranSire is heterozygous
-              GrandPar= ped%pedigree(i)%damPointer%sirepointer%id
+              GrandPar= ped%pedigree(i)%getMaternalGrandSireRecodedIndex()
               if (ImputeGenos(GrandPar,j)==1) then
                 Informativeness(j,5)=1
                 GlobalTmpCountInf(i,5)=GlobalTmpCountInf(i,5)+1
                 TmpInfor(GlobalTmpCountInf(i,5),5)=j
               endif
               ! If my maternal GranDam is heterozygous
-              GrandPar=ped%pedigree(i)%damPointer%dampointer%id
+              GrandPar=ped%pedigree(i)%getmaternalGrandDamRecodedIndex()
               if (ImputeGenos(GrandPar,j)==1) then
                 Informativeness(j,6)=1
                 GlobalTmpCountInf(i,6)=GlobalTmpCountInf(i,6)+1

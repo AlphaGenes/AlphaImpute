@@ -412,7 +412,7 @@ end do
 
 do i=1,nGenotyped
     ! Check if individual is in the genotype file
-    if (IndivIsGenotyped(GlobalHmmID(i))==1) then
+    if (ped%pedigree(GlobalHmmID(i))%genotyped==1) then
         ! k=k+1
         nIndvG=nIndvG+1
         k=i

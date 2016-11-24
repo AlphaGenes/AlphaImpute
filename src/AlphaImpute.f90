@@ -1701,7 +1701,7 @@ else
 
     call CheckImputationInconsistencies(ImputeGenos, ImputePhase, nAnisP, inputParams%nsnp)
 
-    allocate(TmpGenos(0:nAnisP,inputParams%nSnpRaw))
+allocate(TmpGenos(0:nAnisP,inputParams%nSnpRaw))
     allocate(TmpPhase(0:nAnisP,inputParams%nSnpRaw,2))
     TmpGenos=9
     TmpPhase=9
@@ -2752,11 +2752,17 @@ do i=1,nAnisP
         SireDamRL=e+1
         CountLeftSwitch=0
         CountRightSwitch=0
+        block 
+            integer :: tmpGender
         PedId=ped%pedigree(i)%getSireDamNewIDByIndex(SireDamRL)
-
+        if (PedId /= 0) then
+            tmpGender = ped%pedigree(PedId)%gender
+        else 
+            tmpGender = 0
+        endif
         ! Skip if, in the case of sex chromosome, me and my parent are heterogametic
-        if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==HetGameticStatus).and.(ped%pedigree(pedId)%gender==HetGameticStatus)) cycle
-
+        if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==HetGameticStatus).and.(tmpGender==HetGameticStatus)) cycle
+        endblock
         !! SCAN HAPLOTYPE IN TWO DIRECTIONS: L->R AND R->L
         ! If not a base animal and the number of unphased alleles is lower than a threshold
         ! WARNING: WHAT IS THIS THRESHOLD?
@@ -3568,7 +3574,7 @@ do i=1,nAnisP
     do j=1,MultiHD
         if ( (CountMiss-(inputParams%nsnp-nSnpByChip(j))) < (1.0-inputParams%PercGenoForHD)*nSnpByChip(j)&
                 .and. (inputParams%nsnp-CountMiss)<nSnpByChip(j)&
-                .and. IndivIsGenotyped(i)) then
+                .and. ped%pedigree(i)%genotyped) then
             animChip(i)=j
             write(UOutputs,'(a20,6f5.1)') ped%pedigree(i)%originalID, (inputParams%nsnp-CountMiss)*100/real(nSnpByChip(j))
             exit
@@ -3576,7 +3582,7 @@ do i=1,nAnisP
         if ((CountMiss-(inputParams%nsnp-nSnpByChip(j))) > (1.0-inputParams%PercGenoForHD)*nSnpByChip(j)&
                 ! .and. animChip(i)/=0&
                 .and. printed(i)==.false.&
-                .and. IndivIsGenotyped(i)) Then
+                .and. ped%pedigree(i)%genotyped) Then
             write(UOutputs,'(a20,6f5.1)') ped%pedigree(i)%originalID, (inputParams%nsnp-CountMiss)*100/real(nSnpByChip(j))
             printed(i)=.true.
         end if
@@ -3856,12 +3862,12 @@ implicit none
 
 integer :: i,j,k,TurnOn
 type(AlphaImputeInput), pointer :: inputParams
-type(Individual) ,pointer :: tmpParent
+integer :: tmpParentId
 inputParams => defaultInput
 do i=1,nAnisP
     do k=2,3
         TurnOn=1
-        tmpParent => ped%pedigree(i)%getSireDamObjectByIndex(k)
+        tmpParentId = ped%pedigree(i)%getSireDamNewIDByIndex(k)
         ! if the proband is heterogametic, and
         ! considering the heterogametic parent, then avoid!!
         if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==HetGameticStatus).and. ((k-1)==HetGameticStatus)) TurnOn=0
@@ -3871,13 +3877,13 @@ do i=1,nAnisP
         ! Homogametic individuals and the homogametic parent of a heterogametic individual
         if (TurnOn==1) then
             do j=1,inputParams%nsnp
-                if ((TempGenos(i,j)==0).and.(TempGenos(tmpParent%id,j)==2)) then
+                if ((TempGenos(i,j)==0).and.(TempGenos(tmpParentId,j)==2)) then
                     TempGenos(i,j)=9
                     TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(k),j)=9
                 endif
-                if ((TempGenos(i,j)==2).and.(TempGenos(tmpParent%id,j)==0)) then
+                if ((TempGenos(i,j)==2).and.(TempGenos(tmpParentId,j)==0)) then
                     TempGenos(i,j)=9
-                    TempGenos(tmpParent%id,j)=9
+                    TempGenos(tmpParentId,j)=9
                 endif
             enddo
         endif
@@ -3888,23 +3894,23 @@ enddo
 do i=1,nAnisP
     do j=1,inputParams%nsnp
         if (TempGenos(i,j)==9) then
-            if ((TempGenos(ped%pedigree(i)%sirePointer%id,j)==0).and.(TempGenos(ped%pedigree(i)%damPointer%id,j)==0)) then
+            if ((TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(2),j)==0).and.(TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(3),j)==0)) then
                 TempGenos(i,j)=0
-            else if ((TempGenos(ped%pedigree(i)%sirePointer%id,j)==2).and.(TempGenos(ped%pedigree(i)%damPointer%id,j)==2)) then
+            else if ((TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(2),j)==2).and.(TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(3),j)==2)) then
                 TempGenos(i,j)=2
             endif
             if (inputParams%SexOpt==1) then
                 if (ped%pedigree(i)%gender/=HetGameticStatus) then
-                    if ((TempGenos(ped%pedigree(i)%sirePointer%id,j)==0).and.(TempGenos(ped%pedigree(i)%damPointer%id,j)==2)) TempGenos(i,j)=1
-                    if ((TempGenos(ped%pedigree(i)%sirePointer%id,j)==2).and.(TempGenos(ped%pedigree(i)%damPointer%id,j)==0)) TempGenos(i,j)=1
+                    if ((TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(2),j)==0).and.(TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(3),j)==2)) TempGenos(i,j)=1
+                    if ((TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(2),j)==2).and.(TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(3),j)==0)) TempGenos(i,j)=1
                 else
                     ! HomGameticSatus(1 or 2) +1 = sire (2) or dam (3)
                     if (TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(HomGameticStatus+1),j)==0) TempGenos(i,j)=0
                     if (TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(HomGameticStatus+1),j)==2) TempGenos(i,j)=2
                 endif
             else
-                if ((TempGenos(ped%pedigree(i)%sirePointer%id,j)==0).and.(TempGenos(ped%pedigree(i)%damPointer%id,j)==2)) TempGenos(i,j)=1
-                if ((TempGenos(ped%pedigree(i)%sirePointer%id,j)==2).and.(TempGenos(ped%pedigree(i)%damPointer%id,j)==0)) TempGenos(i,j)=1
+                if ((TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(2),j)==0).and.(TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(3),j)==2)) TempGenos(i,j)=1
+                if ((TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(2),j)==2).and.(TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(3),j)==0)) TempGenos(i,j)=1
             endif
         endif
     enddo
@@ -4017,9 +4023,8 @@ print*, " ",CountChanges," errors in the pedigree due to Mendelian inconsistenci
 
 ! Sort sires and dams, and look for mistakes (bisexuality,...).
 ! call PVseq(nAnisRawPedigree,nAnisP) ! TODO had to remove this 
-
+nAnisP = nAnisRawPedigree
 allocate(RecIdHDIndex(0:nAnisP))
-allocate(IndivIsGenotyped(nAnisP))
 
 RecIdHDIndex=0
 
@@ -4040,6 +4045,7 @@ endif
 
 allocate(Genotyped(nAnisP))
 allocate(Pruned(0:nAnisP))
+print *,"allocating",nAnisP
 allocate(TempGenos(0:nAnisP,inputParams%nsnp))
 
 TempGenos=9
@@ -4056,7 +4062,6 @@ do i=1,nAnisG
     enddo
 enddo
 deallocate(Genos)
-IndivIsGenotyped(:)=Genotyped(:)
 
 end subroutine CheckParentage
 !#############################################################################################################################################################################################################################

@@ -44,11 +44,11 @@ integer :: nSnpIterate,AlphaPhasePresent,GeneProbPresent,UserDefinedHD
 integer :: nSnpChips
 
 integer,allocatable,dimension (:,:) :: Reads,ReferAllele,AlterAllele
-integer(kind=1),allocatable,dimension (:) :: SnpIncluded,RecIdHDIndex,GenderRaw,IndivIsGenotyped
+integer(kind=1),allocatable,dimension (:) :: SnpIncluded,RecIdHDIndex,GenderRaw
 integer(kind=1),allocatable,dimension (:,:) :: Genos,TempGenos,TmpGenos,MSTermInfo
 integer(kind=1),allocatable,dimension (:,:) :: ImputeGenos,SireDam
 integer(kind=1),allocatable,dimension (:,:,:) :: ImputePhase,TmpPhase,GlobalWorkPhase
-integer,allocatable :: Setter(:),GpIndex(:,:),BaseAnimals(:),GlobalTmpCountInf(:,:)
+integer,allocatable :: Setter(:),GpIndex(:,:),GlobalTmpCountInf(:,:)
 integer,allocatable :: GlobalHmmID(:)
 real,allocatable,dimension (:) :: Maf
 real,allocatable,dimension (:,:) :: ProbImputeGenos, GPI
