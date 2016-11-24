@@ -12,7 +12,7 @@ double precision, parameter :: EPSILON_ERROR=0.01
 integer, parameter :: NUM_SEGMENTS=1
 
 character(len=300) :: GenotypeFileName,CheckPhaseFileName,CheckGenoFileName
-character*(20), allocatable, dimension(:) :: AnimalsInbred,GlobalHmmMachID
+character*(20), allocatable, dimension(:) :: GlobalHmmMachID
 integer :: nIndHmmMaCH,GlobalRoundHmm,nSnpHmm,nGametesPhased,nAnimPhased,nAnisInbred
 integer :: nHapInSubH,useProcs,nRoundsHmm,HmmBurnInRound,idum,windowLength
 real 	:: phasedThreshold,imputedThreshold

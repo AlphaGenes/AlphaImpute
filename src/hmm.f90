@@ -33,9 +33,8 @@ inputParams => defaultInput
 ! #endif
 
 
-! Number of SNPs and genotyped animals for the HMM algorithm
+! Number of SNPs in the HMM algorithm
 nSnpHmm=inputParams%nsnp
-nIndHmmMaCH=nAnisG
 
 ! Read the phased individuals if HMM Only or Sequence data
 #ifdef DEBUG
@@ -307,6 +306,7 @@ integer, intent(out) :: nInbred
 integer :: i,k,dumC
 logical :: opened, named
 character(len=300) :: InbredFile
+character(len=30) :: dumID
 
 
 inquire(unit=PhaseFileUnit, opened=opened, named=named, name=InbredFile)
@@ -328,11 +328,10 @@ do
 enddo
 rewind(PhaseFileUnit)
 
-allocate(AnimalsInbred(nInbred))
 allocate(PhasedData(nInbred,nSnpHmm))
 
 do i=1,nInbred
-    read (PhaseFileUnit,*) AnimalsInbred(i), PhasedData(i,:)
+    read (PhaseFileUnit,*) dumID, PhasedData(i,:)
 end do
 close(PhaseFileUnit)
 
@@ -514,6 +513,7 @@ StopSnp=nSnpHmm
 if (HMM==RUN_HMM_ONLY .OR. HMM==RUN_HMM_NGS) then
 
     if (GlobalInbredInd(CurrentInd)==.TRUE.) then
+        print *, GlobalInbredInd(CurrentInd), GlobalHmmHDInd(CurrentInd)
         allocate(ForwardProbs(inputParams%nhapinsubh,nSnpHmm))
         call ForwardAlgorithmForSegmentHaplotype(CurrentInd,1,1,nSnpHmm)     ! Paternal haplotype
         call SampleSegmentHaplotypeSource(CurrentInd,1,1,nSnpHmm)
