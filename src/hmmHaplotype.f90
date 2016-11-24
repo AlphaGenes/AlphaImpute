@@ -22,11 +22,11 @@ integer :: marker
 
 marker = 1
 call SetUpPriorHaplotype
-call ConditionHaplotypeOnData(marker, PhaseHmmMaCH(CurrentInd,marker,hap))
+call ConditionHaplotypeOnData(CurrentInd, marker, PhaseHmmMaCH(CurrentInd,marker,hap))
 
 do marker=2,nSnpHmm
     call TransposeHaplotype(marker-1, marker, Thetas(marker-1))
-    call ConditionHaplotypeOnData(marker, PhaseHmmMaCH(CurrentInd,marker,hap))
+    call ConditionHaplotypeOnData(CurrentInd, marker, PhaseHmmMaCH(CurrentInd,marker,hap))
 enddo
 
 end subroutine ForwardAlgorithmForHaplotype
@@ -52,13 +52,13 @@ integer :: marker
 ! marker = 1
 marker = StartSnp
 call SetUpPriorHaplotype
-call ConditionHaplotypeOnData(marker, PhaseHmmMaCH(CurrentInd,marker,hap))
+call ConditionHaplotypeOnData(CurrentInd, marker, PhaseHmmMaCH(CurrentInd,marker,hap))
 
 ! do marker=2,nSnpHmm
 do marker=2,StopSnp
     ! call GetSmallMemoryBlock
     call TransposeHaplotype(marker-1, marker, Thetas(marker-1))
-    call ConditionHaplotypeOnData(marker, PhaseHmmMaCH(CurrentInd,marker,hap))
+    call ConditionHaplotypeOnData(CurrentInd, marker, PhaseHmmMaCH(CurrentInd,marker,hap))
 enddo
 
 end subroutine ForwardAlgorithmForSegmentHaplotype
@@ -433,7 +433,7 @@ enddo
 end subroutine TransposeHaplotype
 
 !######################################################################
-subroutine ConditionHaplotypeOnData(Marker, allele)
+subroutine ConditionHaplotypeOnData(ForWhom, Marker, allele)
 use Global
 use GlobalVariablesHmmMaCH
 use Par_Zig_mod
@@ -441,7 +441,7 @@ use omp_lib
 use AlphaImputeInMod
 
 implicit none
-integer, intent(IN) :: Marker
+integer, intent(IN) :: ForWhom, Marker
 integer(kind=1),intent(IN) :: allele
 
 ! Local variables
@@ -453,9 +453,9 @@ type(AlphaImputeInput), pointer :: inputParams
 
 inputParams => defaultInput
 
-if (defaultInput%HMMOption==RUN_HMM_NGS .AND. GlobalInbredInd(CurrentInd)==.FALSE.) then
-    RefAll = ReferAllele(CurrentInd,Marker)
-    AltAll = AlterAllele(CurrentInd,Marker)
+if (defaultInput%HMMOption==RUN_HMM_NGS .AND. GlobalInbredInd(ForWhom)==.FALSE.) then
+    RefAll = ReferAllele(ForWhom,Marker)
+    AltAll = AlterAllele(ForWhom,Marker)
     posterior_11 = shotgunErrorMatrix(0,RefAll,AltAll)
     posterior_12 = shotgunErrorMatrix(1,RefAll,AltAll)
     posterior_22 = shotgunErrorMatrix(2,RefAll,AltAll)
