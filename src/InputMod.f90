@@ -255,8 +255,9 @@ module InputMod
   Genos(0,:)=9
 
   ! Read the pedigree information
-  
-  ped = initPedigree(inputParams%pedigreefile, nAnisRawPedigree)
+  ! print *,"file",inputParams%pedigreefile
+  ! print *,"size:",nAnisRawPedigree
+  ! ped = initPedigree(inputParams%pedigreefile)
   ! Read the genotype file
   if (inputParams%hmmoption /= RUN_HMM_NGS) then
       rewind(inputParams%genotypeFileUnit)

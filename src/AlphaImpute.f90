@@ -3870,20 +3870,22 @@ do i=1,nAnisP
         ! considering the heterogametic parent, then avoid!!
         if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==HetGameticStatus).and. ((k-1)==HetGameticStatus)) TurnOn=0
         ! TODO check value of k here
-
-        ! if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==HetGameticStatus).and. (pedigree%(i)%parent(k-1)%gender==HetGameticStatus)) TurnOn=0
-        ! Homogametic individuals and the homogametic parent of a heterogametic individual
-        if (TurnOn==1) then
-            do j=1,inputParams%nsnp
-                if ((TempGenos(i,j)==0).and.(TempGenos(tmpParentId,j)==2)) then
-                    TempGenos(i,j)=9
-                    TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(k),j)=9
-                endif
-                if ((TempGenos(i,j)==2).and.(TempGenos(tmpParentId,j)==0)) then
-                    TempGenos(i,j)=9
-                    TempGenos(tmpParentId,j)=9
-                endif
-            enddo
+        if (tmpParentId /= 0) then
+            if (ped%pedigree(tmpParentId)%isDummy) cycle
+            ! if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==HetGameticStatus).and. (pedigree%(i)%parent(k-1)%gender==HetGameticStatus)) TurnOn=0
+            ! Homogametic individuals and the homogametic parent of a heterogametic individual
+            if (TurnOn==1) then
+                do j=1,inputParams%nsnp
+                    if ((TempGenos(i,j)==0).and.(TempGenos(tmpParentId,j)==2)) then
+                        TempGenos(i,j)=9
+                        TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(k),j)=9
+                    endif
+                    if ((TempGenos(i,j)==2).and.(TempGenos(tmpParentId,j)==0)) then
+                        TempGenos(i,j)=9
+                        TempGenos(tmpParentId,j)=9
+                    endif
+                enddo
+            endif
         endif
     enddo
 enddo
@@ -3891,7 +3893,7 @@ enddo
 ! WARNING: This can be refactored
 do i=1,nAnisP
     do j=1,inputParams%nsnp
-        if (TempGenos(i,j)==9) then
+        if (TempGenos(i,j)==9 .and. .not. ped%pedigree(i)%hasDummyParent()) then
             if ((TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(2),j)==0).and.(TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(3),j)==0)) then
                 TempGenos(i,j)=0
             else if ((TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(2),j)==2).and.(TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(3),j)==2)) then
@@ -3944,6 +3946,7 @@ open (unit=101,file="." // DASH // "Miscellaneous" // DASH // "PedigreeMistakes.
 do j=1,nAnisG
     tmpID = ped%dictionary%getValue(trim(GenotypeId(j)))
     if (tmpID /= DICT_NULL) then
+        ped%pedigree(tmpID)%genotypePosition = j
         ped%pedigree(tmpID)%Genotyped = .true.
     endif
 enddo
@@ -3954,8 +3957,8 @@ nBothHomo = 0
 do e=1,2                    ! Do whatever this does, first on males and then on females
     ParPos=e+1              ! Index in the Genotype and Pedigree matrices for sires and dams
     do i=1,nAnisRawPedigree
-        IndId=i            ! My Id
-        ParId=ped%pedigree(i)%getSireDamNewIDByIndex(e+1)       ! Paternal Id,
+        IndId=ped%pedigree(i)%genotypePosition            ! My Id
+        ParId=ped%pedigree(i)%getSireDamGenotypePositionByIndex(e+1)       ! Paternal Id,
         TurnOn=1
         ! GenderRaw: Says whether the proband is a male or a female
         ! If there are sex cromosome information, and
@@ -4043,7 +4046,6 @@ endif
 
 allocate(Genotyped(nAnisP))
 allocate(Pruned(0:nAnisP))
-print *,"allocating",nAnisP
 allocate(TempGenos(0:nAnisP,inputParams%nsnp))
 
 TempGenos=9
