@@ -64,6 +64,27 @@ enddo
 end subroutine ForwardAlgorithmForSegmentHaplotype
 
 !######################################################################
+subroutine ImputeHaplotypeAlleles(CurrentInd, Marker, gamete, Hap)
+use GlobalVariablesHmmMaCH
+implicit none
+
+integer, intent(in) :: CurrentInd, Marker, gamete, Hap
+
+if (SubH(Hap,marker)==PhaseHmmMaCH(CurrentInd,marker,gamete)) then
+    !$OMP ATOMIC
+    ErrorMatches(marker)=ErrorMatches(marker)+1
+else
+    !$OMP ATOMIC
+    ErrorMismatches(marker)=ErrorMismatches(marker)+1
+endif
+
+! Impute if allele is missing
+if (PhaseHmmMaCH(CurrentInd,marker,gamete)==ALLELE_MISSING) then
+    FullH(CurrentInd,marker,gamete) = SubH(Hap,marker)
+endif
+end subroutine ImputeHaplotypeAlleles
+
+!######################################################################
 subroutine SampleHaplotypeSource(CurrentInd,hap)
 use Global
 use GlobalVariablesHmmMaCH
@@ -116,19 +137,9 @@ endif
 do marker=nSnpHmm-1,1,-1
 ! do while (marker>1)
     ! marker=marker-1
-    ! Track whether imputed state matches observed allele
-    if (SubH(Hapi,marker)==PhaseHmmMaCH(CurrentInd,marker,hap)) then
-        !$OMP ATOMIC
-        ErrorMatches(marker)=ErrorMatches(marker)+1
-    else
-        !$OMP ATOMIC
-        ErrorMismatches(marker)=ErrorMismatches(marker)+1
-    endif
 
-    ! Impute if allele is missing
-    if (PhaseHmmMaCH(CurrentInd,marker,hap)==ALLELE_MISSING) then
-        FullH(CurrentInd,marker,hap) = SubH(Hapi,marker)
-    endif
+    ! Track whether imputed state matches observed allele
+    call ImputeHaplotypeAlleles(CurrentInd, Marker, hap, Hapi)
 
     Theta = Thetas(marker)
     Probs = ForwardProbs(:,marker)
@@ -166,18 +177,8 @@ do marker=nSnpHmm-1,1,-1
 enddo
 
 ! Track whether imputed state matches observed allele
-if (SubH(Hapi,1)==PhaseHmmMaCH(CurrentInd,1,hap)) then
-    !$OMP ATOMIC
-    ErrorMatches(1)=ErrorMatches(1)+1
-else
-    !$OMP ATOMIC
-    ErrorMismatches(1)=ErrorMismatches(1)+1
-endif
-
-! Impute if allele is missing
-if (PhaseHmmMaCH(CurrentInd,1,hap)==ALLELE_MISSING) then
-    FullH(CurrentInd,1,hap) = SubH(Hapi,1)
-endif
+! if (inputParams%HMMOption == RUN_HMM_NGS) then
+call ImputeHaplotypeAlleles(CurrentInd, 1, hap, Hapi)
 
 deallocate(probs)
 
