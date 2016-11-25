@@ -2365,10 +2365,12 @@ endif
       GlobalTmpCountInf(i,:)=0
       Informativeness(:,:)=9 ! What the hell is this variable for??
       j=0
+      if (ped%pedigree(i)%hasDummyParent()) cycle
       ! Check whether my parents and grandparents are heterozygous
       do m=1,inputParams%nsnpRaw
         if (SnpIncluded(m)==1) then                     ! Whether to consider this SNP
           j=j+1                                       ! Number of SNPs included so far
+
           if (ImputeGenos(i,j)==1) then               ! If heterozygous
 
             ! My father is heterozygous
