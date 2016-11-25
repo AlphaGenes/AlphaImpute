@@ -1258,9 +1258,7 @@ if (inputParams%restartOption/=4) then
 #endif
     close (109)
 
-    print *,"HEREEEE",OPT_RESTART_IMPUTATION
     if (inputParams%restartOption==OPT_RESTART_IMPUTATION) then
-        print *,"test"
         open (unit=109,file="Tmp2345678.txt",status="unknown")
         do i=1,nAnisP
             write (109,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ImputePhase(i,:,1)
@@ -3060,7 +3058,7 @@ do i=1,nAnisP
         pedID=ped%pedigree(i)%getSireDamNewIDByIndex(SireDamRL)
 
         ! Skip if, in the case of sex chromosome, me and my parent are heterogametic
-        if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==HetGameticStatus).and.(ped%pedigree(PedId)%gender==HetGameticStatus)) cycle
+        if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==HetGameticStatus).and.(ped%pedigree(i)%getParentGenderBasedOnIndex(SireDamRL)==HetGameticStatus)) cycle
 
         !! SCAN HAPLOTYPE IN TWO DIRECTIONS: L->R AND R->L
         ! If not a base animal

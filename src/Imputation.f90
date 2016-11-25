@@ -328,7 +328,7 @@ CONTAINS
             type(individual), pointer :: parent
             !$OMP PARALLEL DO &
             !$OMP DEFAULT(SHARED) &
-            !$OMP PRIVATE(i,j,e,CompPhase,GamA,GamB,curPos,curSection)
+            !$OMP PRIVATE(i,j,e,CompPhase,GamA,GamB,curPos,curSection, parent)
             do i=1,nAnisP
               do e=1,2
                 
