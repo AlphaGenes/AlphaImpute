@@ -2393,6 +2393,7 @@ endif
               endif
             endif
 
+            if (ped%pedigree(i)%hasDummyParentsOrGranparents()) cycle
             ! My father haplotype is phased
             if ((ImputePhase(i,j,1)==0).or.(ImputePhase(i,j,1)==1)) then
               ! If my paternal GranSire is heterozygous
