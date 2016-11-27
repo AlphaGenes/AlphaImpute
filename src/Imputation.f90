@@ -2415,6 +2415,7 @@ endif
             ! My mother haplotype is phased
             if ((ImputePhase(i,j,2)==0).or.(ImputePhase(i,j,2)==1)) then
               ! If my maternal GranSire is heterozygous
+              if (ped%pedigree(i)%hasDummyParentsOrGranparents()) cycle
               GrandPar= ped%pedigree(i)%getMaternalGrandSireRecodedIndex()
               if (ImputeGenos(GrandPar,j)==1) then
                 Informativeness(j,5)=1
