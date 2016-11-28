@@ -2135,6 +2135,7 @@ endif
     inputParams => defaultInput
     do i=1,nAnisP
       if (inputParams%sexopt==0 .or. (inputParams%sexopt==1 .and. ped%pedigree(i)%gender/=HetGameticStatus) ) then     ! If individual is homogametic
+        if (ped%pedigree(i)%hasDummyParent()) cycle
         do e=1,2
           ParId=ped%pedigree(i)%getSireDamNewIDByIndex(e+1)
           do j=1,inputParams%nsnp
