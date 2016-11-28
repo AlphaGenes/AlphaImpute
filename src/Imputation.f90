@@ -2419,6 +2419,7 @@ endif
               GrandPar= ped%pedigree(i)%getMaternalGrandSireRecodedIndex()
 
               if (grandpar == 18750) then
+                print *, "There:", ped%pedigree(i)%hasDummyParentsOrGranparents()
                 print *, "here:",ped%pedigree(grandpar)%isdummy
               end if
               if (ImputeGenos(GrandPar,j)==1) then
