@@ -330,6 +330,7 @@ CONTAINS
             !$OMP DEFAULT(SHARED) &
             !$OMP PRIVATE(i,j,e,CompPhase,GamA,GamB,curPos,curSection, parent)
             do i=1,nAnisP
+              if (ped%pedigree(i)%hasDummyParent()) cycle
               do e=1,2
                 
                   
