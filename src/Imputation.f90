@@ -1610,16 +1610,17 @@ end subroutine InternalParentPhaseElim
         deallocate(MissImputePhase)
       enddo
     enddo
-    if (ped%pedigree(i)%hasDummyParent()) cycle
+    
     do e=1,2
       do j=1,inputParams%nsnp
                ! If GeneProbPhase has been executed, that is, if not considering the Sex Chromosome, then MSTermInfo={0,1}.
         ! Else, if Sex Chromosome, then MSTermInfo is 0 always
         ! So, if a Conservative imputation of haplotypes is selected, this DO statement will do nothing
-        if ((inputParams%ConservativeHapLibImputation==1).and.(MSTermInfo(i,e)==0)) cycle
+        
         if (AnimalOn(i,e)==1) then
           do i=1,nAnisP
-   
+            if (ped%pedigree(i)%hasDummyParent()) cycle
+            if ((inputParams%ConservativeHapLibImputation==1).and.(MSTermInfo(i,e)==0)) cycle
             ! If all alleles across the cores across the internal phasing steps have been phased the
             ! same way, impute
             
