@@ -1205,6 +1205,7 @@ end subroutine InternalParentPhaseElim
           !$OMP DEFAULT(SHARED) &
           !$OMP PRIVATE(i,j,e,PedId,PosHDInd,GamA,GamB,parent)
           do i=1,nAnisP
+            if (ped%pedigree(i)%hasDummyParent()) cycle
             do e=1,2
               PedId=e+1
               parent => ped%pedigree(i)%getSireDamObjectByIndex(pedId)
