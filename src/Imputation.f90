@@ -2417,6 +2417,10 @@ endif
               ! If my maternal GranSire is heterozygous
               if (ped%pedigree(i)%hasDummyParentsOrGranparents()) cycle
               GrandPar= ped%pedigree(i)%getMaternalGrandSireRecodedIndex()
+
+              if (grandpar == 18750) then
+                print *, "here:",ped%pedigree(grandpar)%isdummy
+              end if
               if (ImputeGenos(GrandPar,j)==1) then
                 Informativeness(j,5)=1
                 GlobalTmpCountInf(i,5)=GlobalTmpCountInf(i,5)+1
