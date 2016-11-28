@@ -1610,7 +1610,7 @@ end subroutine InternalParentPhaseElim
         deallocate(MissImputePhase)
       enddo
     enddo
-
+    if (ped%pedigree(i)%hasDummyParent()) cycle
     do e=1,2
       do j=1,inputParams%nsnp
                ! If GeneProbPhase has been executed, that is, if not considering the Sex Chromosome, then MSTermInfo={0,1}.
