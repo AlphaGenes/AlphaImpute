@@ -3056,7 +3056,8 @@ do i=1,nAnisP
         CountLeftSwitch=0
         CountRightSwitch=0
         pedID=ped%pedigree(i)%getSireDamNewIDByIndex(SireDamRL)
-
+        if (ped%isDummy(pedID)) cycle
+        ! TODO can  probably skip if value is 0 too 
         ! Skip if, in the case of sex chromosome, me and my parent are heterogametic
         if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==HetGameticStatus).and.(ped%pedigree(i)%getParentGenderBasedOnIndex(SireDamRL)==HetGameticStatus)) cycle
 
@@ -3959,6 +3960,7 @@ do e=1,2                    ! Do whatever this does, first on males and then on 
     do i=1,nAnisRawPedigree
         IndId=ped%pedigree(i)%genotypePosition            ! My Id
         ParId=ped%pedigree(i)%getSireDamGenotypePositionByIndex(e+1)       ! Paternal Id,
+        if (ped%isDummy(parId)) cycle
         TurnOn=1
         ! GenderRaw: Says whether the proband is a male or a female
         ! If there are sex cromosome information, and
@@ -4369,6 +4371,7 @@ if (inputParams%outopt==0) then
         if (ped%pedigree(i)%isDummy) then
             cycle
         endif
+        ! TODO this should never be triggered 
         write (45,'(a25,i3,2f7.2)') ped%pedigree(i)%originalID,FinalSetter(i),float(count(ImputePhase(i,:,1)/=9))/inputParams%nsnp &
                             ,float(count(ImputePhase(i,:,2)/=9))/inputParams%nsnp
     enddo
