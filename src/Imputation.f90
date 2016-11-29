@@ -330,10 +330,10 @@ CONTAINS
             !$OMP DEFAULT(SHARED) &
             !$OMP PRIVATE(i,j,e,CompPhase,GamA,GamB,curPos,curSection, parent)
             do i=1,nAnisP
-              if (ped%pedigree(i)%hasDummyParent()) cycle
+              
               do e=1,2
                 
-                  
+                  if (ped%pedigree(i)%isDummyBasedOnIndex(e+1)) cycle
                   parent => ped%pedigree(i)%getSireDamObjectByIndex(e+1)
                 ! Skip if, in the case of sex chromosome, me and my parent are heterogametic
                 if ((inputParams%sexopt==1).and.(ped%pedigree(i)%gender==HetGameticStatus).and.(parent%gender==HetGameticStatus)) cycle
@@ -1206,9 +1206,10 @@ end subroutine InternalParentPhaseElim
           !$OMP DEFAULT(SHARED) &
           !$OMP PRIVATE(i,j,e,PedId,PosHDInd,GamA,GamB,parent)
           do i=1,nAnisP
-            if (ped%pedigree(i)%hasDummyParent()) cycle
+            
             do e=1,2
               PedId=e+1
+              if (ped%pedigree(i)%isDummyBasedOnIndex(pedId)) cycle
               parent => ped%pedigree(i)%getSireDamObjectByIndex(pedId)
               ! Skip if, in the case of sex chromosome, me and my parent are heterogametic
               if ((inputParams%sexopt==1).and.(ped%pedigree(i)%gender==HetGameticStatus).and.&
@@ -1612,14 +1613,15 @@ end subroutine InternalParentPhaseElim
       enddo
     enddo
     
-    do e=1,2
+    
       do j=1,inputParams%nsnp
                ! If GeneProbPhase has been executed, that is, if not considering the Sex Chromosome, then MSTermInfo={0,1}.
         ! Else, if Sex Chromosome, then MSTermInfo is 0 always
         ! So, if a Conservative imputation of haplotypes is selected, this DO statement will do nothing
   
           do i=1,nAnisP
-            if (ped%pedigree(i)%hasDummyParent()) cycle
+            do e=1,2
+            if (ped%pedigree(i)%isDummyBasedOnIndex(e)) cycle
             if (AnimalOn(i,e)==1) then
               if ((inputParams%ConservativeHapLibImputation==1).and.(MSTermInfo(i,e)==0)) cycle
               ! If all alleles across the cores across the internal phasing steps have been phased the
@@ -2138,8 +2140,8 @@ endif
     inputParams => defaultInput
     do i=1,nAnisP
       if (inputParams%sexopt==0 .or. (inputParams%sexopt==1 .and. ped%pedigree(i)%gender/=HetGameticStatus) ) then     ! If individual is homogametic
-        if (ped%pedigree(i)%hasDummyParent()) cycle
         do e=1,2
+          if (ped%pedigree(i)%isDummyBasedOnIndex(e)) cycle
           ParId=ped%pedigree(i)%getSireDamNewIDByIndex(e+1)
           do j=1,inputParams%nsnp
             if (ImputePhase(i,j,e)==9) then                 ! Always that the SNP is not genotyped

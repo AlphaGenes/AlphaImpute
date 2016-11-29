@@ -75,7 +75,9 @@ do i=1,nAnisP
         SireDamRL=e+1
         CountLeftSwitch=0
         CountRightSwitch=0
+
         PedId= ped%pedigree(i)%getSireDamNewIDByIndex(SireDamRL) !get index of sire/dam
+        if (ped%isDummy(pedId)) cycle
         if ((inputParams%SexOpt==1).and.(ped%pedigree(pedId)%gender==HetGameticStatus)) cycle
         if ((PedId>0).and.((float(count(ImputePhase(PedId,:,:)==9))/(2*dimSnps))<0.30)) then          !(RecIdHDIndex(PedId)==1)
             WorkRight=9

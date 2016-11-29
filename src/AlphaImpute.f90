@@ -2743,9 +2743,9 @@ MaxLeftRightSwitch=4; MinSpan=200
 do i=1,nAnisP
     HetEnd=-1
     HetStart=-1
-    if (ped%pedigree(i)%hasDummyParent()) cycle
     ! For each gamete
     do e=1,2
+        if (ped%pedigree(i)%isDummyBasedOnIndex(e)) cycle
         PatMat=e
         SireDamRL=e+1
         CountLeftSwitch=0
