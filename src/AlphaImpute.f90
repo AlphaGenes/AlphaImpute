@@ -2669,16 +2669,20 @@ else                                                                    ! Other 
             if (Genos(i,j)==0) GlobalWorkPhase(i,j,:)=0
             if (Genos(i,j)==2) GlobalWorkPhase(i,j,:)=1
         enddo
-        ParId=ped%pedigree(i)%sirePointer%id
-        do j=1,inputParams%nsnp                                                     ! Phase if my father is homozygous
-            if (Genos(ParId,j)==0) GlobalWorkPhase(i,j,1)=0
-            if (Genos(ParId,j)==2) GlobalWorkPhase(i,j,1)=1
-        enddo
-        ParId=ped%pedigree(i)%damPointer%id
-        do j=1,inputParams%nsnp                                                     ! Phase if my mother is homozygous
-            if (Genos(ParId,j)==0) GlobalWorkPhase(i,j,2)=0
-            if (Genos(ParId,j)==2) GlobalWorkPhase(i,j,2)=1
-        enddo
+        if (associated(ped%pedigree(i)%sirePointer)) then
+            ParId=ped%pedigree(i)%sirePointer%id
+            do j=1,inputParams%nsnp                                                     ! Phase if my father is homozygous
+                if (Genos(ParId,j)==0) GlobalWorkPhase(i,j,1)=0
+                if (Genos(ParId,j)==2) GlobalWorkPhase(i,j,1)=1
+            enddo
+        endif
+        if (associated(ped%pedigree(i)%damPointer)) then
+            ParId=ped%pedigree(i)%damPointer%id
+            do j=1,inputParams%nsnp                                                     ! Phase if my mother is homozygous
+                if (Genos(ParId,j)==0) GlobalWorkPhase(i,j,2)=0
+                if (Genos(ParId,j)==2) GlobalWorkPhase(i,j,2)=1
+            enddo
+        endif
 
     enddo
 
