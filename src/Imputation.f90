@@ -332,7 +332,7 @@ CONTAINS
             do i=1,nAnisP
               
               do e=1,2
-                
+
                   if (ped%pedigree(i)%isDummyBasedOnIndex(e+1)) cycle
                   parent => ped%pedigree(i)%getSireDamObjectByIndex(e+1)
                 ! Skip if, in the case of sex chromosome, me and my parent are heterogametic
@@ -1209,7 +1209,7 @@ end subroutine InternalParentPhaseElim
             
             do e=1,2
               PedId=e+1
-              if (ped%pedigree(i)%isDummyBasedOnIndex(pedId)) cycle
+              if (ped%pedigree(i)%isDummyBasedOnIndex(pedId)) cycle !checked this one makes sense
               parent => ped%pedigree(i)%getSireDamObjectByIndex(pedId)
               ! Skip if, in the case of sex chromosome, me and my parent are heterogametic
               if ((inputParams%sexopt==1).and.(ped%pedigree(i)%gender==HetGameticStatus).and.&
@@ -2371,7 +2371,9 @@ endif
       GlobalTmpCountInf(i,:)=0
       Informativeness(:,:)=9 ! What the hell is this variable for??
       j=0
-      if (ped%pedigree(i)%hasDummyParent()) cycle
+  
+
+    ! if (ped%pedigree(i)%hasDummyParent()) cycle
       ! Check whether my parents and grandparents are heterozygous
       do m=1,inputParams%nsnpRaw
         if (SnpIncluded(m)==1) then                     ! Whether to consider this SNP
@@ -2379,38 +2381,43 @@ endif
 
           if (ImputeGenos(i,j)==1) then               ! If heterozygous
 
-            ! My father is heterozygous
-            if (ImputeGenos(ped%pedigree(i)%getSireDamNewIDByIndex(2),j)==1) then
-              ! And have my father haplotype phased
-              if ((ImputePhase(i,j,1)==0).or.(ImputePhase(i,j,1)==1)) then
-                Informativeness(j,1)=1
-                GlobalTmpCountInf(i,1)=GlobalTmpCountInf(i,1)+1     ! Count the number of SNPs phased of my father haplotype
-                TmpInfor(GlobalTmpCountInf(i,1),1)=j                ! The SNP no. GlobalTmpCountInf(i,1) is my SNP no. j
+            if (.not. ped%pedigree(i)%isDummyBasedOnIndex(2)) then
+              ! My father is heterozygous
+              if (ImputeGenos(ped%pedigree(i)%getSireDamNewIDByIndex(2),j)==1) then
+                ! And have my father haplotype phased
+                if ((ImputePhase(i,j,1)==0).or.(ImputePhase(i,j,1)==1)) then
+                  Informativeness(j,1)=1
+                  GlobalTmpCountInf(i,1)=GlobalTmpCountInf(i,1)+1     ! Count the number of SNPs phased of my father haplotype
+                  TmpInfor(GlobalTmpCountInf(i,1),1)=j                ! The SNP no. GlobalTmpCountInf(i,1) is my SNP no. j
+                endif
               endif
             endif
 
             ! My mother is heterozygous
-            if (ImputeGenos(ped%pedigree(i)%getSireDamNewIDByIndex(3),j)==1) then
-              ! And have my mother haplotype phased
-              if ((ImputePhase(i,j,2)==0).or.(ImputePhase(i,j,2)==1)) then
-                Informativeness(j,2)=1
-                GlobalTmpCountInf(i,2)=GlobalTmpCountInf(i,2)+1
-                TmpInfor(GlobalTmpCountInf(i,2),2)=j
+            if (.not. ped%pedigree(i)%isDummyBasedOnIndex(3)) then
+              if (ImputeGenos(ped%pedigree(i)%getSireDamNewIDByIndex(3),j)==1) then
+                ! And have my mother haplotype phased
+                if ((ImputePhase(i,j,2)==0).or.(ImputePhase(i,j,2)==1)) then
+                  Informativeness(j,2)=1
+                  GlobalTmpCountInf(i,2)=GlobalTmpCountInf(i,2)+1
+                  TmpInfor(GlobalTmpCountInf(i,2),2)=j
+                endif
               endif
             endif
 
-            if (ped%pedigree(i)%hasDummyParentsOrGranparents()) cycle
+
+            ! if (ped%pedigree(i)%hasDummyParentsOrGranparents()) cycle
             ! My father haplotype is phased
             if ((ImputePhase(i,j,1)==0).or.(ImputePhase(i,j,1)==1)) then
               ! If my paternal GranSire is heterozygous
-              GrandPar=ped%pedigree(i)%getPaternalGrandSireRecodedIndex()
+              GrandPar=ped%pedigree(i)%getPaternalGrandSireRecodedIndexNoDummy()
               if (ImputeGenos(GrandPar,j)==1) then
                 Informativeness(j,3)=1
                 GlobalTmpCountInf(i,3)=GlobalTmpCountInf(i,3)+1
                 TmpInfor(GlobalTmpCountInf(i,3),3)=j
               endif
               ! If my maternal GranDam is heterozygous
-              GrandPar=ped%pedigree(i)%getPaternalGrandDamRecodedIndex()
+              GrandPar=ped%pedigree(i)%getPaternalGrandSireRecodedIndexNoDummy()
               if (ImputeGenos(GrandPar,j)==1) then
                 Informativeness(j,4)=1
                 GlobalTmpCountInf(i,4)=GlobalTmpCountInf(i,4)+1
@@ -2421,20 +2428,17 @@ endif
             ! My mother haplotype is phased
             if ((ImputePhase(i,j,2)==0).or.(ImputePhase(i,j,2)==1)) then
               ! If my maternal GranSire is heterozygous
-              if (ped%pedigree(i)%hasDummyParentsOrGranparents()) cycle
-              GrandPar= ped%pedigree(i)%getMaternalGrandSireRecodedIndex()
+              ! if (ped%pedigree(i)%hasDummyParentsOrGranparents()) cycle
+              ! TODO make this return 0
+              GrandPar= ped%pedigree(i)%getPaternalGrandSireRecodedIndexNoDummy()
 
-              if (grandpar == 18750) then
-                print *, "There:", ped%pedigree(i)%hasDummyParentsOrGranparents()
-                print *, "here:",ped%pedigree(grandpar)%isdummy
-              end if
               if (ImputeGenos(GrandPar,j)==1) then
                 Informativeness(j,5)=1
                 GlobalTmpCountInf(i,5)=GlobalTmpCountInf(i,5)+1
                 TmpInfor(GlobalTmpCountInf(i,5),5)=j
               endif
               ! If my maternal GranDam is heterozygous
-              GrandPar=ped%pedigree(i)%getmaternalGrandDamRecodedIndex()
+              GrandPar=ped%pedigree(i)%getmaternalGrandDamRecodedIndexNoDummy()
               if (ImputeGenos(GrandPar,j)==1) then
                 Informativeness(j,6)=1
                 GlobalTmpCountInf(i,6)=GlobalTmpCountInf(i,6)+1
