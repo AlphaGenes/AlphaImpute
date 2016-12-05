@@ -374,462 +374,6 @@ enddo
 
 end subroutine FromHMM2ImputePhase
 
-!#############################################################################################################################################################################################################################
-
-! subroutine ReadInParameterFileOld(SpecFile)
-!     use AlphaImputeInputModule
-! ! use Global
-! ! 
-! ! use GlobalVariablesHmmMaCH
-! ! use GlobalFiles, only : PedigreeFile,GenotypeFile,TrueGenosFile, PhasePath,GenderFile
-! implicit none
-
-! character(len=4096), intent(in) :: SpecFile
-
-! integer :: k,i,nLines
-! character (len=300) :: dumC,IntEdit,PhaseDone,OutputOptions,PreProcessOptions,TempOpt,TempHetGameticStatus
-! character (len=300) :: UserDefinedHDAnimalsFile,PrePhasedAnimalFile,PedigreeFreePhasing,PhasingOnlyOptions
-! character (len=300) :: ConservHapLibImp,CharBypassGeneProb,TmpHmmOption
-! integer :: MultipleHDpanels
-
-
-
-! open (unit=1, file=SpecFile, status="old")
-
-! ! Check if the Spec file is correct
-! nLines=0
-! do
-!     read (1,*,iostat=k) dumC
-!     nLines=nLines+1
-!     if (k/=0) then
-!         nLines=nLines-1
-!         exit
-!     endif
-! enddo
-! rewind(1)
-
-! if (nLines/=42) then
-!     print*, "   ","There are some lines missing from AlphaImputeSpec.txt"
-!     print*, "   ","HINT - maybe you are using the Spec file from the beta version"
-!     print*, "   ","       which is out of date"
-!     stop
-! endif
-
-! ! Get Input files: Pedigree and genotype information and True genotypes
-! read(1,*) dumC
-! ! PedigreeFile
-! read (1,*) dumC,PedigreeFile
-! ! GentoypeFile
-! read (1,*) dumC,GenotypeFile
-! ! TrueGenotypeFile
-! read (1,*) dumC,TrueGenosFile
-! if (TrueGenosFile=="None") then
-!     TrueGenos1None0=0
-! else
-!     TrueGenos1None0=1
-! endif
-
-! ! print *, PedigreeFile, GenotypeFile, TrueGenosFile
-
-! ! SEX Chromosome
-! read(1,*) dumC
-! ! SexChrom
-! read (1,*) dumC,TempOpt
-! SexOpt=9
-! HetGameticStatus=9
-! HomGameticStatus=9
-! if (trim(TempOpt)=="Yes") then
-!     backspace(1)
-!     read (1,*) dumC,TempOpt,GenderFile,TempHetGameticStatus
-!     HetGameticStatus=9
-!     if (trim(TempHetGameticStatus)=="Male") then        ! Species  with heterogametic males
-!         HetGameticStatus=1                              ! My father is heterogametic
-!         HomGameticStatus=2                              ! My mother is homogametic
-!     endif
-!     if (trim(TempHetGameticStatus)=="Female") then      ! Species with heterogametic females
-!         HetGameticStatus=2                              ! My mother is heterogametic
-!         HomGameticStatus=1                              ! My father is homogametic
-!     endif
-!     if (HetGameticStatus==9) then
-!         print*, "Warning - heterogametic status is misspecified"
-!         stop
-!     endif
-!     SexOpt=1
-! endif
-
-! ! Not sex chrom
-! if (trim(TempOpt)=="No") then
-!     SexOpt=0
-! endif
-! if (SexOpt==9) then
-!     print*, "Warning - Sex chromosome status is misspecified"
-!     stop
-! endif
-
-! ! print *, TempOpt
-
-! ! Get the number of SNPs in the chromosome
-! read(1,*) dumC
-! ! inputParams%nsnp
-! read (1,*) dumC,inputParams%nsnp
-! if (inputParams%nsnp>240000) then
-!     print*, "Contact John Hickey if you want to do more than 240,000 SNP"
-!     stop
-! endif
-
-! ! Get the information of Multiple HD chips
-! ! MultipleHDpanels
-! read (1,*) dumC,MultipleHDpanels
-! if (MultipleHDpanels/=0) MultiHD=MultipleHDpanels
-! if (MultipleHDpanels==0) MultiHD=0
-! ! if ((trim(MultipleHDpanels)/='Yes').and.(trim(MultipleHDpanels)/='No')) then
-! !     write (*,*) "Please, provide a valid option,"
-! !     write (*,*) "MultipleHDpanels only acepts 'No' or 'Yes'"
-! !     stop
-! ! endif
-! ! Snps of the multiple HD panels
-! allocate(nSnpByChip(MultipleHDpanels))
-! nSnpByChip=0
-! read (1,*) dumC,nSnpByChip(:)
-
-! ! PercGenoForHD
-! read (1,*) dumC,PercGenoForHD
-
-! ! print *, inputParams%nsnp,MultipleHDpanels,PercGenoForHD,nSnpByChip
-
-! ! Get Editing parameters
-! read(1,*) dumC
-! ! InternalEdit
-! read (1,*) dumC,IntEdit
-! if (trim(IntEdit)=='Yes') IntEditStat=1
-! if (trim(IntEdit)=='No') IntEditStat=0
-! if ((trim(IntEdit)/='Yes').and.(trim(IntEdit)/='No')) then
-!     write (*,*) "Please, provide a valid option,"
-!     write (*,*) "InternalEdit only acepts 'No' or 'Yes'"
-!     stop
-! endif
-! if (IntEditStat==1 .AND. MultiHD/=0) then
-!     write(*,*) "IntEditStat and MultipleHDpanels are incompatible,"
-!     write(*,*) "Please, considere to use only one HD panel or to disable internal editing"
-!     stop
-! endif
-
-! ! print *, IntEdit
-
-! ! EditingParameters
-! inputParams%outopt=9
-! if (IntEditStat==1) then
-!     read (1,*) dumC,PercGenoForHD,PercSnpMiss,SecondPercGenoForHD,OutputOptions
-!     if (trim(OutputOptions)=="AllSnpOut") inputParams%outopt=1
-!     if (trim(OutputOptions)=="EditedSnpOut") inputParams%outopt=0
-!     if (inputParams%outopt==9) then
-!         print*, "Output options incorrectly specified"
-!         print*, "Beware!!!!! AlphaImpute is case sensitive"
-!         stop
-!     endif
-! else
-!     ! In case no editing is set and there is a single HD panel, a threshold to determine HD individuals is needed
-!     if (MultiHD==0) PercGenoForHD=90.0
-!     read (1,*) dumC
-!     inputParams%outopt=1
-! endif
-! PercGenoForHD=PercGenoForHD/100
-! PercSnpMiss=PercSnpMiss/100
-! SecondPercGenoForHD=SecondPercGenoForHD/100
-
-! ! print *, PercGenoForHD,PercSnpMiss,SecondPercGenoForHD,inputParams%outopt
-
-! ! Get Phasing parameters
-! read(1,*) dumC
-! ! NumberPhasingRuns
-! ! WARNING: Parser complains and exits on error when this option is set
-! !          number bigger than 10 because PhaseDone is a character variable
-! ! TODO: DEBUG!!
-
-! read (1,*) dumC,PhaseDone
-! NoPhasing=1
-! ! PhaseDone: We already have phase information (AlphaPhase) and so,
-! !            phasing is not necessary
-! if (trim(PhaseDone)=="PhaseDone") then
-!     inputParams%managephaseon1off0=0
-!     rewind (1)
-!     do i=1,15
-!         read (1,*) dumC
-!     enddo
-!     ! Get Path to the phased data and the number of cores used
-!     read (1,*) dumC,PhaseDone,PhasePath,nPhaseInternal
-!     NoPhasing=1
-
-! ! NoPhase: No phase information available and not to phase data
-! elseif (trim(PhaseDone)=="NoPhase") then
-!     NoPhasing=0
-!     inputParams%managephaseon1off0=0
-!     rewind (1)
-!     do i=1,15
-!         read (1,*) dumC
-!     enddo
-!     read (1,*) dumC
-! ! NumberPhasingRuns: No phase information available, then phase data
-! !                    in nPhaseExternal rounds
-! else
-!     inputParams%managephaseon1off0=1
-!     rewind (1)
-!     do i=1,15
-!         read (1,*) dumC
-!     enddo
-!     read (1,*) dumC,nPhaseExternal
-! endif
-
-! ! print *, nPhaseExternal
-
-! if (trim(PhaseDone)/="PhaseDone" .and. trim(PhaseDone)/="NoPhase") then
-!     if (nPhaseExternal>40) then
-!             print*, "Too many phasing runs required, at most you can do 40"
-!             stop
-!     endif
-!     if (nPhaseExternal<2) then
-!             print*, "Not enough phasing runs required, you must do 2 at least, 10 is better"
-!             stop
-!     endif
-
-!     nPhaseInternal=2*nPhaseExternal
-!     allocate(CoreAndTailLengths(nPhaseExternal))
-!     allocate(CoreLengths(nPhaseExternal))
-
-!     ! Get Core and tail lengths for the phasing runs
-!     ! CoreAndTailLengths
-!     read (1,*) dumC,CoreAndTailLengths(:)
-!     ! CoreLengths
-!     read (1,*) dumC,CoreLengths(:)
-!     ! PedFreePhasing: AlphaPhase argument
-!     read (1,*) dumC,PedigreeFreePhasing
-!     if (trim(PedigreeFreePhasing)=="No") then
-!         PedFreePhasing=0
-!     else
-!         if (trim(PedigreeFreePhasing)=="Yes") then
-!             PedFreePhasing=1
-!         else
-!             print*, "Stop - Pedigree free phasing option incorrectly specified"
-!             stop
-!         endif
-!     endif
-!     ! Get error thresholds for the phasing runs
-!     ! GenotypeError
-!     read (1,*) dumC,GenotypeErrorPhase
-! else
-!     ! Skip Phasing related parameters
-!     read (1,*) dumC
-!     read (1,*) dumC
-!     read (1,*) dumC
-!     read (1,*) dumC
-! endif
-
-! !read (1,*) dumC,UseGeneProb
-! !if (trim(UseGeneProb)=='Yes') UseGP=1
-! !if (trim(UseGeneProb)=='No') UseGP=0
-! !if ((trim(UseGeneProb)/='Yes').and.(trim(UseGeneProb)/='No')) then
-! !   write (*,*) "Specify editing status properly"
-! !endif
-
-! ! Get the number of processors to be used
-! ! NumberOfProcessorsAvailable
-! read (1,*) dumC,nProcessors
-
-! PhaseSubsetSize = 200
-! PhaseNIterations = 1
-! read (1,*), dumC, LargeDatasets
-! LargeDatasets = trim(LargeDatasets)
-! if (trim(largeDatasets) == 'Yes') then
-!   rewind (1)
-!   do i=1,21
-!     read (1,*) dumC
-!   enddo
-!   read (1,*) dumC, LargeDatasets, PhaseSubsetSize, PhaseNIterations
-! end if
-
-! !print *, LargeDatasets, PhaseSubsetSize, PhaseNIterations
-
-! ! print *, nProcessors
-
-! ! Iteration of the internal haplotype matching
-! read(1,*) dumC
-! ! InternalIterations
-! read (1,*) dumC,InternalIterations
-
-! ! Whether to use the Haplotype Library in a conservative way
-! ! ConservativeHaplotypeLibraryUse
-! ConservativeHapLibImputation=-1
-! read (1,*) dumC,ConservHapLibImp
-! if (trim(ConservHapLibImp)=="No") then
-!     ConservativeHapLibImputation=0
-! endif
-! if (trim(ConservHapLibImp)=="Yes") then
-!         ConservativeHapLibImputation=1
-! endif
-! if (ConservativeHapLibImputation==-1) then
-!     print*, "ConservativeHaplotypeLibraryUse not correctly specified"
-!     stop
-! endif
-
-! ! Get threshold for haplotype phasing errors
-! ! WellPhasedThreshold
-! read (1,*) dumC,WellPhasedThresh
-
-
-! ! Whether to use a hidden Markov model (HMM) for genotype imputation
-! read(1,*) dumC
-! ! inputParams%hmmoption
-! read (1,*) dumC,TmpHmmOption
-! inputParams%hmmoption=RUN_HMM_NULL
-! if (trim(TmpHmmOption)=='No') inputParams%hmmoption=RUN_HMM_NO
-! if (trim(TmpHmmOption)=='Yes') inputParams%hmmoption=RUN_HMM_YES
-! if (trim(TmpHmmOption)=='Only') inputParams%hmmoption=RUN_HMM_ONLY
-! if (trim(TmpHmmOption)=='Prephase') inputParams%hmmoption=RUN_HMM_PREPHASE
-! if (trim(TmpHmmOption)=="NGS") inputParams%hmmoption=RUN_HMM_NGS
-! if (inputParams%hmmoption==RUN_HMM_NULL) then
-!     print*, "inputParams%hmmoption not correctly specified"
-!     stop
-! endif
-
-! ! HMMParameters
-! ! HMM parameters:
-! !   * nHapInSubH: Number of Haplotypes used as templates
-! !   * HmmBurnInRound: Number of HMM rounds avoided during imputation
-! !   * nRoundsHMM: Number of HMM rounds
-! !   * useProcs: Number of processors used for parallelisation
-! !   * phasedThreshold: Threshold for well phased gametes
-! !   * windLength: Length for the moving window
-! read (1,*) dumC, nHapInSubH
-! read (1,*) dumC, HmmBurnInRound
-! read (1,*) dumC, nRoundsHMM
-! read (1,*) dumC, useProcs
-! read (1,*) dumC, idum
-! read (1,*) dumC, phasedThreshold
-! read (1,*) dumC, imputedThreshold
-! ! read (1,*) dumC, windowLength
-! ! print *, trim(TmpHmmOption), nHapInSubH,HmmBurnInRound,nRoundsHMM,useProcs,idum,phasedThreshold,imputedThreshold,windowLength
-
-! ! Options managing the software workflow
-! read(1,*) dumC
-! ! Whether to create the folder and files structure and exit
-! ! PreprocessDataOnly
-! read (1,*) dumC,PreProcessOptions
-! if (PreProcessOptions=="No") then
-!     PreProcess=.FALSE.
-! else
-!     if (PreProcessOptions=="Yes") then
-!         PreProcess=.TRUE.
-!     else
-!         print*, "Stop - Preprocess of data option incorrectly specified"
-!         stop
-!     endif
-! endif
-
-! ! Whether to only phase data
-! ! PhasingOnly
-! read (1,*) dumC,PhasingOnlyOptions
-! if (PhasingOnlyOptions=="No") then
-!     inputParams%PhaseTheDataOnly=0
-! else
-!     if (PhasingOnlyOptions=="Yes") then
-!         inputParams%PhaseTheDataOnly=1
-!     else
-!         print*, "Stop - Phasing only option incorrectly specified"
-!         stop
-!     endif
-! endif
-
-! ! Get file of animals Highly Dense genotyped
-! ! UserDefinedAlphaPhaseAnimalsFile
-! read (1,*) dumC,UserDefinedHDAnimalsFile
-! if (UserDefinedHDAnimalsFile=="None") then
-!     UserDefinedHD=0
-! else
-!     UserDefinedHD=1
-!     open (unit=46,file=trim(UserDefinedHDAnimalsFile),status="old")
-! endif
-
-! ! Get the file of pre-phased animals
-! ! PrePhasedFile
-! read (1,*) dumC,PrePhasedAnimalFile
-! if (PrePhasedAnimalFile=="None") then
-!     PrePhased=0
-! else
-!     PrePhased=1
-!     open (unit=47,file=trim(PrePhasedAnimalFile),status="old")
-! endif
-
-! ! Whether to skip the use of GeneProb software
-! ! inputParams%bypassgeneprob
-! inputParams%bypassgeneprob=-1
-! read (1,*) dumC,CharBypassGeneProb
-! if (trim(CharBypassGeneProb)=="No") then
-!     inputParams%bypassgeneprob=0
-! endif
-! if (trim(CharBypassGeneProb)=="Yes") then
-!     inputParams%bypassgeneprob=1
-! endif
-! if (trim(CharBypassGeneProb)=="Probabilities") then
-!     inputParams%bypassgeneprob=2
-! end if
-! if (inputParams%bypassgeneprob==-1) then
-!     print*, "inputParams%bypassgeneprob not correctly specified"
-!     stop
-! endif
-! ! RestartOptions handle this situation, so:
-! !   * inputParams%restartOption=0 => Passes through the whole process: GenoProb,
-! !                        Phasing and Imputing
-! !   * inputParams%restartOption=1 => Makes only GenoProb
-! !   * inputParams%restartOption=2 => Makes only Phasing
-! !   * inputParams%restartOption=3 => Makes only Imputation. This implies AlphaImpute
-! !                        has to be run already in order to get GenoProb
-! !                        done or Genotype Probabilities Genotype
-! !                        Probabilities have to be edited by hand
-! !   * inputParams%restartOption=4 =>
-! read (1,*) dumC,inputParams%restartOption
-
-
-! open (unit=2,file=trim(PedigreeFile),status="old")
-! open (unit=3,file=trim(GenotypeFile),status="old")
-! if (SexOpt==1) open (unit=4,file=trim(GenderFile),status="old")
-
-! nProcessAlphaPhase=nProcessors-nProcessGeneProb ! Never used!
-
-! ! Set parameters for parallelisation
-! if (nPhaseInternal==2) then
-!     nAgreeImputeHDLib=1
-!     nAgreeParentPhaseElim=1
-!     nAgreePhaseElim=1
-!     nAgreeInternalHapLibElim=1
-! endif
-! if (nPhaseInternal==4) then
-!     nAgreeImputeHDLib=2
-!     nAgreeParentPhaseElim=2
-!     nAgreePhaseElim=2
-!     nAgreeInternalHapLibElim=2
-! endif
-! if (nPhaseInternal==6) then
-!     nAgreeImputeHDLib=3
-!     nAgreeParentPhaseElim=3
-!     nAgreePhaseElim=3
-!     nAgreeInternalHapLibElim=3
-! endif
-! if (nPhaseInternal>6) then
-!     nAgreeImputeHDLib=4
-!     nAgreeParentPhaseElim=4
-!     nAgreeGrandParentPhaseElim=4
-!     nAgreePhaseElim=4
-!     nAgreeInternalHapLibElim=4
-! endif
-
-! GlobalExtraAnimals=0
-
-! inputParams%nSnpRaw=inputParams%nsnp
-
-! !$  CALL OMP_SET_NUM_THREADS(nProcessors)
-
-! end subroutine ReadInParameterFileOld
-
 !########################################################################################################################################################################
 
 subroutine ReadInPrePhasedData
@@ -1672,7 +1216,7 @@ if (inputParams%outopt==0) then
         ImputationQuality(i,4)=float(inputParams%nsnp-count(ImputePhase(i,:,2)==9))/inputParams%nsnp
         ImputationQuality(i,5)=(ImputationQuality(i,3)+ImputationQuality(i,4))/2
         ImputationQuality(i,6)=float(inputParams%nsnp-count(ImputeGenos(i,:)==9))/inputParams%nsnp
-        write (50,'(a20,20000f7.2)') ped%pedigree(i)%id,ImputationQuality(i,:)
+        write (50,'(a20,20000f7.2)') ped%pedigree(i)%originalID,ImputationQuality(i,:)
     enddo
 
     do j=1,inputParams%nsnp
@@ -1686,8 +1230,8 @@ if (inputParams%outopt==0) then
             cycle
         endif
         if (ImputationQuality(i,5)>=inputParams%WellPhasedThresh) then
-            write (52,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%id,ImputePhase(i,:,1)
-            write (52,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%id,ImputePhase(i,:,2)
+            write (52,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%originalID,ImputePhase(i,:,1)
+            write (52,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%originalID,ImputePhase(i,:,2)
         endif
     enddo
 
@@ -2314,7 +1858,7 @@ allocate(Maf(nSnpIterate))
 
 
 if (inputParams%restartOption==4) then
-    open (unit=209,file="Tmp2345678.txt",status="unknown")
+    open (unit=209,file="Tmp2345678.txt",status="old")
     do i=1,nAnisP
         read (209,*) ImputePhase(i,:,1)
         read (209,*) ImputePhase(i,:,2)
@@ -2670,13 +2214,16 @@ else                                                                    ! Other 
             if (Genos(i,j)==2) GlobalWorkPhase(i,j,:)=1
         enddo
         if (associated(ped%pedigree(i)%sirePointer)) then
+            if (ped%pedigree(i)%sirePointer%isDummy) exit
             ParId=ped%pedigree(i)%sirePointer%id
+
             do j=1,inputParams%nsnp                                                     ! Phase if my father is homozygous
                 if (Genos(ParId,j)==0) GlobalWorkPhase(i,j,1)=0
                 if (Genos(ParId,j)==2) GlobalWorkPhase(i,j,1)=1
             enddo
         endif
         if (associated(ped%pedigree(i)%damPointer)) then
+            if (ped%pedigree(i)%damPointer%isDummy) cycle
             ParId=ped%pedigree(i)%damPointer%id
             do j=1,inputParams%nsnp                                                     ! Phase if my mother is homozygous
                 if (Genos(ParId,j)==0) GlobalWorkPhase(i,j,2)=0
@@ -2957,6 +2504,7 @@ do i=1,nAnisP
                 ! Let's be (StartPt:EndPt) the SNPs in the two direction agree
                 EndPt=0
                 StartPt=0
+                ! TODO add openmp
                 do while ((StartPt<(inputParams%nsnp-MinSpan)).and.(EndPt<(inputParams%nsnp-MinSpan)))      ! If EndPt >(inputParams%nsnp-MinSpan), then recombination events does not exceed the threshold MinSpan
                     do j=EndPt+1,inputParams%nsnp
                         if ((WorkLeft(j)/=9).and.(WorkRight(j)==WorkLeft(j)))  then
@@ -4040,7 +3588,6 @@ call ped%outputSortedPedigreeInAlphaImputeFormat("." // DASH // "Miscellaneous" 
 
 if (inputParams%SexOpt==1) then
         do j=1,nAnisInGenderFile
-
             tmpId = ped%dictionary%getValue(genderId(j))
             if (tmpID /= dict_null) then
                 ped%pedigree(tmpId)%gender=GenderRaw(j)
@@ -4059,13 +3606,12 @@ Genotyped=0
 Pruned=0
 Pruned(0)=1
 do i=1,nAnisG
-    do j=1,nAnisP
-        if (trim(GenotypeId(i))==trim(ped%pedigree(j)%originalID)) then
-            TempGenos(j,:)=Genos(i,:)
-            if (count(TempGenos(j,:)/=9)>0) Genotyped(j)=1
-            exit
-        endif
-    enddo
+    tmpId = ped%dictionary%getValue(GenotypeId(i))
+    if (tmpId /= dict_null) then
+        TempGenos(tmpId,:)=Genos(i,:)
+        if (count(TempGenos(tmpId,:)/=9)>0) Genotyped(tmpId)=1
+        exit
+    endif
 enddo
 deallocate(Genos)
 
@@ -4157,6 +3703,7 @@ use Global
 
 use Utils
 use alphaimputeinmod
+use alphahouseMod, only :countLines
 implicit none
 
 integer :: h,i,j,k,l,nAnisTest,CountCatTest(6)
@@ -4539,6 +4086,8 @@ subroutine FinalChecker
 use Global
 
 use Utils
+use alphahouseMod, only : countLines
+use alphastatmod, only : pearsn, moment
 use alphaimputeinmod
 implicit none
 
@@ -4802,6 +4351,7 @@ if (inputParams%outopt==0) then
         deallocate(WorkVec)
         if (CountValAnim(h)>5) then
             MeanCorPerInd(h)=MeanCorPerInd(h)/CountValAnim(h)
+
             call moment(TmpVarPerGrp(1:CountValAnim(h)),CountValAnim(h),Tmpave,Tmpadev,StdDevPerGrp(h),Tmpvar,Tmpskew,Tmpcurt)
         else
             MeanCorPerInd(h)=-99.0
@@ -5057,94 +4607,6 @@ deallocate(WorkTmp)
 deallocate(GenoStratIndex)
 end subroutine FinalChecker
 
-!#############################################################################################################################################################################################################################
-
-subroutine Pearsn (x,y,n,r)
-
-implicit none
-integer n
-double precision :: prob,r,z,x(n),y(n),TINY
-parameter (tiny=1.e-20)
-integer j
-double precision :: ax,ay,df,sxx,sxy,syy,t,xt,yt
-
-ax=0.0
-ay=0.0
-DO j=1,n
-        ax=ax+x(j)
-        ay=ay+y(j)
-END DO
-ax=ax/n
-ay=ay/n
-sxx=0.
-syy=0.
-sxy=0.
-DO j=1,n
-        xt=x(j)-ax
-        yt=y(j)-ay
-        sxx=sxx+xt**2
-        syy=syy+yt**2
-        sxy=sxy+xt*yt
-END DO
-r=sxy/(SQRT(sxx*syy)+TINY)
-z=0.5*LOG(((1.+r)+TINY)/((1.-r)+TINY))
-df=n-2
-t=r*SQRT(df/(((1.-r)+TINY)*((1.+r)+TINY)))
-!prob=betai(0.5*df,0.5,df/(df+t**2))
-!prob=erfcc(ABS(z*SQRT(n-1.))/1.4142136)
-prob=0
-return
-
-end subroutine Pearsn
-
-!###########################################################################################################################################################
-
-SUBROUTINE moment(DATA,n,ave,adev,sdev,var,skew,curt)
-IMPLICIT NONE
-INTEGER n
-DOUBLE PRECISION adev,ave,curt,sdev,skew,var,DATA(n)
-INTEGER j
-DOUBLE PRECISION p,s,ep
-
-! WARNING: The compiler complains about the PAUSE statement.
-!          It is a deleted statement in 95 and an obsolete one in 90
-IF (n.le.1) PAUSE 'n must be at least 2 in moment'
-s=0
-DO j= 1,n
-        s=s+DATA(j)
-END DO
-
-ave=s/n
-adev=0
-var=0
-skew=0
-curt=0
-ep=0
-
-DO j=1,n
-        s=DATA(j)-ave
-        ep=ep+s
-        adev=adev+ABS(s)
-        p=s*s
-        var=var+p
-        p=p*s
-        skew=skew+p
-        p=p*s
-        curt=curt+p
-END DO
-
-adev=adev/n
-var=(var-ep**2/n)/(n-1)
-sdev=SQRT(var)
-IF(var.ne.0)then
-        skew=skew/(n*sdev**3)
-        curt=curt/(n*var**2)-3
-ELSE
-        !PRINT*, 'no skew or kurtosis when zero variance in moment'
-        !PAUSE 'no skew or kurtosis when zero variance in moment'
-END IF
-RETURN
-END SUBROUTINE moment
 
 !#############################################################################################################################################################################################################################
 
@@ -5196,44 +4658,6 @@ do i=1,nAnisP
 enddo
 
 end subroutine READINJUNK
-
-!#############################################################################################################################################################################################################################
-
-subroutine RandomOrder(order,n,idum)
-use random
- implicit none
-
-!     Generate a random ordering of the integers 1 ... n.
-
-integer, INTENT(IN)  :: n
-integer, INTENT(OUT) :: order(n)
-integer :: idum
-!double precision ran1
-
-!     Local variables
-
-integer :: i, j, k
-double precision    :: wk
-
-do i = 1, n
-  order(i) = i
-end do
-
-!     Starting at the end, swap the current last indicator with one
-!     randomly chosen from those preceeding it.
-
-do i = n, 2, -1
-  wk=ran1(idum)
-  j = 1 + i * wk
-  if (j < i) then
-    k = order(i)
-    order(i) = order(j)
-    order(j) = k
-  end if
-end do
-
-RETURN
-end subroutine RandomOrder
 
 !#############################################################################################################################################################################################################################
 
@@ -5452,11 +4876,12 @@ end subroutine PrintVersion
 
 subroutine PrintTimerTitles
 use Global
+use iso_fortran_env
 implicit none
 
-real :: etime          ! Declare the type of etime()
-real :: elapsed(2)     ! For receiving user and system time
-real :: total,Minutes,Hours,Seconds
+real(kind=real64) :: etime          ! Declare the type of etime()
+real(kind=real64) :: elapsed(2)     ! For receiving user and system time
+real(kind=real64) :: total,Minutes,Hours,Seconds
 
 print *, ""
 print *, ""
