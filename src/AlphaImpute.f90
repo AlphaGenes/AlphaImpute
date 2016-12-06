@@ -129,7 +129,7 @@ if (inputParams%hmmoption /= RUN_HMM_NGS) then
     !call cpu_time(finish)
     !print '("Time CheckParentage= ",f6.3," seconds.")',finish-start
 
-    if (MultiHD/=0) call ClassifyAnimByChips
+    if (inputParams%MultiHD/=0) call ClassifyAnimByChips
     
     !call cpu_time(start)
     call FillInSnp
@@ -3122,7 +3122,7 @@ printed=.FALSE.
 
 do i=1,nAnisP
     CountMiss=count(TempGenos(i,:)==9)
-    do j=1,MultiHD
+    do j=1,inputParams%MultiHD
         if ( (CountMiss-(inputParams%nsnp-nSnpByChip(j))) < (1.0-inputParams%PercGenoForHD)*nSnpByChip(j)&
                 .and. (inputParams%nsnp-CountMiss)<nSnpByChip(j)&
                 .and. ped%pedigree(i)%genotyped) then
@@ -3183,7 +3183,7 @@ if (UserDefinedHD==0) then
     RecIdHDIndex(1:nAnisP)=1
     do i=1,nAnisP
         CountMiss=count(TempGenos(i,:)==9)
-        if (MultiHD/=0) then
+        if (inputParams%MultiHD/=0) then
             ! Disregard animals at LD or those HD animals with a number of markers missing
             if (animChip(i)==0) then
                 Setter(i)=0
@@ -3261,7 +3261,7 @@ if (inputParams%managephaseon1off0==1) then
     enddo
 endif
 
-if (MultiHD/=0 .or. inputParams%IntEditStat==0) then
+if (inputParams%MultiHD/=0 .or. inputParams%IntEditStat==0) then
     nSnpR=inputParams%nsnp
     allocate(Genos(0:nAnisP,inputParams%nsnp))
     Genos=TempGenos

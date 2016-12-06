@@ -36,7 +36,7 @@ implicit none
 
 
 
-integer :: nAnisG,nAnisRawPedigree,nAnisP,HetGameticStatus,HomGameticStatus,MultiHD
+integer :: nAnisG,nAnisRawPedigree,nAnisP,HetGameticStatus,HomGameticStatus
 integer :: nProcessGeneProb,nProcessAlphaPhase,CountRawGenos,nAnisInGenderFile
 integer :: MaxLeftRightSwitch,MinSpan
 integer :: TrueGenos1None0,nObsDataRaw,UseGP
