@@ -39,7 +39,7 @@ module AlphaImputeInMod
         integer(kind=1) :: SexOpt,HetGameticStatus,HomGameticStatus
 
         ! box 3
-        integer(kind=int32) :: nSnp,MultiHD=0
+        integer(kind=int32) :: nSnp,MultiHD
         integer(kind=int32), allocatable :: nSnpByChip(:)
         real(real32) :: PercGenoForHD !TODO don't see why this is a real
 
@@ -115,6 +115,7 @@ module AlphaImputeInMod
         character(len=:), allocatable::tag
         character(len=300),dimension(:),allocatable :: second
 
+        MultiHD = 0
 
         open(newunit=unit, file=SpecFile, action="read", status="old")
         IOStatus = 0
