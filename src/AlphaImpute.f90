@@ -322,7 +322,7 @@ if (inputParams%hmmoption/=RUN_HMM_NGS) then
         write(0,*) 'DEBUG: Final Checker'
 #endif
 
-        if (TrueGenos1None0==1) then
+        if (inputParams%TrueGenos1None0==1) then
             !call cpu_time(start)
             call FinalChecker
             !call cpu_time(finish)
@@ -907,7 +907,7 @@ if (inputParams%SexOpt==1) then
                     if (ImputePhase(i,j,e)==9) ProbImputePhase(i,j,e)=TempAlleleFreq(j)
                 enddo
             endif
-            if (ped%pedigree(i)%gender==HomGameticStatus) then
+            if (ped%pedigree(i)%gender==inputParams%HomGameticStatus) then
                 do j=1,nSnpIterate
                     if (ImputePhase(i,j,e)==9) then
                         ProbImputePhase(i,j,e)=(sum(ProbImputePhase(ParId,j,:))/2)
@@ -915,8 +915,8 @@ if (inputParams%SexOpt==1) then
                 enddo
             endif
         enddo
-        if (ped%pedigree(i)%gender==HetGameticStatus) then
-            ParId=ped%pedigree(i)%getSireDamNewIDByIndex(HetGameticStatus+1)
+        if (ped%pedigree(i)%gender==inputParams%hetGameticStatus) then
+            ParId=ped%pedigree(i)%getSireDamNewIDByIndex(inputParams%hetGameticStatus+1)
             do j=1,nSnpIterate
                 if (ImputePhase(i,j,1)==9) then
                     ProbImputePhase(i,j,:)=(sum(ProbImputePhase(ParId,j,:))/2)
@@ -940,7 +940,7 @@ if (inputParams%SexOpt==1) then
 
     if (inputParams%SexOpt==1) then
         do i=1,nAnisP
-            if (ped%pedigree(i)%gender==HetGameticStatus) then
+            if (ped%pedigree(i)%gender==inputParams%hetGameticStatus) then
                 do j=1,nSnpIterate
                     if ((ImputePhase(i,j,1)==9).and.(ImputePhase(i,j,2)/=9)) ImputePhase(i,j,1)=ImputePhase(i,j,2)
                     if ((ImputePhase(i,j,2)==9).and.(ImputePhase(i,j,1)/=9)) ImputePhase(i,j,2)=ImputePhase(i,j,1)
@@ -1621,7 +1621,7 @@ do i=1,nAnisP
         CountLeftSwitch=0
         CountRightSwitch=0
         pedID=ped%pedigree(i)%getSireDamNewIDByIndex(SireDamRL)
-        if ((inputParams%SexOpt==1).and.(ped%pedigree(PedId)%gender==HetGameticStatus)) cycle
+        if ((inputParams%SexOpt==1).and.(ped%pedigree(PedId)%gender==inputParams%hetGameticStatus)) cycle
         if ((PedId>0).and.((float(count(ImputePhase(PedId,:,:)==9))/(2*nSnpFinal))<0.30)) then          !(RecIdHDIndex(PedId)==1)
             WorkRight=9
             RSide=9
@@ -2017,7 +2017,7 @@ if (inputParams%SexOpt==0) then
     enddo
 else
     do i=1,nAnisP
-        if (ped%pedigree(i)%gender==HomGameticStatus) then
+        if (ped%pedigree(i)%gender==inputParams%HomGameticStatus) then
             do e=1,2
                 id = ped%pedigree(i)%getSireDamNewIDByIndex(e+1)
                 do j=1,nSnpIterate
@@ -2027,7 +2027,7 @@ else
                 enddo
             enddo
         else
-            id = ped%pedigree(i)%getSireDamNewIDByIndex(HomGameticStatus+1)
+            id = ped%pedigree(i)%getSireDamNewIDByIndex(inputParams%HomGameticStatus+1)
             do j=1,nSnpIterate
                 if (ImputePhase(i,j,1)==9) then     !Comment From John Hickey I changed what was indexed e to 1 I think it is ok same thing in analogous routine
                                                     !There is no do loop for e here
@@ -2128,7 +2128,7 @@ if (defaultInput%SexOpt==1) then                                         ! Sex c
             if (Genos(i,j)==0) GlobalWorkPhase(i,j,:)=0
             if (Genos(i,j)==2) GlobalWorkPhase(i,j,:)=1
         enddo
-        if (ped%pedigree(i)%gender/=HetGameticStatus) then
+        if (ped%pedigree(i)%gender/=inputParams%hetGameticStatus) then
             do e=1,2                                                    ! Phase alleles for homogametic individuals in the homozygous case
                 ParId=ped%pedigree(i)%getSireDamNewIDByIndex(e+1)
                 do j=1,inputParams%nsnp
@@ -2137,7 +2137,7 @@ if (defaultInput%SexOpt==1) then                                         ! Sex c
                 enddo
             enddo
         else
-            ParId=ped%pedigree(i)%getSireDamNewIDByIndex(HomGameticStatus+1)                          ! Phase alleles for heterogametic individuals in the homozygous case
+            ParId=ped%pedigree(i)%getSireDamNewIDByIndex(inputParams%HomGameticStatus+1)                          ! Phase alleles for heterogametic individuals in the homozygous case
             do j=1,inputParams%nsnp
                 if (Genos(ParId,j)==0) GlobalWorkPhase(i,j,:)=0
                 if (Genos(ParId,j)==2) GlobalWorkPhase(i,j,:)=1
@@ -2175,7 +2175,7 @@ if (inputParams%SexOpt==1) then                                                 
             if (Genos(i,j)==0) GlobalWorkPhase(i,j,:)=0
             if (Genos(i,j)==2) GlobalWorkPhase(i,j,:)=1
         enddo
-        if (ped%pedigree(i)%gender/=HetGameticStatus) then                        ! Am I homogametic?
+        if (ped%pedigree(i)%gender/=inputParams%hetGameticStatus) then                        ! Am I homogametic?
             do e=1,2                                                    ! Phase a single haplotype whenever my parents are homozygous
                 ParId=ped%pedigree(i)%getSireDamNewIDByIndex(e+1)
                 do j=1,inputParams%nsnp
@@ -2184,7 +2184,7 @@ if (inputParams%SexOpt==1) then                                                 
                 enddo
             enddo
         else                                                            ! Am I heterogametic?
-            ParId=ped%pedigree(i)%getSireDamNewIDByIndex(HomGameticStatus+1)
+            ParId=ped%pedigree(i)%getSireDamNewIDByIndex(inputParams%HomGameticStatus+1)
             do j=1,inputParams%nsnp                                                 ! Phase the two haplotypes whenever my homogametic parent is homozygous
                 if (Genos(ParId,j)==0) GlobalWorkPhase(i,j,:)=0
                 if (Genos(ParId,j)==2) GlobalWorkPhase(i,j,:)=1
@@ -2310,7 +2310,7 @@ do i=1,nAnisP
             tmpGender = 0
         endif
         ! Skip if, in the case of sex chromosome, me and my parent are heterogametic
-        if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==HetGameticStatus).and.(tmpGender==HetGameticStatus)) cycle
+        if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==inputParams%hetGameticStatus).and.(tmpGender==inputParams%hetGameticStatus)) cycle
         endblock
         !! SCAN HAPLOTYPE IN TWO DIRECTIONS: L->R AND R->L
         ! If not a base animal and the number of unphased alleles is lower than a threshold
@@ -2537,8 +2537,8 @@ enddo
 
 ! Impute phase for the Heterogametic chromosome from the Homogametic one, which has been already phased
 do i=1,nAnisP
-    if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==HetGameticStatus)) then
-        ImputePhase(i,:,HetGameticStatus)=ImputePhase(i,:,HomGameticStatus)     !JohnHickey changed the j to :
+    if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==inputParams%hetGameticStatus)) then
+        ImputePhase(i,:,inputParams%hetGameticStatus)=ImputePhase(i,:,inputParams%HomGameticStatus)     !JohnHickey changed the j to :
         GlobalWorkPhase(i,:,:)=ImputePhase(i,:,:)
     endif
 enddo
@@ -2611,7 +2611,7 @@ do i=1,nAnisP
         if (ped%isDummy(pedID)) cycle
         ! TODO can  probably skip if value is 0 too 
         ! Skip if, in the case of sex chromosome, me and my parent are heterogametic
-        if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==HetGameticStatus).and.(ped%pedigree(i)%getParentGenderBasedOnIndex(SireDamRL)==HetGameticStatus)) cycle
+        if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==inputParams%hetGameticStatus).and.(ped%pedigree(i)%getParentGenderBasedOnIndex(SireDamRL)==inputParams%hetGameticStatus)) cycle
 
         !! SCAN HAPLOTYPE IN TWO DIRECTIONS: L->R AND R->L
         ! If not a base animal
@@ -2836,9 +2836,9 @@ enddo
 
 ! Impute phase for the Heterogametic chromosome from the Homogametic one, which has been already phased
 do i=1,nAnisP
-    if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==HetGameticStatus)) then
-        !ImputePhase(i,j,HetGameticStatus)=ImputePhase(i,j,HomGameticStatus)
-        ImputePhase(i,:,HetGameticStatus)=ImputePhase(i,:,HomGameticStatus)     !JohnHickey changed the j to :
+    if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==inputParams%hetGameticStatus)) then
+        !ImputePhase(i,j,inputParams%hetGameticStatus)=ImputePhase(i,j,inputParams%HomGameticStatus)
+        ImputePhase(i,:,inputParams%hetGameticStatus)=ImputePhase(i,:,inputParams%HomGameticStatus)     !JohnHickey changed the j to :
         GlobalWorkPhase(i,:,:)=ImputePhase(i,:,:)
     endif
 enddo
@@ -3176,7 +3176,7 @@ endif
 if (inputParams%NoPhasing==0) SnpIncluded(:)=1
 
 ! I user do not specify any file with HD individuals
-if (UserDefinedHD==0) then
+if (inputParams%UserDefinedHD==0) then
     Setter(0)=0
     Setter(1:nAnisP)=1
     RecIdHDIndex(0)=0
@@ -3308,7 +3308,7 @@ else
             inputParams%nsnp=nSnpR
         endif
     endif
-    if (UserDefinedHD==0) then
+    if (inputParams%UserDefinedHD==0) then
         Setter(1:nAnisP)=1
         RecIdHDIndex(1:nAnisP)=1
         do i=1,nAnisP
@@ -3380,7 +3380,7 @@ do i=1,nAnisP ! These are parents
     Count2=0
     do j=1,ped%pedigree(i)%nOffs ! These are offsprings
         tmpOff => ped%pedigree(i)%offsprings(j)%p
-        if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==HetGameticStatus).and.(tmpOff%gender==HetGameticStatus)) cycle
+        if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==inputParams%hetGameticStatus).and.(tmpOff%gender==inputParams%hetGameticStatus)) cycle
         do k=1,inputParams%nsnp
             if (TempGenos(i,k)==9) then ! If my parent is not genotyped
                 if (TempGenos(tmpOff%id,k)==0) Count0(k)=Count0(k)+1    ! Number of offspring genotype as 0
@@ -3395,7 +3395,7 @@ do i=1,nAnisP ! These are parents
         if ((Count0(k)+Count1(k)+Count2(k))>OffspringFillMin) then
             if (Count0(k)==0) TempGenos(i,k)=2                       ! This is the most likely thing, but it might be not true
             if (Count2(k)==0) TempGenos(i,k)=0                       ! This is the most likely thing, but it might be not true
-            if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==HetGameticStatus)) cycle
+            if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==inputParams%hetGameticStatus)) cycle
             if ((Count0(k)>2).and.(Count2(k)>2)) TempGenos(i,k)=1    ! This is the most likely thing, but it might be not true
         endif
     enddo
@@ -3421,11 +3421,11 @@ do i=1,nAnisP
         tmpParentId = ped%pedigree(i)%getSireDamNewIDByIndex(k)
         ! if the proband is heterogametic, and
         ! considering the heterogametic parent, then avoid!!
-        if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==HetGameticStatus).and. ((k-1)==HetGameticStatus)) TurnOn=0
+        if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==inputParams%hetGameticStatus).and. ((k-1)==inputParams%hetGameticStatus)) TurnOn=0
         ! TODO check value of k here
         if (tmpParentId /= 0) then
             if (ped%pedigree(tmpParentId)%isDummy) cycle
-            ! if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==HetGameticStatus).and. (pedigree%(i)%parent(k-1)%gender==HetGameticStatus)) TurnOn=0
+            ! if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==inputParams%hetGameticStatus).and. (pedigree%(i)%parent(k-1)%gender==inputParams%hetGameticStatus)) TurnOn=0
             ! Homogametic individuals and the homogametic parent of a heterogametic individual
             if (TurnOn==1) then
                 do j=1,inputParams%nsnp
@@ -3453,13 +3453,13 @@ do i=1,nAnisP
                 TempGenos(i,j)=2
             endif
             if (inputParams%SexOpt==1) then
-                if (ped%pedigree(i)%gender/=HetGameticStatus) then
+                if (ped%pedigree(i)%gender/=inputParams%hetGameticStatus) then
                     if ((TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(2),j)==0).and.(TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(3),j)==2)) TempGenos(i,j)=1
                     if ((TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(2),j)==2).and.(TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(3),j)==0)) TempGenos(i,j)=1
                 else
                     ! HomGameticSatus(1 or 2) +1 = sire (2) or dam (3)
-                    if (TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(HomGameticStatus+1),j)==0) TempGenos(i,j)=0
-                    if (TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(HomGameticStatus+1),j)==2) TempGenos(i,j)=2
+                    if (TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(inputParams%HomGameticStatus+1),j)==0) TempGenos(i,j)=0
+                    if (TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(inputParams%HomGameticStatus+1),j)==2) TempGenos(i,j)=2
                 endif
             else
                 if ((TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(2),j)==0).and.(TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(3),j)==2)) TempGenos(i,j)=1
@@ -3519,7 +3519,7 @@ do e=1,2                    ! Do whatever this does, first on males and then on 
         ! if the proband is heterogametic, and
         ! I am considering the heterogametic parent, then avoid!!
         ! That is, avoid males and their sires (hetero=1), or females and their dams (hetero=2)
-        if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==HetGameticStatus).and.((ParPos-1)==HetGameticStatus)) TurnOn=0
+        if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==inputParams%hetGameticStatus).and.((ParPos-1)==inputParams%hetGameticStatus)) TurnOn=0
 
         ! Consider the Homogametic probands and the heterogametic proband with homogametic parent
         if ((IndId/=0).and.(ParId/=0).and.(TurnOn==1)) then

@@ -29,8 +29,6 @@
 module AlphaImputeInMod
     use iso_fortran_env
 
-
-
     type AlphaImputeInput
         ! box 1
         character(len=300):: PedigreeFile = "Pedigree.txt",GenotypeFile="Genotypes.txt",TrueGenotypeFile="TrueGenotypes.txt",GenderFile="None",InbredAnimalsFile="None"

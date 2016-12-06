@@ -336,7 +336,7 @@ CONTAINS
                   if (ped%pedigree(i)%isDummyBasedOnIndex(e+1)) cycle
                   parent => ped%pedigree(i)%getSireDamObjectByIndex(e+1)
                 ! Skip if, in the case of sex chromosome, me and my parent are heterogametic
-                if ((inputParams%sexopt==1).and.(ped%pedigree(i)%gender==HetGameticStatus).and.(parent%gender==HetGameticStatus)) cycle
+                if ((inputParams%sexopt==1).and.(ped%pedigree(i)%gender==inputParams%HetGameticStatus).and.(parent%gender==inputParams%HetGameticStatus)) cycle
                 ! If not a Base Animal
                 if (associated(parent)) then
                   CompPhase=1
@@ -439,7 +439,7 @@ CONTAINS
       do j=1,inputParams%nsnp
         do i=1,nAnisP
           if (AnimalOn(i,e)==1) then
-              if ((inputParams%sexopt==0).or.(ped%pedigree(i)%gender==HomGameticStatus)) then
+              if ((inputParams%sexopt==0).or.(ped%pedigree(i)%gender==inputParams%HomGameticStatus)) then
 
                 if (ImputePhase(i,j,e)==9) then
                     if ((Temp(i,j,e,1)>inputParams%nAgreeInternalHapLibElim).and.(Temp(i,j,e,2)==0)) ImputePhase(i,j,e)=0
@@ -454,12 +454,12 @@ CONTAINS
     ! The individual is has one haplotype: In Sex Chromosome, the heterogametic case
     do j=1,inputParams%nsnp
       do i =1, nAnisP
-        if ((inputParams%sexopt==1).and.(ped%pedigree(i)%gender==HetGameticStatus)) then
-          if (AnimalOn(i,HomGameticStatus)==1) then
-            if (ImputePhase(i,j,HomGameticStatus)==9) then
-                if ((Temp(i,j,HomGameticStatus,1)>inputParams%nAgreeInternalHapLibElim).and.(Temp(i,j,HomGameticStatus,2)==0))&
+        if ((inputParams%sexopt==1).and.(ped%pedigree(i)%gender==inputParams%HetGameticStatus)) then
+          if (AnimalOn(i,inputParams%HomGameticStatus)==1) then
+            if (ImputePhase(i,j,inputParams%HomGameticStatus)==9) then
+                if ((Temp(i,j,inputParams%HomGameticStatus,1)>inputParams%nAgreeInternalHapLibElim).and.(Temp(i,j,inputParams%HomGameticStatus,2)==0))&
                     ImputePhase(i,j,:)=0
-                if ((Temp(i,j,HomGameticStatus,1)==0).and.(Temp(i,j,HomGameticStatus,2)>inputParams%nAgreeInternalHapLibElim))&
+                if ((Temp(i,j,inputParams%HomGameticStatus,1)==0).and.(Temp(i,j,inputParams%HomGameticStatus,2)>inputParams%nAgreeInternalHapLibElim))&
                     ImputePhase(i,j,:)=1
             endif
           end if
@@ -1212,8 +1212,8 @@ end subroutine InternalParentPhaseElim
               if (ped%pedigree(i)%isDummyBasedOnIndex(pedId)) cycle !checked this one makes sense
               parent => ped%pedigree(i)%getSireDamObjectByIndex(pedId)
               ! Skip if, in the case of sex chromosome, me and my parent are heterogametic
-              if ((inputParams%sexopt==1).and.(ped%pedigree(i)%gender==HetGameticStatus).and.&
-                (parent%gender == HetGameticStatus)) then
+              if ((inputParams%sexopt==1).and.(ped%pedigree(i)%gender==inputParams%HetGameticStatus).and.&
+                (parent%gender == inputParams%HetGameticStatus)) then
                     cycle
               end if
 
@@ -1302,7 +1302,7 @@ end subroutine InternalParentPhaseElim
       do j=1,inputParams%nsnp
         do i=1,nAnisP
           if (AnimalOn(i,e)==1) then
-            if ((inputParams%sexopt==0).or.(ped%pedigree(i)%gender==HomGameticStatus)) then
+            if ((inputParams%sexopt==0).or.(ped%pedigree(i)%gender==inputParams%HomGameticStatus)) then
               if (ImputePhase(i,j,e)==9) then
                 ! Impute phase allele with the most significant code for that allele across haplotypes
                 ! only if the other codification never happens
@@ -1321,18 +1321,18 @@ end subroutine InternalParentPhaseElim
 
     do j=1,inputParams%nsnp
       do i = 1, nAnisP
-        if ((inputParams%sexopt==1).and.(ped%pedigree(i)%gender==HetGameticStatus)) then
-          if (AnimalOn(i,HomGameticStatus)==1) then
+        if ((inputParams%sexopt==1).and.(ped%pedigree(i)%gender==inputParams%HetGameticStatus)) then
+          if (AnimalOn(i,inputParams%HomGameticStatus)==1) then
 
-            if (ImputePhase(i,j,HomGameticStatus)==9) then
+            if (ImputePhase(i,j,inputParams%HomGameticStatus)==9) then
               ! Impute phase allele with the most significant code for that allele across haplotypes
               ! only if the other codification never happens
-              if ((Temp(i,j,HomGameticStatus,1)>inputParams%nAgreeInternalHapLibElim).and.&
-                  (Temp(i,j,HomGameticStatus,2)==0)) then
+              if ((Temp(i,j,inputParams%HomGameticStatus,1)>inputParams%nAgreeInternalHapLibElim).and.&
+                  (Temp(i,j,inputParams%HomGameticStatus,2)==0)) then
                     ImputePhase(i,j,:)=0
               end if
-              if ((Temp(i,j,HomGameticStatus,1)==0).and.&
-                  (Temp(i,j,HomGameticStatus,2)>inputParams%nAgreeInternalHapLibElim)) then
+              if ((Temp(i,j,inputParams%HomGameticStatus,1)==0).and.&
+                  (Temp(i,j,inputParams%HomGameticStatus,2)>inputParams%nAgreeInternalHapLibElim)) then
                     ImputePhase(i,j,:)=1
               end if
             endif
@@ -2057,7 +2057,7 @@ endif
 
     do j=1,inputParams%nsnp
       do i=1,nAnisP
-        if (ped%pedigree(i)%gender==HetGameticStatus) then
+        if (ped%pedigree(i)%gender==inputParams%HetGameticStatus) then
           if ((ImputePhase(i,j,1)==9).and.(ImputePhase(i,j,2)/=9)) then
             ImputePhase(i,j,1)=ImputePhase(i,j,2)
           end if
@@ -2139,7 +2139,7 @@ endif
 
     inputParams => defaultInput
     do i=1,nAnisP
-      if (inputParams%sexopt==0 .or. (inputParams%sexopt==1 .and. ped%pedigree(i)%gender/=HetGameticStatus) ) then     ! If individual is homogametic
+      if (inputParams%sexopt==0 .or. (inputParams%sexopt==1 .and. ped%pedigree(i)%gender/=inputParams%HetGameticStatus) ) then     ! If individual is homogametic
         do e=1,2
           if (ped%pedigree(i)%isDummyBasedOnIndex(e)) cycle
           ParId=ped%pedigree(i)%getSireDamNewIDByIndex(e+1)
@@ -2154,7 +2154,7 @@ endif
           enddo
         enddo
       else
-        ParId= ped%pedigree(i)%getSireDamNewIDByIndex(HomGameticStatus+1) !the homogametic parent
+        ParId= ped%pedigree(i)%getSireDamNewIDByIndex(inputParams%HomGameticStatus+1) !the homogametic parent
         do j=1,inputParams%nsnp
           if (ImputePhase(i,j,1)==9) then !Comment from John Hickey see analogous iterate subroutine
             if ((ImputePhase(ParId,j,1)==ImputePhase(ParId,j,2)).and. &
@@ -2208,7 +2208,7 @@ endif
                   ! This is the only difference with the inputParams%sexopt=0 code below. Duplicating
                   ! the code can be avoided by including the IF statement here instead than
                   ! outside the SNPs loop.
-                    if ((ped%pedigree(i)%gender ==HetGameticStatus).and.(tmpChild%gender==HetGameticStatus)) cycle 
+                    if ((ped%pedigree(i)%gender ==inputParams%HetGameticStatus).and.(tmpChild%gender==inputParams%HetGameticStatus)) cycle 
                     if (ImputePhase(tmpChild%id,k,j)==0) Count0=Count0+1
                     if (ImputePhase(tmpChild%id,k,j)==1) Count1=Count1+1
             
@@ -2235,7 +2235,7 @@ endif
                   ! This is the only difference with the inputParams%sexopt=0 code below. Duplicating
                   ! the code can be avoided by including the IF statement here instead than
                   ! outside the SNPs loop.
-                  if ((ped%pedigree(i)%gender ==HetGameticStatus).and.(tmpChild%gender==HetGameticStatus)) cycle 
+                  if ((ped%pedigree(i)%gender ==inputParams%HetGameticStatus).and.(tmpChild%gender==inputParams%HetGameticStatus)) cycle 
                   if (ImputePhase(tmpChild%id,k,j)==0) Count0=Count0+1
                   if (ImputePhase(tmpChild%id,k,j)==1) Count1=Count1+1
 

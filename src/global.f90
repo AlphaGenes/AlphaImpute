@@ -36,11 +36,11 @@ implicit none
 
 
 
-integer :: nAnisG,nAnisRawPedigree,nAnisP,HetGameticStatus,HomGameticStatus
-integer :: nProcessGeneProb,nProcessAlphaPhase,CountRawGenos,nAnisInGenderFile
+integer :: nAnisG,nAnisRawPedigree,nAnisP
+integer :: CountRawGenos,nAnisInGenderFile
 integer :: MaxLeftRightSwitch,MinSpan
-integer :: TrueGenos1None0,nObsDataRaw,UseGP
-integer :: nSnpIterate,AlphaPhasePresent,GeneProbPresent,UserDefinedHD
+integer :: nObsDataRaw,UseGP
+integer :: nSnpIterate,AlphaPhasePresent,GeneProbPresent
 integer :: nSnpChips
 
 integer,allocatable,dimension (:,:) :: Reads,ReferAllele,AlterAllele
