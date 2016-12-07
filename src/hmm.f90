@@ -544,6 +544,7 @@ subroutine MaCHForInd(CurrentInd, HMM)
 ! individual
 
 use Global
+use GlobalPedigree
 use GlobalVariablesHmmMaCH
 use hmmHaplotyper
 use Utils
@@ -581,7 +582,6 @@ StopSnp=nSnpHmm
 if (HMM==RUN_HMM_ONLY .OR. HMM==RUN_HMM_NGS) then
 
     if (GlobalInbredInd(CurrentInd)==.TRUE.) then
-        print *, GlobalInbredInd(CurrentInd), GlobalHmmHDInd(CurrentInd)
         allocate(ForwardProbs(inputParams%nhapinsubh,nSnpHmm))
         call ForwardAlgorithmForSegmentHaplotype(CurrentInd,1,1,nSnpHmm)     ! Paternal haplotype
         call SampleSegmentHaplotypeSource(CurrentInd,1,1,nSnpHmm)
@@ -1366,45 +1366,47 @@ if (defaultInput%HMMOption==RUN_HMM_NGS .AND. GlobalInbredInd(CurrentInd)==.FALS
     AltAll = AlterAllele(CurrentInd,Marker)
 else
     genotype = GenosHmmMaCH(CurrentInd,Marker)
+
+    if (genotype==MISSING) then
+        return
+    endif
 endif
 
-if (genotype==MISSING) then
-    return
-else
-    ! Index keeps track of the states already visited. The total number
-    ! of states in this chunk of code is (inputParams%nhapinsubh x (inputParams%nhapinsubh-1)/2)
-    Index=0
-    if (inputParams%HMMOption==RUN_HMM_NGS .AND. GlobalInbredInd(CurrentInd)==.FALSE.) then
-        do i=0,2
-            cond_probs(i)=Penetrance(Marker,i,0)*shotgunErrorMatrix(0,RefAll,AltAll)&
-                         +Penetrance(Marker,i,1)*shotgunErrorMatrix(1,RefAll,AltAll)&
-                         +Penetrance(Marker,i,2)*shotgunErrorMatrix(2,RefAll,AltAll)
-        enddo
-    endif
-
-    do i=1, inputParams%nhapinsubh
-        if (inputParams%HMMOption /= RUN_HMM_NGS .OR. GlobalInbredInd(CurrentInd)==.TRUE.) then
-            ! Probability to observe genotype SubH(i) being the true
-            ! genotype GenosHmmMaCH in locus Marker
-            Factors(0) = Penetrance(Marker,SubH(i,Marker),genotype)
-            ! Probability to observe genotype SubH(i)+1 being the true
-            ! genotype GenosHmmMaCH in locus Marker
-            Factors(1) = Penetrance(Marker,SubH(i,Marker)+1,genotype)
-        else
-            ! Probability to observe genotype SubH(i) being the true
-            ! genotype GenosHmmMaCH in locus Marker
-            Factors(0) = cond_probs(SubH(i,Marker))
-            ! Probability to observe genotype SubH(i)+1 being the true
-            ! genotype GenosHmmMaCH in locus Marker
-            Factors(1) = cond_probs(SubH(i,Marker)+1)
-        endif
-        do j=1,i
-            Index=Index+1
-            ForwardProbs(Index,Marker)=&
-                ForwardProbs(Index,Marker)*Factors(SubH(j,Marker))
-        enddo
+! Index keeps track of the states already visited. The total number
+! of states in this chunk of code is (inputParams%nhapinsubh x (inputParams%nhapinsubh-1)/2)
+Index=0
+! if (inputParams%HMMOption==RUN_HMM_NGS .AND. GlobalInbredInd(CurrentInd)==.FALSE.) then
+if (inputParams%HMMOption==RUN_HMM_NGS) then
+    do i=0,2
+        cond_probs(i)=Penetrance(Marker,i,0)*shotgunErrorMatrix(0,RefAll,AltAll)&
+                     +Penetrance(Marker,i,1)*shotgunErrorMatrix(1,RefAll,AltAll)&
+                     +Penetrance(Marker,i,2)*shotgunErrorMatrix(2,RefAll,AltAll)
     enddo
 endif
+
+do i=1, inputParams%nhapinsubh
+    ! if (inputParams%HMMOption /= RUN_HMM_NGS .OR. GlobalInbredInd(CurrentInd)==.TRUE.) then
+    if (inputParams%HMMOption /= RUN_HMM_NGS) then
+        ! Probability to observe genotype SubH(i) being the true
+        ! genotype GenosHmmMaCH in locus Marker
+        Factors(0) = Penetrance(Marker,SubH(i,Marker),genotype)
+        ! Probability to observe genotype SubH(i)+1 being the true
+        ! genotype GenosHmmMaCH in locus Marker
+        Factors(1) = Penetrance(Marker,SubH(i,Marker)+1,genotype)
+    else
+        ! Probability to observe genotype SubH(i) being the true
+        ! genotype GenosHmmMaCH in locus Marker
+        Factors(0) = cond_probs(SubH(i,Marker))
+        ! Probability to observe genotype SubH(i)+1 being the true
+        ! genotype GenosHmmMaCH in locus Marker
+        Factors(1) = cond_probs(SubH(i,Marker)+1)
+    endif
+    do j=1,i
+        Index=Index+1
+        ForwardProbs(Index,Marker)=&
+            ForwardProbs(Index,Marker)*Factors(SubH(j,Marker))
+    enddo
+enddo
 
 end subroutine ConditionOnData
 
