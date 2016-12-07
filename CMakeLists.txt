@@ -2,14 +2,6 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.8.5)
 PROJECT(AlphaImpute)
 enable_language (Fortran)
 
-if (WIN32)
-	execute_process(COMMAND CMD git rev-parse --short HEAD OUTPUT_VARIABLE SUBVERSION)
-	execute_process(COMMAND CMD git describe --abbrev=0 --tags OUTPUT_VARIABLE VERSION)
-else()
-	execute_process(COMMAND git rev-parse --short HEAD OUTPUT_VARIABLE SUBVERSION)
-	execute_process(COMMAND git describe --tag OUTPUT_VARIABLE VERSION)
-endif()
-
 
 OPTION(RUN_TESTS "Run and compile tests"
   OFF)
@@ -21,6 +13,7 @@ set(CLUSTER 0 CACHE STRING "cluster size")
 SET(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/../alphacmakefiles/cmake/modules")
 set(CMAKE_MACOSX_RPATH 0)
 
+INCLUDE(${CMAKE_MODULE_PATH}/setVersion.cmake)
 
 add_definitions(-DCLUSTER=${CLUSTER})
 
