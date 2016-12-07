@@ -22,11 +22,11 @@ integer :: marker
 
 marker = 1
 call SetUpPriorHaplotype
-call ConditionHaplotypeOnData(CurrentInd, marker, PhaseHmmMaCH(CurrentInd,marker,hap))
+call ConditionHaplotypeOnData(CurrentInd, marker, hap)
 
 do marker=2,nSnpHmm
     call TransposeHaplotype(marker-1, marker, Thetas(marker-1))
-    call ConditionHaplotypeOnData(CurrentInd, marker, PhaseHmmMaCH(CurrentInd,marker,hap))
+    call ConditionHaplotypeOnData(CurrentInd, marker, hap)
 enddo
 
 end subroutine ForwardAlgorithmForHaplotype
@@ -52,13 +52,13 @@ integer :: marker
 ! marker = 1
 marker = StartSnp
 call SetUpPriorHaplotype
-call ConditionHaplotypeOnData(CurrentInd, marker, PhaseHmmMaCH(CurrentInd,marker,hap))
+call ConditionHaplotypeOnData(CurrentInd, marker, hap)
 
 ! do marker=2,nSnpHmm
 do marker=2,StopSnp
     ! call GetSmallMemoryBlock
     call TransposeHaplotype(marker-1, marker, Thetas(marker-1))
-    call ConditionHaplotypeOnData(CurrentInd, marker, PhaseHmmMaCH(CurrentInd,marker,hap))
+    call ConditionHaplotypeOnData(CurrentInd, marker, hap)
 enddo
 
 end subroutine ForwardAlgorithmForSegmentHaplotype
@@ -66,6 +66,7 @@ end subroutine ForwardAlgorithmForSegmentHaplotype
 !######################################################################
 subroutine ImputeHaplotypeAlleles(CurrentInd, Marker, gamete, Hap)
 use GlobalVariablesHmmMaCH
+use omp_lib
 implicit none
 
 integer, intent(in) :: CurrentInd, Marker, gamete, Hap
@@ -83,6 +84,65 @@ if (PhaseHmmMaCH(CurrentInd,marker,gamete)==ALLELE_MISSING) then
     FullH(CurrentInd,marker,gamete) = SubH(Hap,marker)
 endif
 end subroutine ImputeHaplotypeAlleles
+
+!######################################################################
+subroutine ImputeHaplotypeAllelesNGS(CurrentInd, Marker, gamete, Hap)
+use Global
+use GlobalVariablesHmmMaCH
+use omp_lib
+use Par_Zig_mod
+implicit none
+
+integer, intent(in) :: CurrentInd, Marker, gamete, Hap
+
+integer :: copied, imputed, RefAll, AltAll, Thread
+double precision :: prior_11, prior_12, prior_22
+double precision :: posterior_11, posterior_22
+double precision :: random, summ, ErrorRate
+
+Thread = omp_get_thread_num()
+
+copied = SubH(Hap, Marker)
+
+call GetErrorRatebyMarker(Marker, ErrorRate)
+
+RefAll = ReferAllele(CurrentInd,Marker)
+AltAll = AlterAllele(CurrentInd,marker)
+
+prior_11 = shotgunErrorMatrix(0,RefAll,AltAll)
+prior_12 = shotgunErrorMatrix(1,RefAll,AltAll)
+prior_22 = shotgunErrorMatrix(2,RefAll,AltAll)
+
+posterior_11 = ErrorRate * (prior_11 + prior_12 / 2.0)  &
+             + (1.0 - ErrorRate) * (prior_22 + prior_12 / 2.0)
+posterior_22 = (1.0 - ErrorRate) * (prior_11 + prior_12 / 2.0) &
+             + ErrorRate * (prior_22 + prior_12 / 2.0)
+
+summ = posterior_11 + posterior_22
+posterior_11 = posterior_11 / summ
+posterior_22 = posterior_22 / summ
+
+random = par_uni(Thread)
+
+if (random < posterior_11) then
+    imputed = 0
+else
+    imputed = 1
+endif
+
+FullH(CurrentInd, Marker, gamete) = imputed
+
+if (abs(copied - imputed) == 0) then
+    ! count the number of matching alleles
+    !$OMP ATOMIC
+    ErrorMatches(Marker) = ErrorMatches(Marker) + 1
+else
+    ! count the number of mismatching alleles
+    !$OMP ATOMIC
+    ErrorMisMatches(Marker) = ErrorMisMatches(Marker) + 1
+endif
+
+end subroutine ImputeHaplotypeAllelesNGS
 
 !######################################################################
 subroutine SampleHaplotypeSource(CurrentInd,hap)
@@ -139,7 +199,12 @@ do marker=nSnpHmm-1,1,-1
     ! marker=marker-1
 
     ! Track whether imputed state matches observed allele
-    call ImputeHaplotypeAlleles(CurrentInd, Marker, hap, Hapi)
+    ! if (inputParams%HMMOption == RUN_HMM_NGS .AND. GlobalInbredInd(CurrentInd)==.FALSE.) then
+    if (inputParams%HMMOption == RUN_HMM_NGS) then
+        call ImputeHaplotypeAllelesNGS(CurrentInd, Marker, hap, Hapi)
+    else
+        call ImputeHaplotypeAlleles(CurrentInd, Marker, hap, Hapi)
+    endif
 
     Theta = Thetas(marker)
     Probs = ForwardProbs(:,marker)
@@ -177,8 +242,12 @@ do marker=nSnpHmm-1,1,-1
 enddo
 
 ! Track whether imputed state matches observed allele
-! if (inputParams%HMMOption == RUN_HMM_NGS) then
-call ImputeHaplotypeAlleles(CurrentInd, 1, hap, Hapi)
+! if (inputParams%HMMOption == RUN_HMM_NGS .AND. GlobalInbredInd(CurrentInd)==.FALSE.) then
+if (inputParams%HMMOption == RUN_HMM_NGS) then
+    call ImputeHaplotypeAllelesNGS(CurrentInd, 1, hap, Hapi)
+else
+    call ImputeHaplotypeAlleles(CurrentInd, 1, hap, Hapi)
+endif
 
 deallocate(probs)
 
@@ -434,7 +503,7 @@ enddo
 end subroutine TransposeHaplotype
 
 !######################################################################
-subroutine ConditionHaplotypeOnData(ForWhom, Marker, allele)
+subroutine ConditionHaplotypeOnData(CurrentInd, Marker, hap)
 use Global
 use GlobalVariablesHmmMaCH
 use Par_Zig_mod
@@ -442,43 +511,61 @@ use omp_lib
 use AlphaImputeInMod
 
 implicit none
-integer, intent(IN) :: ForWhom, Marker
-integer(kind=1),intent(IN) :: allele
+integer, intent(IN) :: CurrentInd, Marker
+integer, intent(IN) :: hap
 
 ! Local variables
-integer :: i
-integer :: RefAll, AltAll
+integer :: i, j, Index
+integer :: RefAll, AltAll, allele
 double precision :: factors(0:1), ErrorRate
-double precision :: posterior_11, posterior_12, posterior_22, summ
+double precision :: prior_11, prior_12, prior_22, summ
 type(AlphaImputeInput), pointer :: inputParams
 
 inputParams => defaultInput
 
-if (defaultInput%HMMOption==RUN_HMM_NGS .AND. GlobalInbredInd(ForWhom)==.FALSE.) then
-    RefAll = ReferAllele(ForWhom,Marker)
-    AltAll = AlterAllele(ForWhom,Marker)
-    posterior_11 = shotgunErrorMatrix(0,RefAll,AltAll)
-    posterior_12 = shotgunErrorMatrix(1,RefAll,AltAll)
-    posterior_22 = shotgunErrorMatrix(2,RefAll,AltAll)
+call GetErrorRatebyMarker(Marker, ErrorRate)
+! if (defaultInput%HMMOption==RUN_HMM_NGS .AND. GlobalInbredInd(CurrentInd)==.FALSE.) then
+if (defaultInput%HMMOption==RUN_HMM_NGS) then
+    RefAll = ReferAllele(CurrentInd,Marker)
+    AltAll = AlterAllele(CurrentInd,Marker)
 
-    factors(0) = (posterior_11 + posterior_12) * 0.5
-    factors(1) = (posterior_22 + posterior_12) * 0.5
+    if (RefAll+AltAll == 0) then
+        return
+    endif
+
+    prior_11 = shotgunErrorMatrix(0,RefAll,AltAll)
+    prior_12 = shotgunErrorMatrix(1,RefAll,AltAll)
+    prior_22 = shotgunErrorMatrix(2,RefAll,AltAll)
+
+    factors(1) = ErrorRate * (prior_11 + prior_12 / 2.0)  &
+               + (1.0 - ErrorRate) * (prior_22 + prior_12 / 2.0)
+    factors(0) = (1.0 - ErrorRate) * (prior_11 + prior_12 / 2.0) &
+               + ErrorRate * (prior_22 + prior_12 / 2.0)
 
     summ = factors(0) + factors(1)
     factors(0) = factors(0) / summ
     factors(1) = factors(1) / summ
 else
-    call GetErrorRatebyMarker(Marker, ErrorRate)
+    ! call GetErrorRatebyMarker(Marker, ErrorRate)
+    allele = PhaseHmmMaCH(CurrentInd,marker,hap)
+    if (allele == ALLELE_MISSING) then
+        return
+    endif
     factors(0) = ErrorRate
     factors(1) = 1.0 - factors(0)
 endif
 
 do i=1,inputParams%nHapInSubH
-    if (allele==SubH(i,Marker)) then
-        ForwardProbs(i,Marker) = ForwardProbs(i,Marker) * factors(1)
+    ! if (defaultInput%HMMOption==RUN_HMM_NGS .AND. GlobalInbredInd(CurrentInd)==.FALSE.) then
+    if (defaultInput%HMMOption == RUN_HMM_NGS) then
+        ForwardProbs(i,Marker) = ForwardProbs(i,Marker) * Factors(SubH(i,Marker))
     else
-        ForwardProbs(i,Marker) = ForwardProbs(i,Marker) * factors(0)
-    endif
+        if (allele==SubH(i,Marker)) then
+            ForwardProbs(i,Marker) = ForwardProbs(i,Marker) * factors(1)
+        else
+            ForwardProbs(i,Marker) = ForwardProbs(i,Marker) * factors(0)
+        endif
+    end if
 enddo
 
 end subroutine ConditionHaplotypeOnData
