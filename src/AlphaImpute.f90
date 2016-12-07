@@ -3237,37 +3237,33 @@ open (unit=102,file="." // DASH // "Miscellaneous" // DASH // "EditingSnpSummary
 if (inputParams%managephaseon1off0==1) then
     TempFreq(:)=0.0
     Counter(:)=0
+    print *,"1"
     do i=1,nAnisP
         do j=1,inputParams%nsnp
             if (TempGenos(i,j)/=9) then
                 TempFreq(j)=TempFreq(j)+float(TempGenos(i,j))
                 Counter(j)=Counter(j)+2
+                if (Setter(i) == 1) then
+                     if (TempGenos(i,j)==9) SnpSummary(j)=SnpSummary(j)+1.0
+                endif
             endif
         enddo
     enddo
     do j=1,inputParams%nsnp
         if (Counter(j)>0.000000) TempFreq(j)=TempFreq(j)/Counter(j)
     enddo
-endif
-
-if (inputParams%managephaseon1off0==1) then
     SnpSummary=0.0
-    do i=1,nAnisP
-        if (Setter(i)==1) then
-            do j=1,inputParams%nsnp
-                if (TempGenos(i,j)==9) SnpSummary(j)=SnpSummary(j)+1.0
-            enddo
-        endif
-    enddo
 endif
 
 if (inputParams%MultiHD/=0 .or. inputParams%IntEditStat==0) then
+    print *,"2"
     nSnpR=inputParams%nsnp
     allocate(Genos(0:nAnisP,inputParams%nsnp))
     Genos=TempGenos
     deallocate(TempGenos)
     if (inputParams%managephaseon1off0==1) SnpIncluded(:)=1
 else
+    print *,"3"
     if (inputParams%managephaseon1off0==1) then
         SnpSummary(:)=SnpSummary(:)/CountHD
         nSnpR=0
@@ -3283,6 +3279,8 @@ else
         deallocate(TempGenos)
         SnpIncluded(:)=1
     else
+        print *,"4"
+        print *,TempGenos
         allocate(Genos(0:nAnisP,nSnpR))
         Genos(0,:)=9
         if (inputParams%managephaseon1off0==1) then
@@ -3309,6 +3307,7 @@ else
         endif
     endif
     if (inputParams%UserDefinedHD==0) then
+        print *,"5"
         Setter(1:nAnisP)=1
         RecIdHDIndex(1:nAnisP)=1
         do i=1,nAnisP
