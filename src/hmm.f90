@@ -45,7 +45,6 @@ if ( (HMM==RUN_HMM_ONLY .OR. HMM==RUN_HMM_NGS) .AND. inputParams%InbredAnimalsFi
     call ReadInbred(inputParams%prePhasedFileUnit, InbredHmmMaCH, nAnisInbred)
 end if
 
-
 ! Number of animals in the HMM
 nIndHmmMaCH = nAnisG + nAnisInbred
 
@@ -1629,7 +1628,6 @@ do j=1,nSnpHmm      ! For each SNP
     alleles = 0
 
     do i=1,nGenotyped
-        ! readObs = readObs + GenosHmmMaCH(i,j)
         readObs = readObs + reads(i,j)
         alleles = alleles + AlterAllele(i,j)
     enddo
@@ -1640,7 +1638,6 @@ do j=1,nSnpHmm      ! For each SNP
     prior_22 = frequency**2
 
     do i=1,nGenotyped
-        readObs = reads(i,j)
         RefAll = ReferAllele(i,j)
         AltAll = AlterAllele(i,j)
 
@@ -1669,7 +1666,7 @@ do j=1,nSnpHmm      ! For each SNP
             endif
         else if (posterior_22 > 0.9999) then
             GenosHmmMaCH(i,j) = 2
-            FullH(i,j,:) = 0
+            FullH(i,j,:) = 1
         else
             if (reads(i,j) == 0) then
                 GenosHmmMaCH(i,j) = MISSING
