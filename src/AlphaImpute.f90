@@ -3280,7 +3280,6 @@ else
         SnpIncluded(:)=1
     else
         print *,"4"
-        print *,TempGenos
         allocate(Genos(0:nAnisP,nSnpR))
         Genos(0,:)=9
         if (inputParams%managephaseon1off0==1) then
@@ -3414,6 +3413,9 @@ integer :: i,j,k,TurnOn
 type(AlphaImputeInput), pointer :: inputParams
 integer :: tmpParentId
 inputParams => defaultInput
+
+
+print *, "in FillInSnp"
 do i=1,nAnisP
     do k=2,3
         TurnOn=1
@@ -3490,7 +3492,6 @@ type(AlphaImputeInput), pointer :: inputParams
 integer :: tmpID
 integer :: nHomoParent, nBothHomo
 
-
 inputParams => defaultInput
 open (unit=101,file="." // DASH // "Miscellaneous" // DASH // "PedigreeMistakes.txt",status="unknown")
 
@@ -3511,7 +3512,6 @@ do e=1,2                    ! Do whatever this does, first on males and then on 
     do i=1,nAnisRawPedigree
         IndId=ped%pedigree(i)%genotypePosition            ! My Id
         ParId=ped%pedigree(i)%getSireDamGenotypePositionByIndex(e+1)       ! Paternal Id,
-        if (ped%isDummy(parId)) cycle
         TurnOn=1
         ! GenderRaw: Says whether the proband is a male or a female
         ! If there are sex cromosome information, and
@@ -3604,14 +3604,16 @@ TempGenos=9
 Genotyped=0
 Pruned=0
 Pruned(0)=1
+! print *,Genos
 do i=1,nAnisG
     tmpId = ped%dictionary%getValue(GenotypeId(i))
     if (tmpId /= dict_null) then
         TempGenos(tmpId,:)=Genos(i,:)
         if (count(TempGenos(tmpId,:)/=9)>0) Genotyped(tmpId)=1
-        exit
     endif
 enddo
+! do i=1,nAnisG
+! print *, TempGenos
 deallocate(Genos)
 
 end subroutine CheckParentage
