@@ -305,7 +305,7 @@ integer, intent(out) :: nInbred
 integer :: i,k,dumC
 logical :: opened, named
 character(len=300) :: InbredFile
-character(len=30) :: dumID
+character(len=20) :: dumID
 
 
 inquire(unit=PhaseFileUnit, opened=opened, named=named, name=InbredFile)
@@ -337,19 +337,78 @@ close(PhaseFileUnit)
 end subroutine ReadInbred
 
 !######################################################################
+subroutine getHapList(HapListUnit, ListIds, nHaps)
+implicit none
+
+integer, intent(inout) :: HapListUnit
+character(len=20), allocatable, intent(inout) :: ListIds(:)
+integer, intent(out) :: nHaps
+
+integer :: i, k
+logical :: opened, named
+character(len=300) :: HapListFile
+character(len=20) :: dumC
+
+inquire(unit=HapListUnit, opened=opened, named=named, name=HapListFile)
+
+if (.NOT. opened .and. named) then
+    open(unit=HapListUnit, file=HapListFile, status='unknown')
+else if (.NOT. named) then
+    write(0, *) "ERROR - Something went wrong when trying to read the file of the list of haplotypes"
+end if
+
+nHaps = 0
+do
+    read(HapListUnit, *, iostat=k) dumC
+    nHaps=nHaps+1
+    if(k/=0) then
+        nHaps=nHaps-1
+        exit
+    endif
+enddo
+
+rewind(HapListUnit)
+
+allocate(ListIds(nHaps))
+do i=1,nHaps
+    read(HapListUnit, *) ListIds(i)
+enddo
+close(HapListUnit)
+
+end subroutine getHapList
+
+!######################################################################
 subroutine ParseMaCHDataNGS(nGenotyped)
 use Global
+use GlobalPedigree
 use GlobalVariablesHmmMaCH
 use AlphaImputeInMod
 implicit none
 integer, intent(in) :: nGenotyped
-integer :: i
+integer :: i, j, nHaps, HapsLeft
 type(AlphaImputeInput), pointer :: inputParams
+character(len=20), allocatable :: HapList(:)
+character(len=20) :: aux
+
+interface
+  subroutine getHapList(HapListUnit, ListIds, nHaps)
+    integer, intent(inout) :: HapListUnit
+    character(len=20), allocatable, intent(inout) :: ListIds(:)
+    integer, intent(out) :: nHaps
+  end subroutine getHapList
+end interface
+
 
 inputParams => defaultInput
 #ifdef DEBUG
     write(0,*) 'DEBUG: [ParseMaCHDataNGS]'
 #endif
+
+if (inputParams%HapList) then
+    nHaps=0
+    call getHapList(inputParams%HapListUnit,HapList,nHaps)
+    HapsLeft=nHaps
+end if
 
 do i=1,nGenotyped
     ! Add animal's diploid to the Diploids Library
@@ -360,7 +419,17 @@ do i=1,nGenotyped
         !          type should logical: GlobalHmmHDInd=.true.
         GlobalHmmHDInd(i)=1
     endif
+    if (inputParams%HapList) then
+        ! do j=1,HapsLeft
+        do j=1,nHaps
+            if (ID(GlobalHmmID(i)) == HapList(j)) then
+                GlobalInbredInd(i) = .TRUE.
+                exit
+            endif
+        enddo
+    endif
 enddo
+
 
 ! AlphaImpute does not phase sequence data, thus no individual has been phased.
 nGametesPhased = 0
