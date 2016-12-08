@@ -681,7 +681,7 @@ do i=1,inputParams%nprocessors
 #endif
     open (unit=108,file=trim(filout),status='unknown')
     write (108,*) "nAnis        ,",nAnisP
-    write (108,*) "inputParams%nsnp     ,",nSnpIterate
+    write (108,*) "nsnp     ,",nSnpIterate
 #ifdef OS_UNIX
     write (108,*) "InputFilePath    ,",'"../IterateGeneProbInput.txt"'
 #else
@@ -3066,7 +3066,7 @@ do i=1,inputParams%nprocessors
 
     open (unit=108,file=trim(filout),status='unknown')
     write (108,*) "nAnis        ,",nAnisP
-    write (108,*) "inputParams%nsnp     ,",inputParams%nsnp
+    write (108,*) "nsnp     ,",inputParams%nsnp
 #ifdef OS_UNIX
     write (108,*) "InputFilePath    ,",'"../../InputFiles/RecodedGeneProbInput.txt"'
 #else
