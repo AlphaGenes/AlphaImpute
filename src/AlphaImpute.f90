@@ -2304,8 +2304,14 @@ do i=1,nAnisP
         block 
             integer :: tmpGender
         PedId=ped%pedigree(i)%getSireDamNewIDByIndex(SireDamRL)
+
+
+
         if (PedId /= 0) then
             tmpGender = ped%pedigree(PedId)%gender
+            if (ped%pedigree(pedId)%isDummy()) then
+                cycle
+            endif
         else 
             tmpGender = 0
         endif
