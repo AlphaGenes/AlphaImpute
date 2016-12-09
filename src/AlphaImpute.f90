@@ -2309,7 +2309,7 @@ do i=1,nAnisP
 
         if (PedId /= 0) then
             tmpGender = ped%pedigree(PedId)%gender
-            if (ped%pedigree(pedId)%isDummy()) then
+            if (ped%pedigree(pedId)%isDummy) then
                 cycle
             endif
         else 
