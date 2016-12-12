@@ -3261,6 +3261,9 @@ endif
 
 if (inputParams%MultiHD/=0 .or. inputParams%IntEditStat==0) then
     nSnpR=inputParams%nsnp
+    if (allocated(genos)) then
+        deallocate(genos)
+    endif
     allocate(Genos(0:nAnisP,inputParams%nsnp))
     Genos=TempGenos
     deallocate(TempGenos)
@@ -4099,10 +4102,12 @@ type(AlphaImputeInput), pointer :: inputParams
 
 character(len=lengan),allocatable,dimension(:) :: TrueGenosId
 
+inputParams =>defaultInput
+
 allocate(Work(inputParams%nSnpRaw))
 allocate(WorkTmp(inputParams%nSnpRaw))
 allocate(GenoStratIndex(nAnisP))
-inputParams =>defaultInput
+
 FileName=trim(inputParams%TrueGenotypeFile)
 ! call CountLines(FileName,nAnisTest)
 nAnisTest = CountLines(FileName)
