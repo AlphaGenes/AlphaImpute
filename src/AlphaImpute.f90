@@ -3485,7 +3485,7 @@ implicit none
 
 integer :: e,i,j,CountBothGeno,CountDisagree,CountChanges,IndId,ParId,ParPos
 integer :: TurnOn
-integer,allocatable,dimension (:) :: Genotyped,Pruned
+integer,allocatable,dimension (:) :: Pruned
 type(AlphaImputeInput), pointer :: inputParams
 integer :: tmpID
 integer :: nHomoParent, nBothHomo
@@ -3594,24 +3594,21 @@ if (inputParams%SexOpt==1) then
         enddo
 endif
 
-allocate(Genotyped(nAnisP))
 allocate(Pruned(0:nAnisP))
 allocate(TempGenos(0:nAnisP,inputParams%nsnp))
 
 TempGenos=9
-Genotyped=0
 Pruned=0
 Pruned(0)=1
 do i=1,nAnisG
     tmpId = ped%dictionary%getValue(GenotypeId(i))
     if (tmpId /= dict_null) then
         TempGenos(tmpId,:)=Genos(i,:)
-        if (count(TempGenos(tmpId,:)/=9)>0) Genotyped(tmpId)=1
+        if (count(TempGenos(tmpId,:)/=9)>0) ped%pedigree(tmpId)%genotyped=.true.
     endif
 enddo
 ! do i=1,nAnisG
 ! print *, TempGenos
-deallocate(Genos)
 
 end subroutine CheckParentage
 !#############################################################################################################################################################################################################################

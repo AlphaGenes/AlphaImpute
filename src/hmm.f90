@@ -383,7 +383,7 @@ implicit none
 type(AlphaImputeInput), pointer :: inputParams
 integer, intent(in) :: nGenotyped
 
-integer :: i,j,k, NoGenosUnit, nIndvG
+integer :: i,j,k, NoGenosUnit, nIndvG,tmpID
 
 inputParams => defaultInput
 #ifdef DEBUG
@@ -402,17 +402,16 @@ nIndvG=0
 ! genotyped animal (GlobalHmmHDInd)
 
 do j = 1, nGenotyped
-    do i = 1, nAnisP
-        if (trim(ped%pedigree(i)%originalID) == trim(GenotypeID(j))) then
-            GlobalHmmID(j) = i
-        end if
-    end do
+    tmpID = ped%dictionary%getValue(GenotypeID(j))
+    if (tmpID /=DICT_NULL) then
+        GlobalHmmID(j) = tmpID
+    end if
 end do
 
 
 do i=1,nGenotyped
     ! Check if individual is in the genotype file
-    if (ped%pedigree(GlobalHmmID(i))%genotyped==1) then
+    if (ped%pedigree(GlobalHmmID(i))%genotyped==.true.) then
         ! k=k+1
         nIndvG=nIndvG+1
         k=i
@@ -461,6 +460,7 @@ nGametesPhased = CountPhasedGametes()
 
 ! Check if the number of genotyped animals is correct
 if (nIndvG/=nGenotyped) then
+    print *,GlobalHmmID
     write (6,*) '   ','WARNING: There are individuals in the genotype file that have'
     write (6,*) '   ','         not been genotyped'
     write (6,*) '   ','         For a list of these individuals look into the file'
