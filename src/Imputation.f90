@@ -940,8 +940,10 @@ end subroutine InternalParentPhaseElim
             do i = 1, nAnisHD
               select case (PhaseHD(i, j, e))
                 case (1)
+                  ! set that phase information exists
                   BitPhaseHD(i, curSection, e) = ibset(BitPhaseHD(i, curSection, e), curPos)
                 case (9)
+                  ! set that missing iformation does not
                   MissPhaseHD(i, curSection, e) = ibset(MissPhaseHD(i, curSection, e), curPos)
               end select
             end do
