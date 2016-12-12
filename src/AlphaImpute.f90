@@ -3261,6 +3261,7 @@ endif
 
 if (inputParams%MultiHD/=0 .or. inputParams%IntEditStat==0) then
     nSnpR=inputParams%nsnp
+    ! TODO tidy this up - should not need deallocate here
     if (allocated(genos)) then
         deallocate(genos)
     endif
