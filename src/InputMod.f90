@@ -248,6 +248,7 @@ module InputMod
 
   allocate(Temp(inputParams%nsnp))
   allocate(GenotypeId(nAnisG))
+  print *,"allocated in readInData"
   allocate(Genos(0:nAnisG,inputParams%nsnp))
   allocate(GenderId(nAnisRawPedigree))
   allocate(GenderRaw(nAnisRawPedigree))
@@ -449,10 +450,10 @@ module InputMod
 
   allocate(temp(inputParams%nSnp))
 
-  if (allocated(Genos)) then
-    deallocate(Genos)
+  if (.not. allocated(Genos)) then
+    allocate(Genos(0:nAnisG,inputParams%nsnp))
   endif
-  allocate(Genos(0:nAnisG,inputParams%nsnp))
+
   Genos(0,:)=9
 
   inquire(unit=GenoFileUnit, opened=opened, named=named, name=GenoFile)
@@ -494,10 +495,9 @@ module InputMod
 
   allocate(temp(inputParams%nSnp))
 
-  if (allocated(Genos)) then
-    deallocate(Genos)
+  if (.not. allocated(Genos)) then
+    allocate(Genos(0:nAnisG,inputParams%nsnp))
   endif
-  allocate(Genos(0:nAnisG,inputParams%nsnp))
   Genos(0,:)=9
 
   inquire(unit=GenoFileUnit, opened=opened, named=named, name=GenoFile)

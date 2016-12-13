@@ -3265,6 +3265,7 @@ if (inputParams%MultiHD/=0 .or. inputParams%IntEditStat==0) then
     if (allocated(genos)) then
         deallocate(genos)
     endif
+    print *,"allocated in 1"
     allocate(Genos(0:nAnisP,inputParams%nsnp))
     Genos=TempGenos
     deallocate(TempGenos)
@@ -3280,6 +3281,7 @@ else
         nSnpR=count(SnpIncluded(:)==1)
     endif
     if (nSnpR==inputParams%nsnp) then
+        print *,"allocated in 2"
         allocate(Genos(0:nAnisP,inputParams%nsnp))
         Genos=TempGenos
         deallocate(TempGenos)
@@ -3289,6 +3291,7 @@ else
         if (allocated(genos)) then
             deallocate(genos)
         endif
+        print *,"allocated in 3"
         allocate(Genos(0:nAnisP,nSnpR))
         Genos(0,:)=9
         if (inputParams%managephaseon1off0==1) then
@@ -3582,7 +3585,7 @@ close (101)
 print*, " ",CountChanges," errors in the pedigree due to Mendelian inconsistencies"
 
 ! Sort sires and dams, and look for mistakes (bisexuality,...).
-! call PVseq(nAnisRawPedigree,nAnisP) ! TODO had to remove this 
+
 nAnisP = nAnisRawPedigree
 allocate(RecIdHDIndex(0:nAnisP))
 
@@ -3925,7 +3928,6 @@ if (inputParams%outopt==0) then
         if (ped%pedigree(i)%isDummy) then
             cycle
         endif
-        ! TODO this should never be triggered 
         write (45,'(a25,i3,2f7.2)') ped%pedigree(i)%originalID,FinalSetter(i),float(count(ImputePhase(i,:,1)/=9))/inputParams%nsnp &
                             ,float(count(ImputePhase(i,:,2)/=9))/inputParams%nsnp
     enddo
