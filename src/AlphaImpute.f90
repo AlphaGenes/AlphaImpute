@@ -3285,6 +3285,10 @@ else
         deallocate(TempGenos)
         SnpIncluded(:)=1
     else
+        ! TODO this should not need to be done
+        if (allocated(genos)) then
+            deallocate(genos)
+        endif
         allocate(Genos(0:nAnisP,nSnpR))
         Genos(0,:)=9
         if (inputParams%managephaseon1off0==1) then
