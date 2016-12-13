@@ -3129,18 +3129,18 @@ printed=.FALSE.
 do i=1,nAnisP
     CountMiss=count(TempGenos(i,:)==9)
     do j=1,inputParams%MultiHD
-        if ( (CountMiss-(inputParams%nsnp-nSnpByChip(j))) < (1.0-inputParams%PercGenoForHD)*nSnpByChip(j)&
-                .and. (inputParams%nsnp-CountMiss)<nSnpByChip(j)&
+        if ( (CountMiss-(inputParams%nsnp-inputParams%nSnpByChip(j))) < (1.0-inputParams%PercGenoForHD)*inputParams%nSnpByChip(j)&
+                .and. (inputParams%nsnp-CountMiss)<inputParams%nSnpByChip(j)&
                 .and. ped%pedigree(i)%genotyped) then
             animChip(i)=j
-            write(UOutputs,'(a20,6f5.1)') ped%pedigree(i)%originalID, (inputParams%nsnp-CountMiss)*100/real(nSnpByChip(j))
+            write(UOutputs,'(a20,6f5.1)') ped%pedigree(i)%originalID, (inputParams%nsnp-CountMiss)*100/real(inputParams%nSnpByChip(j))
             exit
         endif
-        if ((CountMiss-(inputParams%nsnp-nSnpByChip(j))) > (1.0-inputParams%PercGenoForHD)*nSnpByChip(j)&
+        if ((CountMiss-(inputParams%nsnp-inputParams%nSnpByChip(j))) > (1.0-inputParams%PercGenoForHD)*inputParams%nSnpByChip(j)&
                 ! .and. animChip(i)/=0&
                 .and. printed(i)==.false.&
                 .and. ped%pedigree(i)%genotyped) Then
-            write(UOutputs,'(a20,6f5.1)') ped%pedigree(i)%originalID, (inputParams%nsnp-CountMiss)*100/real(nSnpByChip(j))
+            write(UOutputs,'(a20,6f5.1)') ped%pedigree(i)%originalID, (inputParams%nsnp-CountMiss)*100/real(inputParams%nSnpByChip(j))
             printed(i)=.true.
         end if
     enddo

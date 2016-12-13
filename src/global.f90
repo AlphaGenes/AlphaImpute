@@ -57,7 +57,7 @@ real,allocatable,dimension (:,:,:) :: ProbImputePhase
 character*(lengan),allocatable :: GenotypeId(:),GenderId(:)
 
 integer, allocatable :: nSnpsAnimal(:), Centroid(:), ClusterMemberIndv(:)
-integer, allocatable :: nSnpByChip(:), animChip(:)
+integer, allocatable :: animChip(:)
 type(PedigreeHolder) :: ped !TODO move out of global
 
 real(kind=4),allocatable :: xnumrelmatHold(:)
