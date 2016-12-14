@@ -248,7 +248,6 @@ module InputMod
 
   allocate(Temp(inputParams%nsnp))
   allocate(GenotypeId(nAnisG))
-  print *,"allocated in readInData"
   allocate(Genos(0:nAnisG,inputParams%nsnp))
   allocate(GenderId(nAnisRawPedigree))
   allocate(GenderRaw(nAnisRawPedigree))

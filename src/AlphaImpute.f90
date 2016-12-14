@@ -3265,7 +3265,6 @@ if (inputParams%MultiHD/=0 .or. inputParams%IntEditStat==0) then
     if (allocated(genos)) then
         deallocate(genos)
     endif
-    print *,"allocated in 1"
     allocate(Genos(0:nAnisP,inputParams%nsnp))
     Genos=TempGenos
     deallocate(TempGenos)
@@ -3281,7 +3280,6 @@ else
         nSnpR=count(SnpIncluded(:)==1)
     endif
     if (nSnpR==inputParams%nsnp) then
-        print *,"allocated in 2"
         allocate(Genos(0:nAnisP,inputParams%nsnp))
         Genos=TempGenos
         deallocate(TempGenos)
@@ -3291,7 +3289,6 @@ else
         if (allocated(genos)) then
             deallocate(genos)
         endif
-        print *,"allocated in 3"
         allocate(Genos(0:nAnisP,nSnpR))
         Genos(0,:)=9
         if (inputParams%managephaseon1off0==1) then
@@ -3420,12 +3417,13 @@ use Global
 use AlphaImputeInMod
 implicit none
 
-integer :: i,j,k,TurnOn
+integer :: i,j,k,TurnOn,z
 type(AlphaImputeInput), pointer :: inputParams
 integer :: tmpParentId
 inputParams => defaultInput
 
-do i=1,nAnisP
+do z=1,nAnisP
+    i = pedigree%sortedIndexList(z) !get sorted index
     do k=2,3
         TurnOn=1
         tmpParentId = ped%pedigree(i)%getSireDamNewIDByIndex(k)
@@ -3454,7 +3452,8 @@ do i=1,nAnisP
 enddo
 
 ! WARNING: This can be refactored
-do i=1,nAnisP
+do z=1,nAnisP
+    i = pedigree%sortedIndexList(z) !get sorted index
     do j=1,inputParams%nsnp
         if (TempGenos(i,j)==9 .and. .not. ped%pedigree(i)%hasDummyParent()) then
             if ((TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(2),j)==0).and.(TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(3),j)==0)) then
