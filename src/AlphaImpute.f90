@@ -3280,7 +3280,9 @@ else
         nSnpR=count(SnpIncluded(:)==1)
     endif
     if (nSnpR==inputParams%nsnp) then
-        allocate(Genos(0:nAnisP,inputParams%nsnp))
+        if (.not. allocated(genos)) then
+            allocate(Genos(0:nAnisP,inputParams%nsnp))
+        endif
         Genos=TempGenos
         deallocate(TempGenos)
         SnpIncluded(:)=1
@@ -3423,7 +3425,7 @@ integer :: tmpParentId
 inputParams => defaultInput
 
 do z=1,nAnisP
-    i = pedigree%sortedIndexList(z) !get sorted index
+    i = ped%sortedIndexList(z) !get sorted index
     do k=2,3
         TurnOn=1
         tmpParentId = ped%pedigree(i)%getSireDamNewIDByIndex(k)
@@ -3453,7 +3455,7 @@ enddo
 
 ! WARNING: This can be refactored
 do z=1,nAnisP
-    i = pedigree%sortedIndexList(z) !get sorted index
+    i = ped%sortedIndexList(z) !get sorted index
     do j=1,inputParams%nsnp
         if (TempGenos(i,j)==9 .and. .not. ped%pedigree(i)%hasDummyParent()) then
             if ((TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(2),j)==0).and.(TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(3),j)==0)) then
