@@ -1357,10 +1357,10 @@ allocate(TmpGenos(0:nAnisP,inputParams%nSnpRaw))
         endif
 
         l=0
-        write(error_unit, *) "nAnisG:,",nAnisG
         do j=1,inputParams%nSnpRaw
            if (SnpIncluded(j)==1) then
                l=l+1
+                write(error_unit, *) "nAnisG:,",nAnisG
                 do i=1,nAnisG
                     ProbImputeGenos(GlobalHmmID(i),j)   = ProbImputeGenosHmm(i,j)
                     ProbImputePhase(GlobalHmmID(i),j,1) = ProbImputePhaseHmm(i,j,1)
@@ -3281,7 +3281,7 @@ else
         nSnpR=count(SnpIncluded(:)==1)
     endif
     if (nSnpR==inputParams%nsnp) then
-        if (.not. allocated(genos)) then
+        if (.not. allocated(Genos)) then
             allocate(Genos(0:nAnisP,inputParams%nsnp))
         endif
         Genos=TempGenos
@@ -3426,7 +3426,7 @@ integer :: tmpParentId
 inputParams => defaultInput
 
 do z=1,nAnisP
-    i = ped%sortedIndexList(z) !get sorted index
+    i = pedigree%sortedIndexList(z) !get sorted index
     do k=2,3
         TurnOn=1
         tmpParentId = ped%pedigree(i)%getSireDamNewIDByIndex(k)
@@ -3456,7 +3456,7 @@ enddo
 
 ! WARNING: This can be refactored
 do z=1,nAnisP
-    i = ped%sortedIndexList(z) !get sorted index
+    i = pedigree%sortedIndexList(z) !get sorted index
     do j=1,inputParams%nsnp
         if (TempGenos(i,j)==9 .and. .not. ped%pedigree(i)%hasDummyParent()) then
             if ((TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(2),j)==0).and.(TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(3),j)==0)) then
