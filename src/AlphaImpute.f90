@@ -3595,7 +3595,7 @@ RecIdHDIndex=0
 
 
 call ped%outputSortedPedigreeInAlphaImputeFormat("." // DASH // "Miscellaneous" // DASH // "InternalDataRecoding.txt")
-
+call ped%sortPedigreeAndOverwrite()
 if (inputParams%SexOpt==1) then
         do j=1,nAnisInGenderFile
             tmpId = ped%dictionary%getValue(genderId(j))
