@@ -3420,13 +3420,12 @@ use Global
 use AlphaImputeInMod
 implicit none
 
-integer :: i,j,k,TurnOn,z
+integer :: i,j,k,TurnOn
 type(AlphaImputeInput), pointer :: inputParams
 integer :: tmpParentId
 inputParams => defaultInput
 
-do z=1,nAnisP
-    i = pedigree%sortedIndexList(z) !get sorted index
+do i=1,nAnisP
     do k=2,3
         TurnOn=1
         tmpParentId = ped%pedigree(i)%getSireDamNewIDByIndex(k)
@@ -3455,8 +3454,7 @@ do z=1,nAnisP
 enddo
 
 ! WARNING: This can be refactored
-do z=1,nAnisP
-    i = pedigree%sortedIndexList(z) !get sorted index
+do i=1,nAnisP
     do j=1,inputParams%nsnp
         if (TempGenos(i,j)==9 .and. .not. ped%pedigree(i)%hasDummyParent()) then
             if ((TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(2),j)==0).and.(TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(3),j)==0)) then
