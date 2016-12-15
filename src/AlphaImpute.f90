@@ -1360,6 +1360,7 @@ allocate(TmpGenos(0:nAnisP,inputParams%nSnpRaw))
         do j=1,inputParams%nSnpRaw
            if (SnpIncluded(j)==1) then
                l=l+1
+                write(error_unit, *) "nAnisG:,",nAnisG
                 do i=1,nAnisG
                     ProbImputeGenos(GlobalHmmID(i),j)   = ProbImputeGenosHmm(i,j)
                     ProbImputePhase(GlobalHmmID(i),j,1) = ProbImputePhaseHmm(i,j,1)
@@ -3280,7 +3281,9 @@ else
         nSnpR=count(SnpIncluded(:)==1)
     endif
     if (nSnpR==inputParams%nsnp) then
-        allocate(Genos(0:nAnisP,inputParams%nsnp))
+        if (.not. allocated(Genos)) then
+            allocate(Genos(0:nAnisP,inputParams%nsnp))
+        endif
         Genos=TempGenos
         deallocate(TempGenos)
         SnpIncluded(:)=1
