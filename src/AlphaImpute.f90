@@ -1357,6 +1357,7 @@ allocate(TmpGenos(0:nAnisP,inputParams%nSnpRaw))
         endif
 
         l=0
+        write(error_unit, *) "nAnisG:,",nAnisG
         do j=1,inputParams%nSnpRaw
            if (SnpIncluded(j)==1) then
                l=l+1
