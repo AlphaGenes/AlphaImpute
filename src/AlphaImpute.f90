@@ -3605,12 +3605,9 @@ if (inputParams%SexOpt==1) then
         enddo
 endif
 
-allocate(Pruned(0:nAnisP))
-allocate(TempGenos(0:nAnisP,inputParams%nsnp))
+allocate(TempGenos(0:ped%pedigreeSize,inputParams%nsnp))
 
 TempGenos=9
-Pruned=0
-Pruned(0)=1
 do i=1,nAnisG
     tmpId = ped%dictionary%getValue(GenotypeId(i))
     if (tmpId /= dict_null) then
