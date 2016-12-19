@@ -115,7 +115,7 @@ module AlphaImputeInMod
         character(len=:), allocatable::tag
         character(len=300),dimension(:),allocatable :: second
 
-        MultiHD = 0
+        this%MultiHD = 0
 
         open(newunit=unit, file=SpecFile, action="read", status="old")
         IOStatus = 0
