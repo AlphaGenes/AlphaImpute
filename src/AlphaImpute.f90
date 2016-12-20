@@ -63,12 +63,12 @@ INTERFACE WriteProbabilities
     integer, intent(IN) :: Indexes(nAnisG)
   END SUBROUTINE WriteProbabilitiesHMM
 
-SUBROUTINE WriteProbabilitiesGeneProb(outFile, GenosProbs, ped, nExtraAnims, nAnisP, nSnps)
-    use PedigreeModule
-    character(len=*), intent(IN) :: outFile
-    integer, intent(IN) :: nExtraAnims, nAnisP, nSnps
-    double precision, intent(IN) :: GenosProbs(nAnisP,nSnps,2)
-    type(pedigreeHolder),intent(in) :: ped
+subroutine WriteProbabilitiesGeneProb(outFile, GenosProbs, ped, nSnps)
+use PedigreeModule
+character(len=*), intent(IN) :: outFile
+integer, intent(IN) :: nSnps
+type(pedigreeHolder), intent(IN) :: ped
+double precision, intent(IN) :: GenosProbs(ped%pedigreesize-ped%nDummys,nSnps,2)
   END SUBROUTINE WriteProbabilitiesGeneProb
 END INTERFACE
 
@@ -221,9 +221,9 @@ else
             if (inputParams%outopt==1) then
               markers = inputParams%nSnpRaw
             end if
-            allocate(GenosProbs(inputParams%GlobalExtraAnimals + nAnisP, markers, 2))
+            allocate(GenosProbs(ped%nDummys + nAnisP, markers, 2))
             call ReReadIterateGeneProbs(GenosProbs, .FALSE., nAnisP)
-            call WriteProbabilities("./Results/GenotypeProbabilities.txt", GenosProbs, ped, inputParams%GlobalExtraAnimals, nAnisP, inputParams%nsnp)
+            call WriteProbabilities("./Results/GenotypeProbabilities.txt", GenosProbs, ped, inputParams%nsnp)
             deallocate(GenosProbs)
 
             if (inputParams%restartOption==OPT_RESTART_GENEPROB) then
@@ -242,9 +242,9 @@ else
           if (inputParams%outopt==1) then
             markers = inputParams%nSnpRaw
           end if
-          allocate(GenosProbs(inputParams%GlobalExtraAnimals + nAnisP, markers, 2))
+          allocate(GenosProbs(ped%nDummys+ nAnisP, markers, 2))
           call ReReadIterateGeneProbs(GenosProbs, .FALSE., nAnisP)
-          call WriteProbabilities("./Results/GenotypeProbabilities.txt", GenosProbs, ped, inputParams%GlobalExtraAnimals, nAnisP, inputParams%nsnp)
+          call WriteProbabilities("./Results/GenotypeProbabilities.txt", GenosProbs, ped, inputParams%nsnp)
           deallocate(GenosProbs)
           write(6,*) "Restart option 1 stops program after genotype probabilities have been outputted"
           stop
@@ -1078,7 +1078,7 @@ use output
 implicit none
 
 character(len=7) :: cm !use for formatting output - allows for up to 1 million SNPs
-integer :: i,j,k,l
+integer :: i,j,l
 integer,allocatable,dimension(:):: WorkTmp
 double precision :: ImputationQuality(nAnisP,6)
 double precision, allocatable :: GenosProbs(:,:,:)
@@ -1096,12 +1096,12 @@ INTERFACE WriteProbabilities
 
   END SUBROUTINE WriteProbabilitiesHMM
 
-  SUBROUTINE WriteProbabilitiesGeneProb(outFile, GenosProbs, ped, nExtraAnims, nAnisP, nSnps)
-    use pedigreeModule
-    character(len=*), intent(IN) :: outFile
-    integer, intent(IN) :: nExtraAnims, nAnisP, nSnps
-    double precision, intent(IN) :: GenosProbs(nAnisP,nSnps,2)
-    type(PedigreeHolder), intent(in) :: ped
+subroutine WriteProbabilitiesGeneProb(outFile, GenosProbs, ped, nSnps)
+use PedigreeModule
+character(len=*), intent(IN) :: outFile
+integer, intent(IN) :: nSnps
+type(pedigreeHolder), intent(IN) :: ped
+double precision, intent(IN) :: GenosProbs(ped%pedigreesize-ped%nDummys,nSnps,2)
   END SUBROUTINE WriteProbabilitiesGeneProb
 END INTERFACE
 
@@ -1125,7 +1125,6 @@ allocate(WorkTmp(inputParams%nSnpRaw))
 
 if (inputParams%hmmoption==RUN_HMM_NGS) then
     nAnisP = nAnisG
-    inputParams%GlobalExtraAnimals=0
 endif
 
 write(cm,'(I7)') inputParams%nSnpRaw !for formatting
@@ -1177,7 +1176,7 @@ if (inputParams%outopt==0) then
 
     do i=1, nAnisP
         if (ped%pedigree(i)%isDummy) then
-            cycle
+            exit
         endif
          write (33,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%originalID,ImputePhase(i,:,1)
          write (33,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%originalID,ImputePhase(i,:,2)
@@ -1205,7 +1204,7 @@ if (inputParams%outopt==0) then
     ImputationQuality(:,2)=0.0
     do i=1, nAnisP
         if (ped%pedigree(i)%isDummy) then
-            cycle
+            exit
         endif
         do j=1,inputParams%nsnp
             !ImputationQuality(i,2)=ImputationQuality(i,2)+abs(ProbImputeGenos(i,j)-(2*Maf(j)))
@@ -1220,14 +1219,14 @@ if (inputParams%outopt==0) then
     enddo
 
     do j=1,inputParams%nsnp
-        write (51,'(i10,20000f7.2)') j,float(((nAnisP-(inputParams%GlobalExtraAnimals+1))+1)-count(ImputeGenos(inputParams%GlobalExtraAnimals+1:nAnisP,j)==9))/((nAnisP-(inputParams%GlobalExtraAnimals+1))+1)
+        write (51,'(i10,20000f7.2)') j,float(((nAnisP-(ped%nDummys+1))+1)-count(ImputeGenos(ped%nDummys+1:nAnisP,j)==9))/((nAnisP-(ped%nDummys+1))+1)
     enddo
 
     call CheckImputationInconsistencies(ImputeGenos, ImputePhase, nAnisP, inputParams%nsnp)
     inputParams%WellPhasedThresh=inputParams%WellPhasedThresh/100
     do i=1, nAnisP
         if (ped%pedigree(i)%isDummy) then
-            cycle
+            exit
         endif
         if (ImputationQuality(i,5)>=inputParams%WellPhasedThresh) then
             write (52,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%originalID,ImputePhase(i,:,1)
@@ -1272,7 +1271,7 @@ allocate(TmpGenos(0:nAnisP,inputParams%nSnpRaw))
                 if (tmpIDInt /= DICT_NULL) then
                     do j=1,inputParams%nSnpRaw
                         if (SnpIncluded(j)==0) then
-                            if (WorkTmp(j)==1) TmpGenos(k,j)=1
+                            if (WorkTmp(j)==1) TmpGenos(tmpIDInt,j)=1
                             if (WorkTmp(j)==0) then
                                 TmpPhase(tmpIDInt,j,:)=0
                                 TmpGenos(tmpIDInt,j)=0
@@ -1294,7 +1293,7 @@ allocate(TmpGenos(0:nAnisP,inputParams%nSnpRaw))
     call CheckImputationInconsistencies(TmpGenos, TmpPhase, nAnisP, inputParams%nsnp)
     do i=1, nAnisP
         if (ped%pedigree(i)%isDummy) then
-            cycle
+            exit
         endif
          write (33,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%originalID,TmpPhase(i,:,1)
          write (33,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%originalID,TmpPhase(i,:,2)
@@ -1405,7 +1404,7 @@ allocate(TmpGenos(0:nAnisP,inputParams%nSnpRaw))
     ! call CheckImputationInconsistencies(ImputeGenos, ImputePhase, nAnisP, inputParams%nsnp)
     do i=1, nAnisP
         if (ped%pedigree(i)%isDummy) then
-            cycle
+            exit
         endif
          write (53,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%originalID,ImputePhase(i,:,1)
          write (53,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%originalID,ImputePhase(i,:,2)
@@ -1419,7 +1418,7 @@ allocate(TmpGenos(0:nAnisP,inputParams%nSnpRaw))
     if (allocated(GPI)) then
         do i=1, nAnisP
         if (ped%pedigree(i)%isDummy) then
-            cycle
+            exit
         endif
           write (60,'(a20,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4)') ped%pedigree(i)%originalID,GPI(i,:)
         end do
@@ -1433,7 +1432,7 @@ allocate(TmpGenos(0:nAnisP,inputParams%nSnpRaw))
         if (inputParams%bypassgeneprob==0) then
             allocate(GenosProbs(nAnisP,nSnpIterate,2))
             call ReReadIterateGeneProbs(GenosProbs, .TRUE., nAnisP)
-            call WriteProbabilities("./Results/GenotypeProbabilities.txt", GenosProbs, ped, inputParams%GlobalExtraAnimals, nAnisP, inputParams%nsnp)
+            call WriteProbabilities("./Results/GenotypeProbabilities.txt", GenosProbs, ped, inputParams%nsnp)
         endif
     endif
 
@@ -1467,7 +1466,7 @@ allocate(TmpGenos(0:nAnisP,inputParams%nSnpRaw))
     ImputationQuality(:,2)=0.0
     do i=1, nAnisP
         if (ped%pedigree(i)%isDummy) then
-            cycle
+            exit
         endif
         do j=1,inputParams%nSnpRaw
             !ImputationQuality(i,2)=ImputationQuality(i,2)+abs(ProbImputeGenos(i,j)-(2*Maf(j)))
@@ -1486,14 +1485,14 @@ allocate(TmpGenos(0:nAnisP,inputParams%nSnpRaw))
 #endif
 
     do j=1,inputParams%nSnpRaw
-        write (51,'(i10,20000f7.2)') j,float(((nAnisP-(inputParams%GlobalExtraAnimals+1))+1)-count(ImputeGenos(inputParams%GlobalExtraAnimals+1:nAnisP,j)==9))/((nAnisP-(inputParams%GlobalExtraAnimals+1))+1)
+        write (51,'(i10,20000f7.2)') j,float(((nAnisP-(ped%nDummys+1))+1)-count(ImputeGenos(ped%nDummys+1:nAnisP,j)==9))/((nAnisP-(ped%nDummys+1))+1)
     enddo
 
     call CheckImputationInconsistencies(TmpGenos, TmpPhase, nAnisP, inputParams%nsnp)
     inputParams%WellPhasedThresh=inputParams%WellPhasedThresh/100
     do i=1, nAnisP
         if (ped%pedigree(i)%isDummy) then
-            cycle
+            exit
         endif
         if (ImputationQuality(i,5)>=inputParams%WellPhasedThresh) then
             write (52,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%originalID,TmpPhase(i,:,1)
@@ -1801,19 +1800,17 @@ do i=1,nAnisP
                 endif
             enddo
         endif
-        if (i>inputParams%GlobalExtraAnimals) then
-            write (44,'(a20,20000i20)') ped%pedigree(i)%originalID,nRec
-            write (42,'(a20,20000i20)') ped%pedigree(i)%originalID,nRec,StR(1:nRec)
-            write (42,'(a20,20000i20)') ped%pedigree(i)%originalID,nRec,EnR(1:nRec)
+        write (44,'(a20,20000i20)') ped%pedigree(i)%originalID,nRec
+        write (42,'(a20,20000i20)') ped%pedigree(i)%originalID,nRec,StR(1:nRec)
+        write (42,'(a20,20000i20)') ped%pedigree(i)%originalID,nRec,EnR(1:nRec)
 !
 !           write (43,'(a20,20000i20)') ped%pedigree(i)%originalID,nRec,StRNarrow(1:nRec)
 !           write (43,'(a20,20000i20)') ped%pedigree(i)%originalID,nRec,EnRNarrow(1:nRec)
-            do j=1,nRec
-                write (45,'(a20,20000i20)') ped%pedigree(i)%originalID,e,StR(j),EnR(j)
+        do j=1,nRec
+            write (45,'(a20,20000i20)') ped%pedigree(i)%originalID,e,StR(j),EnR(j)
 !               write (46,'(a20,20000i20)') ped%pedigree(i)%originalID,e,StRNarrow(j),EnRNarrow(j)
-            enddo
+        enddo
 
-        endif
     enddo
     WorkPhase(i,:,:)=ImputePhase(i,:,:)
 
@@ -1826,7 +1823,7 @@ open (unit=41,file="Results" // DASH // "ImputeGenotypeProbabilities.txt",status
 
 do i=1, nAnisP
         if (ped%pedigree(i)%isDummy) then
-            cycle
+            exit
         endif
      write (33,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%originalID,ImputePhase(i,:,1)
      write (33,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%originalID,ImputePhase(i,:,2)
@@ -2224,7 +2221,7 @@ else                                                                    ! Other 
             enddo
         endif
         if (associated(ped%pedigree(i)%damPointer)) then
-            if (ped%pedigree(i)%damPointer%isDummy) cycle
+            if (ped%pedigree(i)%damPointer%isDummy) exit
             ParId=ped%pedigree(i)%damPointer%id
             do j=1,inputParams%nsnp                                                     ! Phase if my mother is homozygous
                 if (Genos(ParId,j)==0) GlobalWorkPhase(i,j,2)=0
@@ -2297,7 +2294,6 @@ do i=1,nAnisP
     HetStart=-1
     ! For each gamete
     do e=1,2
-        if (ped%pedigree(i)%isDummyBasedOnIndex(e)) cycle
         PatMat=e
         SireDamRL=e+1
         CountLeftSwitch=0
@@ -3496,7 +3492,6 @@ implicit none
 
 integer :: e,i,j,CountBothGeno,CountDisagree,CountChanges,IndId,ParId,ParPos
 integer :: TurnOn
-integer,allocatable,dimension (:) :: Pruned
 type(AlphaImputeInput), pointer :: inputParams
 integer :: tmpID
 integer :: nHomoParent, nBothHomo
@@ -3600,7 +3595,6 @@ if (inputParams%SexOpt==1) then
             if (tmpID /= dict_null) then
                 ped%pedigree(tmpId)%gender=GenderRaw(j)
                 TurnOn=0
-                exit
             endif
         enddo
 endif
@@ -3766,7 +3760,7 @@ do i=1,nAnisG
             integer :: tmpID
             tmpID = ped%dictionary%getValue(dumC)
             if (tmpId /= DICT_NULL) then
-                FinalSetter(k)=1
+                FinalSetter(tmpId)=1
             endif
         endblock
     endif
@@ -3799,7 +3793,7 @@ if (inputParams%outopt==0) then
         do i=1,nAnisTest
             tmpID = ped%dictionary%getValue(TrueGenosId(i))
             if (tmpID /= dict_null) then
-                RecTestId(i)=j
+                RecTestId(i)=tmpId
             
             endif
         enddo
@@ -3923,7 +3917,7 @@ if (inputParams%outopt==0) then
 
     do i=1, nAnisP
         if (ped%pedigree(i)%isDummy) then
-            cycle
+            EXIT
         endif
         write (45,'(a25,i3,2f7.2)') ped%pedigree(i)%originalID,FinalSetter(i),float(count(ImputePhase(i,:,1)/=9))/inputParams%nsnp &
                             ,float(count(ImputePhase(i,:,2)/=9))/inputParams%nsnp
@@ -4061,7 +4055,7 @@ else
 
     do i=1, nAnisP
         if (ped%pedigree(i)%isDummy) then
-            cycle
+            exit
         endif
         write (45,'(a25,i3,2f7.2)') ped%pedigree(i)%originalID,FinalSetter(i),float(count(ImputePhase(i,:,1)/=9))/inputParams%nSnpRaw &
                             ,float(count(ImputePhase(i,:,2)/=9))/inputParams%nSnpRaw
@@ -4162,8 +4156,7 @@ do i=1,nAnisG
     if (float(Counter)>(float(inputParams%nSnpRaw)/2)) then
         tmpIDInt = ped%dictionary%getValue(dumC)
         if (tmpIDInt /= DICT_NULL) then
-            FinalSetter(k)=1
-            exit
+            FinalSetter(tmpIDInt)=1
         endif
         
     endif
@@ -4377,7 +4370,7 @@ if (inputParams%outopt==0) then
 
     do i=1, nAnisP
         if (ped%pedigree(i)%isDummy) then
-            cycle
+            exit
         endif
         write (45,'(a25,i3,2f7.2)') ped%pedigree(i)%originalID,FinalSetter(i),float(count(ImputePhase(i,:,1)/=9))/inputParams%nsnp &
                             ,float(count(ImputePhase(i,:,2)/=9))/inputParams%nsnp
@@ -4586,7 +4579,7 @@ else
 
     do i=1, nAnisP
         if (ped%pedigree(i)%isDummy) then
-            cycle
+            exit
         endif
         write (45,'(a25,i3,2f7.2)') ped%pedigree(i)%originalID,FinalSetter(i),float(count(ImputePhase(i,:,1)/=9))/inputParams%nSnpRaw &
                             ,float(count(ImputePhase(i,:,2)/=9))/inputParams%nSnpRaw

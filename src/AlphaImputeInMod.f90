@@ -79,7 +79,6 @@ module AlphaImputeInMod
 
         ! other
         integer(kind=int32) :: nSnpRaw,nAgreeImputeHDLib,nAgreeParentPhaseElim,nAgreeGrandParentPhaseElim,nAgreePhaseElim,nAgreeInternalHapLibElim
-        integer(kind=int32) :: GlobalExtraAnimals
         real(kind=real64) :: phasedThreshold,imputedThreshold
         contains
             procedure :: ReadInParameterFile
@@ -521,8 +520,6 @@ module AlphaImputeInMod
             this%nAgreePhaseElim=4
             this%nAgreeInternalHapLibElim=4
         endif
-
-        this%GlobalExtraAnimals=0
 
         this%nSnpRaw = this%nsnp
 

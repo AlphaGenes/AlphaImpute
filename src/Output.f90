@@ -63,15 +63,15 @@ close(55)
 ! write(0,*) "Wrote out file", outFile, "with genotype probabilities"
 end subroutine WriteProbabilitiesHMM
 
-subroutine WriteProbabilitiesGeneProb(outFile, GenosProbs, ped, nExtraAnims, nAnisP, nSnps)
+subroutine WriteProbabilitiesGeneProb(outFile, GenosProbs, ped, nSnps)
 use PedigreeModule
 character(len=*), intent(IN) :: outFile
-integer, intent(IN) :: nExtraAnims, nAnisP, nSnps
-double precision, intent(IN) :: GenosProbs(nAnisP,nSnps,2)
+integer, intent(IN) :: nSnps
 type(pedigreeHolder), intent(IN) :: ped
+double precision, intent(IN) :: GenosProbs(ped%pedigreesize-ped%nDummys,nSnps,2)
 
 ! Local Variable
-integer :: i,k!,j,k, n0, n1, n2
+integer :: i!,j,k, n0, n1, n2
 ! real, allocatable :: Probs0(:), Probs1(:)
 
 open (unit=55,file=outFile,status="unknown")
@@ -79,10 +79,9 @@ open (unit=55,file=outFile,status="unknown")
 ! allocate(Probs0(nSnps))
 ! allocate(Probs1(nSnps))
 
-do i=nExtraAnims+1,nAnisP
-    k=i-nExtraAnims
-    write (55,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%Pedigree(i)%originalID,GenosProbs(k,:,1)
-    write (55,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%Pedigree(i)%originalID,GenosProbs(k,:,2)
+do i=1,ped%pedigreesize-ped%nDummys
+    write (55,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%Pedigree(i)%originalID,GenosProbs(i,:,1)
+    write (55,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%Pedigree(i)%originalID,GenosProbs(i,:,2)
     ! enddo
 enddo
 end subroutine WriteProbabilitiesGeneProb
