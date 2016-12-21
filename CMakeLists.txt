@@ -18,7 +18,6 @@ INCLUDE(${CMAKE_MODULE_PATH}/setVersion.cmake)
 
 
 add_definitions(-DCLUSTER=${CLUSTER})
-
 # Define the executable name
 SET(ALPHAIMPUTEEXE AlphaImpute)
 MESSAGE("Prog name ${ALPHAIMPUTEEXE}")
