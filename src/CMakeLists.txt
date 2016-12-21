@@ -7,6 +7,7 @@ SET(ALPHAIMPUTE_src
             ${SRCALPHAIMPUTE}hmmvariables.f90
             ${SRCALPHAIMPUTE}hmmHaplotype.f90          
             ${SRCALPHAIMPUTE}Imputation.f90
+            ${SRCALPHAIMPUTE}informationModule.f90
             ${SRCALPHAIMPUTE}InputMod.f90
             ${SRCALPHAIMPUTE}manageWindows.f90
             ${SRCALPHAIMPUTE}par_zig_mod.f90
