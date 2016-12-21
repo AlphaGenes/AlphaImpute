@@ -668,10 +668,11 @@ end subroutine InternalParentPhaseElim
             ! allocate(BitWork(numSections,2))
             ! allocate(MissWork(numSections,2))
             ! allocate(HapElim(nAnisP*2,2))
-            HapElim=1
+            ! HapElim=1
             BanBoth=0
             BitWork = 0
             MissWork = 0
+            counter = nAnisP*2*2
             do e=1,2
               ! If GeneProbPhase has been executed, that is, if not considering the Sex Chromosome, then MSTermInfo={0,1}.
               ! Else, if Sex Chromosome, then MSTermInfo is 0 always
@@ -687,12 +688,13 @@ end subroutine InternalParentPhaseElim
                   if ( .NOT. Section%compareHaplotypeAllowMissing(BitHapLib(h,:), BitImputePhase(i,:,e), &
                     MissHapLib(h,:), MissImputePhase(i,:,e))) then
                     HapElim(h,e)=0
+                    counter = counter - 1 !same as previous but without having to acutally use count
                   end if
                 enddo
 
                 ! If the number of candidate haplotypes is less than the 25% of the Library,
                 ! then impute if all alleles have been phased the same way
-                Counter=count(HapElim(1:nHap,e)==1)
+                ! Counter=count(HapElim(1:nHap,e)==1)
                 if (float(Counter)<(float(nHap)*0.25)) then
                   ! Ban this haplotype will be phased here and nowhere else
                   BanBoth(e)=1
@@ -706,7 +708,7 @@ end subroutine InternalParentPhaseElim
 
                     ! Count the occurrences in phasing of alleles across candidate haplotypes
                     do h=1,nHap
-                      if (HapElim(h,e)==1) then
+                      if (HapElim(h,e)/=0) then
                         if (BTEST(BitHapLib(h,curSection), curPos) == .FALSE. .AND. &
                             BTEST(MissHapLib(h,curSection), curPos) == .FALSE.) then
                           Count0=Count0+1
