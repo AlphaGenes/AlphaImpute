@@ -15,6 +15,8 @@ set(CMAKE_MACOSX_RPATH 0)
 
 INCLUDE(${CMAKE_MODULE_PATH}/setVersion.cmake)
 
+
+
 add_definitions(-DCLUSTER=${CLUSTER})
 
 # Define the executable name
@@ -31,6 +33,8 @@ SET(BIN ${CMAKE_SOURCE_DIR}/bin)
 SET(TESTS ${CMAKE_SOURCE_DIR}/tests)
 SET(SRCALPHAIMPUTE ${SRC}/)
 
+
+INCLUDE(${CMAKE_MODULE_PATH}/findDoxygen.cmake)
 # Defined libary source
 
 # Uncomment if it is required that Fortran 90 is supported

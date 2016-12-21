@@ -665,9 +665,9 @@ end subroutine InternalParentPhaseElim
           !$OMP DEFAULT(SHARED) &
           !$OMP PRIVATE(i,j,e,h,HapElim,BanBoth,Counter,Count0,Count1,Ban,curPos,curSection,BitWork,MissWork,BitGeno)
           do i=1,nAnisP
-            allocate(BitWork(numSections,2))
-            allocate(MissWork(numSections,2))
-            allocate(HapElim(nAnisP*2,2))
+            ! allocate(BitWork(numSections,2))
+            ! allocate(MissWork(numSections,2))
+            ! allocate(HapElim(nAnisP*2,2))
             HapElim=1
             BanBoth=0
             BitWork = 0
@@ -796,9 +796,9 @@ end subroutine InternalParentPhaseElim
                 enddo
               endif
             enddo
-            deallocate(HapElim)
-            deallocate(BitWork)
-            deallocate(MissWork)
+            ! deallocate(HapElim)
+            ! deallocate(BitWork)
+            ! deallocate(MissWork)
           enddo
           !$OMP END PARALLEL DO
 
