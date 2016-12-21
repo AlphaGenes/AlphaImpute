@@ -29,175 +29,83 @@ module InputMod
   public:: CountInData, ReadInData, ReadSeq, ReadGenos
 
 
-  contains
+contains
 
-!---------------------------------------------------------------------------
-! DESCRIPTION:
-!> @brief      Count the number of individuals
-!
-!> @details    This subroutine encapsulates the two different the subroutines
-!>             that count the number of animals and markers
-!
-!> @author     Roberto Antolin, roberto.antolin@roslin.ed.ac.uk
-!
-!> @date       Nov 16, 2016
-!
-! PARAMETERS:
-!> @param[in]
-!---------------------------------------------------------------------------
+  !---------------------------------------------------------------------------
+  ! DESCRIPTION:
+  !> @brief      Count the number of individuals
+  !
+  !> @details    This subroutine encapsulates the two different the subroutines
+  !>             that count the number of animals and markers
+  !
+  !> @author     Roberto Antolin, roberto.antolin@roslin.ed.ac.uk
+  !
+  !> @date       Nov 16, 2016
+  !
+  ! PARAMETERS:
+  !> @param[in]
+  !---------------------------------------------------------------------------
   subroutine CountInData
-  use Global
-  use AlphaImputeInMod
-  implicit none
+    use Global
+    use AlphaImputeInMod
+    implicit none
 
-  type(AlphaImputeInput), pointer :: inputParams
-  inputParams => defaultInput
+    type(AlphaImputeInput), pointer :: inputParams
+    inputParams => defaultInput
 
-  if (inputParams%hmmoption == RUN_HMM_NGS) then
-    call CountInSequenceData
-  else
-    call CountInGenotypeData
-  end if
+    if (inputParams%hmmoption == RUN_HMM_NGS) then
+      call CountInSequenceData
+    else
+      call CountInGenotypeData
+    end if
   end subroutine CountInData
 
-!---------------------------------------------------------------------------
-! DESCRIPTION:
-!> @brief      Count the number of individuals
-!
-!> @details    This subroutine counts the number of individuals genotyped and
-!>             the number of individuals in the pedigree.
-!>             If no pedigree information is available, then these to counts
-!>             are equal to the number of individuals genotyped.
-!
-!> @author     Roberto Antolin, roberto.antolin@roslin.ed.ac.uk
-!
-!> @date       Nov 10, 2016
-!
-! PARAMETERS:
-!> @param[in]
-!---------------------------------------------------------------------------
+  !---------------------------------------------------------------------------
+  ! DESCRIPTION:
+  !> @brief      Count the number of individuals
+  !
+  !> @details    This subroutine counts the number of individuals genotyped and
+  !>             the number of individuals in the pedigree.
+  !>             If no pedigree information is available, then these to counts
+  !>             are equal to the number of individuals genotyped.
+  !
+  !> @author     Roberto Antolin, roberto.antolin@roslin.ed.ac.uk
+  !
+  !> @date       Nov 10, 2016
+  !
+  ! PARAMETERS:
+  !> @param[in]
+  !---------------------------------------------------------------------------
   subroutine CountInGenotypeData
 
-  use Global
-  use GlobalVariablesHmmMaCH
-  use AlphaImputeInMod
-  implicit none
+    use Global
+    use GlobalVariablesHmmMaCH
+    use AlphaImputeInMod
+    implicit none
 
-  integer :: k
-  character (len=300) :: dumC
-  type(AlphaImputeInput), pointer :: inputParams
+    integer :: k
+    character (len=300) :: dumC
+    type(AlphaImputeInput), pointer :: inputParams
 
-  inputParams => defaultInput
-  do
-    read (inputParams%pedigreeFileUnit,*,iostat=k) dumC
-    nAnisRawPedigree=nAnisRawPedigree+1
-    if (k/=0) then
-      nAnisRawPedigree=nAnisRawPedigree-1
-      exit            ! This forces to exit if an error is found
-    endif
-  enddo
-  rewind(inputParams%genotypeFileUnit)
-
-  print*, " ",nAnisRawPedigree," individuals in the pedigree file"
-  nObsDataRaw=nAnisRawPedigree
-
-  do
-    read (inputParams%genotypeFileUnit,*,iostat=k) dumC
-    nAnisG=nAnisG+1
-    if (k/=0) then
-      nAnisG=nAnisG-1
-      exit
-    endif
-  enddo
-
-  rewind(inputParams%genotypeFileUnit)
-
-  if (inputParams%hmmoption == RUN_HMM_NGS) then
-    if(mod(nAnisG,2)==0) then
-      nAnisG=nAnisG/2
-    else
-      write(0,*) "Error: The number of lines in the file of reads is not even. Is the file corrupt?"
-      write(0,*) "The program will now stop"
-      stop
-    endif
-  endif
-
-  print*, " ",nAnisG," individuals in the genotype file"
-
-  ! This is incoherent with functions ReadInData and ReadInParameterFile
-  if (trim(inputParams%PedigreeFile)=="NoPedigree") nAnisRawPedigree=nAnisG
-
-  end subroutine CountInGenotypeData
-
-!---------------------------------------------------------------------------
-! DESCRIPTION:
-!> @brief      Count the number of individuals
-!
-!> @details    This subroutine counts the number of individuals sequenced and
-!>             the number of individuals in the pedigree.
-!>             If no pedigree information is available, then these to counts
-!>             are equal to the number of individuals genotyped.
-!
-!> @author     Roberto Antolin, roberto.antolin@roslin.ed.ac.uk
-!
-!> @date       Nov 10, 2016
-!
-! PARAMETERS:
-!> @param[in]
-!---------------------------------------------------------------------------
-  subroutine CountInSequenceData
-  use Global
-  use GlobalVariablesHmmMaCH
-  use AlphaImputeInMod
-  implicit none
-
-  integer :: k, markers
-  character (len=1024*1024) :: dumC
-  type(AlphaImputeInput), pointer :: inputParams
-
-  inputParams => defaultInput
-  do
-    read (inputParams%pedigreeFileUnit,*,iostat=k) dumC
-    nAnisRawPedigree=nAnisRawPedigree+1
-    if (k/=0) then
-      nAnisRawPedigree=nAnisRawPedigree-1
-      exit            ! This forces to exit if an error is found
-    endif
-  enddo
-  rewind(inputParams%genotypeFileUnit)
-
-  print*, " ",nAnisRawPedigree," individuals in the pedigree file"
-  nObsDataRaw=nAnisRawPedigree
-
-
-  if (inputParams%VCFFormat) then
-    read(inputParams%genotypeFileUnit,'(A)',iostat=k) dumC
-    nAnisG = nWords(trim(dumC)) - 5
-    print *, nAnisG
-
-    markers = 0
+    inputParams => defaultInput
     do
-      read (inputParams%genotypeFileUnit,*,iostat=k) dumC
-      markers = markers + 1
+      read (inputParams%pedigreeFileUnit,*,iostat=k) dumC
+      nAnisRawPedigree=nAnisRawPedigree+1
       if (k/=0) then
-        markers = markers - 1
-        exit
+        nAnisRawPedigree=nAnisRawPedigree-1
+        exit            ! This forces to exit if an error is found
       endif
     enddo
+    rewind(inputParams%genotypeFileUnit)
 
-    if (markers /= inputParams%nsnp) then
-      write(0,*) "Error: The number of markers in the file of sequence data does not match the"
-      write(0,*) "       number of markers provider by the user is not even. Is the file corrupt?"
-      stop
-    end if
-
-  else
+    print*, " ",nAnisRawPedigree," individuals in the pedigree file"
+    nObsDataRaw=nAnisRawPedigree
 
     do
       read (inputParams%genotypeFileUnit,*,iostat=k) dumC
-      nAnisG = nAnisG + 1
+      nAnisG=nAnisG+1
       if (k/=0) then
-        nAnisG = nAnisG - 1
+        nAnisG=nAnisG-1
         exit
       endif
     enddo
@@ -213,148 +121,240 @@ module InputMod
         stop
       endif
     endif
-  end if
 
-  print*, " ",nAnisG," individuals in the genotype file"
+    print*, " ",nAnisG," individuals in the genotype file"
 
-  ! This is incoherent with functions ReadInData and ReadInParameterFile
-  if (trim(inputParams%PedigreeFile)=="NoPedigree") nAnisRawPedigree=nAnisG
+    ! This is incoherent with functions ReadInData and ReadInParameterFile
+    if (trim(inputParams%PedigreeFile)=="NoPedigree") nAnisRawPedigree=nAnisG
+
+  end subroutine CountInGenotypeData
+
+  !---------------------------------------------------------------------------
+  ! DESCRIPTION:
+  !> @brief      Count the number of individuals
+  !
+  !> @details    This subroutine counts the number of individuals sequenced and
+  !>             the number of individuals in the pedigree.
+  !>             If no pedigree information is available, then these to counts
+  !>             are equal to the number of individuals genotyped.
+  !
+  !> @author     Roberto Antolin, roberto.antolin@roslin.ed.ac.uk
+  !
+  !> @date       Nov 10, 2016
+  !
+  ! PARAMETERS:
+  !> @param[in]
+  !---------------------------------------------------------------------------
+  subroutine CountInSequenceData
+    use Global
+    use GlobalVariablesHmmMaCH
+    use AlphaImputeInMod
+    implicit none
+
+    integer :: k, markers
+    character (len=1024*1024) :: dumC
+    type(AlphaImputeInput), pointer :: inputParams
+
+    inputParams => defaultInput
+    do
+      read (inputParams%pedigreeFileUnit,*,iostat=k) dumC
+      nAnisRawPedigree=nAnisRawPedigree+1
+      if (k/=0) then
+        nAnisRawPedigree=nAnisRawPedigree-1
+        exit            ! This forces to exit if an error is found
+      endif
+    enddo
+    rewind(inputParams%genotypeFileUnit)
+
+    print*, " ",nAnisRawPedigree," individuals in the pedigree file"
+    nObsDataRaw=nAnisRawPedigree
+
+
+    if (inputParams%VCFFormat) then
+      read(inputParams%genotypeFileUnit,'(A)',iostat=k) dumC
+      nAnisG = nWords(trim(dumC)) - 5
+      print *, nAnisG
+
+      markers = 0
+      do
+        read (inputParams%genotypeFileUnit,*,iostat=k) dumC
+        markers = markers + 1
+        if (k/=0) then
+          markers = markers - 1
+          exit
+        endif
+      enddo
+
+      if (markers /= inputParams%nsnp) then
+        write(0,*) "Error: The number of markers in the file of sequence data does not match the"
+        write(0,*) "       number of markers provider by the user is not even. Is the file corrupt?"
+        stop
+      end if
+
+    else
+
+      do
+        read (inputParams%genotypeFileUnit,*,iostat=k) dumC
+        nAnisG = nAnisG + 1
+        if (k/=0) then
+          nAnisG = nAnisG - 1
+          exit
+        endif
+      enddo
+
+      rewind(inputParams%genotypeFileUnit)
+
+      if (inputParams%hmmoption == RUN_HMM_NGS) then
+        if(mod(nAnisG,2)==0) then
+          nAnisG=nAnisG/2
+        else
+          write(0,*) "Error: The number of lines in the file of reads is not even. Is the file corrupt?"
+          write(0,*) "The program will now stop"
+          stop
+        endif
+      endif
+    end if
+
+    print*, " ",nAnisG," individuals in the genotype file"
+
+    ! This is incoherent with functions ReadInData and ReadInParameterFile
+    if (trim(inputParams%PedigreeFile)=="NoPedigree") nAnisRawPedigree=nAnisG
 
   end subroutine CountInSequenceData
 
-!---------------------------------------------------------------------------
-! DESCRIPTION:
-!> @brief      Read files
-!
-!> @details    This subroutine reads the pedigree data and the gender file
-!>             in case of Sex Chromosome
-!
-!> @author     Roberto Antolin, roberto.antolin@roslin.ed.ac.uk
-!
-!> @date       Nov 10, 2016
-!
-! PARAMETERS:
-!> @param[in]
-!---------------------------------------------------------------------------
+  !---------------------------------------------------------------------------
+  ! DESCRIPTION:
+  !> @brief      Read files
+  !
+  !> @details    This subroutine reads the pedigree data and the gender file
+  !>             in case of Sex Chromosome
+  !
+  !> @author     Roberto Antolin, roberto.antolin@roslin.ed.ac.uk
+  !
+  !> @date       Nov 10, 2016
+  !
+  ! PARAMETERS:
+  !> @param[in]
+  !---------------------------------------------------------------------------
   subroutine ReadInData
-  
-  use Global
-  use AlphaImputeInMod
-  implicit none
 
-  type(AlphaImputeInput), pointer :: inputParams
-  integer, allocatable, dimension(:) :: Temp
-  inputParams=> defaultInput
+    use Global
+    use AlphaImputeInMod
+    implicit none
 
-  allocate(Temp(inputParams%nsnp))
-  allocate(GenotypeId(nAnisG))
-  allocate(Genos(0:nAnisG,inputParams%nsnp))
-  allocate(GenderId(nAnisRawPedigree))
-  allocate(GenderRaw(nAnisRawPedigree))
+    type(AlphaImputeInput), pointer :: inputParams
+    integer, allocatable, dimension(:) :: Temp
+    inputParams=> defaultInput
 
-  Genos(0,:)=9
+    allocate(Temp(inputParams%nsnp))
+    allocate(GenotypeId(nAnisG))
+    allocate(Genos(0:nAnisG,inputParams%nsnp))
+    allocate(GenderId(nAnisRawPedigree))
+    allocate(GenderRaw(nAnisRawPedigree))
 
-  ! Read the pedigree information
-  ! print *,"file",inputParams%pedigreefile
-  ! print *,"size:",nAnisRawPedigree
-  ! ped = initPedigree(inputParams%pedigreefile)
-  ! Read the genotype file
-  if (inputParams%hmmoption /= RUN_HMM_NGS) then
+    Genos(0,:)=9
+
+    ! Read the pedigree information
+    ! print *,"file",inputParams%pedigreefile
+    ! print *,"size:",nAnisRawPedigree
+    ! ped = initPedigree(inputParams%pedigreefile)
+    ! Read the genotype file
+    if (inputParams%hmmoption /= RUN_HMM_NGS) then
       rewind(inputParams%genotypeFileUnit)
       if (.not. inputParams%PlinkFormat) then
         call ReadGenos(inputParams%genotypeFileUnit)
       else
         call ReadPlink(inputParams%genotypeFileUnit)
       end if
-  endif
-  close(inputParams%pedigreeFileUnit)
-  close(inputParams%genotypeFileUnit)
+    endif
+    close(inputParams%pedigreeFileUnit)
+    close(inputParams%genotypeFileUnit)
 
-  ! Read the gender file if imputing the sex chromosome
-  if (inputParams%SexOpt==1) then
-    ped = initPedigree(inputParams%pedigreefile, nAnisRawPedigree,inputParams%genderFile)
-  else 
-    ped = initPedigree(inputParams%pedigreefile, nAnisRawPedigree)
-  endif
-  deallocate(temp)
+    ! Read the gender file if imputing the sex chromosome
+    if (inputParams%SexOpt==1) then
+      ped = initPedigree(inputParams%pedigreefile, nAnisRawPedigree,inputParams%genderFile)
+    else 
+      ped = initPedigree(inputParams%pedigreefile, nAnisRawPedigree)
+    endif
+    deallocate(temp)
   end subroutine ReadInData
 
   !#############################################################################################################################################################################################################################
   subroutine ReadSeq(ReadsFileUnit)
-  
-  use Global
-  use alphaimputeinmod
-  implicit none
 
-  integer, intent(inout) :: ReadsFileUnit
-  integer :: i,j
+    use Global
+    use alphaimputeinmod
+    implicit none
 
-  type(AlphaImputeInput), pointer :: inputParams
-  logical :: opened, named
-  character(len=300) :: ReadsFile
-  integer, allocatable,dimension (:) :: ReferAlleleLine, AlterAlleleLine
+    integer, intent(inout) :: ReadsFileUnit
+    integer :: i,j
 
-  inputParams => defaultInput
-  allocate(ReferAllele(0:nAnisG,inputParams%nsnp))
-  allocate(AlterAllele(0:nAnisG,inputParams%nsnp))
-  allocate(ReferAlleleLine(inputParams%nsnp))
-  allocate(AlterAlleleLine(inputParams%nsnp))
+    type(AlphaImputeInput), pointer :: inputParams
+    logical :: opened, named
+    character(len=300) :: ReadsFile
+    integer, allocatable,dimension (:) :: ReferAlleleLine, AlterAlleleLine
 
-  Reads=0
+    inputParams => defaultInput
+    allocate(ReferAllele(0:nAnisG,inputParams%nsnp))
+    allocate(AlterAllele(0:nAnisG,inputParams%nsnp))
+    allocate(ReferAlleleLine(inputParams%nsnp))
+    allocate(AlterAlleleLine(inputParams%nsnp))
 
-#ifdef DEBUG
-  write(0,*) "DEBUG: [ReadSeq] Reads size=", size(Reads,1)
-#endif
+    Reads=0
 
-  ! open (unit=3,file=trim(readsFileName),status="old")
-  inquire(unit=ReadsFileUnit, opened=opened, named=named, name=ReadsFile)
-  if (.NOT. opened .and. named) then
-    open(unit=ReadsFileUnit, file=ReadsFile, status='unknown')
-  else if (.NOT. named) then
-    ! write(0, *) "ERROR - Something went wrong when trying to read the file of pre-phased data"
-    open(newunit=ReadsFileUnit, file=inputParams%GenotypeFile)
-  end if
+    #ifdef DEBUG
+    write(0,*) "DEBUG: [ReadSeq] Reads size=", size(Reads,1)
+    #endif
 
-#ifdef DEBUG
-  write(0,*) "DEBUG: [ReadSeq] Reading sequence data..."
-#endif
+    ! open (unit=3,file=trim(readsFileName),status="old")
+    inquire(unit=ReadsFileUnit, opened=opened, named=named, name=ReadsFile)
+    if (.NOT. opened .and. named) then
+      open(unit=ReadsFileUnit, file=ReadsFile, status='unknown')
+    else if (.NOT. named) then
+      ! write(0, *) "ERROR - Something went wrong when trying to read the file of pre-phased data"
+      open(newunit=ReadsFileUnit, file=inputParams%GenotypeFile)
+    end if
 
-  if (inputParams%VCFFormat) then
-    call readVCF(ReadsFileUnit, GenotypeId, ReferAllele, AlterAllele, inputParams%nsnp, inputParams%nsnp, 1, inputParams%nsnp, nAnisG)
-  else
+    #ifdef DEBUG
+    write(0,*) "DEBUG: [ReadSeq] Reading sequence data..."
+    #endif
+
+    if (inputParams%VCFFormat) then
+      call readVCF(ReadsFileUnit, GenotypeId, ReferAllele, AlterAllele, inputParams%nsnp, inputParams%nsnp, 1, inputParams%nsnp, nAnisG)
+    else
+      do i=1,nAnisG
+        read (ReadsFileUnit,*) GenotypeId(i), ReferAllele(i,:)
+        read (ReadsFileUnit,*) GenotypeId(i), AlterAllele(i,:)
+      end do
+    end if
+
     do i=1,nAnisG
-      read (ReadsFileUnit,*) GenotypeId(i), ReferAllele(i,:)
-      read (ReadsFileUnit,*) GenotypeId(i), AlterAllele(i,:)
-    end do
-  end if
-
-  do i=1,nAnisG
-    do j=1,inputParams%nsnp
-      if (ReferAllele(i,j)>=MAX_READS_COUNT) ReferAllele(i,j)=MAX_READS_COUNT-1
-      if (AlterAllele(i,j)>=MAX_READS_COUNT) AlterAllele(i,j)=MAX_READS_COUNT-1
-      Reads(i,j)=AlterAllele(i,j)+ReferAllele(i,j)
+      do j=1,inputParams%nsnp
+        if (ReferAllele(i,j)>=MAX_READS_COUNT) ReferAllele(i,j)=MAX_READS_COUNT-1
+        if (AlterAllele(i,j)>=MAX_READS_COUNT) AlterAllele(i,j)=MAX_READS_COUNT-1
+        Reads(i,j)=AlterAllele(i,j)+ReferAllele(i,j)
+      enddo
     enddo
-  enddo
 
-  open(unit=999, file='borrar.txt',status='unknown')
-  do i =1, nAnisG
-    write(999,'(a20,100i2)') ReferAllele(i,:)
-    write(999,'(a20,100i2)') AlterAllele(i,:)
-  end do
-  close(999)
+    open(unit=999, file='borrar.txt',status='unknown')
+    do i =1, nAnisG
+      write(999,'(a20,100i2)') ReferAllele(i,:)
+      write(999,'(a20,100i2)') AlterAllele(i,:)
+    end do
+    close(999)
 
-#ifdef DEBUG
-  write(0,*) "DEBUG: [ReadSeq] Sequence data read"
-#endif
+    #ifdef DEBUG
+    write(0,*) "DEBUG: [ReadSeq] Sequence data read"
+    #endif
 
-  close(ReadsFileUnit)
+    close(ReadsFileUnit)
 
   end subroutine ReadSeq
 
-!#############################################################################################################################################################################################################################
+  !#############################################################################################################################################################################################################################
   subroutine readVCF(ReadsFileUnit, Ids, RefAll, AltAll, nSnpIn, SnpUsed, StartSnp, EndSnp, nIndivIn)
     ! subroutine readRogerData(filename, Ids, position, quality, SequenceData, nSnpIn, SnpUsed, StartSnp, EndSnp, nIndivIn)
-    
+
     use Global
     use AlphaImputeInMod
     use omp_lib
@@ -433,153 +433,153 @@ module InputMod
 
   !#############################################################################################################################################################################################################################
   subroutine ReadGenos(GenoFileUnit)
-  
-  use Global
-  use alphaimputeinmod
-  implicit none
 
-  integer, intent(inout) :: GenoFileUnit
-  integer :: i,j
-  integer,allocatable,dimension(:) :: temp
-  type(AlphaImputeInput), pointer :: inputParams
-  logical :: opened, named
-  character(len=300) :: GenoFile
+    use Global
+    use alphaimputeinmod
+    implicit none
 
-  inputParams => defaultInput
+    integer, intent(inout) :: GenoFileUnit
+    integer :: i,j
+    integer,allocatable,dimension(:) :: temp
+    type(AlphaImputeInput), pointer :: inputParams
+    logical :: opened, named
+    character(len=300) :: GenoFile
 
-  allocate(temp(inputParams%nSnp))
+    inputParams => defaultInput
 
-  if (.not. allocated(Genos)) then
-    allocate(Genos(0:nAnisG,inputParams%nsnp))
-  endif
+    allocate(temp(inputParams%nSnp))
 
-  Genos(0,:)=9
+    if (.not. allocated(Genos)) then
+      allocate(Genos(0:nAnisG,inputParams%nsnp))
+    endif
 
-  inquire(unit=GenoFileUnit, opened=opened, named=named, name=GenoFile)
-  if (.NOT. opened .and. named) then
-    open(unit=GenoFileUnit, file=GenoFile, status='unknown')
-  else if (.NOT. named) then
-    ! write(0, *) "ERROR - Something went wrong when trying to read the file of pre-phased data"
-    open(newunit=GenoFileUnit, file=inputParams%GenotypeFile)
-  end if
+    Genos(0,:)=9
 
-  do i=1,nAnisG
-    read (GenoFileUnit,*) GenotypeId(i),Temp(:)
-    do j=1,inputParams%nsnp
-      if ((Temp(j)<0).or.(Temp(j)>2)) Temp(j)=9
+    inquire(unit=GenoFileUnit, opened=opened, named=named, name=GenoFile)
+    if (.NOT. opened .and. named) then
+      open(unit=GenoFileUnit, file=GenoFile, status='unknown')
+    else if (.NOT. named) then
+      ! write(0, *) "ERROR - Something went wrong when trying to read the file of pre-phased data"
+      open(newunit=GenoFileUnit, file=inputParams%GenotypeFile)
+    end if
+
+    do i=1,nAnisG
+      read (GenoFileUnit,*) GenotypeId(i),Temp(:)
+      do j=1,inputParams%nsnp
+        if ((Temp(j)<0).or.(Temp(j)>2)) Temp(j)=9
+      enddo
+      Genos(i,:)=Temp(:)
     enddo
-    Genos(i,:)=Temp(:)
-  enddo
-  close(GenoFileUnit)
-  deallocate(temp)
+    close(GenoFileUnit)
+    deallocate(temp)
   end subroutine ReadGenos
 
   !#############################################################################################################################################################################################################################
   subroutine ReadPlink(GenoFileUnit)
-  
-  use Global
-  use alphaimputeinmod
-  implicit none
 
-  integer, intent(inout) :: GenoFileUnit
-  integer :: i,j
-  character(len=2),allocatable,dimension(:) :: temp
-  type(AlphaImputeInput), pointer :: inputParams
-  logical :: opened, named
+    use Global
+    use alphaimputeinmod
+    implicit none
 
-  character(len=300) :: dumC
-  character(len=300) :: GenoFile
+    integer, intent(inout) :: GenoFileUnit
+    integer :: i,j
+    character(len=2),allocatable,dimension(:) :: temp
+    type(AlphaImputeInput), pointer :: inputParams
+    logical :: opened, named
 
-  inputParams => defaultInput
+    character(len=300) :: dumC
+    character(len=300) :: GenoFile
 
-  allocate(temp(inputParams%nSnp))
+    inputParams => defaultInput
 
-  if (.not. allocated(Genos)) then
-    allocate(Genos(0:nAnisG,inputParams%nsnp))
-  endif
-  Genos(0,:)=9
+    allocate(temp(inputParams%nSnp))
 
-  inquire(unit=GenoFileUnit, opened=opened, named=named, name=GenoFile)
-  if (.NOT. opened .and. named) then
-    open(unit=GenoFileUnit, file=GenoFile, status='unknown')
-  else if (.NOT. named) then
-    open(newunit=GenoFileUnit, file=inputParams%GenotypeFile)
-  end if
+    if (.not. allocated(Genos)) then
+      allocate(Genos(0:nAnisG,inputParams%nsnp))
+    endif
+    Genos(0,:)=9
 
-  ! Skip the first line as is the head
-  read (GenoFileUnit,*) dumC
-  do i=1,nAnisG
-    read (GenoFileUnit,*) dumC,GenotypeId(i),dumC,dumC,dumC,dumC,Temp(:)
-    do j=1,inputParams%nsnp
-      if (Temp(j)=='NA') then
-        Temp(j) = '9'
-      else if (Temp(j)/='NA') then
-      end if
+    inquire(unit=GenoFileUnit, opened=opened, named=named, name=GenoFile)
+    if (.NOT. opened .and. named) then
+      open(unit=GenoFileUnit, file=GenoFile, status='unknown')
+    else if (.NOT. named) then
+      open(newunit=GenoFileUnit, file=inputParams%GenotypeFile)
+    end if
+
+    ! Skip the first line as is the head
+    read (GenoFileUnit,*) dumC
+    do i=1,nAnisG
+      read (GenoFileUnit,*) dumC,GenotypeId(i),dumC,dumC,dumC,dumC,Temp(:)
+      do j=1,inputParams%nsnp
+        if (Temp(j)=='NA') then
+          Temp(j) = '9'
+        else if (Temp(j)/='NA') then
+        end if
+      enddo
+      read(Temp(:),*) Genos(i,:)
     enddo
-    read(Temp(:),*) Genos(i,:)
-  enddo
-  close(GenoFileUnit)
-  deallocate(temp)
+    close(GenoFileUnit)
+    deallocate(temp)
 
   end subroutine ReadPlink
 
-!---------------------------------------------------------------------------
-! DESCRIPTION:
-!> @brief      Count the number of words in a line
-!
-!> @details    Count the number of words in a line separated by spaces
-!
-!> @author     Roberto Antolin, roberto.antolin@roslin.ed.ac.uk
-!
-!> @date       Nov 16, 2016
-!
-! PARAMETERS:
-!> @param[in] Line
-!? @return    Number of words in the line
-!---------------------------------------------------------------------------
+  !---------------------------------------------------------------------------
+  ! DESCRIPTION:
+  !> @brief      Count the number of words in a line
+  !
+  !> @details    Count the number of words in a line separated by spaces
+  !
+  !> @author     Roberto Antolin, roberto.antolin@roslin.ed.ac.uk
+  !
+  !> @date       Nov 16, 2016
+  !
+  ! PARAMETERS:
+  !> @param[in] Line
+  !? @return    Number of words in the line
+  !---------------------------------------------------------------------------
   integer function nWords(line)
-  implicit none
-  character :: line*(*)
-  logical :: back
-  integer :: length, k
+    implicit none
+    character :: line*(*)
+    logical :: back
+    integer :: length, k
 
-  back = .true.
-  length = len_trim(line)
+    back = .true.
+    length = len_trim(line)
 
-  k = index(line(1:length), ' ', back)
-  if (k == 0) then
+    k = index(line(1:length), ' ', back)
+    if (k == 0) then
       nWords = 0
       return
-  end if
+    end if
 
-  nWords = 1
-  do
+    nWords = 1
+    do
       ! starting with the right most blank space,
       ! look for the next non-space character down
       ! indicating there is another item in the line
       do
-          if (k <= 0) exit
-          if (line(k:k) == ' ') then
-              k = k - 1
-              cycle
-          else
-              nWords = nWords + 1
-              exit
-          end if
+        if (k <= 0) exit
+        if (line(k:k) == ' ') then
+          k = k - 1
+          cycle
+        else
+          nWords = nWords + 1
+          exit
+        end if
       end do
 
       ! once a non-space character is found,
       ! skip all adjacent non-space character
       do
-          if ( k<=0 ) exit
-          if (line(k:k) /= ' ') then
-              k = k - 1
-              cycle
-          end if
-          exit
+        if ( k<=0 ) exit
+        if (line(k:k) /= ' ') then
+          k = k - 1
+          cycle
+        end if
+        exit
       end do
       if (k <= 0) exit
-  end do
+    end do
   end function nWords
 
 
