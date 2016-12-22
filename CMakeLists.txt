@@ -1,7 +1,7 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8.5)
 PROJECT(AlphaImpute)
 enable_language (Fortran)
-
+FIND_PACKAGE(Doxygen)
 
 OPTION(RUN_TESTS "Run and compile tests"
   OFF)

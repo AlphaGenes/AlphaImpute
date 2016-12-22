@@ -944,8 +944,11 @@ contains
                 do j=1,inputParams%nSnpRaw
                     if (SnpIncluded(j)==1) then
                         l=l+1
-                        write(error_unit, *) "nAnisG:,",nAnisG
                         do i=1,nAnisG
+                            if (GlobalHmmID(i) > nAnisP ) then
+                                GlobalHmmID(i) = 0
+                                ! TODO this means animal is a dummy - need to deal with this
+                            endif
                             ProbImputeGenos(GlobalHmmID(i),j)   = ProbImputeGenosHmm(i,j)
                             ProbImputePhase(GlobalHmmID(i),j,1) = ProbImputePhaseHmm(i,j,1)
                             ProbImputePhase(GlobalHmmID(i),j,2) = ProbImputePhaseHmm(i,j,2)
