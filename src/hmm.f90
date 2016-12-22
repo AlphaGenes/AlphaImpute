@@ -378,6 +378,8 @@ subroutine ParseMaCHDataGenos(nGenotyped)
     use Utils
     use AlphaImputeInMod
 
+    use iso_fortran_env
+
     implicit none
 
     type(AlphaImputeInput), pointer :: inputParams
@@ -405,6 +407,9 @@ subroutine ParseMaCHDataGenos(nGenotyped)
         tmpID = ped%dictionary%getValue(GenotypeID(j))
         if (tmpID /=DICT_NULL) then
             GlobalHmmID(j) = tmpID
+            if (tmpID > nAnisP) then
+                write(error_unit,*) "ERROR: GENOTYPE ID OUT OF RANGE:",tmpID,",",GenotypeID(j)
+            endif
         end if
     end do
 
