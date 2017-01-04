@@ -663,12 +663,13 @@ write(0,*) 'DEBUG: Mach Finished'
                     allocate(BitWork(numSections,2))
                     allocate(MissWork(numSections,2))
                     allocate(HapElim(nAnisP*2,2))
+                    HapElim = 0 !  changed from HapElim=1 to improve speed
                     !$OMP PARALLEL DO &
                     !$OMP DEFAULT(SHARED) &
                     !$OMP PRIVATE(i,j,e,h,HapElim,BanBoth,Counter,Count0,Count1,Ban,curPos,curSection,BitWork,MissWork,BitGeno)
                     do i=1,nAnisP
 
-                        ! HapElim=1
+                        
                         BanBoth=0
                         BitWork = 0
                         MissWork = 0
@@ -687,7 +688,7 @@ write(0,*) 'DEBUG: Mach Finished'
                                 do h=1,nHap
                                     if ( .NOT. Section%compareHaplotypeAllowMissing(BitHapLib(h,:), BitImputePhase(i,:,e), &
                                         MissHapLib(h,:), MissImputePhase(i,:,e))) then
-                                        HapElim(h,e)=0
+                                        HapElim(h,e)=i
                                         counter = counter - 1 !same as previous but without having to acutally use count
                                     end if
                                 enddo
@@ -708,7 +709,7 @@ write(0,*) 'DEBUG: Mach Finished'
 
                                         ! Count the occurrences in phasing of alleles across candidate haplotypes
                                         do h=1,nHap
-                                            if (HapElim(h,e)/=0) then
+                                            if (HapElim(h,e)/=i) then
                                                 if (BTEST(BitHapLib(h,curSection), curPos) == .FALSE. .AND. &
                                                     BTEST(MissHapLib(h,curSection), curPos) == .FALSE.) then
                                                     Count0=Count0+1
