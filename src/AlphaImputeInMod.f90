@@ -84,27 +84,27 @@ module AlphaImputeInMod
         ! other
         integer(kind=int32) :: nSnpRaw,nAgreeImputeHDLib,nAgreeParentPhaseElim,nAgreeGrandParentPhaseElim,nAgreePhaseElim,nAgreeInternalHapLibElim
         integer(kind=int32) :: GlobalExtraAnimals
-        contains
-            procedure :: ReadInParameterFile
+    contains
+        procedure :: ReadInParameterFile
     end type AlphaImputeInput
 
     type(AlphaImputeInput),target, allocatable :: defaultInput
 
-    contains
+contains
 
-!---------------------------------------------------------------------------
-! DESCRIPTION:
-!> @brief      Constructor for AlphaImputeInput object
-!
-!> @details    Initialise new Bit Haplotype
-!
-!> @author     David Wilson, david.wilson@roslin.ed.ac.uk
-!
-!> @date       Nov 07, 2016
-!
-! PARAMETERS:
-!> @param[in]  specfile - The path of the specfile
-!---------------------------------------------------------------------------
+    !---------------------------------------------------------------------------
+    ! DESCRIPTION:
+    !> @brief      Constructor for AlphaImputeInput object
+    !
+    !> @details    Initialise new Bit Haplotype
+    !
+    !> @author     David Wilson, david.wilson@roslin.ed.ac.uk
+    !
+    !> @date       Nov 07, 2016
+    !
+    ! PARAMETERS:
+    !> @param[in]  specfile - The path of the specfile
+    !---------------------------------------------------------------------------
 
     subroutine ReadInParameterFile(this,SpecFile)
         use AlphaHouseMod, only: parseToFirstWhitespace,splitLineIntoTwoParts,toLower
@@ -130,7 +130,7 @@ module AlphaImputeInMod
             call splitLineIntoTwoParts(trim(line), first, second)
             tag = parseToFirstWhitespace(first)
             if (first(1:1)=="=" .or. len(trim(line))==0) then
-              cycle
+                cycle
             else
                 select case(trim(tag))
 
