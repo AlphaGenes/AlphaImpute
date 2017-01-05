@@ -1,248 +1,210 @@
 MODULE Utils
-IMPLICIT NONE
+    IMPLICIT NONE
 
 CONTAINS
 
-  !---------------------------------------------------------------------------
-  ! DESCRIPTION:
-  !> @brief      Return the number of lines in a file
-  !
-  !> @details    Return the number of lines in a file
-  !
-  !> @author     Roberto Antolin, roberto.antolin@roslin.ed.ac.uk
-  !
-  !> @date       July 25, 2016
-  !
-  ! PARAMETERS:
-  !> @param[in]  FileName  File name
-  !> @return     Number of lines in the file
-  !---------------------------------------------------------------------------
-  FUNCTION CountLines(FileName) result(nLines)
-    use ISO_Fortran_Env
-    implicit none
+    !######################################################################
+    SUBROUTINE RemoveInformationGameteSegment(gamete,nStart,nStop)
+        ! Remove the allele information of a gamete segment
 
-    character(len=*), intent(in) :: FileName
-    integer                         :: nLines
+        USE GlobalVariablesHmmMaCH
 
-    integer :: f, UInputs
-    character(len=300) :: dumC
+        INTEGER,INTENT(IN) :: nStart, nStop
+        INTEGER(KIND=1),INTENT(OUT),DIMENSION(:) :: gamete
 
-    nLines=0
-    UInputs = 111
-    open (unit=UInputs,file=trim(FileName),status="old")
-    do
-      read (UInputs,*,iostat=f) dumC
-      nLines=nLines+1
-      if (f/=0) then
-        nLines=nLines-1
-        exit
-      endif
-    enddo
-    close(UInputs)
-  END FUNCTION CountLines
+        gamete(nStart:nStop) = ALLELE_MISSING
 
-!######################################################################
-SUBROUTINE RemoveInformationGameteSegment(gamete,nStart,nStop)
-! Remove the allele information of a gamete segment
+    END SUBROUTINE RemoveInformationGameteSegment
 
-USE GlobalVariablesHmmMaCH
+    !######################################################################
+    SUBROUTINE RemoveInformationGamete(gamete)
+        ! Remove the allele information of a gamete
 
-INTEGER,INTENT(IN) :: nStart, nStop
-INTEGER(KIND=1),INTENT(OUT),DIMENSION(:) :: gamete
+        USE GlobalVariablesHmmMaCH
 
-gamete(nStart:nStop) = ALLELE_MISSING
+        INTEGER(KIND=1),INTENT(OUT),DIMENSION(:) :: gamete
 
-END SUBROUTINE RemoveInformationGameteSegment
+        gamete(:) = ALLELE_MISSING
 
-!######################################################################
-SUBROUTINE RemoveInformationGamete(gamete)
-! Remove the allele information of a gamete
+    END SUBROUTINE RemoveInformationGamete
 
-USE GlobalVariablesHmmMaCH
+    !######################################################################
+    SUBROUTINE RemoveAlleleInformationIndividual(ToWhom)
+        ! Remove the genotype information of an individual
 
-INTEGER(KIND=1),INTENT(OUT),DIMENSION(:) :: gamete
+        USE GlobalVariablesHmmMaCH
 
-gamete(:) = ALLELE_MISSING
+        INTEGER, INTENT(IN) :: ToWhom
 
-END SUBROUTINE RemoveInformationGamete
+        call RemoveAlleleInformationSegment(ToWhom, 1, nSnpHmm)
 
-!######################################################################
-SUBROUTINE RemoveAlleleInformationIndividual(ToWhom)
-! Remove the genotype information of an individual
+    END SUBROUTINE RemoveAlleleInformationIndividual
 
-USE GlobalVariablesHmmMaCH
+    !######################################################################
+    SUBROUTINE RemoveAlleleInformationSegment(ToWhom,nStart,nStop)
+        ! Remove the genotype information of an individual
 
-INTEGER, INTENT(IN) :: ToWhom
+        USE GlobalVariablesHmmMaCH
 
-call RemoveAlleleInformationSegment(ToWhom, 1, nSnpHmm)
+        INTEGER, INTENT(IN) :: ToWhom, nStart, nStop
 
-END SUBROUTINE RemoveAlleleInformationIndividual
+        call RemoveInformationGamete(PhaseHmmMaCH(ToWhom,nStart:nStop,1))
+        call RemoveInformationGamete(PhaseHmmMaCH(ToWhom,nStart:nStop,2))
 
-!######################################################################
-SUBROUTINE RemoveAlleleInformationSegment(ToWhom,nStart,nStop)
-! Remove the genotype information of an individual
+    END SUBROUTINE RemoveAlleleInformationSegment
 
-USE GlobalVariablesHmmMaCH
+    !######################################################################
+    SUBROUTINE RemoveGenotypeInformationIndividual(ToWhom)
+        ! Remove the genotype information of an individual
 
-INTEGER, INTENT(IN) :: ToWhom, nStart, nStop
+        USE GlobalVariablesHmmMaCH
 
-call RemoveInformationGamete(PhaseHmmMaCH(ToWhom,nStart:nStop,1))
-call RemoveInformationGamete(PhaseHmmMaCH(ToWhom,nStart:nStop,2))
+        INTEGER, INTENT(IN) :: ToWhom
 
-END SUBROUTINE RemoveAlleleInformationSegment
+        call RemoveGenotypeInformationIndividualSegment(ToWhom,1,nSnpHmm)
 
-!######################################################################
-SUBROUTINE RemoveGenotypeInformationIndividual(ToWhom)
-! Remove the genotype information of an individual
+    END SUBROUTINE RemoveGenotypeInformationIndividual
 
-USE GlobalVariablesHmmMaCH
+    !######################################################################
+    SUBROUTINE RemoveGenotypeInformationIndividualSegment(ToWhom,nStart,nStop)
+        ! Remove the genotype information of an individual
 
-INTEGER, INTENT(IN) :: ToWhom
+        USE GlobalVariablesHmmMaCH
 
-call RemoveGenotypeInformationIndividualSegment(ToWhom,1,nSnpHmm)
+        INTEGER, INTENT(IN) :: ToWhom,nStart,nStop
 
-END SUBROUTINE RemoveGenotypeInformationIndividual
+        GenosHmmMaCH(ToWhom,nStart:nStop) = MISSING
 
-!######################################################################
-SUBROUTINE RemoveGenotypeInformationIndividualSegment(ToWhom,nStart,nStop)
-! Remove the genotype information of an individual
+    END SUBROUTINE RemoveGenotypeInformationIndividualSegment
 
-USE GlobalVariablesHmmMaCH
+    !######################################################################
+    FUNCTION CountPhasedGametes RESULT( gametesPhased )
 
-INTEGER, INTENT(IN) :: ToWhom,nStart,nStop
+        USE Global
+        USE GlobalVariablesHmmMaCH
+        use alphaimputeinmod
 
-GenosHmmMaCH(ToWhom,nStart:nStop) = MISSING
+        INTEGER :: gametesPhased, ind
+        INTEGER(KIND=1), ALLOCATABLE :: gamete(:)
+        type(AlphaImputeInput), pointer :: inputParams
 
-END SUBROUTINE RemoveGenotypeInformationIndividualSegment
+        inputParams => defaultInput
 
-!######################################################################
-FUNCTION CountPhasedGametes RESULT( gametesPhased )
+        allocate(gamete(nSnpHmm))
+        gametesPhased=0
+        do ind=1,nAnisP
+            gamete=ImputePhase(ind,:,1)
+            if (float(count(gamete(:)==1 .OR. gamete(:)==0))/nSnpHmm >= inputParams%imputedThreshold/100.0) then
+                gametesPhased=gametesPhased+1
+            endif
 
-USE Global
-USE GlobalVariablesHmmMaCH
-use alphaimputeinmod
+            gamete=ImputePhase(ind,:,2)
+            if (float(count(gamete(:)==1 .OR. gamete(:)==0))/nSnpHmm >= inputParams%imputedThreshold/100.0) then
+                gametesPhased=gametesPhased+1
+            endif
+        enddo
+        RETURN
+    END FUNCTION CountPhasedGametes
 
-INTEGER :: gametesPhased, ind
-INTEGER(KIND=1), ALLOCATABLE :: gamete(:)
-type(AlphaImputeInput), pointer :: inputParams
+    !######################################################################
+    FUNCTION CountPhasedAlleles(gamete) RESULT( allelesPhased )
 
-inputParams => defaultInput
+        USE Global
+        USE GlobalVariablesHmmMaCH
 
-allocate(gamete(nSnpHmm))
-gametesPhased=0
-do ind=1,nAnisP
-    gamete=ImputePhase(ind,:,1)
-    if (float(count(gamete(:)==1 .OR. gamete(:)==0))/nSnpHmm >= inputParams%imputedThreshold/100.0) then
-        gametesPhased=gametesPhased+1
-    endif
+        INTEGER :: allelesPhased
+        INTEGER(KIND=1),INTENT(IN) :: gamete(:)
 
-    gamete=ImputePhase(ind,:,2)
-    if (float(count(gamete(:)==1 .OR. gamete(:)==0))/nSnpHmm >= inputParams%imputedThreshold/100.0) then
-        gametesPhased=gametesPhased+1
-    endif
-enddo
-RETURN
-END FUNCTION CountPhasedGametes
+        allelesPhased = count(gamete(:)==1 .OR. gamete(:)==0)
 
-!######################################################################
-FUNCTION CountPhasedAlleles(gamete) RESULT( allelesPhased )
 
-USE Global
-USE GlobalVariablesHmmMaCH
+        RETURN
+    END FUNCTION CountPhasedAlleles
 
-INTEGER :: allelesPhased
-INTEGER(KIND=1),INTENT(IN) :: gamete(:)
+    !######################################################################
+    FUNCTION CountMissingAlleles(gamete) RESULT( allelesMissing )
 
-allelesPhased = count(gamete(:)==1 .OR. gamete(:)==0)
+        USE Global
+        USE GlobalVariablesHmmMaCH
 
+        INTEGER :: allelesMissing
+        INTEGER(KIND=1),INTENT(IN) :: gamete(:)
 
-RETURN
-END FUNCTION CountPhasedAlleles
+        allelesMissing = nSnpHmm - CountPhasedAlleles(gamete)
 
-!######################################################################
-FUNCTION CountMissingAlleles(gamete) RESULT( allelesMissing )
+        RETURN
+    END FUNCTION CountMissingAlleles
 
-USE Global
-USE GlobalVariablesHmmMaCH
+    !######################################################################
+    FUNCTION CountMissingAllelesByGametes(gamete1,gamete2) RESULT( allelesMissing )
+        ! TODO: THIS SUBROUTINE IS NOT WORKING PROPERLY. ALLELESMISSING GETS SHIT
 
-INTEGER :: allelesMissing
-INTEGER(KIND=1),INTENT(IN) :: gamete(:)
+        USE Global
+        USE GlobalVariablesHmmMaCH
 
-allelesMissing = nSnpHmm - CountPhasedAlleles(gamete)
+        INTEGER :: allelesMissing
+        INTEGER(KIND=1),INTENT(IN) :: gamete1(:),gamete2(:)
 
-RETURN
-END FUNCTION CountMissingAlleles
+        allelesMissing = nSnpHmm - CountGenotypedAllelesByGametes(gamete1,gamete2)
 
-!######################################################################
-FUNCTION CountMissingAllelesByGametes(gamete1,gamete2) RESULT( allelesMissing )
-! TODO: THIS SUBROUTINE IS NOT WORKING PROPERLY. ALLELESMISSING GETS SHIT
+        RETURN
+    END FUNCTION CountMissingAllelesByGametes
 
-USE Global
-USE GlobalVariablesHmmMaCH
+    !######################################################################
+    FUNCTION CountGenotypedAllelesByGametes(gamete1, gamete2) RESULT( allelesGenotyped )
 
-INTEGER :: allelesMissing
-INTEGER(KIND=1),INTENT(IN) :: gamete1(:),gamete2(:)
+        USE Global
+        USE GlobalVariablesHmmMaCH
 
-allelesMissing = nSnpHmm - CountGenotypedAllelesByGametes(gamete1,gamete2)
+        INTEGER(KIND=1),INTENT(IN) :: gamete1(:), gamete2(:)
 
-RETURN
-END FUNCTION CountMissingAllelesByGametes
+        ! Local variables
+        INTEGER :: allelesGenotyped
 
-!######################################################################
-FUNCTION CountGenotypedAllelesByGametes(gamete1, gamete2) RESULT( allelesGenotyped )
 
-USE Global
-USE GlobalVariablesHmmMaCH
+        allelesGenotyped = count((gamete1(:)==1 .OR. gamete1(:)==0) .AND. (gamete2(:)==1 .OR. gamete2(:)==0))
 
-INTEGER(KIND=1),INTENT(IN) :: gamete1(:), gamete2(:)
+        ! do i=1,size(gamete1)
+        !     if ((gamete1(i)==1 .OR. gamete1(i)==0) .AND. (gamete2(i)==1 .OR. gamete2(i)==0)) then
+        !         allelesGenotyped = allelesGenotyped + 1
+        !     endif
+        ! enddo
 
-! Local variables
-INTEGER :: allelesGenotyped
+        RETURN
+    END FUNCTION CountGenotypedAllelesByGametes
 
+    !######################################################################
+    FUNCTION CountGenotypedGenotypesByChromosome(chromosome) RESULT( genotypesMissing )
 
-allelesGenotyped = count((gamete1(:)==1 .OR. gamete1(:)==0) .AND. (gamete2(:)==1 .OR. gamete2(:)==0))
+        USE Global
+        USE GlobalVariablesHmmMaCH
 
-! do i=1,size(gamete1)
-!     if ((gamete1(i)==1 .OR. gamete1(i)==0) .AND. (gamete2(i)==1 .OR. gamete2(i)==0)) then
-!         allelesGenotyped = allelesGenotyped + 1
-!     endif
-! enddo
+        INTEGER,INTENT(IN) :: chromosome(:)
 
-RETURN
-END FUNCTION CountGenotypedAllelesByGametes
+        ! Local variables
+        INTEGER :: genotypesMissing
 
-!######################################################################
-FUNCTION CountGenotypedGenotypesByChromosome(chromosome) RESULT( genotypesMissing )
+        genotypesMissing = count(chromosome(:)==0 .or. chromosome(:)==2 .or. chromosome(:)==1)
 
-USE Global
-USE GlobalVariablesHmmMaCH
+        RETURN
+    END FUNCTION CountGenotypedGenotypesByChromosome
 
-INTEGER,INTENT(IN) :: chromosome(:)
+    !######################################################################
+    FUNCTION CountMissingdGenotypesByChromosome(chromosome) RESULT( genotypesMissing )
 
-! Local variables
-INTEGER :: genotypesMissing
+        USE Global
+        USE GlobalVariablesHmmMaCH
 
-genotypesMissing = count(chromosome(:)==0 .or. chromosome(:)==2 .or. chromosome(:)==1)
+        INTEGER,INTENT(IN) :: chromosome(:)
 
-RETURN
-END FUNCTION CountGenotypedGenotypesByChromosome
+        ! Local variables
+        INTEGER :: genotypesMissing
 
-!######################################################################
-FUNCTION CountMissingdGenotypesByChromosome(chromosome) RESULT( genotypesMissing )
+        genotypesMissing = nSnpHmm - CountGenotypedGenotypesByChromosome(chromosome)
 
-USE Global
-USE GlobalVariablesHmmMaCH
+        RETURN
+    END FUNCTION CountMissingdGenotypesByChromosome
 
-INTEGER,INTENT(IN) :: chromosome(:)
-
-! Local variables
-INTEGER :: genotypesMissing
-
-genotypesMissing = nSnpHmm - CountGenotypedGenotypesByChromosome(chromosome)
-
-RETURN
-END FUNCTION CountMissingdGenotypesByChromosome
-
-!######################################################################
+    !######################################################################
 
 END MODULE

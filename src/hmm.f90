@@ -28,9 +28,9 @@ subroutine MaCHController(HMM)
 
     inputParams => defaultInput
 
-    ! #ifdef DEBUG
-    !     write(0,*) 'DEBUG: [MaCHController] Allocate memory'
-    ! #endif
+! #ifdef DEBUG
+!     write(0,*) 'DEBUG: [MaCHController] Allocate memory'
+! #endif
 
 
     ! Number of SNPs in the HMM algorithm
@@ -102,7 +102,7 @@ subroutine MaCHController(HMM)
 
     ! Crossover parameter in order to maximize the investigation of
     ! different mosaic configurations
-! WARNING: crossovers are related with the transition matrix of the HMM.
+    ! WARNING: crossovers are related with the transition matrix of the HMM.
     !          If there are nSnpHmm states and nSnpHmm-1 transitions
     !          between states, why the number of crossovers is nSnpHmm??
     allocate(Crossovers(nSnpHmm-1))
@@ -307,7 +307,6 @@ subroutine ReadInbred(PhaseFileUnit, PhasedData, nInbred)
     character(len=300) :: InbredFile
     character(len=20) :: dumID
 
-
     inquire(unit=PhaseFileUnit, opened=opened, named=named, name=InbredFile)
 
     if (.NOT. opened .and. named) then
@@ -391,13 +390,12 @@ subroutine ParseMaCHDataNGS(nGenotyped)
     character(len=20) :: aux
 
     interface
-    subroutine getHapList(HapListUnit, ListIds, nHaps)
-        integer, intent(inout) :: HapListUnit
-        character(len=20), allocatable, intent(inout) :: ListIds(:)
-        integer, intent(out) :: nHaps
-    end subroutine getHapList
+        subroutine getHapList(HapListUnit, ListIds, nHaps)
+            integer, intent(inout) :: HapListUnit
+            character(len=20), allocatable, intent(inout) :: ListIds(:)
+            integer, intent(out) :: nHaps
+        end subroutine getHapList
     end interface
-
 
     inputParams => defaultInput
 #ifdef DEBUG
@@ -421,6 +419,7 @@ subroutine ParseMaCHDataNGS(nGenotyped)
         endif
         if (inputParams%HapList) then
             ! do j=1,HapsLeft
+            ! TODO: CHANGE THIS TO A WHILE LOOP
             do j=1,nHaps
                 if (ID(GlobalHmmID(i)) == HapList(j)) then
                     GlobalInbredInd(i) = .TRUE.
@@ -429,7 +428,6 @@ subroutine ParseMaCHDataNGS(nGenotyped)
             enddo
         endif
     enddo
-
 
     ! AlphaImpute does not phase sequence data, thus no individual has been phased.
     nGametesPhased = 0
@@ -444,13 +442,14 @@ subroutine ParseMaCHDataGenos(nGenotyped)
     use GlobalVariablesHmmMaCH
     use Utils
     use AlphaImputeInMod
+    use iso_fortran_env
 
     implicit none
 
     type(AlphaImputeInput), pointer :: inputParams
     integer, intent(in) :: nGenotyped
 
-    integer :: i,j,k, NoGenosUnit, nIndvG
+    integer :: i,j,k, NoGenosUnit, nIndvG,tmpID
 
     inputParams => defaultInput
 #ifdef DEBUG
@@ -469,12 +468,20 @@ subroutine ParseMaCHDataGenos(nGenotyped)
     ! genotyped animal (GlobalHmmHDInd)
 
     do j = 1, nGenotyped
-        do i = 1, nAnisP
-            if (trim(Id(i)) == trim(GenotypeID(j))) then
-                GlobalHmmID(j) = i
-            end if
-        end do
+        tmpID = ped%dictionary%getValue(GenotypeID(j))
+        if (tmpID /=DICT_NULL) then
+            GlobalHmmID(j) = tmpID
+            if (tmpID > nAnisP) then
+                write(error_unit,*) "ERROR: GENOTYPE ID OUT OF RANGE:",tmpID,",",GenotypeID(j)
+            endif
+        end if
     end do
+    !     do i = 1, nAnisP
+    !         if (trim(Id(i)) == trim(GenotypeID(j))) then
+    !             GlobalHmmID(j) = i
+    !         end if
+    !     end do
+    ! end do
 
 
     do i=1,nGenotyped
@@ -518,7 +525,6 @@ subroutine ParseMaCHDataGenos(nGenotyped)
             endif
         endif
     end do
-    !enddo
 
     close(NoGenosUnit)
 
@@ -646,10 +652,10 @@ subroutine MaCHForInd(CurrentInd, HMM)
         enddo
         ! endif
 
-        ! ! Cumulative genotype probabilities through hmm processes
-        ! #if DEBUG.EQ.1
-        !     write(0,*) 'DEBUG: Calculate genotype dosages [MaCHForInd]'
-        ! #endif
+        ! Cumulative genotype probabilities through hmm processes
+! #if DEBUG.EQ.1
+!        write(0,*) 'DEBUG: Calculate genotype dosages [MaCHForInd]'
+! #endif
         ! if (GlobalRoundHmm>inputParams%hmmburninround) then
         ProbImputeGenosHmm(CurrentInd,:)=ProbImputeGenosHmm(CurrentInd,:)&
             +FullH(CurrentInd,:,1)+FullH(CurrentInd,:,2)
@@ -1067,6 +1073,7 @@ subroutine ImputeAlleles(CurrentInd,CurrentMarker,State1,State2)
         ErrorUncertainty(CurrentMarker)=ErrorUncertainty(CurrentMarker)+1
 
     ! If allele is homozygous or the genotype does not agree the observation
+
     else
         ! count the number of alleles matching
         !$OMP ATOMIC
@@ -1366,7 +1373,6 @@ subroutine ConditionOnData(CurrentInd,Marker)
         AltAll = AlterAllele(CurrentInd,Marker)
     else
         genotype = GenosHmmMaCH(CurrentInd,Marker)
-
         if (genotype==MISSING) then
             return
         endif
@@ -1401,6 +1407,7 @@ subroutine ConditionOnData(CurrentInd,Marker)
             ! genotype GenosHmmMaCH in locus Marker
             Factors(1) = cond_probs(SubH(i,Marker)+1)
         endif
+
         do j=1,i
             Index=Index+1
             ForwardProbs(Index,Marker)=&

@@ -31,45 +31,36 @@ end module PARAMETERS
 
 module Global
     use PARAMETERS
-implicit none
+    use PedigreeModule
+    implicit none
 
 
 
-integer :: nAnisG,nAnisRawPedigree,nAnisP,HetGameticStatus,HomGameticStatus,MultiHD
-integer :: nProcessGeneProb,nProcessAlphaPhase,CountRawGenos,nAnisInGenderFile
-integer :: MaxLeftRightSwitch,MinSpan
-integer :: TrueGenos1None0,nObsDataRaw,UseGP
-integer :: nSnpIterate,AlphaPhasePresent,GeneProbPresent,UserDefinedHD
-integer :: nSnpChips
+    integer :: nAnisG,nAnisRawPedigree,nAnisP
+    integer :: CountRawGenos,nAnisInGenderFile
+    integer :: MaxLeftRightSwitch,MinSpan
+    integer :: nObsDataRaw,UseGP
+    integer :: nSnpIterate,AlphaPhasePresent,GeneProbPresent
+    integer :: nSnpChips
 
-integer,allocatable,dimension (:,:) :: Reads,ReferAllele,AlterAllele
-integer(kind=1),allocatable,dimension (:) :: SnpIncluded,RecIdHDIndex,GenderRaw,RecGender,IndivIsGenotyped
-integer(kind=1),allocatable,dimension (:,:) :: Genos,TempGenos,TmpGenos,MSTermInfo
-integer(kind=1),allocatable,dimension (:,:) :: ImputeGenos,SireDam
-integer(kind=1),allocatable,dimension (:,:,:) :: ImputePhase,TmpPhase,GlobalWorkPhase
-integer,allocatable :: RecPed(:,:),Setter(:),GpIndex(:,:),BaseAnimals(:),GlobalTmpCountInf(:,:)
-integer,allocatable :: GlobalHmmID(:)
-real,allocatable,dimension (:) :: Maf
-real,allocatable,dimension (:,:) :: ProbImputeGenos, GPI
-real,allocatable,dimension (:,:,:) :: ProbImputePhase
+    integer,allocatable,dimension (:,:) :: Reads,ReferAllele,AlterAllele
+    integer(kind=1),allocatable,dimension (:) :: SnpIncluded,RecIdHDIndex,GenderRaw
+    integer(kind=1),allocatable,dimension (:,:) :: Genos,TempGenos,TmpGenos,MSTermInfo
+    integer(kind=1),allocatable,dimension (:,:) :: ImputeGenos,SireDam
+    integer(kind=1),allocatable,dimension (:,:,:) :: ImputePhase,TmpPhase,GlobalWorkPhase
+    integer,allocatable :: Setter(:),GpIndex(:,:),GlobalTmpCountInf(:,:)
+    integer,allocatable :: GlobalHmmID(:)
+    real,allocatable,dimension (:) :: Maf
+    real,allocatable,dimension (:,:) :: ProbImputeGenos, GPI
+    real,allocatable,dimension (:,:,:) :: ProbImputePhase
 
-character*(lengan),allocatable :: GenotypeId(:),GenderId(:)
+    character*(lengan),allocatable :: GenotypeId(:),GenderId(:)
 
-integer, allocatable :: nSnpsAnimal(:), Centroid(:), ClusterMemberIndv(:)
-integer, allocatable :: nSnpByChip(:), animChip(:)
+    integer, allocatable :: nSnpsAnimal(:), Centroid(:), ClusterMemberIndv(:)
+    integer, allocatable :: animChip(:)
+    type(PedigreeHolder) :: ped !TODO move out of global
 
-
+    real(kind=4),allocatable :: xnumrelmatHold(:)
+    integer :: NRMmem, shell, shellmax, shellWarning
 end module Global
 
-
-module GlobalPedigree
-use Global
-implicit none
-
-real(kind=4),allocatable :: xnumrelmatHold(:)
-integer :: NRMmem, shell, shellmax, shellWarning
-integer,allocatable:: seqid(:),seqsire(:),seqdam(:),RecodeGenotypeId(:),passedorder(:)
-character*(lengan),allocatable :: ped(:,:),Id(:),sire(:),dam(:)
-
-
-end module GlobalPedigree

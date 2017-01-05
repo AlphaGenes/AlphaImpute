@@ -250,7 +250,6 @@ MODULE hmmHaplotyper
         endif
 
         deallocate(probs)
-
     end subroutine SampleHaplotypeSource
 
 
