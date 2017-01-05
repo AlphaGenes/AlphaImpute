@@ -941,7 +941,7 @@ contains
                 endif
 
                 l=0
-                do j=1,inputParams%nSnpRaw
+                do j=1,inputParams%nsnp
                     if (SnpIncluded(j)==1) then
                         l=l+1
                         do i=1,nAnisG
@@ -951,8 +951,6 @@ contains
                             endif
                             ProbImputeGenos(GlobalHmmID(i),j)   = ProbImputeGenosHmm(i,j)
                             ProbImputePhase(GlobalHmmID(i),j,1) = ProbImputePhaseHmm(i,j,1)
-                            print *,ProbImputePhaseHmm(i,j,2)
-                            print *,ProbImputePhase(GlobalHmmID(i),j,2)
                             ProbImputePhase(GlobalHmmID(i),j,2) = ProbImputePhaseHmm(i,j,2)
                         enddo
                     endif
