@@ -423,8 +423,16 @@ contains
                 read(second(1), *) this%useProcs
             case("seed")
                 read(second(1), *)this%idum
+
+            case("thresholdformissingalleles")
+                read(second(1), *) this%phasedThreshold
+
             case("phasedanimalsthreshold")
                 read(second(1), *) this%phasedThreshold
+                
+            case("thresholdimputed")
+                read(second(1), *) this%imputedThreshold
+                  
             case("wellimputedthreshold")
                 read(second(1), *) this%imputedThreshold
             case("haplotypeslist")

@@ -2151,7 +2151,7 @@ write(0,*) 'DEBUG: Mach Finished'
         do i=1,nAnisP
             if (inputParams%sexopt==0 .or. (inputParams%sexopt==1 .and. ped%pedigree(i)%gender/=inputParams%HetGameticStatus) ) then     ! If individual is homogametic
                 do e=1,2
-                    if (ped%pedigree(i)%isDummyBasedOnIndex(e)) cycle
+                    if (ped%pedigree(i)%isDummyBasedOnIndex(e+1)) cycle
                     ParId=ped%pedigree(i)%getSireDamNewIDByIndex(e+1)
                     do j=1,inputParams%nsnp
                         if (ImputePhase(i,j,e)==9) then                 ! Always that the SNP is not genotyped
