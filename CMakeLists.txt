@@ -4,7 +4,7 @@ enable_language (Fortran)
 FIND_PACKAGE(Doxygen)
 
 OPTION(RUN_TESTS "Run and compile tests"
-  OFF)
+       OFF)
 OPTION(USE_HDF5 "Use hdf"
        OFF)
 

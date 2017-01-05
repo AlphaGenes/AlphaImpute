@@ -13,7 +13,6 @@ SET(ALPHAIMPUTE_src
             ${SRCALPHAIMPUTE}par_zig_mod.f90
             ${SRCALPHAIMPUTE}PhaseRounds.f90
             ${SRCALPHAIMPUTE}random.f90
-            ${SRCALPHAIMPUTE}recombination.f90
             ${SRCALPHAIMPUTE}utils.f90
             ${SRCALPHAIMPUTE}AlphaImpute.f90
 

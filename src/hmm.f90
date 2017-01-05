@@ -28,14 +28,13 @@ subroutine MaCHController(HMM)
 
     inputParams => defaultInput
 
-    !#ifdef DEBUG
-    !     write(0,*) 'DEBUG: [MaCHController] Allocate memory'
-    !#endif
+! #ifdef DEBUG
+!     write(0,*) 'DEBUG: [MaCHController] Allocate memory'
+! #endif
 
 
-    ! Number of SNPs and genotyped animals for the HMM algorithm
+    ! Number of SNPs in the HMM algorithm
     nSnpHmm=inputParams%nsnp
-    nIndHmmMaCH=nAnisG
 
     ! Read the phased individuals if HMM Only or Sequence data
 #ifdef DEBUG
@@ -45,7 +44,6 @@ subroutine MaCHController(HMM)
     if ( (HMM==RUN_HMM_ONLY .OR. HMM==RUN_HMM_NGS) .AND. inputParams%InbredAnimalsFile/="None") then
         call ReadInbred(inputParams%prePhasedFileUnit, InbredHmmMaCH, nAnisInbred)
     end if
-
 
     ! Number of animals in the HMM
     nIndHmmMaCH = nAnisG + nAnisInbred
@@ -307,7 +305,7 @@ subroutine ReadInbred(PhaseFileUnit, PhasedData, nInbred)
     integer :: i,k,dumC
     logical :: opened, named
     character(len=300) :: InbredFile
-
+    character(len=20) :: dumID
 
     inquire(unit=PhaseFileUnit, opened=opened, named=named, name=InbredFile)
 
@@ -328,15 +326,55 @@ subroutine ReadInbred(PhaseFileUnit, PhasedData, nInbred)
     enddo
     rewind(PhaseFileUnit)
 
-    allocate(AnimalsInbred(nInbred))
     allocate(PhasedData(nInbred,nSnpHmm))
 
     do i=1,nInbred
-        read (PhaseFileUnit,*) AnimalsInbred(i), PhasedData(i,:)
+        read (PhaseFileUnit,*) dumID, PhasedData(i,:)
     end do
     close(PhaseFileUnit)
 
 end subroutine ReadInbred
+
+!######################################################################
+subroutine getHapList(HapListUnit, ListIds, nHaps)
+    implicit none
+
+    integer, intent(inout) :: HapListUnit
+    character(len=20), allocatable, intent(inout) :: ListIds(:)
+    integer, intent(out) :: nHaps
+
+    integer :: i, k
+    logical :: opened, named
+    character(len=300) :: HapListFile
+    character(len=20) :: dumC
+
+    inquire(unit=HapListUnit, opened=opened, named=named, name=HapListFile)
+
+    if (.NOT. opened .and. named) then
+        open(unit=HapListUnit, file=HapListFile, status='unknown')
+    else if (.NOT. named) then
+        write(0, *) "ERROR - Something went wrong when trying to read the file of the list of haplotypes"
+    end if
+
+    nHaps = 0
+    do
+        read(HapListUnit, *, iostat=k) dumC
+        nHaps=nHaps+1
+        if(k/=0) then
+            nHaps=nHaps-1
+            exit
+        endif
+    enddo
+
+    rewind(HapListUnit)
+
+    allocate(ListIds(nHaps))
+    do i=1,nHaps
+        read(HapListUnit, *) ListIds(i)
+    enddo
+    close(HapListUnit)
+
+end subroutine getHapList
 
 !######################################################################
 subroutine ParseMaCHDataNGS(nGenotyped)
@@ -345,13 +383,29 @@ subroutine ParseMaCHDataNGS(nGenotyped)
     use AlphaImputeInMod
     implicit none
     integer, intent(in) :: nGenotyped
-    integer :: i
+    integer :: i, j, nHaps, HapsLeft
     type(AlphaImputeInput), pointer :: inputParams
+    character(len=20), allocatable :: HapList(:)
+    character(len=20) :: aux
+
+    interface
+        subroutine getHapList(HapListUnit, ListIds, nHaps)
+            integer, intent(inout) :: HapListUnit
+            character(len=20), allocatable, intent(inout) :: ListIds(:)
+            integer, intent(out) :: nHaps
+        end subroutine getHapList
+    end interface
 
     inputParams => defaultInput
 #ifdef DEBUG
     write(0,*) 'DEBUG: [ParseMaCHDataNGS]'
 #endif
+
+    if (inputParams%HapList) then
+        nHaps=0
+        call getHapList(inputParams%HapListUnit,HapList,nHaps)
+        HapsLeft=nHaps
+    end if
 
     do i=1,nGenotyped
         ! Add animal's diploid to the Diploids Library
@@ -361,6 +415,16 @@ subroutine ParseMaCHDataNGS(nGenotyped)
             ! WARNING: If this variable only stores 1 and 0, then its
             !          type should logical: GlobalHmmHDInd=.true.
             GlobalHmmHDInd(i)=1
+        endif
+        if (inputParams%HapList) then
+            ! do j=1,HapsLeft
+            ! TODO: CHANGE THIS TO A WHILE LOOP
+            do j=1,nHaps
+                if (ped%pedigree(GlobalHmmID(i))%originalID == HapList(j)) then
+                    GlobalInbredInd(i) = .TRUE.
+                    exit
+                endif
+            enddo
         endif
     enddo
 
@@ -373,11 +437,9 @@ end subroutine ParseMaCHDataNGS
 subroutine ParseMaCHDataGenos(nGenotyped)
     ! subroutine ParseMaCHData
     use Global
-
     use GlobalVariablesHmmMaCH
     use Utils
     use AlphaImputeInMod
-
     use iso_fortran_env
 
     implicit none
@@ -412,11 +474,17 @@ subroutine ParseMaCHDataGenos(nGenotyped)
             endif
         end if
     end do
+    !     do i = 1, nAnisP
+    !         if (trim(Id(i)) == trim(GenotypeID(j))) then
+    !             GlobalHmmID(j) = i
+    !         end if
+    !     end do
+    ! end do
 
 
     do i=1,nGenotyped
         ! Check if individual is in the genotype file
-        if (ped%pedigree(GlobalHmmID(i))%genotyped==.true.) then
+        if (ped%pedigree(GlobalHmmID(i))%isGenotyped() == .TRUE.) then
             ! k=k+1
             nIndvG=nIndvG+1
             k=i
@@ -455,7 +523,6 @@ subroutine ParseMaCHDataGenos(nGenotyped)
             endif
         endif
     end do
-    !enddo
 
     close(NoGenosUnit)
 
@@ -465,7 +532,6 @@ subroutine ParseMaCHDataGenos(nGenotyped)
 
     ! Check if the number of genotyped animals is correct
     if (nIndvG/=nGenotyped) then
-        print *,GlobalHmmID
         write (6,*) '   ','WARNING: There are individuals in the genotype file that have'
         write (6,*) '   ','         not been genotyped'
         write (6,*) '   ','         For a list of these individuals look into the file'
@@ -583,10 +649,10 @@ subroutine MaCHForInd(CurrentInd, HMM)
         enddo
         ! endif
 
-        ! ! Cumulative genotype probabilities through hmm processes
-        !#if DEBUG.EQ.1
-        !     write(0,*) 'DEBUG: Calculate genotype dosages [MaCHForInd]'
-        !#endif
+        ! Cumulative genotype probabilities through hmm processes
+! #if DEBUG.EQ.1
+!        write(0,*) 'DEBUG: Calculate genotype dosages [MaCHForInd]'
+! #endif
         ! if (GlobalRoundHmm>inputParams%hmmburninround) then
         ProbImputeGenosHmm(CurrentInd,:)=ProbImputeGenosHmm(CurrentInd,:)&
             +FullH(CurrentInd,:,1)+FullH(CurrentInd,:,2)
@@ -1003,7 +1069,8 @@ subroutine ImputeAlleles(CurrentInd,CurrentMarker,State1,State2)
         !$OMP ATOMIC
         ErrorUncertainty(CurrentMarker)=ErrorUncertainty(CurrentMarker)+1
 
-        ! If allele is homozygous or the genotype does not agree the observation
+    ! If allele is homozygous or the genotype does not agree the observation
+
     else
         ! count the number of alleles matching
         !$OMP ATOMIC
@@ -1303,45 +1370,47 @@ subroutine ConditionOnData(CurrentInd,Marker)
         AltAll = AlterAllele(CurrentInd,Marker)
     else
         genotype = GenosHmmMaCH(CurrentInd,Marker)
+        if (genotype==MISSING) then
+            return
+        endif
     endif
 
-    if (genotype==MISSING) then
-        return
-    else
-        ! Index keeps track of the states already visited. The total number
-        ! of states in this chunk of code is (inputParams%nhapinsubh x (inputParams%nhapinsubh-1)/2)
-        Index=0
-        if (inputParams%HMMOption==RUN_HMM_NGS .AND. GlobalInbredInd(CurrentInd)==.FALSE.) then
-            do i=0,2
-                cond_probs(i)=Penetrance(Marker,i,0)*shotgunErrorMatrix(0,RefAll,AltAll)&
-                    +Penetrance(Marker,i,1)*shotgunErrorMatrix(1,RefAll,AltAll)&
-                    +Penetrance(Marker,i,2)*shotgunErrorMatrix(2,RefAll,AltAll)
-            enddo
-        endif
-
-        do i=1, inputParams%nhapinsubh
-            if (inputParams%HMMOption /= RUN_HMM_NGS .OR. GlobalInbredInd(CurrentInd)==.TRUE.) then
-                ! Probability to observe genotype SubH(i) being the true
-                ! genotype GenosHmmMaCH in locus Marker
-                Factors(0) = Penetrance(Marker,SubH(i,Marker),genotype)
-                ! Probability to observe genotype SubH(i)+1 being the true
-                ! genotype GenosHmmMaCH in locus Marker
-                Factors(1) = Penetrance(Marker,SubH(i,Marker)+1,genotype)
-            else
-                ! Probability to observe genotype SubH(i) being the true
-                ! genotype GenosHmmMaCH in locus Marker
-                Factors(0) = cond_probs(SubH(i,Marker))
-                ! Probability to observe genotype SubH(i)+1 being the true
-                ! genotype GenosHmmMaCH in locus Marker
-                Factors(1) = cond_probs(SubH(i,Marker)+1)
-            endif
-            do j=1,i
-                Index=Index+1
-                ForwardProbs(Index,Marker)=&
-                    ForwardProbs(Index,Marker)*Factors(SubH(j,Marker))
-            enddo
+    ! Index keeps track of the states already visited. The total number
+    ! of states in this chunk of code is (inputParams%nhapinsubh x (inputParams%nhapinsubh-1)/2)
+    Index=0
+    ! if (inputParams%HMMOption==RUN_HMM_NGS .AND. GlobalInbredInd(CurrentInd)==.FALSE.) then
+    if (inputParams%HMMOption==RUN_HMM_NGS) then
+        do i=0,2
+            cond_probs(i)=Penetrance(Marker,i,0)*shotgunErrorMatrix(0,RefAll,AltAll)&
+            +Penetrance(Marker,i,1)*shotgunErrorMatrix(1,RefAll,AltAll)&
+            +Penetrance(Marker,i,2)*shotgunErrorMatrix(2,RefAll,AltAll)
         enddo
     endif
+
+    do i=1, inputParams%nhapinsubh
+        ! if (inputParams%HMMOption /= RUN_HMM_NGS .OR. GlobalInbredInd(CurrentInd)==.TRUE.) then
+        if (inputParams%HMMOption /= RUN_HMM_NGS) then
+            ! Probability to observe genotype SubH(i) being the true
+            ! genotype GenosHmmMaCH in locus Marker
+            Factors(0) = Penetrance(Marker,SubH(i,Marker),genotype)
+            ! Probability to observe genotype SubH(i)+1 being the true
+            ! genotype GenosHmmMaCH in locus Marker
+            Factors(1) = Penetrance(Marker,SubH(i,Marker)+1,genotype)
+        else
+            ! Probability to observe genotype SubH(i) being the true
+            ! genotype GenosHmmMaCH in locus Marker
+            Factors(0) = cond_probs(SubH(i,Marker))
+            ! Probability to observe genotype SubH(i)+1 being the true
+            ! genotype GenosHmmMaCH in locus Marker
+            Factors(1) = cond_probs(SubH(i,Marker)+1)
+        endif
+
+        do j=1,i
+            Index=Index+1
+            ForwardProbs(Index,Marker)=&
+                ForwardProbs(Index,Marker)*Factors(SubH(j,Marker))
+        enddo
+    enddo
 
 end subroutine ConditionOnData
 
@@ -1615,7 +1684,6 @@ subroutine SetUpEquationsReads(nGenotyped)
     ! Li et al. 2010, Appendix
 
     use Global
-
     use GlobalVariablesHmmMaCH
     use random
     use AlphaImputeInMod
@@ -1634,7 +1702,6 @@ subroutine SetUpEquationsReads(nGenotyped)
         alleles = 0
 
         do i=1,nGenotyped
-            ! readObs = readObs + GenosHmmMaCH(i,j)
             readObs = readObs + reads(i,j)
             alleles = alleles + AlterAllele(i,j)
         enddo
@@ -1645,7 +1712,6 @@ subroutine SetUpEquationsReads(nGenotyped)
         prior_22 = frequency**2
 
         do i=1,nGenotyped
-            readObs = reads(i,j)
             RefAll = ReferAllele(i,j)
             AltAll = AlterAllele(i,j)
 
@@ -1674,7 +1740,7 @@ subroutine SetUpEquationsReads(nGenotyped)
                 endif
             else if (posterior_22 > 0.9999) then
                 GenosHmmMaCH(i,j) = 2
-                FullH(i,j,:) = 0
+                FullH(i,j,:) = 1
             else
                 if (reads(i,j) == 0) then
                     GenosHmmMaCH(i,j) = MISSING
