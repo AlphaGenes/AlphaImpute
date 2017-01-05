@@ -379,7 +379,6 @@ end subroutine getHapList
 !######################################################################
 subroutine ParseMaCHDataNGS(nGenotyped)
     use Global
-    use GlobalPedigree
     use GlobalVariablesHmmMaCH
     use AlphaImputeInMod
     implicit none
@@ -421,7 +420,7 @@ subroutine ParseMaCHDataNGS(nGenotyped)
             ! do j=1,HapsLeft
             ! TODO: CHANGE THIS TO A WHILE LOOP
             do j=1,nHaps
-                if (ID(GlobalHmmID(i)) == HapList(j)) then
+                if (ped%pedigree(GlobalHmmID(i))%originalID == HapList(j)) then
                     GlobalInbredInd(i) = .TRUE.
                     exit
                 endif
@@ -438,7 +437,6 @@ end subroutine ParseMaCHDataNGS
 subroutine ParseMaCHDataGenos(nGenotyped)
     ! subroutine ParseMaCHData
     use Global
-    use GlobalPedigree
     use GlobalVariablesHmmMaCH
     use Utils
     use AlphaImputeInMod
@@ -486,7 +484,7 @@ subroutine ParseMaCHDataGenos(nGenotyped)
 
     do i=1,nGenotyped
         ! Check if individual is in the genotype file
-        if (IndivIsGenotyped(GlobalHmmID(i))==1) then
+        if (ped%pedigree(GlobalHmmID(i))%isGenotyped() == .TRUE.) then
             ! k=k+1
             nIndvG=nIndvG+1
             k=i
@@ -550,7 +548,6 @@ subroutine MaCHForInd(CurrentInd, HMM)
     ! individual
 
     use Global
-    use GlobalPedigree
     use GlobalVariablesHmmMaCH
     use hmmHaplotyper
     use Utils
@@ -1687,7 +1684,6 @@ subroutine SetUpEquationsReads(nGenotyped)
     ! Li et al. 2010, Appendix
 
     use Global
-    use GlobalPedigree
     use GlobalVariablesHmmMaCH
     use random
     use AlphaImputeInMod
