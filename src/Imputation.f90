@@ -666,15 +666,17 @@ write(0,*) 'DEBUG: Mach Finished'
                     HapElim = 0 !  changed from HapElim=1 to improve speed
                     !$OMP PARALLEL DO &
                     !$OMP DEFAULT(SHARED) &
-                    !$OMP PRIVATE(i,j,e,h,HapElim,BanBoth,Counter,Count0,Count1,Ban,curPos,curSection,BitWork,MissWork,BitGeno)
+                    !$OMP PRIVATE(i,j,e,h,HapElim,BanBoth,counter,Count0,Count1,Ban,curPos,curSection,BitWork,MissWork,BitGeno)
                     do i=1,nAnisP
 
                         
                         BanBoth=0
                         BitWork = 0
                         MissWork = 0
-                        counter = nAnisP*2*2
+                        
                         do e=1,2
+
+                            counter = nHap*2
                             ! If GeneProbPhase has been executed, that is, if not considering the Sex Chromosome, then MSTermInfo={0,1}.
                             ! Else, if Sex Chromosome, then MSTermInfo is 0 always
                             ! So, if a Conservative imputation of haplotypes is selected, this DO statement will do nothing
