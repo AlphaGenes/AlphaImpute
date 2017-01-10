@@ -257,8 +257,8 @@ contains
                     read(second(1),*) this%PercGenoForHD
                     read(second(2),*) this%PercSnpMiss
                     read(second(3),*) this%SecondPercGenoForHD
-                    if (second(4)=="AllSnpOut") this%outopt=1
-                    if (second(4)=="EditedSnpOut") this%outopt=0
+                    if (toLower(second(4))=="allsnpout") this%outopt=1
+                    if (toLower(second(4))=="editedsnpout") this%outopt=0
                     if (this%outopt==9) then
                         goto 4000
                     endif
