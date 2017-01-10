@@ -163,7 +163,12 @@ contains
             JobsDone(:)=0
             do
                 do i=1,inputParams%nPhaseInternal
-                    write (filout,'("./Phasing/Phase"i0,"/PhasingResults/Timer.txt")')i
+                    if ((ManagePhaseOn1Off0==0).and.(NoPhasing==1)) then
+                        write (filout,'(a,"/Phase"i0,"/PhasingResults/Timer.txt")') trim(inputParams%PhasePath), i
+                    else
+                        write (filout,'("./Phasing/Phase"i0,"/PhasingResults/Timer.txt")')i
+                    end if
+
                     inquire(file=trim(filout),exist=FileExists)
                     if ((FileExists .eqv. .true.).and.(JobsDone(i)==0)) then
                         print*, " ","AlphaPhase job ",i," done"
@@ -181,7 +186,12 @@ contains
         ProcUsed=0
         do i=1,inputParams%nprocessors
             ProcUsed=ProcUsed+1
-            write (infile,'("cd Phasing/Phase"i0)')i
+            if ((ManagePhaseOn1Off0==0).and.(NoPhasing==1)) then
+                write (infile,'("cd "a,"/Phase"i0)') trim(inputParams%PhasePath), i
+            else
+                write (infile,'("cd Phasing/Phase"i0)')i
+            end if
+
             write (107,*) trim(infile)
             if (AlphaPhasePresent==0) write (107,*) "nohup sh -c ""AlphaPhase > out 2>&1"" >/dev/null &"
             if (AlphaPhasePresent==1) write (107,*) "nohup sh -c ""./AlphaPhase > out 2>&1"" >/dev/null &"
@@ -204,7 +214,11 @@ contains
         ! Check that every process has finished before go on
         do
             do i=1,inputParams%nPhaseInternal
-                write (filout,'("./Phasing/Phase"i0,"/PhasingResults/Timer.txt")')i
+                if ((ManagePhaseOn1Off0==0).and.(NoPhasing==1)) then
+                    write (filout,'(a,"/Phase"i0,"/PhasingResults/Timer.txt")') trim(inputParams%PhasePath), i
+                else
+                    write (filout,'("./Phasing/Phase"i0,"/PhasingResults/Timer.txt")')i
+                end if
 
                 inquire(file=trim(filout),exist=FileExists)
                 if ((FileExists .eqv. .true.).and.(JobsDone(i)==0)) then
@@ -215,7 +229,11 @@ contains
                         JobsStarted(Tmp)=1
                         write (filout,'("TempPhase"i0,".sh")')Tmp
                         open (unit=107,file=trim(filout),status="unknown")
-                        write (infile,'("cd Phasing/Phase"i0)')Tmp
+                        if ((ManagePhaseOn1Off0==0).and.(NoPhasing==1)) then
+                            write (infile,'("cd "a,"/Phase"i0)') trim(inputParams%PhasePath), Tmp
+                        else
+                            write (infile,'("cd Phasing/Phase"i0)')Tmp
+                        end if
                         write (107,*) trim(infile)
                         if (AlphaPhasePresent==0) write (107,*) "nohup sh -c ""AlphaPhase > out 2>&1"" >/dev/null &"
                         if (AlphaPhasePresent==1) write (107,*) "nohup sh -c ""./AlphaPhase > out 2>&1"" >/dev/null &"
@@ -626,7 +644,7 @@ contains
             enddo
 
             do i=1,nAnisP
-                do e=1,2            
+                do e=1,2
                     parID=ped%pedigree(i)%getSireDamNewIDByIndex(e+1)
                     if (ParId==0) then
                         do j=1,nSnpIterate
@@ -1784,7 +1802,7 @@ contains
         CountRawGenos=count(Genos(:,:)/=9)
 
         do i=1,nObsDataRaw
-            write (103,'(4a20)') Ped%pedigree(i)%originalID,Ped%pedigree(i)%sireID,Ped%pedigree(i)%damID 
+            write (103,'(4a20)') Ped%pedigree(i)%originalID,Ped%pedigree(i)%sireID,Ped%pedigree(i)%damID
         enddo
         call flush(103)
         close(103)
@@ -1836,7 +1854,11 @@ contains
         ! Create AlphaPhaseSpec file
         do i=1,inputParams%nPhaseInternal           ! Phasing is done in parallel
 #ifdef OS_UNIX
-            write (filout,'("./Phasing/Phase"i0,"/AlphaPhaseSpec.txt")')i
+    if((ManagePhaseOn1Off0==0).and.(NoPhasing==1)) then
+        write (filout,'(a,"/Phase"i0,"/AlphaPhaseSpec.txt")')trim(inputParam%PhasePath), i
+    else
+        write (filout,'("./Phasing/Phase"i0,"/AlphaPhaseSpec.txt")') i
+    end if
 #else
             write (filout,'(".\Phasing\Phase"i0,"\AlphaPhaseSpec.txt")')i
 #endif
@@ -1891,7 +1913,14 @@ contains
             close(106)
             write (filout,'("Phase"i0)')i
             ! if (AlphaPhasePresent==1) call system ("cp AlphaPhase Phasing/" // filout)
-            if (AlphaPhasePresent==1) call system (COPY // " AlphaPhase" // EXE // " Phasing" // DASH // filout // NULL)
+            if (AlphaPhasePresent==1) then
+                if ((ManagePhaseOn1Off0==0).and.(NoPhasing==1)) then
+                    call system (COPY // " AlphaPhase" // EXE // " " // trim(inputParams%PhasePath) // DASH // filout // NULL)
+                else
+                    call system (COPY // " AlphaPhase" // EXE // " Phasing" // DASH // filout // NULL)
+                endif
+            endif
+
         enddo
 
         Tmp=int(float(inputParams%nsnp)/inputParams%nprocessors)
@@ -1994,7 +2023,6 @@ contains
     !#############################################################################################################################################################################################################################
     subroutine InternalEdit
         use Global
-
         use alphaimputeinmod
         implicit none
 
@@ -2014,7 +2042,7 @@ contains
 
         SnpIncluded(:)=0
         if ((inputParams%managephaseon1off0==0).and.(inputParams%NoPhasing==1)) then
-            write (FileName,'(a,"/EditingSnpSummary.txt")') trim(inputParams%phasePath)
+            FileName = trim(inputParams%phasePath) // DASH // "EditingSnpSummary.txt"
             open(unit=111,file=trim(FileName),status="old")
             do i=1,inputParams%nsnp
                 read (111,*) dum,SnpSummary(i),SnpIncluded(i)
@@ -2189,8 +2217,13 @@ contains
         enddo
         close(102)
 
-        ! open (unit=112,file="./Phasing/EditingSnpSummary.txt",status="unknown")
-        open (unit=112,file="." // DASH // "Phasing" // DASH // "EditingSnpSummary.txt",status="unknown")
+        if ((ManagePhaseOn1Off0==0).and.(NoPhasing==1)) then
+            FileName = trim(inputParams%PhasePath) // DASH // "EditingSnpSummary.txt"
+        else
+            FileName = "." // DASH // "Phasing" // DASH // "EditingSnpSummary.txt"
+        end if
+
+        open (unit=112,file=FileName,status="unknown")
         do j=1,inputParams%nSnpRaw
             write (112,*) j,SnpSummary(j),SnpIncluded(j)        !'(i,1x,f5.3,1x,i)'
         enddo
@@ -3430,12 +3463,12 @@ program AlphaImpute
     if (inputParams%hmmoption /= RUN_HMM_NGS) then
         if (inputParams%restartOption<OPT_RESTART_PHASING) call MakeDirectories(RUN_HMM_NULL)
 
-        !call cpu_time(start)  
+        !call cpu_time(start)
         call CountInData
         !call cpu_time(finish)
         !print '("Time ReadInData= ",f6.3," seconds.")',finish-start
 
-        !call cpu_time(start)       
+        !call cpu_time(start)
         call ReadInData
         !call cpu_time(finish)
         !print '("Time ReadInData= ",f6.3," seconds.")',finish-start

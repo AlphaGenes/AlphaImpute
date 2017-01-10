@@ -669,11 +669,11 @@ write(0,*) 'DEBUG: Mach Finished'
                     !$OMP PRIVATE(i,j,e,h,HapElim,BanBoth,counter,Count0,Count1,Ban,curPos,curSection,BitWork,MissWork,BitGeno)
                     do i=1,nAnisP
 
-                        
+
                         BanBoth=0
                         BitWork = 0
                         MissWork = 0
-                        
+
                         do e=1,2
 
                             counter = nHap*2
@@ -1231,7 +1231,7 @@ write(0,*) 'DEBUG: Mach Finished'
                             if (associated(parent)) then
                                 ! We look for possible gametes within the haplotypes identified to each of the
                                 ! individual's parents constructed during the phasing step
-                                PosHDInd=PosHD(parent%id)   ! Index of the parent in the HD phase information 
+                                PosHDInd=PosHD(parent%id)   ! Index of the parent in the HD phase information
                                 !TODO check- SHOULD THIS BE INDIVIDUAL id (above) rather than parent ID?
 
                                 ! If there is one allele phased at least
@@ -1744,13 +1744,13 @@ write(0,*) 'DEBUG: Mach Finished'
         ! WARNING: If I only want to phase base animals, why do I need to read the whole file?
 #ifdef OS_UNIX
         if (inputParams%ManagePhaseOn1Off0==0) then
-            write (FileName,'(a,"Phase",i0,"/PhasingResults/FinalPhase.txt")') trim(inputParams%phasePath),MiddlePhaseRun
+            write (FileName,'(a,"/Phase",i0,"/PhasingResults/FinalPhase.txt")') trim(inputParams%phasePath),MiddlePhaseRun
         else
             write (FileName,'("./Phasing/Phase",i0,"/PhasingResults/FinalPhase.txt")')MiddlePhaseRun
         endif
 #else
         if (inputParams%ManagePhaseOn1Off0==0) then
-            write (FileName,'(a,"Phase",i0,"\PhasingResults\FinalPhase.txt")') trim(inputParams%phasePath),MiddlePhaseRun
+            write (FileName,'(a,"\Phase",i0,"\PhasingResults\FinalPhase.txt")') trim(inputParams%phasePath),MiddlePhaseRun
         else
             write (FileName,'(".\Phasing\Phase",i0,"\PhasingResults\FinalPhase.txt")')MiddlePhaseRun
         endif
@@ -1764,24 +1764,24 @@ write(0,*) 'DEBUG: Mach Finished'
 
                 tmpIndex = ped%dictionary%getValue(dumC)
                 if (tmpIndex /= DICT_NULL) then
-                    PosHD(tmpIndex)=i        
+                    PosHD(tmpIndex)=i
 
-                else 
+                else
                     write(error_unit,*) "WARNING - HD Phase information for animal not in the pedigree"
-                endif 
+                endif
             enddo
         endblock
         close(2001)
 
 #ifdef OS_UNIX
         if (inputParams%ManagePhaseOn1Off0==0) then
-            write (FileName,'(a,"Phase",i0,"/PhasingResults/FinalPhase.txt")') trim(inputParams%phasePath),CompPhaseRun
+            write (FileName,'(a,"/Phase",i0,"/PhasingResults/FinalPhase.txt")') trim(inputParams%phasePath),CompPhaseRun
         else
             write (FileName,'("./Phasing/Phase",i0,"/PhasingResults/FinalPhase.txt")')CompPhaseRun
         endif
 #else
         if (inputParams%ManagePhaseOn1Off0==0) then
-            write (FileName,'(a,"Phase",i0,"\PhasingResults\FinalPhase.txt")') trim(inputParams%phasePath),CompPhaseRun
+            write (FileName,'(a,"\Phase",i0,"\PhasingResults\FinalPhase.txt")') trim(inputParams%phasePath),CompPhaseRun
         else
             write (FileName,'(".\Phasing\Phase",i0,"\PhasingResults\FinalPhase.txt")')CompPhaseRun
         endif
@@ -2220,7 +2220,7 @@ write(0,*) 'DEBUG: Mach Finished'
                                     ! This is the only difference with the inputParams%sexopt=0 code below. Duplicating
                                     ! the code can be avoided by including the IF statement here instead than
                                     ! outside the SNPs loop.
-                                    if ((ped%pedigree(i)%gender ==inputParams%HetGameticStatus).and.(tmpChild%gender==inputParams%HetGameticStatus)) cycle 
+                                    if ((ped%pedigree(i)%gender ==inputParams%HetGameticStatus).and.(tmpChild%gender==inputParams%HetGameticStatus)) cycle
                                     if (ImputePhase(tmpChild%id,k,j)==0) Count0=Count0+1
                                     if (ImputePhase(tmpChild%id,k,j)==1) Count1=Count1+1
 
@@ -2247,7 +2247,7 @@ write(0,*) 'DEBUG: Mach Finished'
                                     ! This is the only difference with the inputParams%sexopt=0 code below. Duplicating
                                     ! the code can be avoided by including the IF statement here instead than
                                     ! outside the SNPs loop.
-                                    if ((ped%pedigree(i)%gender ==inputParams%HetGameticStatus).and.(tmpChild%gender==inputParams%HetGameticStatus)) cycle 
+                                    if ((ped%pedigree(i)%gender ==inputParams%HetGameticStatus).and.(tmpChild%gender==inputParams%HetGameticStatus)) cycle
                                     if (ImputePhase(tmpChild%id,k,j)==0) Count0=Count0+1
                                     if (ImputePhase(tmpChild%id,k,j)==1) Count1=Count1+1
 
@@ -2636,7 +2636,7 @@ write(0,*) 'DEBUG: Mach Finished'
                 SireDamRL=e+1
                 CountLeftSwitch=0
                 CountRightSwitch=0
-                block 
+                block
                     integer :: tmpGender
                     PedId=ped%pedigree(i)%getSireDamNewIDByIndex(SireDamRL)
 
@@ -2647,7 +2647,7 @@ write(0,*) 'DEBUG: Mach Finished'
                         if (ped%pedigree(pedId)%isDummy) then
                             cycle
                         endif
-                    else 
+                    else
                         tmpGender = 0
                     endif
                     ! Skip if, in the case of sex chromosome, me and my parent are heterogametic
@@ -2951,7 +2951,7 @@ write(0,*) 'DEBUG: Mach Finished'
                 CountRightSwitch=0
                 pedID=ped%pedigree(i)%getSireDamNewIDByIndex(SireDamRL)
                 if (ped%isDummy(pedID)) cycle
-                ! TODO can  probably skip if value is 0 too 
+                ! TODO can  probably skip if value is 0 too
                 ! Skip if, in the case of sex chromosome, me and my parent are heterogametic
                 if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==inputParams%hetGameticStatus).and.(ped%pedigree(i)%getParentGenderBasedOnIndex(SireDamRL)==inputParams%hetGameticStatus)) cycle
 
