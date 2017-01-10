@@ -472,6 +472,8 @@ subroutine ParseMaCHDataGenos(nGenotyped)
             if (tmpID > nAnisP) then
                 write(error_unit,*) "ERROR: GENOTYPE ID OUT OF RANGE:",tmpID,",",GenotypeID(j)
             endif
+        else
+                write(error_unit,*) "WARNING: GENOTYPE ID NOT IN PEDIGREE:",GenotypeID(j)
         end if
     end do
     !     do i = 1, nAnisP
