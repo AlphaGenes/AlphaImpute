@@ -827,13 +827,13 @@ subroutine geneprob(currentSnp)
         end if
 
         if (ifreq_iterate>=1) then
-            IF(pHold(ifreq_iterate+1) > 0.9999) pHold(ifreq_iterate+1) = 0.9999
-            IF(pHold(ifreq_iterate+1) < 0.0001) pHold(ifreq_iterate+1) = 0.0001
-            ! if(pHold(ifreq_iterate+1) > 0.9999 .OR. pHold(ifreq_iterate+1) < 0.0001) then
-            !     pHold(ifreq_iterate+1) = pHold(ifreq_iterate) ! take last value
-            !     nfreq_max=ifreq_iterate+1 ! and stop after getting probs from that (redundant - previous line makes a StopCrit stop)
-            !     !!     PRINT*, 'Unstable projection - taking current prior ...'
-            ! endif
+            !IF(pHold(ifreq_iterate+1) > 0.9999) pHold(ifreq_iterate+1) = 0.9999
+            !IF(pHold(ifreq_iterate+1) < 0.0001) pHold(ifreq_iterate+1) = 0.0001
+            if(pHold(ifreq_iterate+1) > 0.9999 .OR. pHold(ifreq_iterate+1) < 0.0001) then
+                pHold(ifreq_iterate+1) = pHold(ifreq_iterate) ! take last value
+                nfreq_max=ifreq_iterate+1 ! and stop after getting probs from that (redundant - previous line makes a StopCrit stop)
+                !!     PRINT*, 'Unstable projection - taking current prior ...'
+            endif
         endif
 
         if(nfreq_max>0) then
