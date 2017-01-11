@@ -941,9 +941,7 @@ contains
                 write(0,*) 'DEBUG: Write HMM results [WriteOutResults]'
 #endif
                 if (inputParams%HMMOption/=RUN_HMM_NO) Then
-                  if (inputParams%outopt==0) nSnpIterate=inputParams%nsnp
-                  if (inputParams%outopt==1) nSnpIterate=inputParams%nSnpRaw
-                  
+                  nSnpIterate=inputParams%nsnp                  
                   if (allocated(ProbImputeGenos)) then
                         deallocate(ProbImputeGenos)
                     end if
@@ -1076,7 +1074,7 @@ contains
                 if (ped%pedigree(i)%isDummy) then
                     exit
                 endif
-                do j=1,inputParams%nSnpRaw
+                do j=1,inputParams%nSnp
                     !ImputationQuality(i,2)=ImputationQuality(i,2)+abs(ProbImputeGenos(i,j)-(2*Maf(j)))
                     ImputationQuality(i,2)=ImputationQuality(i,2)+abs(ProbImputeGenos(i,j)-((Maf(j)**4)+(4*(Maf(j)**2)*((1.0-Maf(j))**2))+(1.0-Maf(j)**4)))
                 enddo
