@@ -74,28 +74,7 @@ MODULE PhaseRounds
     END INTERFACE CoreIndex
 
 CONTAINS
-    !---------------------------------------------------------------------------
-    ! DESCRIPTION:
-    !> @brief      Initialise new core index
-    !
-    !> @details    Initialise new core index
-    !
-    !> @author     Roberto Antolin, roberto.antolin@roslin.ed.ac.uk
-    !
-    !> @date       Julyy 25, 2016
-    !
-    ! PARAMETERS:
-    !> @param[inout]  CoreI  CoreIndex
-    !---------------------------------------------------------------------------
-    FUNCTION newCoreIndex(nCores) result(this)
-        integer, intent(in) :: nCores
-        type(CoreIndex)     :: this
 
-        this%nCores = nCores
-        allocate(this%StartSnp(this%nCores))
-        allocate(this%EndSnp(this%nCores))
-
-    END FUNCTION newCoreIndex
 
     !---------------------------------------------------------------------------
     ! DESCRIPTION:
@@ -156,26 +135,52 @@ CONTAINS
         close(UInputs)
     END FUNCTION ReadCores
 
-    !---------------------------------------------------------------------------
-    ! DESCRIPTION:
-    !> @brief      Return file of Core indexes
-    !
-    !> @details    Return the correct path of the file containing the core indexes
-    !>             of a given intenal phase if a folder with phased data is provided
-    !
-    !> @author     Roberto Antolin, roberto.antolin@roslin.ed.ac.uk
-    !
-    !> @date       July 25, 2016
-    !
-    ! PARAMETERS:
-    !> @param[in] PhasePath       Path of phased data
-    !> @param[in] phaseInternal   Number of a internal phase
-    !> @return    File name
-    !---------------------------------------------------------------------------
-    FUNCTION getFileNameCoreIndex_Path(PhasePath, phaseInternal) result(FileName)
-        integer, intent(in)             :: phaseInternal
-        character(len=300), intent(in)  :: PhasePath
-        character(len=1000)             :: FileName
+!---------------------------------------------------------------------------
+! DESCRIPTION:
+!> @brief      Initialise new core index
+!
+!> @details    Initialise new core index
+!
+!> @author     Roberto Antolin, roberto.antolin@roslin.ed.ac.uk
+!
+!> @date       Julyy 25, 2016
+!
+! PARAMETERS:
+!> @param[inout]  CoreI  CoreIndex
+!---------------------------------------------------------------------------
+  FUNCTION newCoreIndex(nCores) result(this)
+    integer, intent(in) :: nCores
+    type(CoreIndex)     :: this
+
+    integer :: UInputs
+
+    this%nCores = nCores
+    allocate(this%StartSnp(this%nCores))
+    allocate(this%EndSnp(this%nCores))
+
+  END FUNCTION newCoreIndex
+
+
+!---------------------------------------------------------------------------
+! DESCRIPTION:
+!> @brief      Return file of Core indexes
+!
+!> @details    Return the correct path of the file containing the core indexes
+!>             of a given intenal phase if a folder with phased data is provided
+!
+!> @author     Roberto Antolin, roberto.antolin@roslin.ed.ac.uk
+!
+!> @date       July 25, 2016
+!
+! PARAMETERS:
+!> @param[in] PhasePath       Path of phased data
+!> @param[in] phaseInternal   Number of a internal phase
+!> @return    File name
+!---------------------------------------------------------------------------
+  FUNCTION getFileNameCoreIndex_Path(PhasePath, phaseInternal) result(FileName)
+    integer, intent(in)             :: phaseInternal
+    character(len=*), intent(in)  :: PhasePath
+    character(len=1000)             :: FileName
 
 #ifdef OS_UNIX
         write (FileName,'(a,"Phase",i0,"/PhasingResults/CoreIndex.txt")') trim(PhasePath),phaseInternal
@@ -196,7 +201,7 @@ CONTAINS
     !> @date       July 25, 2016
     !
     ! PARAMETERS:
-    !> @param[in] phaseInternal   Number of a internal phase
+    !> 77@param[in] phaseInternal   Number of a internal phase
     !> @return    File name
     !---------------------------------------------------------------------------
     FUNCTION getFileNameCoreIndex_NoPath(phaseInternal) result(FileName)
@@ -208,110 +213,112 @@ CONTAINS
 #else
         write (FileName,'(".\Phasing\Phase",i0,"\PhasingResults\CoreIndex.txt")')phaseInternal
 #endif
-    END FUNCTION getFileNameCoreIndex_NoPath
 
-    !---------------------------------------------------------------------------
-    ! DESCRIPTION:
-    !> @brief      Return file of the final phase of a internal phasing
-    !
-    !> @details    Return the correct path of the file containing the final phase
-    !>             of a given intenal phase if a folder with phased data is provided
-    !
-    !> @author     Roberto Antolin, roberto.antolin@roslin.ed.ac.uk
-    !
-    !> @date       July 25, 2016
-    !
-    ! PARAMETERS:
-    !> @param[in] PhasePath       Path of phased data
-    !> @param[in] phaseInternal   Number of a internal phase
-    !> @return    File name
-    !---------------------------------------------------------------------------
-    FUNCTION getFileNameFinalPhase_Path(PhasePath, phaseInternal) result(FileName)
-        integer, intent(in)             :: phaseInternal
-        character(len=300), intent(in)  :: PhasePath
-        character(len=1000)             :: FileName
+  END FUNCTION getFileNameCoreIndex_NoPath
+
+!---------------------------------------------------------------------------
+! DESCRIPTION:
+!> @brief      Return file of the final phase of a internal phasing
+!
+!> @details    Return the correct path of the file containing the final phase
+!>             of a given intenal phase if a folder with phased data is provided
+!
+!> @author     Roberto Antolin, roberto.antolin@roslin.ed.ac.uk
+!
+!> @date       July 25, 2016
+!
+! PARAMETERS:
+!> @param[in] PhasePath       Path of phased data
+!> @param[in] phaseInternal   Number of a internal phase
+!> @return    File name
+!---------------------------------------------------------------------------
+  FUNCTION getFileNameFinalPhase_Path(PhasePath, phaseInternal) result(FileName)
+    integer, intent(in)             :: phaseInternal
+    character(len=*), intent(in)  :: PhasePath
+    character(len=1000)             :: FileName
 
 #ifdef OS_UNIX
         write (FileName,'(a,"Phase",i0,"/PhasingResults/FinalPhase.txt")') trim(PhasePath),phaseInternal
 #else
         write (FileName,'(a,"Phase",i0,"\PhasingResults\FinalPhase.txt")') trim(PhasePath),phaseInternal
 #endif
-    END FUNCTION getFileNameFinalPhase_Path
 
-    !---------------------------------------------------------------------------
-    ! DESCRIPTION:
-    !> @brief      Return file of the final phase of a internal phasing
-    !
-    !> @details    Return the correct path of the file containing the final phase
-    !>             of a given intenal phase
-    !
-    !> @author     Roberto Antolin, roberto.antolin@roslin.ed.ac.uk
-    !
-    !> @date       July 25, 2016
-    !
-    ! PARAMETERS:
-    !> @param[in] PhasePath       Path of phased data
-    !> @param[in] phaseInternal   Number of a internal phase
-    !> @return    File name
-    !---------------------------------------------------------------------------
-    FUNCTION getFileNameFinalPhase_NoPath(phaseInternal) result(FileName)
-        integer, intent(in)            :: phaseInternal
-        character(len=1000)            :: FileName
+  END FUNCTION getFileNameFinalPhase_Path
 
+!---------------------------------------------------------------------------
+! DESCRIPTION:
+!> @brief      Return file of the final phase of a internal phasing
+!
+!> @details    Return the correct path of the file containing the final phase
+ !>             of a given intenal phase
+!
+!> @author     Roberto Antolin, roberto.antolin@roslin.ed.ac.uk
+!
+!> @date       July 25, 2016
+!
+! PARAMETERS:
+!> @param[in] phaseInternal   Number of a internal phase
+!> @return    File name
+!---------------------------------------------------------------------------
+  FUNCTION getFileNameFinalPhase_NoPath(phaseInternal) result(FileName)
+    integer, intent(in)            :: phaseInternal
+    character(len=1000)            :: FileName
 #ifdef OS_UNIX
         write (FileName,'("./Phasing/Phase",i0,"/PhasingResults/FinalPhase.txt")') phaseInternal
 #else
         write (FileName,'(".\Phasing\Phase",i0,"\PhasingResults\FinalPhase.txt")')phaseInternal
 #endif
+
     END FUNCTION getFileNameFinalPhase_NoPath
 
-    !---------------------------------------------------------------------------
-    ! DESCRIPTION:
-    !> @brief      Return file of the haplotype library of a internal phasing
-    !
-    !> @details    Return the correct path of the file containing the haplotype library
-    !>             of a given intenal phase and core
-    !
-    !> @author     Roberto Antolin, roberto.antolin@roslin.ed.ac.uk
-    !
-    !> @date       July 25, 2016
-    !
-    ! PARAMETERS:
-    !> @param[in] PhasePath       Path of phased data
-    !> @param[in] phaseInternal   Number of a internal phase
-    !> @return    File name
-    !---------------------------------------------------------------------------
-    FUNCTION getFileNameHapLib_Path(PhasePath, phaseInternal, core) result(FileName)
-        integer, intent(in)             :: phaseInternal, core
-        character(len=300), intent(in)  :: PhasePath
-        character(len=1000)             :: FileName
+
+!---------------------------------------------------------------------------
+! DESCRIPTION:
+!> @brief      Return file of the haplotype library of a internal phasing
+!
+!> @details    Return the correct path of the file containing the haplotype library
+!>             of a given intenal phase and core
+!
+!> @author     Roberto Antolin, roberto.antolin@roslin.ed.ac.uk
+!
+!> @date       July 25, 2016
+!
+! PARAMETERS:
+!> @param[in] PhasePath       Path of phased data
+!> @param[in] phaseInternal   Number of a internal phase
+!> @return    File name
+!---------------------------------------------------------------------------
+  FUNCTION getFileNameHapLib_Path(PhasePath, phaseInternal, core) result(FileName)
+    integer, intent(in)             :: phaseInternal, core
+    character(len=*), intent(in)  :: PhasePath
+    character(len=1000)             :: FileName
 
 #ifdef OS_UNIX
         write (FileName,'(a,"Phase",i0,"/PhasingResults/HaplotypeLibrary/HapLib",i0,".bin")') trim(PhasePath), phaseInternal, core
 #else
         write (FileName,'(a,"Phase",i0,"\PhasingResults\HaplotypeLibrary\HapLib",i0,".bin")') trim(PhasePath), phaseInternal, core
 #endif
-    END FUNCTION getFileNameHapLib_Path
 
-    !---------------------------------------------------------------------------
-    ! DESCRIPTION:
-    !> @brief      Return file of the haplotype library of a internal phasing
-    !
-    !> @details    Return the correct path of the file containing the haplotype library
-    !>             of a given intenal phase and core
-    !
-    !> @author     Roberto Antolin, roberto.antolin@roslin.ed.ac.uk
-    !
-    !> @date       July 25, 2016
-    !
-    ! PARAMETERS:
-    !> @param[in] PhasePath       Path of phased data
-    !> @param[in] phaseInternal   Number of a internal phase
-    !> @return    File name
-    !---------------------------------------------------------------------------
-    FUNCTION getFileNameHapLib_NoPath(phaseInternal, core) result(FileName)
-        integer, intent(in)            :: phaseInternal, core
-        character(len=1000)            :: FileName
+  END FUNCTION getFileNameHapLib_Path
+
+!---------------------------------------------------------------------------
+! DESCRIPTION:
+!> @brief      Return file of the haplotype library of a internal phasing
+!
+!> @details    Return the correct path of the file containing the haplotype library
+!>             of a given intenal phase and core
+!
+!> @author     Roberto Antolin, roberto.antolin@roslin.ed.ac.uk
+!
+!> @date       July 25, 2016
+!
+! PARAMETERS:
+!> @param[in] phaseInternal   Number of a internal phase
+!> @return    File name
+!---------------------------------------------------------------------------
+  FUNCTION getFileNameHapLib_NoPath(phaseInternal, core) result(FileName)
+    integer, intent(in)            :: phaseInternal, core
+    character(len=1000)            :: FileName
 
 #ifdef OS_UNIX
         write (FileName,'("./Phasing/Phase",i0,"/PhasingResults/HaplotypeLibrary/HapLib",i0,".bin")') phaseInternal, core
