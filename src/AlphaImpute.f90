@@ -923,8 +923,10 @@ contains
                 write(0,*) 'DEBUG: Write HMM results [WriteOutResults]'
 #endif
                 if (inputParams%HMMOption/=RUN_HMM_NO) Then
-                    nSnpIterate=inputParams%nSnp
-                    if (allocated(ProbImputeGenos)) then
+                  if (inputParams%outopt==0) nSnpIterate=inputParams%nsnp
+                  if (inputParams%outopt==1) nSnpIterate=inputParams%nSnpRaw
+                  
+                  if (allocated(ProbImputeGenos)) then
                         deallocate(ProbImputeGenos)
                     end if
                     allocate(ProbImputeGenos(0:nAnisP,nSnpIterate))
