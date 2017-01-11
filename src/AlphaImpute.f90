@@ -186,7 +186,7 @@ contains
         ProcUsed=0
         do i=1,inputParams%nprocessors
             ProcUsed=ProcUsed+1
-            if ((ManagePhaseOn1Off0==0).and.(NoPhasing==1)) then
+            if ((inputParams%ManagePhaseOn1Off0==0).and.(inputParams%NoPhasing==1)) then
                 write (infile,'("cd "a,"/Phase"i0)') trim(inputParams%PhasePath), i
             else
                 write (infile,'("cd Phasing/Phase"i0)')i
@@ -214,7 +214,7 @@ contains
         ! Check that every process has finished before go on
         do
             do i=1,inputParams%nPhaseInternal
-                if ((ManagePhaseOn1Off0==0).and.(NoPhasing==1)) then
+                if ((inputParams%ManagePhaseOn1Off0==0).and.(inputParams%NoPhasing==1)) then
                     write (filout,'(a,"/Phase"i0,"/PhasingResults/Timer.txt")') trim(inputParams%PhasePath), i
                 else
                     write (filout,'("./Phasing/Phase"i0,"/PhasingResults/Timer.txt")')i
@@ -229,7 +229,7 @@ contains
                         JobsStarted(Tmp)=1
                         write (filout,'("TempPhase"i0,".sh")')Tmp
                         open (unit=107,file=trim(filout),status="unknown")
-                        if ((ManagePhaseOn1Off0==0).and.(NoPhasing==1)) then
+                        if ((inputParams%ManagePhaseOn1Off0==0).and.(inputParams%NoPhasing==1)) then
                             write (infile,'("cd "a,"/Phase"i0)') trim(inputParams%PhasePath), Tmp
                         else
                             write (infile,'("cd Phasing/Phase"i0)')Tmp
@@ -1854,8 +1854,8 @@ contains
         ! Create AlphaPhaseSpec file
         do i=1,inputParams%nPhaseInternal           ! Phasing is done in parallel
 #ifdef OS_UNIX
-    if((ManagePhaseOn1Off0==0).and.(NoPhasing==1)) then
-        write (filout,'(a,"/Phase"i0,"/AlphaPhaseSpec.txt")')trim(inputParam%PhasePath), i
+    if((inputParams%ManagePhaseOn1Off0==0).and.(inputParams%NoPhasing==1)) then
+        write (filout,'(a,"/Phase"i0,"/AlphaPhaseSpec.txt")')trim(inputParams%PhasePath), i
     else
         write (filout,'("./Phasing/Phase"i0,"/AlphaPhaseSpec.txt")') i
     end if
@@ -1914,7 +1914,7 @@ contains
             write (filout,'("Phase"i0)')i
             ! if (AlphaPhasePresent==1) call system ("cp AlphaPhase Phasing/" // filout)
             if (AlphaPhasePresent==1) then
-                if ((ManagePhaseOn1Off0==0).and.(NoPhasing==1)) then
+                if ((inputParams%ManagePhaseOn1Off0==0).and.(inputParams%NoPhasing==1)) then
                     call system (COPY // " AlphaPhase" // EXE // " " // trim(inputParams%PhasePath) // DASH // filout // NULL)
                 else
                     call system (COPY // " AlphaPhase" // EXE // " Phasing" // DASH // filout // NULL)
@@ -2217,7 +2217,7 @@ contains
         enddo
         close(102)
 
-        if ((ManagePhaseOn1Off0==0).and.(NoPhasing==1)) then
+        if ((inputParams%ManagePhaseOn1Off0==0).and.(inputParams%NoPhasing==1)) then
             FileName = trim(inputParams%PhasePath) // DASH // "EditingSnpSummary.txt"
         else
             FileName = "." // DASH // "Phasing" // DASH // "EditingSnpSummary.txt"
