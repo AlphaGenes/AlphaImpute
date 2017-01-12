@@ -906,7 +906,7 @@ contains
                 open (unit=39, file="IterateGeneProb" // DASH // "IterateGeneProbInput.txt")
 
                 do i=1,nAnisP
-                    write (39,'(i16,1x,i16,1x,i16,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%getIntegerVectorOfRecodedIds(),TmpGenos(i,:)
+                    write (39,'(i16,1x,i16,1x,i16,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%getIntegerVectorOfRecodedIdsNoDummy(),TmpGenos(i,:)
                 enddo
                 call flush(39)
                 close(39)
