@@ -1,6 +1,6 @@
 #ifdef OS_UNIX
 
-#define STRINGIFY(x) #x
+#define STRINGIFY(x)#x
 #define TOSTRING(x) STRINGIFY(x)
 
 #DEFINE DASH "/"
@@ -15,7 +15,7 @@
 
 #else
 
-#define STRINGIFY(x) #x
+#define STRINGIFY(x)#x
 #define TOSTRING(x) STRINGIFY(x)
 
 #DEFINE DASH "\"
@@ -758,7 +758,7 @@ contains
 
                 open (unit=39, file="IterateGeneProb" // DASH // "IterateGeneProbInput.txt")
                 do i=1,nAnisP
-                    write (39,'(3i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%id,ped%pedigree(i)%sirePointer%id,ped%pedigree(i)%dampointer%id,ImputeGenos(i,:)
+                    write (39,'(i16,1x,i16,1x,i16,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%getIntegerVectorOfRecodedIds(),ImputeGenos(i,:)
                 enddo
                 call flush(39)
                 ! close (39)
@@ -903,11 +903,10 @@ contains
                 write (34,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%originalID,TmpGenos(i,:)
             enddo
             if (inputParams%SexOpt==0 .and. inputParams%hmmoption/=RUN_HMM_NGS) then
-                ! open (unit=39,file="IterateGeneProb/IterateGeneProbInput.txt")
                 open (unit=39, file="IterateGeneProb" // DASH // "IterateGeneProbInput.txt")
 
                 do i=1,nAnisP
-                    write (39,'(3i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%getIntegerVectorOfRecodedIds(),TmpGenos(i,:)
+                    write (39,'(i16,1x,i16,1x,i16,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%getIntegerVectorOfRecodedIds(),TmpGenos(i,:)
                 enddo
                 call flush(39)
                 close(39)
@@ -940,23 +939,22 @@ contains
 #ifdef DEBUG
                 write(0,*) 'DEBUG: Write HMM results [WriteOutResults]'
 #endif
-                if (inputParams%HMMOption/=RUN_HMM_NO) Then
-                  nSnpIterate=inputParams%nsnp                  
-                  if (allocated(ProbImputeGenos)) then
-                        deallocate(ProbImputeGenos)
-                    end if
-                    allocate(ProbImputeGenos(0:nAnisP,nSnpIterate))
-                    if (allocated(ProbImputePhase)) then
-                        deallocate(ProbImputePhase)
-                    end if
-                    allocate(ProbImputePhase(0:nAnisP,nSnpIterate,2))
-                    if (allocated(Maf)) then
-                        deallocate(Maf)
-                    end if
-                    allocate(Maf(nSnpIterate))
-                    ProbImputeGenos(1:nAnisP,:)= 9.0
-                    ProbImputePhase(1:nAnisP,:,:)= 9.0
-                endif
+                nSnpIterate=inputParams%nsnp                  
+                if (allocated(ProbImputeGenos)) then
+                    deallocate(ProbImputeGenos)
+                end if
+                allocate(ProbImputeGenos(0:nAnisP,nSnpIterate))
+                if (allocated(ProbImputePhase)) then
+                    deallocate(ProbImputePhase)
+                end if
+                allocate(ProbImputePhase(0:nAnisP,nSnpIterate,2))
+                if (allocated(Maf)) then
+                    deallocate(Maf)
+                end if
+                allocate(Maf(nSnpIterate))
+                ProbImputeGenos(1:nAnisP,:)= 9.0
+                ProbImputePhase(1:nAnisP,:,:)= 9.0
+
 
                 l=0
                 do j=1,inputParams%nsnp
@@ -1854,11 +1852,11 @@ contains
         ! Create AlphaPhaseSpec file
         do i=1,inputParams%nPhaseInternal           ! Phasing is done in parallel
 #ifdef OS_UNIX
-    if((inputParams%ManagePhaseOn1Off0==0).and.(inputParams%NoPhasing==1)) then
-        write (filout,'(a,"/Phase"i0,"/AlphaPhaseSpec.txt")')trim(inputParams%PhasePath), i
-    else
-        write (filout,'("./Phasing/Phase"i0,"/AlphaPhaseSpec.txt")') i
-    end if
+            if((inputParams%ManagePhaseOn1Off0==0).and.(inputParams%NoPhasing==1)) then
+                write (filout,'(a,"/Phase"i0,"/AlphaPhaseSpec.txt")')trim(inputParams%PhasePath), i
+            else
+                write (filout,'("./Phasing/Phase"i0,"/AlphaPhaseSpec.txt")') i
+            end if
 #else
             write (filout,'(".\Phasing\Phase"i0,"\AlphaPhaseSpec.txt")')i
 #endif
