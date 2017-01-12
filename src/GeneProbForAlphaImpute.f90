@@ -338,6 +338,7 @@ subroutine geneprob(currentSnp)
         p2(ia)=idd
 
 
+
         call LNKLST(is,idd,ia,1)
         call LNKLST(idd,is,ia,0)
     end do

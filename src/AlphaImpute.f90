@@ -758,7 +758,7 @@ contains
 
                 open (unit=39, file="IterateGeneProb" // DASH // "IterateGeneProbInput.txt")
                 do i=1,nAnisP
-                    write (39,'(i16,1x,i16,1x,i16,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%getIntegerVectorOfRecodedIds(),ImputeGenos(i,:)
+                    write (39,'(i16,1x,i16,1x,i16,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%getIntegerVectorOfRecodedIdsNoDummy(),ImputeGenos(i,:)
                 enddo
                 call flush(39)
                 ! close (39)
@@ -3386,7 +3386,7 @@ contains
         print*, ""
         print*, "                Analysis Finished                         "
 
-        total=etime(elapsed)
+        total=etime( )
         Minutes=total/60
         Seconds=Total-(INT(Minutes)*60)
         Hours=Minutes/60
