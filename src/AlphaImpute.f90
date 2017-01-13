@@ -1012,7 +1012,7 @@ contains
             write(0,*) 'DEBUG: Write phase, genotypes and probabilities into files [WriteOutResults]'
 #endif
             ! call CheckImputationInconsistencies(ImputeGenos, ImputePhase, nAnisP, inputParams%nsnp)
-            
+            !  TODO remove
             print *, "size of imputeGenos:",size(ImputeGenos,2), " nSnp:", inputParams%nsnp
             do i=1, nAnisP
                 if (ped%pedigree(i)%isDummy) then
