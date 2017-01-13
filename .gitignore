@@ -18,3 +18,5 @@ nbproject
 .cproject
 .project
 eclipse.inc
+MakeFile
+compile_commands.json
