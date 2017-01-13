@@ -845,8 +845,14 @@ contains
 
             call CheckImputationInconsistencies(ImputeGenos, ImputePhase, nAnisP, inputParams%nsnp)
 
-            allocate(TmpGenos(0:nAnisP,inputParams%nSnpRaw))
-            allocate(TmpPhase(0:nAnisP,inputParams%nSnpRaw,2))
+
+            if (inputParams%outopt == 1)
+                allocate(TmpGenos(0:nAnisP,inputParams%nSnpRaw))
+                allocate(TmpPhase(0:nAnisP,inputParams%nSnpRaw,2))
+            else
+                allocate(TmpGenos(0:nAnisP,inputParams%nSnp))
+                allocate(TmpPhase(0:nAnisP,inputParams%nSnp,2))
+            endif
             TmpGenos=9
             TmpPhase=9
 
@@ -1006,6 +1012,8 @@ contains
             write(0,*) 'DEBUG: Write phase, genotypes and probabilities into files [WriteOutResults]'
 #endif
             ! call CheckImputationInconsistencies(ImputeGenos, ImputePhase, nAnisP, inputParams%nsnp)
+            
+            print *, "size of imputeGenos:",size(ImputeGenos,2), " nSnp:", inputParams%nsnp
             do i=1, nAnisP
                 if (ped%pedigree(i)%isDummy) then
                     exit
