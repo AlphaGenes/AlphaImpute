@@ -3386,7 +3386,7 @@ contains
         print*, ""
         print*, "                Analysis Finished                         "
 
-        total=etime( )
+        total=etime(elapsed)
         Minutes=total/60
         Seconds=Total-(INT(Minutes)*60)
         Hours=Minutes/60
