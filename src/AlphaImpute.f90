@@ -846,7 +846,8 @@ contains
             call CheckImputationInconsistencies(ImputeGenos, ImputePhase, nAnisP, inputParams%nsnp)
 
 
-            if (inputParams%outopt == 1)
+! TODO this might be erronous
+            if (inputParams%outopt == 1) then
                 allocate(TmpGenos(0:nAnisP,inputParams%nSnpRaw))
                 allocate(TmpPhase(0:nAnisP,inputParams%nSnpRaw,2))
             else
