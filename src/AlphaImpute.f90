@@ -946,7 +946,7 @@ contains
 #ifdef DEBUG
                 write(0,*) 'DEBUG: Write HMM results [WriteOutResults]'
 #endif
-                nSnpIterate=inputParams%nsnp                  
+                nSnpIterate=inputParams%nsnp
                 if (allocated(ProbImputeGenos)) then
                     deallocate(ProbImputeGenos)
                 end if
@@ -2120,21 +2120,20 @@ contains
         if (inputParams%managephaseon1off0==1) then
             TempFreq(:)=0.0
             Counter(:)=0
-            do i=1,nAnisP
-                do j=1,inputParams%nsnp
+            SnpSummary=0.0
+            do j=1,inputParams%nsnp
+                do i=1, nAnisP
                     if (TempGenos(i,j)/=9) then
                         TempFreq(j)=TempFreq(j)+float(TempGenos(i,j))
                         Counter(j)=Counter(j)+2
+                    else
                         if (Setter(i) == 1) then
-                            if (TempGenos(i,j)==9) SnpSummary(j)=SnpSummary(j)+1.0
+                            SnpSummary(j)=SnpSummary(j)+1.0
                         endif
-                    endif
-                enddo
-            enddo
-            do j=1,inputParams%nsnp
+                    end if
+                end do
                 if (Counter(j)>0.000000) TempFreq(j)=TempFreq(j)/Counter(j)
-            enddo
-            SnpSummary=0.0
+            end do
         endif
 
         if (inputParams%MultiHD/=0 .or. inputParams%IntEditStat==0) then
