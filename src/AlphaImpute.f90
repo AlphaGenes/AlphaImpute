@@ -763,11 +763,13 @@ contains
                 call flush(39)
                 ! close (39)
 
-                if (inputParams%bypassgeneprob==0) then
-                    call IterateGeneProbs
-                else
-                    call IterateInsteadOfGeneProbs
-                endif
+                if (inputParams%hmmoption == RUN_HMM_NO) then
+                    if (inputParams%bypassgeneprob==0) then
+                        call IterateGeneProbs
+                    else
+                        call IterateInsteadOfGeneProbs
+                    endif
+                end if
             else
 
                 call CheckImputationInconsistencies(ImputeGenos, ImputePhase, nAnisP, inputParams%nsnp)
