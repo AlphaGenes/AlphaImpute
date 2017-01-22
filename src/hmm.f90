@@ -1503,7 +1503,7 @@ subroutine SetUpEquations(HMM, nGenotyped, nInbred)
 
     if (HMM==RUN_HMM_NGS) then
         call SetUpEquationsReads(nGenotyped)
-    else if (HMM==RUN_HMM_ONLY) then
+    else if (HMM/=RUN_HMM_ONLY) then
         call SetUpEquationsGenotypesHaploid(nGenotyped)
     endif
     if (nInbred > 0) then
