@@ -1085,7 +1085,8 @@ contains
                 allocate(Maf(inputParams%nSnpRaw))
                 ProbImputeGenos(1:nAnisP,:)= 9.0
                 ProbImputePhase(1:nAnisP,:,:)= 9.0
-
+                ImputeGenos = 9
+                ImputePhase = 9
 
                 l=0
                 do j=1,inputParams%nsnp
