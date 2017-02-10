@@ -24,6 +24,7 @@ MESSAGE("Prog name ${ALPHAIMPUTEEXE}")
 SET(GENEPROBEXE GeneProbForAlphaImpute)
 # Define the library name
 SET(AHLIB alphahouse)
+SET(GPLIB geneprob)
 
 # Define some directories
 SET(SRC ${CMAKE_SOURCE_DIR}/src)
@@ -72,12 +73,13 @@ endif(${USE_HDF5})
 # are to your liking.
 INCLUDE(${CMAKE_MODULE_PATH}/SetFortranFlags.cmake)
 SET(SRCAH ../alphahouse/src/)
-
+SET(SRCGP ../geneprob/src/)
 # Have the .mod files placed in the OBJ folder
 SET(CMAKE_Fortran_MODULE_DIRECTORY ${OBJ})
 
 
 ADD_SUBDIRECTORY(${SRCAH} ${OBJ}/AH)
+ADD_SUBDIRECTORY(${SRCGP} ${OBJ}/GP)
 
 
 # TODO add tests to correct location

@@ -218,6 +218,8 @@ contains
 #else
             write (filout,'("GeneProb\GeneProb"i0,"\GeneProbs.txt")')h          !here
 #endif
+
+            ! TODOgeneprob info read here 
             open (unit=110,file=trim(filout),status="unknown")
             StSnp=GpIndex(h,1)          ! Where SNPs start
             EnSnp=GpIndex(h,2)          ! Where SNPs end

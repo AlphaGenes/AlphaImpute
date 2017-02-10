@@ -253,6 +253,37 @@ contains
         deallocate(JobsStarted)
     end subroutine PhasingManagement
 
+
+!#############################################################################################################################################################################################################################
+
+! TODOGENEPROB currently working on tihs
+    subroutine IterateGeneProbsNew
+
+        integer :: i,j,k,tmp
+        integer,dimension(:), allocatable :: JobsDone
+        real,allocatable :: PatAlleleProb(:,:),MatAlleleProb(:,:),HetProb(:),GeneProbWork(:,:)
+        character(len=300) :: filout
+        logical :: FileExists
+
+        inputParams=> defaultInput
+
+        if (inputParams%outopt==0) nSnpIterate=inputParams%nsnp
+        if (inputParams%outopt==1) nSnpIterate=inputParams%nSnpRaw
+
+
+    !$!$omp parallel do
+
+    do i=1,inputParams%nprocessors
+
+
+
+        ! run geneprob with
+        ! startsnp = GpIndex(i,1)
+        ! endsnp = GpIndex(i,2)
+    enddo
+
+
+    !$ OMP END parallel do
     !#############################################################################################################################################################################################################################
 
     subroutine IterateGeneProbs
@@ -1634,6 +1665,7 @@ contains
 
             StSnp=GpIndex(h,1)
             EnSnp=GpIndex(h,2)
+            ! TODOGENEPROB this is where geneprob informatiion is read in
             do i=1,nAnisP
                 read (222,*) dum, GPI(i,StSnp:EnSnp)
 
