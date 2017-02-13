@@ -40,6 +40,7 @@ if (ALPHAIMPUTEEXE)
 
     # add external links here
     TARGET_LINK_LIBRARIES(${ALPHAIMPUTEEXE} ${AHLIB})
+    TARGET_LINK_LIBRARIES(${ALPHAIMPUTEEXE} ${GPLIB})
 endif()
 
 if (HMMLIB)

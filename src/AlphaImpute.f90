@@ -252,38 +252,69 @@ contains
         deallocate(JobsDone)
         deallocate(JobsStarted)
     end subroutine PhasingManagement
-
+ 
 
 !#############################################################################################################################################################################################################################
 
 ! TODOGENEPROB currently working on tihs
-    subroutine IterateGeneProbsNew
+    subroutine IterateGeneProbsNew(GenosProbs)
+
+        use iso_fortran_env
+        use global, only : Maf,GpIndex,ImputePhase,ImputeGenos, ped, nAnisP,ProbImputePhase, ProbImputeGenos
+        use AlphaImputeInMod
+        use GeneProbModule , only : runGeneProbAlphaImpute
+        use imputation, only : PhaseComplement
 
         integer :: i,j,k,tmp
+
+        integer :: startSnp, endsnp, nSnp
         integer,dimension(:), allocatable :: JobsDone
         real,allocatable :: PatAlleleProb(:,:),MatAlleleProb(:,:),HetProb(:),GeneProbWork(:,:)
         character(len=300) :: filout
         logical :: FileExists
-
+        type(AlphaImputeInput), pointer :: inputParams
+        real(kind=real64), intent(out), allocatable :: GenosProbs(:,:,:)
         inputParams=> defaultInput
 
-        if (inputParams%outopt==0) nSnpIterate=inputParams%nsnp
-        if (inputParams%outopt==1) nSnpIterate=inputParams%nSnpRaw
+        if (inputParams%outopt==0) nSnp=inputParams%nsnp
+        if (inputParams%outopt==1) nSnp=inputParams%nSnpRaw
 
 
-    !$!$omp parallel do
+        ! This will be MPI jobs in future, as right now parallelization is run using openMP inside Geneprob itself
+        do i=1,inputParams%nprocessors
+            startsnp = GpIndex(i,1)
+            endsnp = GpIndex(i,2)
+            ! No writes should be made to pedigree, so this can be shared. GenosProbs and MAF need to be combined
+            call runGeneProbAlphaImpute(StartSnp, endsnp, ped, GenosProbs, MAF)
 
-    do i=1,inputParams%nprocessors
-
-
-
-        ! run geneprob with
-        ! startsnp = GpIndex(i,1)
-        ! endsnp = GpIndex(i,2)
-    enddo
+        enddo
 
 
-    !$ OMP END parallel do
+        call IterateGeneProbPhase
+        call IterateParentHomoFill
+        call PhaseComplement
+        call IterateMakeGenotype
+
+        do i=1,nAnisP
+            do j=1,nSnp
+                do k=1,2
+                    if (ImputePhase(i,j,k)/=9) ProbImputePhase(i,j,k)=float(ImputePhase(i,j,k))
+                enddo
+
+                if (ImputeGenos(i,j)/=9) then
+                    ProbImputeGenos(i,j)=float(ImputeGenos(i,j))
+                else
+                    ProbImputeGenos(i,j)=sum(ProbImputePhase(i,j,:))
+                endif
+            enddo
+        enddo
+
+        ImputePhase(0,:,:)=9
+        ImputeGenos(0,:)=9
+
+    end subroutine IterateGeneProbsNew
+
+
     !#############################################################################################################################################################################################################################
 
     subroutine IterateGeneProbs
@@ -297,6 +328,7 @@ contains
         real,allocatable :: PatAlleleProb(:,:),MatAlleleProb(:,:),HetProb(:),GeneProbWork(:,:)
         character(len=300) :: filout
         logical :: FileExists
+        
 
         inputParams=> defaultInput
 
@@ -311,7 +343,6 @@ contains
         allocate(GeneProbWork(nSnpIterate,4))
         allocate(ProbImputeGenos(0:nAnisP,nSnpIterate))
         allocate(ProbImputePhase(0:nAnisP,nSnpIterate,2))
-        allocate(GPI(nAnisP,nSnpIterate))
         deallocate(GpIndex)
 
         allocate(GpIndex(inputParams%nprocessors,2))
@@ -775,7 +806,6 @@ contains
         open (unit=53,file="." // DASH// "Results" // DASH // "ImputePhaseHMM.txt",status="unknown")
         open (unit=54,file="." // DASH// "Results" // DASH // "ImputeGenotypesHMM.txt",status="unknown")
 
-        open (unit=60,file="./Results/GPI.txt",status="unknown")
 
 #ifdef DEBUG
         write(0,*) 'DEBUG: output=0 [WriteOutResults]'
@@ -909,7 +939,6 @@ contains
                         write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(hmmID)%originalID,ProbImputePhase(i,:,1)
                         write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(hmmID)%originalID,ProbImputePhase(i,:,2)
                         write (41,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(hmmID)%originalID,ProbImputeGenos(i,:)
-                        ! write (60,'(a20,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4)') ped%pedigree(i)%originalID,GPI(i,:)
                     enddo
                 END BLOCK
             else
@@ -920,19 +949,8 @@ contains
                     write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(i)%originalID,ProbImputePhase(i,:,1)
                     write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(i)%originalID,ProbImputePhase(i,:,2)
                     write (41,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(i)%originalID,ProbImputeGenos(i,:)
-                ! write (60,'(a20,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4)') ped%pedigree(i)%originalID,GPI(i,:)
                 enddo
             endif
-
-            if (allocated(GPI)) then
-                do i=1, nAnisP
-                    if (ped%pedigree(i)%isDummy) then
-                        exit
-                    endif
-                    write (60,'(a20,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4)') ped%pedigree(i)%originalID,GPI(i,:)
-                end do
-                deallocate(GPI)
-            end if
 
             if (allocated(Maf)) Then
                 deallocate(Maf)
@@ -1194,16 +1212,6 @@ contains
                     write (41,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(i)%originalID,ProbImputeGenos(i,:)
                 enddo
             endif
-
-            if (allocated(GPI)) then
-                do i=1, nAnisP
-                    if (ped%pedigree(i)%isDummy) then
-                        exit
-                    endif
-                    write (60,'(a20,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4)') ped%pedigree(i)%originalID,GPI(i,:)
-                end do
-                deallocate(GPI)
-            end if
 
             if (inputParams%hmmoption/=RUN_HMM_NO) then
                 ! call WriteProbabilities("./Results/GenotypeProbabilities.txt", GlobalHmmID, ID, nAnisG, inputParams%nsnp)
@@ -1660,48 +1668,11 @@ contains
             open (unit=111,file=trim(filout),status="unknown")
 #endif
 
-            write (filout,'("./IterateGeneProb/GeneProb"i0,"/GPI.txt")')h
             open (unit=222,file=filout,status="unknown")
 
             StSnp=GpIndex(h,1)
             EnSnp=GpIndex(h,2)
             ! TODOGENEPROB this is where geneprob informatiion is read in
-            do i=1,nAnisP
-                read (222,*) dum, GPI(i,StSnp:EnSnp)
-
-                do j=1,4
-                    read (110,*) dum,GeneProbWork(StSnp:EnSnp,j)
-                enddo
-                PatAlleleProb(StSnp:EnSnp,1)=GeneProbWork(StSnp:EnSnp,1)&
-                    +GeneProbWork(StSnp:EnSnp,2)
-                PatAlleleProb(StSnp:EnSnp,2)=GeneProbWork(StSnp:EnSnp,3)&
-                    +GeneProbWork(StSnp:EnSnp,4)
-                MatAlleleProb(StSnp:EnSnp,1)=GeneProbWork(StSnp:EnSnp,1)&
-                    +GeneProbWork(StSnp:EnSnp,3)
-                MatAlleleProb(StSnp:EnSnp,2)=GeneProbWork(StSnp:EnSnp,2)&
-                    +GeneProbWork(StSnp:EnSnp,4)
-
-                HetProb(StSnp:EnSnp)=GeneProbWork(StSnp:EnSnp,2)+GeneProbWork(StSnp:EnSnp,3)
-
-                do j=StSnp,EnSnp
-                    if ((PatAlleleProb(j,1)>=GeneProbThresh).and.(ImputePhase(i,j,1)==9)) ImputePhase(i,j,1)=0
-                    if ((PatAlleleProb(j,2)>=GeneProbThresh).and.(ImputePhase(i,j,1)==9)) ImputePhase(i,j,1)=1
-                    if ((MatAlleleProb(j,1)>=GeneProbThresh).and.(ImputePhase(i,j,2)==9)) ImputePhase(i,j,2)=0
-                    if ((MatAlleleProb(j,2)>=GeneProbThresh).and.(ImputePhase(i,j,2)==9)) ImputePhase(i,j,2)=1
-                    if (ImputePhase(i,j,1)==9) then
-                        ProbImputePhase(i,j,1)=GeneProbWork(j,3)+GeneProbWork(j,4)
-                    else
-                        ProbImputePhase(i,j,1)=float(ImputePhase(i,j,1))
-                    endif
-                    if (ImputePhase(i,j,2)==9) then
-                        ProbImputePhase(i,j,2)=GeneProbWork(j,2)+GeneProbWork(j,4)
-                    else
-                        ProbImputePhase(i,j,2)=float(ImputePhase(i,j,2))
-                    endif
-                    if (HetProb(j)>=GeneProbThresh) ProbImputeGenos(i,j)=1
-                enddo
-                ProbImputeGenos(i,StSnp:EnSnp)=ProbImputePhase(i,StSnp:EnSnp,1)+ProbImputePhase(i,StSnp:EnSnp,2)
-            enddo
 
             do j=StSnp,EnSnp
                 read (111,*) Maf(j)
@@ -3637,47 +3608,20 @@ program AlphaImpute
     if (inputParams%hmmoption /= RUN_HMM_NGS) then
         if (inputParams%restartOption<OPT_RESTART_PHASING) call MakeDirectories(RUN_HMM_NULL)
 
-        !call cpu_time(start)
         call CountInData
-        !call cpu_time(finish)
-        !print '("Time ReadInData= ",f6.3," seconds.")',finish-start
-
-        !call cpu_time(start)
         call ReadInData
-        !call cpu_time(finish)
-        !print '("Time ReadInData= ",f6.3," seconds.")',finish-start
-
         !call cpu_time(start)
         call SnpCallRate
-        !call cpu_time(finish)
-        !print '("Time SnpCallRate= ",f6.3," seconds.")',finish-start
-
-        !call cpu_time(start)
         call CheckParentage
-        !call cpu_time(finish)
-        !print '("Time CheckParentage= ",f6.3," seconds.")',finish-start
-
+        
         if (inputParams%MultiHD/=0) call ClassifyAnimByChips
-
-        !call cpu_time(start)
+        
         call FillInSnp
-        !call cpu_time(finish)
-        !print '("Time FillInSnp= ",f6.3," seconds.")',finish-start
 
-        !call cpu_time(start)
         call FillInBasedOnOffspring
-        !call cpu_time(finish)
-        !print '("Time FillInBasedOnOffspring= ",f6.3," seconds.")',finish-start
-
-        !call cpu_time(start)
         call InternalEdit
-        !call cpu_time(finish)
-        !print '("Time InternalEdit= ",f6.3," seconds.")',finish-start
 
-        !call cpu_time(start)
         call MakeFiles
-        !call cpu_time(finish)
-        !print '("Time MakeFiles= ",f6.3," seconds.")',finish-start
 
     else
 
@@ -3717,7 +3661,7 @@ program AlphaImpute
 
         if (inputParams%SexOpt==0) then
             select case (inputParams%bypassgeneprob)
-            !        if (inputParams%bypassgeneprob==0) then
+            
         case (0)
 
 #ifdef DEBUG
@@ -3726,23 +3670,13 @@ program AlphaImpute
 
             if (inputParams%restartOption== OPT_RESTART_ALL .or. inputParams%restartOption== OPT_RESTART_GENEPROB) Then
 
-#ifdef OS_UNIX
 #if CLUSTER==2
                 write(6,*) ""
                 write(6,*) "Restart option 1 stops program before Geneprobs jobs have been submitted"
                 stop
-#else
-                call GeneProbManagement
 #endif
-#else
-                !call cpu_time(start)
-                call GeneProbManagementWindows
-
-                !call cpu_time(finish)
-                !print '("Time GeneProbManagementWindows= ",f6.3," seconds.")',finish-start
-
-#endif
-
+                ! TODOGeneprob run gneeprob here
+                call IterateGeneProbsNew(GenosProbs)
             endif
 
             markers = inputParams%nsnp
@@ -3750,7 +3684,7 @@ program AlphaImpute
                 markers = inputParams%nSnpRaw
             end if
             allocate(GenosProbs(ped%nDummys + nAnisP, markers, 2))
-            call ReReadIterateGeneProbs(GenosProbs, .FALSE., nAnisP)
+            ! call ReReadIterateGeneProbs(GenosProbs, .FALSE., nAnisP)
             call WriteProbabilities("./Results/GenotypeProbabilities.txt", GenosProbs, ped,nAnisP, inputParams%nsnp)
             deallocate(GenosProbs)
 
@@ -3832,9 +3766,7 @@ if (inputParams%hmmoption/=RUN_HMM_NGS) then
         !call cpu_time(finish)
         !print '("Time ImputationManagement= ",f6.3," seconds.")',finish-start
 
-#ifdef DEBUG
-        write(0,*) 'DEBUG: Write results'
-#endif
+
 
         call WriteOutResults
 

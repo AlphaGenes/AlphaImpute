@@ -133,7 +133,6 @@ contains
     end subroutine ReReadIterateGeneProbs
 
 
-
     subroutine ReadInPrePhasedData
         ! Impute phase information from pre-phased file. Count the number of pre-phased individuals
         use Global
