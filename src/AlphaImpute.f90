@@ -177,13 +177,9 @@ contains
         use GeneProbModule , only : runGeneProbAlphaImpute
         use imputation, only : PhaseComplement
 
-        integer :: i,j,k,tmp
+        integer :: i,j,k
 
         integer :: startSnp, endsnp, nSnp
-        integer,dimension(:), allocatable :: JobsDone
-        real,allocatable :: PatAlleleProb(:,:),MatAlleleProb(:,:),HetProb(:),GeneProbWork(:,:)
-        character(len=300) :: filout
-        logical :: FileExists
         type(AlphaImputeInput), pointer :: inputParams
         real(kind=real64), intent(out), allocatable :: GenosProbs(:,:,:)
         inputParams=> defaultInput
@@ -1331,9 +1327,7 @@ contains
         use alphaimputeinmod
         implicit none
 
-        integer :: h,i,j,dum,StSnp,EnSnp,counter, fileUnit
-        real :: PatAlleleProb(nSnpIterate,2),MatAlleleProb(nSnpIterate,2),HetProb(nSnpIterate),GeneProbWork(nSnpIterate,4)
-        character(len=300) :: filout
+        integer :: i,j, fileUnit
         type(AlphaImputeInput), pointer :: inputParams
 
         inputParams => defaultInput

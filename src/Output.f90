@@ -199,7 +199,7 @@ contains
         double precision, dimension(:,:,:), intent(INOUT) :: GenosProbs
         type(AlphaImputeInput), pointer :: inputParams
         ! Local variables
-        integer :: h,i,j,dum,StSnp,EnSnp
+        integer :: i,j,dum,StSnp,EnSnp
         double precision, allocatable :: GeneProbWork(:,:)
         character(len=300) :: inFile
 
