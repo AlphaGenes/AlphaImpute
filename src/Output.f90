@@ -1,3 +1,34 @@
+#ifdef OS_UNIX
+
+#define STRINGIFY(x)#x
+#define TOSTRING(x) STRINGIFY(x)
+
+#DEFINE DASH "/"
+#DEFINE COPY "cp"
+#DEFINE MD "mkdir"
+#DEFINE RMDIR "rm -r"
+#DEFINE RM "rm"
+#DEFINE RENAME "mv"
+#DEFINE SH "sh"
+#DEFINE EXE ""
+#DEFINE NULL ""
+
+#else
+
+#define STRINGIFY(x)#x
+#define TOSTRING(x) STRINGIFY(x)
+
+#DEFINE DASH "\"
+#DEFINE COPY "copy"
+#DEFINE MD "md"
+#DEFINE RMDIR "RMDIR /S /Q"
+#DEFINE RM "del"
+#DEFINE RENAME "MOVE /Y"
+#DEFINE SH "BAT"
+#DEFINE EXE ".exe"
+#DEFINE NULL " >NUL"
+#endif
+
 module Output
     ! use global
 
@@ -83,6 +114,27 @@ contains
     end subroutine WriteProbabilitiesGeneProb
 
 
+    subroutine readProbabilitiesGeneProb(file, GenosProbs, ped,nAnims, nSnps)
+        use PedigreeModule
+        character(len=*), intent(IN) :: file
+        integer, intent(IN) :: nSnps,nAnims
+        type(pedigreeHolder), intent(INOUT) :: ped
+        double precision, intent(out) :: GenosProbs(ped%pedigreesize-ped%nDummys,nSnps,2)
+        integer :: fileUnit        
+        integer :: i
+
+        open (newunit=fileUnit,file=file,status="unknown")
+
+        ! allocate(Probs0(nSnps))
+        ! allocate(Probs1(nSnps))
+
+        do i=1,nAnims
+            read(fileUnit,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%Pedigree(i)%originalID,GenosProbs(i,:,1)
+            read(fileUnit,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%Pedigree(i)%originalID,GenosProbs(i,:,2)
+            ! enddo
+        enddo
+    end subroutine readProbabilitiesGeneProb
+
 
     subroutine ReReadIterateGeneProbs(GenosProbs, IterGeneProb, nAnis)
         ! Read genotype probabilities from files and phase allele based in these probabilities.
@@ -132,6 +184,45 @@ contains
 
     end subroutine ReReadIterateGeneProbs
 
+
+    subroutine readInGeneProbData(GenosProbs)
+        ! Read genotype probabilities from files and phase allele based in these probabilities.
+        ! This files should have been already created during previous calls to AlphaImpute (RestartOption<3)
+        ! The subroutine outputs the genotype probabilities of the homozygous genotype of the reference allele,
+        ! G00, and the heterozygous genotype, Gh = G10 + G01. The homozygous genotype for the alternative allele can be inferred
+        ! from the these two as G11 = 1 - G00 - Gh
+        use Global
+        use alphaimputeinmod
+        implicit none
+
+        !double precision, dimension(:,:,:), intent(INOUT) :: GenosProbs(nAnis,markers,2)
+        double precision, dimension(:,:,:), intent(INOUT) :: GenosProbs
+        type(AlphaImputeInput), pointer :: inputParams
+        ! Local variables
+        integer :: h,i,j,dum,StSnp,EnSnp
+        double precision, allocatable :: GeneProbWork(:,:)
+        character(len=300) :: inFile
+
+        inputParams => defaultInput
+
+
+            write (inFile,'("GeneProb/GeneProb"i0,"/GeneProbs.txt")')
+            inFile = "." // DASH // " Results" // DASH // "GenotypeProbabilities.txt"
+            open (unit=110,file=trim(infile),status="unknown")
+            allocate(GeneProbWork(1-inputParams%nsnp+1,4))
+            GeneProbWork=9
+            do i=1,inputParams%nsnp                                           ! The number of lines of GeneProbs.txt files is = nAnisP x 4
+                do j=1,4                                            ! where 4 stands for the two paternal and the two maternal haplotypes
+                    read (110,*) dum,GeneProbWork(:,j)
+                enddo
+
+                GenosProbs(i,StSnp:EnSnp,1) = GeneProbWork(:,1)
+                GenosProbs(i,StSnp:EnSnp,2) = GeneProbWork(:,2) + GeneProbWork(:,3)
+            enddo
+            deallocate(GeneProbWork)
+            close(110)
+
+    end subroutine readInGeneProbData
 
     subroutine ReadInPrePhasedData
         ! Impute phase information from pre-phased file. Count the number of pre-phased individuals
@@ -193,7 +284,7 @@ contains
         ! Read genotype probabilities from files and phase allele based in these probabilities.
         ! This files should have been already created during previous calls to AlphaImpute (inputParams%restartOption<3)
         ! Phasing information is store in the variable GlobalWorkPhase
-        use Global
+        use Global, only : GLOBALWORKPHASE, GPINDEX, nAnisP, GENEPROBTHRESH
         use AlphaImputeInMod
         implicit none
 

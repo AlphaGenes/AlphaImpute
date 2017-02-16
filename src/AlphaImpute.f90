@@ -36,94 +36,6 @@ module AlphaImputeModule
 contains
 
 
-
-    !########################################################################################################################################################################
-
-
-    !#############################################################################################################################################################################################################################
-
-    subroutine GeneProbManagement
-        use Global
-        use alphaimputeinmod
-        implicit none
-
-        integer :: i
-        character(len=300) :: filout
-        type(AlphaImputeInput), pointer :: inputParams
-
-        inputParams => defaultInput
-        open (unit=109,file="TempGeneProb.sh",status="unknown")
-
-        print*, " "
-        print*, " ","       Calculating genotype probabilities"
-
-#if CLUSTER==1
-        ! PIC company algorithm to calculate probabilities of genotype
-        write (filout,'("cd GeneProb/")')
-        write(f,'(i0)') nProcessors
-        write (109,*) trim(filout)
-        write(109,*) "cp ../../../SharedFiles/AlphaImpute_scripts/runSubmitGeneProb.sh ."
-        write(109,*) "cp ../../../SharedFiles/AlphaImpute_scripts/submitGeneProb.sh ."
-        write(109,'(a,a)') "./runSubmitGeneProb.sh ",trim(f)
-        close (109)
-        call system("chmod +x TempGeneProb.sh")
-        call system("./TempGeneProb.sh")
-        call system("rm TempGeneProb.sh")
-        ! Check that every process has finished before going on
-        if (inputParams%restartOption/=OPT_RESTART_GENEPROB) call CheckGeneProbFinished(nProcessors)
-
-#else
-        ! Create bash script for run GeneProb subprocesses
-        do i=1,inputParams%nProcessors
-            write (filout,'("cd GeneProb/GeneProb"i0)')i
-            write (109,*) trim(filout)
-            ! Call the external package GeneProbForAlphaImpute
-            if (GeneProbPresent==0) write (109,*) "nohup sh -c ""GeneProbForAlphaImpute > out 2>&1"" >/dev/null &"
-            if (GeneProbPresent==1) write (109,*) "nohup sh -c ""./GeneProbForAlphaImpute > out 2>&1"" >/dev/null &"
-            write (109,*) "cd ../.."
-        enddo
-
-        close (109)
-        call system("chmod +x TempGeneProb.sh")
-        call system("./TempGeneProb.sh")
-
-        ! Check that every process has finished before going on
-        call CheckGeneProbFinished(inputParams%nProcessors)
-#endif
-
-    end subroutine GeneProbManagement
-
-    !#############################################################################################################################################################################################################################
-
-    subroutine CheckGeneProbFinished(nProcs)
-        use Global
-        implicit none
-
-        integer, intent(in) :: nProcs
-        character(len=300) :: filout
-        integer :: i,JobsDone(nProcs)
-        logical :: FileExists
-
-        JobsDone(:)=0
-        do
-            do i=1,nProcs
-#ifdef OS_UNIX
-                write (filout,'("./GeneProb/GeneProb"i0,"/GpDone.txt")')i
-#else
-                write (filout,'(".\GeneProb\GeneProb"i0,"\GpDone.txt")')i
-#endif
-                inquire(file=trim(filout),exist=FileExists)
-                if (FileExists .eqv. .true.) then
-                    if (JobsDone(i)==0) print*, " ","      GeneProb job ",i," done"
-                    JobsDone(i)=1
-                endif
-            enddo
-            call sleep(SleepParameter)
-            if (sum(JobsDone(:))==nProcs) exit
-        enddo
-
-    end subroutine CheckGeneProbFinished
-
     !#############################################################################################################################################################################################################################
 
     subroutine PhasingManagement
@@ -281,13 +193,17 @@ contains
 
 
         ! This will be MPI jobs in future, as right now parallelization is run using openMP inside Geneprob itself
-        do i=1,inputParams%nprocessors
-            startsnp = GpIndex(i,1)
-            endsnp = GpIndex(i,2)
+        ! TODO add tihs in
+        ! do i=1,inputParams%nprocessors
+            ! startsnp = GpIndex(i,1)
+            ! endsnp = GpIndex(i,2)
+
+            startSnp = 1
+            endsnp = inputParams%nSnp
             ! No writes should be made to pedigree, so this can be shared. GenosProbs and MAF need to be combined
             call runGeneProbAlphaImpute(StartSnp, endsnp, ped, GenosProbs, MAF)
 
-        enddo
+        ! enddo
 
 
         call IterateGeneProbPhase
@@ -317,224 +233,7 @@ contains
 
     !#############################################################################################################################################################################################################################
 
-    subroutine IterateGeneProbs
-        use Global
-        use Imputation
 
-        implicit none
-
-        integer :: i,j,k,tmp
-        integer,dimension(:), allocatable :: JobsDone
-        real,allocatable :: PatAlleleProb(:,:),MatAlleleProb(:,:),HetProb(:),GeneProbWork(:,:)
-        character(len=300) :: filout
-        logical :: FileExists
-        
-
-        inputParams=> defaultInput
-
-        if (inputParams%outopt==0) nSnpIterate=inputParams%nsnp
-        if (inputParams%outopt==1) nSnpIterate=inputParams%nSnpRaw
-
-        allocate(jobsDone(inputParams%nProcessors))
-
-        allocate(PatAlleleProb(nSnpIterate,2))
-        allocate(MatAlleleProb(nSnpIterate,2))
-        allocate(HetProb(nSnpIterate))
-        allocate(GeneProbWork(nSnpIterate,4))
-        allocate(ProbImputeGenos(0:nAnisP,nSnpIterate))
-        allocate(ProbImputePhase(0:nAnisP,nSnpIterate,2))
-        deallocate(GpIndex)
-
-        allocate(GpIndex(inputParams%nprocessors,2))
-
-        ProbImputeGenos(0,:)=0.0
-        ProbImputePhase(0,:,:)=0.0
-        ProbImputeGenos(1:nAnisP,:)=-9.0
-        ProbImputePhase(1:nAnisP,:,:)=-9.0
-
-        Tmp=int(float(nSnpIterate)/inputParams%nprocessors)
-        GpIndex(1,1)=1
-        GpIndex(1,2)=Tmp
-        if (inputParams%nprocessors>1) then
-            do i=2,inputParams%nprocessors
-                GpIndex(i,1)=GpIndex(i-1,1)+Tmp
-                GpIndex(i,2)=GpIndex(i-1,2)+Tmp
-            enddo
-        endif
-        GpIndex(inputParams%nprocessors,2)=nSnpIterate
-
-
-        do i=1,inputParams%nprocessors
-#ifdef OS_UNIX
-            write (filout,'("./IterateGeneProb/GeneProb"i0,"/GeneProbSpec.txt")')i
-#else
-            write (filout,'(".\IterateGeneProb\GeneProb"i0,"\GeneProbSpec.txt")')i
-#endif
-            open (unit=108,file=trim(filout),status='unknown')
-            write (108,*) "nAnis        ,",nAnisP
-            write (108,*) "nsnp     ,",nSnpIterate
-#ifdef OS_UNIX
-            write (108,*) "InputFilePath    ,",'"../IterateGeneProbInput.txt"'
-#else
-            write (108,*) "InputFilePath    ,",'"..\IterateGeneProbInput.txt"'
-#endif
-            write (108,*) "OutputFilePath   ,",'"GeneProbs.txt"'
-            write (108,*) "StartSnp     ,",GpIndex(i,1)
-            write (108,*) "EndSnp       ,",GpIndex(i,2)
-            close(108)
-            write (filout,'("GeneProb"i0)')i
-            ! call system ("cp GeneProbForAlphaImpute IterateGeneProb/" // filout)
-            if (GeneProbPresent==1) call system (COPY // " GeneProbForAlphaImpute" // EXE // " IterateGeneProb" // DASH // filout // NULL)
-        enddo
-
-#ifdef OS_UNIX
-        open (unit=109,file="TempIterateGeneProb.sh",status="unknown")
-#else
-        open (unit=109,file="TempIterateGeneProb.BAT",status="unknown")
-#endif
-
-        if (inputParams%restartOption/=4) then
-            !if (PicVersion==.FALSE.) then
-#if CLUSTER==0
-            do i=1,inputParams%nprocessors
-#ifdef OS_UNIX
-                write (filout,'("cd IterateGeneProb/GeneProb"i0)')i
-#else
-                write (filout,'("cd IterateGeneProb\GeneProb"i0)')i
-#endif
-                write (109,*) trim(filout)
-#ifdef OS_UNIX
-                if (GeneProbPresent==0) write (109,*) "nohup sh -c ""GeneProbForAlphaImpute > out 2>&1"" >/dev/null &"
-                if (GeneProbPresent==1) write (109,*) "nohup sh -c ""./GeneProbForAlphaImpute > out 2>&1"" >/dev/null &"
-#else
-                if (GeneProbPresent==0) write (109,*) "start /b GeneProbForAlphaImpute.exe > out 2>&1"
-                if (GeneProbPresent==1) write (109,*) "start /b .\GeneProbForAlphaImpute.exe > out 2>&1"
-#endif
-                write (109,*) "cd ../.."
-                !#ifdef OS_UNIX
-                !#else
-                !         write (109,*) "exit"
-                !#endif
-                call flush(109)
-            enddo
-            close(109)
-
-#ifdef OS_UNIX
-            call system("chmod +x TempIterateGeneProb.sh")
-            call system("./TempIterateGeneProb.sh")
-#else
-            call system("start ""Iterate GeneProbs"" .\TempIterateGeneProb.BAT >NUL")
-#endif
-
-            print*, " "
-            print*, " ","       Calculating genotype probabilities"
-            JobsDone(:)=0
-            !JDone(:)=0
-
-#ifdef OS_UNIX
-            call system("rm -f ./IterateGeneProb/GeneProb*/GpDone.txt")
-#else
-            do i=1,inputParams%nprocessors
-                write (filout,'("IterateGeneProb\GeneProb"i0"\GpDone.txt")')i
-                inquire(file=trim(filout),exist=FileExists)
-                if (FileExists .eqv. .TRUE.) call system("del /f /q " // filout // NULL)
-            enddo
-#endif
-
-            !if (inputParams%restartOption/=OPT_RESTART_IMPUTATION) then
-            do
-                do i=1,inputParams%nprocessors
-#ifdef OS_UNIX
-                    write (filout,'("./IterateGeneProb/GeneProb"i0,"/GpDone.txt")')i
-#else
-                    write (filout,'(".\IterateGeneProb\GeneProb"i0,"\GpDone.txt")')i
-#endif
-                    inquire(file=trim(filout),exist=FileExists)
-                    if (FileExists .eqv. .true.) then
-                        if (JobsDone(i)==0) print*, " ","      GeneProb job ",i," done"
-                        JobsDone(i)=1
-                        !JDone(i)=1
-                    endif
-                enddo
-                if (sum(JobsDone(:))==inputParams%nprocessors) exit
-            enddo
-            !endif
-#elif CLUSTER==1
-            write (filout,'("cd IterateGeneProb/")')
-            write(f,'(i0)') inputParams%nprocessors
-            write (109,*) trim(filout)
-            write(109,*) "cp ../../../SharedFiles/AlphaImpute_scripts/runSubmitGeneProb.sh ."
-            write(109,*) "cp ../../../SharedFiles/AlphaImpute_scripts/submitGeneProb.sh ."
-            write(109,'(a,a)') "./runSubmitGeneProb.sh ",trim(f)
-            print*, " "
-            close (109)
-            call system("chmod +x TempIterateGeneProb.sh")
-            call system("./TempIterateGeneProb.sh")
-            call system("rm TempIterateGeneProb.sh")
-
-            JobsDone(:)=0
-            call system("rm -f ./IterateGeneProb/GeneProb*/GpDone.txt")
-
-            if (inputParams%restartOption/=OPT_RESTART_IMPUTATION) then
-                do
-                    do i=1,inputParams%nprocessors
-                        write (filout,'("./IterateGeneProb/GeneProb"i0,"/GpDone.txt")')i
-                        inquire(file=trim(filout),exist=FileExists)
-                        if ((FileExists .eqv. .true.).and.(JobsDone(i)==0)) then
-                            print*, " ","IterateGeneProb job ",i," done"
-                            JobsDone(i)=1
-                        endif
-                    enddo
-                    call sleep(SleepParameter)
-                    if (sum(JobsDone(:))==inputParams%nprocessors) exit
-                enddo
-            endif
-#else
-#endif
-            close (109)
-
-            if (inputParams%restartOption==OPT_RESTART_IMPUTATION) then
-                open (unit=109,file="Tmp2345678.txt",status="unknown")
-                do i=1,nAnisP
-                    write (109,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ImputePhase(i,:,1)
-                    write (109,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ImputePhase(i,:,2)
-                    write (109,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ImputeGenos(i,:)
-                enddo
-                close (109)
-#if CLUSTER==1
-                write(6,*) "Restart option 3 stops program before Iterate Geneprob jobs have been finished"
-#elif CLUSTER==0
-                write(6,*) "Restart option 3 stops program after Iterate Geneprob jobs have been finished"
-#else
-                write(6,*) "Restart option 3 stops program before Iterate Geneprob jobs have been submitted"
-#endif
-                stop
-            endif
-        endif
-
-        call IterateGeneProbPhase
-        call IterateParentHomoFill
-        call PhaseComplement
-        call IterateMakeGenotype
-
-        do i=1,nAnisP
-            do j=1,nSnpIterate
-                do k=1,2
-                    if (ImputePhase(i,j,k)/=9) ProbImputePhase(i,j,k)=float(ImputePhase(i,j,k))
-                enddo
-
-                if (ImputeGenos(i,j)/=9) then
-                    ProbImputeGenos(i,j)=float(ImputeGenos(i,j))
-                else
-                    ProbImputeGenos(i,j)=sum(ProbImputePhase(i,j,:))
-                endif
-            enddo
-        enddo
-
-        ImputePhase(0,:,:)=9
-        ImputeGenos(0,:)=9
-
-    end subroutine IterateGeneProbs
 
     !#############################################################################################################################################################################################################################
 
@@ -826,7 +525,7 @@ contains
 
                 if (inputParams%hmmoption == RUN_HMM_NO) then
                     if (inputParams%bypassgeneprob==0) then
-                        call IterateGeneProbs
+                        call IterateGeneProbsNew(GenosProbs)
                     else
                         call IterateInsteadOfGeneProbs
                     endif
@@ -1096,7 +795,7 @@ contains
                 ImputePhase=TmpPhase
                 if (inputParams%SexOpt==0) then
                     if (inputParams%bypassgeneprob==0) then
-                        call IterateGeneProbs
+                        call IterateGeneProbsNew(GenosProbs)
                     else
                         call IterateInsteadOfGeneProbs
                     endif
@@ -1185,8 +884,6 @@ contains
                 write(0,*) 'DEBUG: Write phase, genotypes and probabilities into files [WriteOutResults]'
 #endif
                 ! call CheckImputationInconsistencies(ImputeGenos, ImputePhase, nAnisP, inputParams%nsnp)
-                !  TODO remove
-                print *, "size of imputeGenos:",size(ImputeGenos,2), " nSnp:", inputParams%nsnp
                 BLOCK
                     integer :: hmmID
                     do i=1, nAnisG
@@ -1219,7 +916,7 @@ contains
             else
                 if (inputParams%bypassgeneprob==0) then
                     allocate(GenosProbs(nAnisP,nSnpIterate,2))
-                    call ReReadIterateGeneProbs(GenosProbs, .TRUE., nAnisP)
+                    ! TODOGENEPROB geneprob should not have been bypassed here so check that it indeed is not
                     call WriteProbabilities("./Results/GenotypeProbabilities.txt", GenosProbs, ped,nAnisP, inputParams%nsnp)
                 endif
             endif
@@ -1634,62 +1331,38 @@ contains
         use alphaimputeinmod
         implicit none
 
-        integer :: h,i,j,dum,StSnp,EnSnp,counter
+        integer :: h,i,j,dum,StSnp,EnSnp,counter, fileUnit
         real :: PatAlleleProb(nSnpIterate,2),MatAlleleProb(nSnpIterate,2),HetProb(nSnpIterate),GeneProbWork(nSnpIterate,4)
         character(len=300) :: filout
         type(AlphaImputeInput), pointer :: inputParams
 
         inputParams => defaultInput
 
+        if (allocated(Maf)) then
+            deallocate(maf)
+        endif
         allocate(Maf(nSnpIterate))
 
 
         if (inputParams%restartOption==4) then
-            open (unit=209,file="Tmp2345678.txt",status="old")
+            open (unit=fileUnit,file="Tmp2345678.txt",status="old")
             do i=1,nAnisP
-                read (209,*) ImputePhase(i,:,1)
-                read (209,*) ImputePhase(i,:,2)
-                read (209,*) ImputeGenos(i,:)
+                read (fileUnit,*) ImputePhase(i,:,1)  
+                read (fileUnit,*) ImputePhase(i,:,2)
+                read (fileUnit,*) ImputeGenos(i,:)
             enddo
-            close (209)
+            close (fileUnit)
         endif
 
-        counter=0
-        do h=1,inputParams%nprocessors
-#ifdef OS_UNIX
-            write (filout,'("./IterateGeneProb/GeneProb"i0,"/GeneProbs.txt")')h         !here
-            open (unit=110,file=trim(filout),status="unknown")
-            write (filout,'("./IterateGeneProb/GeneProb"i0,"/MinorAlleleFrequency.txt")')h          !here
-            open (unit=111,file=trim(filout),status="unknown")
-#else
-            write (filout,'(".\IterateGeneProb\GeneProb"i0,"\GeneProbs.txt")')h         !here
-            open (unit=110,file=trim(filout),status="unknown")
-            write (filout,'(".\IterateGeneProb\GeneProb"i0,"\MinorAlleleFrequency.txt")')h          !here
-            open (unit=111,file=trim(filout),status="unknown")
-#endif
-
-            open (unit=222,file=filout,status="unknown")
-
-            StSnp=GpIndex(h,1)
-            EnSnp=GpIndex(h,2)
-            ! TODOGENEPROB this is where geneprob informatiion is read in
-
-            do j=StSnp,EnSnp
-                read (111,*) Maf(j)
-            enddo
-
-            close(110)
-            close(111)
-            close(222)
-        enddo
-
-        open(unit=111,file="." // DASH // "Miscellaneous" // "MinorAlleleFrequency.txt", status="unknown")
-
-
+        ! StSnp=GpIndex(h,1)
+        ! EnSnp=GpIndex(h,2)
+        ! TODO once geneprob is MPI'd use this
+        open(newunit=fileUnit,file="." // DASH // "Miscellaneous" // "MinorAlleleFrequency.txt", status="unknown")
         do j=1,nSnpIterate
-            write (111,*) j,Maf(j)
+            read (fileUnit,*) Maf(j)
         enddo
-        close(111)
+
+        close(fileUnit)
 
 
         call IterateMakeGenotype
@@ -1960,8 +1633,6 @@ contains
         else                                ! Not sex chromosome
             if (inputParams%bypassgeneprob==1) then     ! Do I have to bypass Genotype Probabilities?
                 call InsteadOfGeneProb
-            else
-                deallocate(Genos)
             endif
         endif
 
@@ -1981,21 +1652,6 @@ contains
             ! WARNING: What if there is any version of this software in the bin either?
         endif
 
-        ! Check whether GeneProbForAlphaImpute is present
-#ifdef OS_UNIX
-        write (FileCheck,'("GeneProbForAlphaImpute")')
-#else
-        write (FileCheck,'("GeneProbForAlphaImpute.exe")')
-#endif
-        inquire(file=trim(FileCheck),exist=FileExists)
-        if (FileExists .eqv. .true.) then
-            GeneProbPresent=1
-        else
-            GeneProbPresent=0
-            print*, " "
-            print*, " ","GeneProb not present and copied, version in the bin directory used"
-            ! WARNING: What if there is any version of this software in the bin either?
-        endif
 
         ! Create AlphaPhaseSpec file
         do i=1,inputParams%nPhaseInternal           ! Phasing is done in parallel
@@ -2080,38 +1736,6 @@ contains
         endif
         GpIndex(inputParams%nprocessors,2)=inputParams%nsnp
 
-        ! Create GeneProbSpec file
-        do i=1,inputParams%nprocessors
-#ifdef OS_UNIX
-            write (filout,'("./GeneProb/GeneProb"i0,"/GeneProbSpec.txt")')i
-#else
-            write (filout,'(".\GeneProb\GeneProb"i0,"\GeneProbSpec.txt")')i
-#endif
-
-            open (unit=108,file=trim(filout),status='unknown')
-            write (108,*) "nAnis        ,",nAnisP
-            write (108,*) "nsnp     ,",inputParams%nsnp
-#ifdef OS_UNIX
-            write (108,*) "InputFilePath    ,",'"../../InputFiles/RecodedGeneProbInput.txt"'
-#else
-            write (108,*) "InputFilePath    ,",'"..\..\InputFiles\RecodedGeneProbInput.txt"'
-#endif
-            write (108,*) "OutputFilePath   ,",'"GeneProbs.txt"'
-            write (108,*) "StartSnp     ,",GpIndex(i,1)
-            write (108,*) "EndSnp       ,",GpIndex(i,2)
-            call flush(108)
-            close(108)
-
-            write (filout,'("GeneProb"i0)')i
-            ! if (GeneProbPresent==1) call system ("cp GeneProbForAlphaImpute GeneProb/" // filout)
-            if (GeneProbPresent==1) call system (COPY // " GeneProbForAlphaImpute" // EXE // " GeneProb" // DASH // filout // NULL)
-        enddo
-
-        if (inputParams%PreProcess==.true.) then
-            print*, "  "
-            print*, "  ","The program has preprocessed the data and now it stops"
-            stop
-        endif
 
         deallocate(TempCore)
         deallocate(TempCplusT)
@@ -3574,6 +3198,7 @@ program AlphaImpute
     use AlphaImputeInMod
     use Imputation
     use InputMod
+    use GeneProbModule
     implicit none
 
     integer :: markers
@@ -3639,18 +3264,11 @@ program AlphaImpute
 
     if (inputParams%hmmoption == RUN_HMM_NGS) then
 
-#ifdef DEBUG
-        write(0,*) 'DEBUG: HMM NGS'
-#endif
         call MaCHController(inputParams%hmmoption)
         call FromHMM2ImputePhase
         call WriteOutResults
 
     else if (inputParams%hmmoption==RUN_HMM_ONLY) then
-
-#ifdef DEBUG
-        write(0,*) 'DEBUG: HMM only'
-#endif
 
         print*, ""
         print*, "Bypass calculation of probabilities and phasing"
@@ -3664,36 +3282,23 @@ program AlphaImpute
             
         case (0)
 
-#ifdef DEBUG
-            write(0,*) 'DEBUG: Calculate Genotype Probabilites'
-#endif
-
             if (inputParams%restartOption== OPT_RESTART_ALL .or. inputParams%restartOption== OPT_RESTART_GENEPROB) Then
 
-#if CLUSTER==2
-                write(6,*) ""
-                write(6,*) "Restart option 1 stops program before Geneprobs jobs have been submitted"
-                stop
-#endif
                 ! TODOGeneprob run gneeprob here
-                call IterateGeneProbsNew(GenosProbs)
+
+                ! call ped%addGenotypeInformation(imputeGenos)
+                ! WriteOutResults is a piece of shit and makes life hard
+                
+                
+                call ped%addGenotypeInformation(Genos)
+                
+                call runGeneProbAlphaImpute(1, inputParams%nsnp, ped, GenosProbs, MAF)
+                call WriteProbabilities("./Results/GenotypeProbabilities.txt", GenosProbs, ped,nAnisP, inputParams%nsnp)
             endif
 
-            markers = inputParams%nsnp
-            if (inputParams%outopt==1) then
-                markers = inputParams%nSnpRaw
-            end if
-            allocate(GenosProbs(ped%nDummys + nAnisP, markers, 2))
-            ! call ReReadIterateGeneProbs(GenosProbs, .FALSE., nAnisP)
-            call WriteProbabilities("./Results/GenotypeProbabilities.txt", GenosProbs, ped,nAnisP, inputParams%nsnp)
-            deallocate(GenosProbs)
+            ! deallocate(GenosProbs)
 
             if (inputParams%restartOption==OPT_RESTART_GENEPROB) then
-#if CLUSTER==1
-                write(6,*) "Restart option 1 stops program before Geneprobs jobs have finished"
-#elif CLUSTER==0
-                write(6,*) "Restart option 1 stops program after Geneprobs jobs have finished"
-#endif
                 stop
             endif
             write(6,*) " "
@@ -3705,11 +3310,15 @@ program AlphaImpute
                 markers = inputParams%nSnpRaw
             end if
             allocate(GenosProbs(ped%nDummys+ nAnisP, markers, 2))
-            call ReReadIterateGeneProbs(GenosProbs, .FALSE., nAnisP)
+            call readInGeneProbData(GenosProbs)
+            ! TODO may not need
             call WriteProbabilities("./Results/GenotypeProbabilities.txt", GenosProbs, ped,nAnisP, inputParams%nsnp)
             deallocate(GenosProbs)
             write(6,*) "Restart option 1 stops program after genotype probabilities have been outputted"
             stop
+        case default
+            print *, "ERROR: BYPAS GENEPROB SET INCORRECTLY"
+            stop 1
         end select
     endif
 
@@ -3748,9 +3357,6 @@ program AlphaImpute
         endif
     endif
 
-    ! print*, " "
-    ! print*, " ","Phasing completed"
-
     ! This is not necessary, already output in subroutine PhasingManagement
     if ((inputParams%restartOption/=OPT_RESTART_ALL).and.(inputParams%restartOption<OPT_RESTART_IMPUTATION)) then
         write(6,*) "Restart option 2 stops program after Phasing has been managed"
@@ -3761,12 +3367,7 @@ endif
 if (inputParams%hmmoption/=RUN_HMM_NGS) then
     ! If we only want to phase data, then skip all the imputation steps
     if (inputParams%PhaseTheDataOnly==0) Then
-        !call cpu_time(start)
         call ImputationManagement
-        !call cpu_time(finish)
-        !print '("Time ImputationManagement= ",f6.3," seconds.")',finish-start
-
-
 
         call WriteOutResults
 
@@ -3783,22 +3384,16 @@ if (inputParams%hmmoption/=RUN_HMM_NGS) then
 #endif
 
         if (inputParams%TrueGenos1None0==1) then
-            !call cpu_time(start)
             call FinalChecker
-            !call cpu_time(finish)
-            !print '("Time FinalChecker= ",f6.3," seconds.")',finish-start
+
         endif
-        ! call Cleaner
     endif
 endif
-!call cpu_time(start)
-call PrintTimerTitles
-!call cpu_time(finish)
-!print '("Time call PrintTimerTitles= ",f6.3," seconds.")',finish-start
 
-if (inputParams%restartOption > OPT_RESTART_IMPUTATION) then
-    call system(RM // " Tmp2345678.txt")
-end if
+call PrintTimerTitles
+! if (inputParams%restartOption > OPT_RESTART_IMPUTATION) then
+!     call system(RM // " Tmp2345678.txt")
+! end if
 
 end program AlphaImpute
 

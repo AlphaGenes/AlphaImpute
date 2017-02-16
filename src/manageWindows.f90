@@ -1,37 +1,4 @@
-!#############################################################################################################################################################################################################################
-subroutine GeneProbManagementWindows
-    use Global
-    use alphaimputeModule
-    use AlphaImputeInMod
-    implicit none
 
-    integer :: i
-    character(len=300) :: filout
-    type(AlphaImputeInput), pointer :: inputParams
-
-    inputParams => defaultInput
-    open (unit=109,file="TempGeneProb.BAT",status="unknown")
-
-    print*, " "
-    print*, " ","       Calculating genotype probabilities"
-
-    ! Create bash script for run GeneProb subprocesses
-    do i=1,inputParams%nProcessors
-        write (filout,'("cd GeneProb\GeneProb"i0)')i
-        write (109,*) trim(filout)
-        ! Call the external package GeneProbForAlphaImpute
-        if (GeneProbPresent==0) write (109,*) "start /b GeneProbForAlphaImpute.exe > out 2>&1"
-        if (GeneProbPresent==1) write (109,*) "start /b .\GeneProbForAlphaImpute.exe > out 2>&1"
-        write (109,*) "cd ../.."
-    enddo
-
-    close (109)
-    call system("start ""GeneProbs"" .\TempGeneProb.BAT >NUL")
-
-    ! Check that every process has finished before going on
-    call CheckGeneProbFinished(inputParams%nProcessors)
-
-end subroutine GeneProbManagementWindows
 
 !#############################################################################################################################################################################################################################
 
