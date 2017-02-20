@@ -32,10 +32,36 @@
 !#############################################################################################################################################################################################################################
 
 module AlphaImputeModule
-    implicit none
+    implicit none    
 contains
 
 
+
+
+    subroutine PhasingManagementNew
+        use AlphaImputeInMod
+        use AlphaPhaseParametersDefinition
+        use AlphaPhaseFunctions
+        use AlphaPhaseResultsDefinition
+        use Global, only : ped
+        implicit none
+
+        type(AlphaImputeInput), pointer :: inputParams
+        type(AlphaPhaseParameters) :: params
+        type(AlphaPhaseResults) :: results
+
+        params = AlphaPhaseParameters()
+
+        ! TODO openMP this in alphaphase
+        ! TODO fix core and tail length definition
+        params%CoreAndTailLength = inputParams%CoreAndTailLengths(1)
+        params%itterateNumber = inputParams%PhaseNIterations
+        params%PercGenoHaploDisagree = inputParams%GenotypeErrorPhase
+        results = phaseAndCreateLibraries(ped, params, quiet=.true.)
+
+
+
+    end subroutine PhasingManagementNew
     !#############################################################################################################################################################################################################################
 
     subroutine PhasingManagement

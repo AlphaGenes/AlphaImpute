@@ -10,9 +10,7 @@ SET(ALPHAIMPUTE_src
             ${SRCALPHAIMPUTE}Imputation.f90
             ${SRCALPHAIMPUTE}InputMod.f90
             ${SRCALPHAIMPUTE}manageWindows.f90
-            ${SRCALPHAIMPUTE}par_zig_mod.f90
             ${SRCALPHAIMPUTE}PhaseRounds.f90
-            ${SRCALPHAIMPUTE}random.f90
             ${SRCALPHAIMPUTE}utils.f90
             ${SRCALPHAIMPUTE}AlphaImpute.f90
 
@@ -35,10 +33,11 @@ if (ALPHAIMPUTEEXE)
     # add external links here
     TARGET_LINK_LIBRARIES(${ALPHAIMPUTEEXE} ${AHLIB})
     TARGET_LINK_LIBRARIES(${ALPHAIMPUTEEXE} ${GPLIB})
+    TARGET_LINK_LIBRARIES(${ALPHAIMPUTEEXE} ${APLIB})
 endif()
 
-if (HMMLIB)
-    ADD_LIBRARY(${HMMLIB} STATIC ${HMM_src})
-    TARGET_LINK_LIBRARIES(${HMMLIB} ${AHLIB})
-endif()
+# if (HMMLIB)
+#     ADD_LIBRARY(${HMMLIB} STATIC ${HMM_src})
+#     TARGET_LINK_LIBRARIES(${HMMLIB} ${AHLIB})
+# endif()
 #INSTALL(TARGETS ${ALPHAIMPUTEEXE} RUNTIME DESTINATION bin)
