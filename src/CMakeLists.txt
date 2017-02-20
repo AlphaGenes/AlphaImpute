@@ -9,8 +9,6 @@ SET(ALPHAIMPUTE_src
             ${SRCALPHAIMPUTE}InformationModule.f90    
             ${SRCALPHAIMPUTE}Imputation.f90
             ${SRCALPHAIMPUTE}InputMod.f90
-            ${SRCALPHAIMPUTE}manageWindows.f90
-            ${SRCALPHAIMPUTE}PhaseRounds.f90
             ${SRCALPHAIMPUTE}utils.f90
             ${SRCALPHAIMPUTE}AlphaImpute.f90
 
