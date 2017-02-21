@@ -38,7 +38,7 @@ contains
 
 
 
-    subroutine PhasingManagementNew
+    subroutine PhasingManagementNew(results)
         use AlphaImputeInMod
         use AlphaPhaseParametersDefinition
         use AlphaPhaseFunctions
@@ -48,7 +48,7 @@ contains
 
         type(AlphaImputeInput), pointer :: inputParams
         type(AlphaPhaseParameters) :: params
-        type(AlphaPhaseResults) :: results
+        type(AlphaPhaseResults), intent(out) :: results
 
         params = AlphaPhaseParameters()
 
@@ -3220,12 +3220,13 @@ program AlphaImpute
     use Imputation
     use InputMod
     use GeneProbModule
+    use AlphaPhaseResultsDefinition
     implicit none
 
     integer :: markers
     double precision, allocatable :: GenosProbs(:,:,:)
     character(len=4096) :: cmd, SpecFile
-
+    type(AlphaPhaseResults) :: APResults
 
     inputParams => defaultInput
     if (Command_Argument_Count() > 0) then
@@ -3350,27 +3351,24 @@ program AlphaImpute
 
 
         if (inputParams%restartOption<OPT_RESTART_IMPUTATION) Then
-            call PhasingManagementNew
+            call PhasingManagementNew(APResults)
 
         endif
 
         if (inputParams%restartOption==OPT_RESTART_PHASING) then
+        ! TODO need to write out phasing results
             write(6,*) "Restart option 2 stops program after Phasing has been managed"
             stop
         endif
     endif
 
-    ! This is not necessary, already output in subroutine PhasingManagement
-    if ((inputParams%restartOption/=OPT_RESTART_ALL).and.(inputParams%restartOption<OPT_RESTART_IMPUTATION)) then
-        write(6,*) "Restart option 2 stops program after Phasing has been managed"
-        stop
-    endif
+
 endif
 
 if (inputParams%hmmoption/=RUN_HMM_NGS) then
     ! If we only want to phase data, then skip all the imputation steps
     if (inputParams%PhaseTheDataOnly==0) Then
-        call ImputationManagement
+        call ImputationManagement(APResults)
 
         call WriteOutResults
 

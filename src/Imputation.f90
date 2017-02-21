@@ -15,10 +15,13 @@ MODULE Imputation
     type(AlphaImputeInput), pointer :: inputParams
 CONTAINS
 
-    SUBROUTINE ImputationManagement
+    SUBROUTINE ImputationManagement(apResult)
         use omp_lib
         use informationModule
         use Output, only : ReadInPrePhasedData, ReReadGeneProbs
+        use AlphaPhaseResultDefinition
+
+        type(AlphaPhaseResult), intent(in) :: apResult
         integer :: loop
         character(len=150) :: timeOut
 
@@ -855,6 +858,8 @@ write(0,*) 'DEBUG: Mach Finished'
 
     !#############################################################################################################################################################################################################################
 
+
+    ! TODO fix this 
     SUBROUTINE PhaseElimination
         ! Candidate haplotype library imputation of alleles.
         ! For each core of each round of the LRPHLI algorithm, all haplotypes that have been found and
@@ -872,10 +877,10 @@ write(0,*) 'DEBUG: Mach Finished'
         use ISO_Fortran_Env
         use Global
 
-        use PhaseRounds
         use Utils
         use HaplotypeBits
         use alphaimputeinmod
+        use AlphaPhaseResultDefinition
         implicit none
 
         integer :: e,g,h,i,j,GamA,GamB,nAnisHD,PosHDInd
@@ -886,6 +891,7 @@ write(0,*) 'DEBUG: Mach Finished'
         integer(kind=1),allocatable,dimension (:,:,:,:) :: Temp
 
         character(len=1000) :: FileName,FileNamePhase
+        type(AlphaPhaseResult) :: apResult
         type(CoreIndex) :: CoreI
         type(BitSection) :: Section
 
@@ -927,7 +933,7 @@ write(0,*) 'DEBUG: Mach Finished'
                 EndSnp=CoreI%EndSnp(g)
 
                 Section = BitSection((EndSnp - StartSnp + 1), 64)
-                numSections = Section%numSections
+                numSections = Section%numSection
 
                 allocate(BitPhaseHD(nAnisHD,numSections,2))
                 allocate(BitImputePhase(0:nAnisP,numSections,2))
@@ -1142,19 +1148,13 @@ write(0,*) 'DEBUG: Mach Finished'
         Temp=0
         AnimalOn=0
 
-        do h=1,inputParams%nPhaseInternal
-            ! Get HIGH DENSITY phase information of this phasing step and information
-            ! of core indexes
-            if (inputParams%ManagePhaseOn1Off0==0) then
-                FileName = getFileNameCoreIndex(trim(inputParams%phasePath),h)
-                FileNamePhase = getFileNameFinalPhase(trim(inputParams%phasePath),h)
-            else
-                FileName = getFileNameCoreIndex(h)
-                FileNamePhase = getFileNameFinalPhase(h)
-            end if
 
-            ! Get core information of number of cores and allocate start and end cores information
-            CoreI = ReadCores(FileName)
+        ! TODOPHASE if phase stuff hasn't been read in, read it in here
+
+
+        do h=1,inputParams%nPhaseInternal
+           
+
 
             ! Get phase information
             call ReadPhased(nAnisHD, FileNamePhase, ped, PhaseHD, PosHD)
@@ -1463,7 +1463,7 @@ write(0,*) 'DEBUG: Mach Finished'
                 read(UHLib) nHap,CoreLength
 
                 if(nHap/=0) then
-                    ! Allocate the Haplotype Library and read it from file
+                    ! Allocate the Haplo,alLibrary and read it from file
                     allocate(HapLib(nHap, CoreLength))
                     do l=1,nHap
                         read(UHLib) HapLib(l,:)
@@ -1758,6 +1758,7 @@ write(0,*) 'DEBUG: Mach Finished'
         block
             integer :: tmpIndex
             open (unit=2001,file=trim(FileName),status="old")
+            !TODOPhase finalPhase read int PhaseHD 
             do i=1,nAnisHD
                 read (2001,*) dumC,PhaseHD(i,:,1,1)
                 read (2001,*) dumC,PhaseHD(i,:,2,1)
@@ -2021,6 +2022,10 @@ write(0,*) 'DEBUG: Mach Finished'
         ! Get information from RecodedGeneProbInput.txt which has been created in Makefiles subroutine
         ! WARNING: Why don't read information from Geno(:,:) that has been used to feed RecodedGeneProbInput.txt instead??
         !          Read from file is always slower!
+
+
+
+        ! TODOPHASE make this function read in new files 
         open (unit=43,file='.' // DASH // 'InputFiles' // DASH // 'RecodedGeneProbInput.txt',status='old')
         do i=1,nAnisP
             read (43,*) dum,dum,dum,ImputeGenos(i,:)
@@ -2321,7 +2326,7 @@ write(0,*) 'DEBUG: Mach Finished'
         !!   * IndividualMendelianInformativeness.txt
 
         use Global
-
+        ! TODOphase this all needs redone 
         use alphaimputeinmod
 
         implicit none
