@@ -1137,7 +1137,6 @@ contains
 #endif
                 ! call CheckImputationInconsistencies(ImputeGenos, ImputePhase, nAnisP, inputParams%nsnp)
                 !  TODO remove
-                print *, "size of imputeGenos:",size(ImputeGenos,2), " nSnp:", inputParams%nsnp
                 BLOCK
                     integer :: hmmID
                     do i=1, nAnisG

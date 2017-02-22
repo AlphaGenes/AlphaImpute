@@ -19,7 +19,7 @@ CONTAINS
         use omp_lib
         use informationModule
         use Output, only : ReadInPrePhasedData, ReReadGeneProbs
-        integer :: i,j,loop
+        integer :: loop
         character(len=150) :: timeOut
 
         inputParams => defaultInput

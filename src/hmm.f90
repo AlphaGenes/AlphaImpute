@@ -193,13 +193,13 @@ subroutine MaCHController(HMM)
         t1 = omp_get_wtime()
         write(0,*) 'DEBUG: Begin paralellisation [MaCHController]'
 #endif
+
         !$OMP PARALLEL DO DEFAULT(shared)
-        !$!OMP DO
         do i=1,nIndHmmMaCH
             call MaCHForInd(i, HMM)
         enddo
-        !$!OMP END DO
         !$OMP END PARALLEL DO
+
 #if DEBUG.EQ.1
         t2 = omp_get_wtime()
         tT = tT + (t2-t1)
@@ -386,7 +386,6 @@ subroutine ParseMaCHDataNGS(nGenotyped)
     integer :: i, j, nHaps, HapsLeft
     type(AlphaImputeInput), pointer :: inputParams
     character(len=20), allocatable :: HapList(:)
-    character(len=20) :: aux
 
     interface
         subroutine getHapList(HapListUnit, ListIds, nHaps)
@@ -482,7 +481,6 @@ subroutine ParseMaCHDataGenos(nGenotyped)
     !         end if
     !     end do
     ! end do
-
 
     do i=1,nGenotyped
         ! Check if individual is in the genotype file

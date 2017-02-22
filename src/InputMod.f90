@@ -273,7 +273,7 @@ contains
         ! Read the gender file if imputing the sex chromosome
         if (inputParams%SexOpt==1) then
             ped = initPedigree(inputParams%pedigreefile, nAnisRawPedigree,inputParams%genderFile)
-        else 
+        else
             ped = initPedigree(inputParams%pedigreefile, nAnisRawPedigree)
         endif
         deallocate(temp)
@@ -470,6 +470,7 @@ contains
             enddo
             Genos(i,:)=Temp(:)
         enddo
+
         close(GenoFileUnit)
         deallocate(temp)
     end subroutine ReadGenos
