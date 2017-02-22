@@ -33,19 +33,6 @@ CONTAINS
 write(0,*) 'DEBUG: Allocate memory for genotypes and haplotypes'
 #endif
 
-            ! TODO: This hack avoid mem allocation problems with ImputeGenos and ImputePhase
-            !       up in the code: at InsteadOfGeneProb in MakeFiles subroutine.
-            !       Something has to be done with InsteadOfGeneProb cos' it is causing lots
-            !       of problems!!
-            if (allocated(ImputeGenos)) Then
-                deallocate(ImputeGenos)
-            endif
-            allocate(ImputeGenos(0:nAnisP,inputParams%nsnp))
-            if (allocated(ImputePhase)) Then
-                deallocate(ImputePhase)
-            endif
-            allocate(ImputePhase(0:nAnisP,inputParams%nsnp,2))
-            ImputePhase=9
 
             allocate(GlobalTmpCountInf(nAnisP,8))
 
@@ -55,8 +42,7 @@ write(0,*) 'DEBUG: Allocate memory for genotypes and haplotypes'
 write(0,*) 'DEBUG: Read Genotypes'
 #endif
 
-            call ped%addGenotypeInformation(inputParams%GenotypeFile,inputParams%nsnp,NanisG)
-
+            call ped%addGenotypeInformation(inputParams%GenotypeFile,inputParams%nsnp,nAnisG)
 
 
 #ifdef DEBUG

@@ -1951,10 +1951,11 @@ contains
 
 
         !ANDREAS AND JOHN CHANGE ON FRIDAY - POSSIBLY REMOVE
+        ! TODO: IT SHOULD BE REMOVED OR CHANGE SUBROUTINE'S NAME AT LEAST!
         if (inputParams%SexOpt==1) then                 ! Sex chromosome
             call InsteadOfGeneProb          ! Calculate Genotype Probabilities
         else                                ! Not sex chromosome
-            if (inputParams%bypassgeneprob==1) then     ! Do I have to bypass Genotype Probabilities?
+            if (inputParams%bypassgeneprob==1 .OR. inputParams%hmmoption == RUN_HMM_ONLY) then
                 call InsteadOfGeneProb
             else
                 deallocate(Genos)
