@@ -19,9 +19,9 @@ CONTAINS
         use omp_lib
         use informationModule
         use Output, only : ReadInPrePhasedData, ReReadGeneProbs
-        use AlphaPhaseResultDefinition
+        use AlphaPhaseResultsDefinition
 
-        type(AlphaPhaseResult), intent(in) :: apResult
+        type(AlphaPhaseResults), intent(in) :: apResult
         integer :: loop
         character(len=150) :: timeOut
 
@@ -880,7 +880,7 @@ write(0,*) 'DEBUG: Mach Finished'
         use Utils
         use HaplotypeBits
         use alphaimputeinmod
-        use AlphaPhaseResultDefinition
+        use AlphaPhaseResultsDefinition
         implicit none
 
         integer :: e,g,h,i,j,GamA,GamB,nAnisHD,PosHDInd
@@ -891,7 +891,7 @@ write(0,*) 'DEBUG: Mach Finished'
         integer(kind=1),allocatable,dimension (:,:,:,:) :: Temp
 
         character(len=1000) :: FileName,FileNamePhase
-        type(AlphaPhaseResult) :: apResult
+        type(AlphaPhaseResults) :: apResult
         type(CoreIndex) :: CoreI
         type(BitSection) :: Section
 
@@ -2012,10 +2012,11 @@ write(0,*) 'DEBUG: Mach Finished'
     subroutine InitialiseArrays
         ! Impute phase information for homozygous cases
         use alphaimputeinmod
+        use global, only :ped
         implicit none
 
         integer :: i,j,dum
-
+        integer :: tmpGenoIndexed
         ImputeGenos=9
         ImputePhase=9
         inputParams => defaultInput
@@ -2026,7 +2027,7 @@ write(0,*) 'DEBUG: Mach Finished'
 
 
         ! TODOPHASE make this function read in new files 
-        open (unit=43,file='.' // DASH // 'InputFiles' // DASH // 'RecodedGeneProbInput.txt',status='old')
+
         do i=1,nAnisP
             read (43,*) dum,dum,dum,ImputeGenos(i,:)
             do j=1,inputParams%nsnp
@@ -2035,7 +2036,17 @@ write(0,*) 'DEBUG: Mach Finished'
             enddo
         enddo
 
-        ! WARNING: Close statement is missing?
+
+        do i=1, ped%nGenotyped
+            tmpGenoIndexed = ped%genotypeMap(i)
+            ImputeGenos(i,:) = ped%pedigree(ped%genotypeMap(i))%toIntegerArray()
+
+        enddo
+
+        do j=1,inputParams%nsnp
+            if (ImputeGenos(i,j)==0) ImputePhase(i,j,:)=0
+            if (ImputeGenos(i,j)==2) ImputePhase(i,j,:)=1
+        enddo
 
     end subroutine InitialiseArrays
 
@@ -2423,7 +2434,6 @@ write(0,*) 'DEBUG: Mach Finished'
                         endif
 
 
-                        ! if (ped%pedigree(i)%hasDummyParentsOrGranparents()) cycle
                         ! My father haplotype is phased
                         if ((ImputePhase(i,j,1)==0).or.(ImputePhase(i,j,1)==1)) then
                             ! If my paternal GranSire is heterozygous

@@ -510,9 +510,11 @@ contains
 
         allocate(WorkTmp(inputParams%nSnpRaw))
 
-        if (inputParams%hmmoption==RUN_HMM_NGS) then
-            nAnisP = nAnisG
-        endif
+
+        ! TODO deleted the following because am using new pedigree structure
+        ! if (inputParams%hmmoption==RUN_HMM_NGS) then
+        !     nAnisP = ped%nGenotyped
+        ! endif
 
         write(cm,'(I7)') inputParams%nSnpRaw !for formatting
         cm = adjustl(cm)
@@ -593,8 +595,8 @@ contains
                 if (allocated(maf)) then
                     deallocate(maf)
                 end if
-                allocate(ImputeGenos(0:nAnisG,inputParams%nSnp))
-                allocate(ImputePhase(0:nAnisG,inputParams%nSnp,2))
+                allocate(ImputeGenos(0:ped%nGenotyped,inputParams%nSnp))
+                allocate(ImputePhase(0:ped%nGenotyped,inputParams%nSnp,2))
                 allocate(ProbImputeGenos(0:nAnisP,inputParams%nSnp))
                 allocate(ProbImputePhase(0:nAnisP,inputParams%nSnp,2))
                 allocate(Maf(inputParams%nSnp))
@@ -608,7 +610,7 @@ contains
                 l=0
                 do j=1,inputParams%nsnp
                         l=l+1
-                        do i=1,nAnisG
+                        do i=1,ped%nGenotyped
                             ! if (GlobalHmmID(i) > nAnisP ) then
                             !     GlobalHmmID(i) = 0
                             !     ! TODO this means animal is a dummy - need to deal with this
@@ -623,7 +625,7 @@ contains
                 write(0,*) 'DEBUG: Impute alleles and genotypes based on HMM genotypes probabilities [WriteOutResults]'
 #endif
                 ! Impute the most likely genotypes. (Most frequent genotype)
-                do i=1,nAnisG
+                do i=1,ped%nGenotyped
                     do j=1,inputParams%nSnp
                         n2 = GenosCounts(i,j,2)                           ! Homozygous: 2 case
                         n1 = GenosCounts(i,j,1)                           ! Heterozygous
@@ -647,11 +649,11 @@ contains
                     enddo
                 enddo
 
-                ! call CheckImputationInconsistencies(ImputeGenos, ImputePhase, nAnisG, inputParams%nSnp)
+                ! call CheckImputationInconsistencies(ImputeGenos, ImputePhase, ped%nGenotyped, inputParams%nSnp)
 
                 BLOCK
                     integer :: hmmID
-                    do i=1,nAnisG
+                    do i=1,ped%nGenotyped
                         ! TODO: Remove this variable with the isssue is really fixed
                         ! hmmID = GlobalHmmID(i)
                         hmmID = i
@@ -762,7 +764,7 @@ contains
                 integer :: tmpIDInt
                 if (inputParams%inteditstat == 1) then
                     open (unit=42,file=trim(inputParams%GenotypeFile),status='old')
-                    do i=1,nAnisG
+                    do i=1,ped%nGenotyped
                         read (42,*) TmpId,WorkTmp(:)
 
                         tmpIDInt = ped%dictionary%getValue(trim(tmpID))
@@ -839,11 +841,11 @@ contains
                 if (allocated(ImputeGenos)) then
                     deallocate(ImputeGenos)
                 end if
-                allocate(ImputeGenos(0:nAnisG,inputParams%nSnpRaw))
+                allocate(ImputeGenos(0:ped%nGenotyped,inputParams%nSnpRaw))
                 if (allocated(ImputePhase)) then
                     deallocate(ImputePhase)
                 end if
-                allocate(ImputePhase(0:nAnisG,inputParams%nSnpRaw,2))
+                allocate(ImputePhase(0:ped%nGenotyped,inputParams%nSnpRaw,2))
                 if (allocated(ProbImputeGenos)) then
                     deallocate(ProbImputeGenos)
                 end if
@@ -864,7 +866,7 @@ contains
                 l=0
                 do j=1,inputParams%nsnp
                         l=l+1
-                        do i=1,nAnisG
+                        do i=1,ped%nGenotyped
                             ! if (GlobalHmmID(i) > nAnisP ) then
                             !     GlobalHmmID(i) = 0
                             !     ! TODO this means animal is a dummy - need to deal with this
@@ -879,7 +881,7 @@ contains
                 write(0,*) 'DEBUG: Impute alleles and genotypes based on HMM genotypes probabilities [WriteOutResults]'
 #endif
                 ! Impute the most likely genotypes. (Most frequent genotype)
-                do i=1,nAnisG
+                do i=1,ped%nGenotyped
                     do j=1,inputParams%nSnpRaw
                         n2 = GenosCounts(i,j,2)                           ! Homozygous: 2 case
                         n1 = GenosCounts(i,j,1)                           ! Heterozygous
@@ -909,7 +911,7 @@ contains
                 ! call CheckImputationInconsistencies(ImputeGenos, ImputePhase, nAnisP, inputParams%nsnp)
                 BLOCK
                     integer :: hmmID
-                    do i=1, nAnisG
+                    do i=1, ped%nGenotyped
                         ! TODO: Remove this variable when this issue is really fixed
                         ! hmmID = GlobalHmmID(i)
                         hmmID =i
@@ -934,8 +936,8 @@ contains
             endif
 
             if (inputParams%hmmoption/=RUN_HMM_NO) then
-                ! call WriteProbabilities("./Results/GenotypeProbabilities.txt", GlobalHmmID, ID, nAnisG, inputParams%nsnp)
-                call WriteProbabilities("./Results/GenotypeProbabilities.txt", GlobalHmmID, nAnisG, inputParams%nsnp)
+                ! call WriteProbabilities("./Results/GenotypeProbabilities.txt", GlobalHmmID, ID, ped%nGenotyped, inputParams%nsnp)
+                call WriteProbabilities("./Results/GenotypeProbabilities.txt", GlobalHmmID, ped%nGenotyped, inputParams%nsnp)
             else
                 if (inputParams%bypassgeneprob==0) then
                     allocate(GenosProbs(nAnisP,nSnpIterate,2))
@@ -2169,7 +2171,7 @@ contains
         open (unit=101,file="." // DASH // "Miscellaneous" // DASH // "PedigreeMistakes.txt",status="unknown")
 
 
-        do j=1,nAnisG
+        do j=1,ped%nGenotyped
             tmpID = ped%dictionary%getValue(trim(GenotypeId(j)))
             if (tmpID /= DICT_NULL) then
                 ped%pedigree(tmpID)%genotypePosition = j
@@ -2182,7 +2184,7 @@ contains
         nBothHomo = 0
         do e=1,2                    ! Do whatever this does, first on males and then on females
             ParPos=e+1              ! Index in the Genotype and Pedigree matrices for sires and dams
-            do i=1,nAnisRawPedigree
+            do i=1,ped%pedigreeSize
                 IndId=ped%pedigree(i)%genotypePosition            ! My Id
                 ParId=ped%pedigree(i)%getSireDamGenotypePositionByIndex(e+1)       ! Paternal Id,
                 TurnOn=1
@@ -2250,7 +2252,7 @@ contains
 
         ! Sort sires and dams, and look for mistakes (bisexuality,...).
 
-        nAnisP = nAnisRawPedigree
+        nAnisP = ped%pedigreeSize
         allocate(RecIdHDIndex(0:nAnisP))
 
         RecIdHDIndex=0
@@ -2271,14 +2273,14 @@ contains
         allocate(TempGenos(0:ped%pedigreeSize,inputParams%nsnp))
 
         TempGenos=9
-        do i=1,nAnisG
+        do i=1,ped%nGenotyped
             tmpId = ped%dictionary%getValue(GenotypeId(i))
             if (tmpId /= dict_null) then
                 TempGenos(tmpId,:)=Genos(i,:)
                 if (count(TempGenos(tmpId,:)/=9)>0) ped%pedigree(tmpId)%genotyped=.true.
             endif
         enddo
-        ! do i=1,nAnisG
+        ! do i=1,ped%nGenotyped
         ! print *, TempGenos
 
     end subroutine CheckParentage
@@ -2437,7 +2439,7 @@ contains
 
         allocate(FinalSetter(0:nAnisP))
         FinalSetter=0
-        do i=1,nAnisG
+        do i=1,ped%nGenotyped
             read (36,*) dumC,WorkTmp(:)
             Counter=0
             do j=1,inputParams%nSnpRaw
@@ -2492,7 +2494,7 @@ contains
             enddo
             if (count(RecTestId(:)==-99)>0) print*, "Error - There seems to be unidentifiablecount ",count(RecTestId(:)==-99)," individuals in the test file"
 
-            do i=1,nAnisG
+            do i=1,ped%nGenotyped
                 read (36,*) dumC,WorkTmp(:)
                 do j=1,nAnisTest
                     if (trim(TrueGenosId(j))==dumC) then
@@ -2710,7 +2712,7 @@ contains
             enddo
             if (count(RecTestId(:)==-99)>0) print*, "Error - There seems to be unidentifiablecount ",count(RecTestId(:)==-99)," individuals in the test file"
 
-            do i=1,nAnisG
+            do i=1,ped%nGenotyped
                 read (36,*) dumC,WorkTmp(:)
                 do j=1,nAnisTest
                     if (trim(TrueGenosId(j))==dumC) then
@@ -2970,7 +2972,7 @@ contains
 
 
         inputParams => defaultInput
-        allocate(res(nAnisG))
+        allocate(res(ped%nGenotyped))
         k = 1
         res(1) = nSnpsAnimal(1)
 
@@ -2991,7 +2993,7 @@ contains
         ! nClusters=nChips
         SurrCounter=k
         allocate(ClusterMember(SurrCounter))
-        allocate(ClusterMemberIndv(nAnisG))
+        allocate(ClusterMemberIndv(ped%nGenotyped))
         allocate(centroid(nClusters))
         allocate(nSurrPerCluster(nClusters))
 
@@ -3046,7 +3048,7 @@ contains
         ClusterMemberIndv=0
 
         ! open (unit=2222,file='nSnpsAnimalCluster.txt',status='unknown')
-        do i=1,nAnisG
+        do i=1,ped%nGenotyped
             dist=inputParams%nsnp
             do j=1,nClusters
                 if(abs(nSnpsAnimal(i)-Centroid(j))<dist) then
@@ -3080,9 +3082,9 @@ contains
 
         open(newunit=UOutputs, file="." // DASH // "Miscellaneous" // DASH // "SnpCallRateByAnimal.txt",status='unknown')
 
-        do i=1,nAnisG
-            CountMiss=count(Genos(i,:)==9)
-            write(UOutputs,'(a20,6f5.1)') GenotypeId(i), (inputParams%nsnp-CountMiss)*100/real(inputParams%nsnp)
+        do i=1,ped%nGenotyped
+            countMiss = ped%pedigree(ped%genotypeMap(i))%individualGenotype%numMissing()
+            write(UOutputs,'(a20,6f5.1)') ped%pedigree(ped%genotypeMap(i))%originalID, (inputParams%nsnp-CountMiss)*100/real(inputParams%nsnp)
         end do
         close(UOutputs)
 
@@ -3276,9 +3278,9 @@ program AlphaImpute
         call CountInData
         call ReadInData
         call SnpCallRate
-        allocate(Reads(nAnisG,inputParams%nsnp))
-        allocate(ImputeGenos(0:nAnisG,inputParams%nsnp))
-        allocate(ImputePhase(0:nAnisG,inputParams%nsnp,2))
+        allocate(Reads(ped%nGenotyped,inputParams%nsnp))
+        allocate(ImputeGenos(0:ped%nGenotyped,inputParams%nsnp))
+        allocate(ImputePhase(0:ped%nGenotyped,inputParams%nsnp,2))
         allocate(SnpIncluded(inputParams%nsnp))
         call CheckParentage
         call ReadSeq(inputParams%GenotypeFileUnit)

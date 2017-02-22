@@ -156,53 +156,31 @@ contains
         type(AlphaImputeInput), pointer :: inputParams
 
         inputParams => defaultInput
-        do
-            read (inputParams%pedigreeFileUnit,*,iostat=k) dumC
-            nAnisRawPedigree=nAnisRawPedigree+1
-            if (k/=0) then
-                nAnisRawPedigree=nAnisRawPedigree-1
-                exit            ! This forces to exit if an error is found
-            endif
-        enddo
-        rewind(inputParams%genotypeFileUnit)
-
-        print*, " ",nAnisRawPedigree," individuals in the pedigree file"
-        nObsDataRaw=nAnisRawPedigree
 
 
         if (inputParams%VCFFormat) then
-            read(inputParams%genotypeFileUnit,'(A)',iostat=k) dumC
-            nAnisG = nWords(trim(dumC)) - 5
-            print *, nAnisG
+            ! TODO need to add back in VCF support
+            ! read(inputParams%genotypeFileUnit,'(A)',iostat=k) dumC
+            ! nAnisG = nWords(trim(dumC)) - 5
+            ! print *, nAnisG
 
-            markers = 0
-            do
-                read (inputParams%genotypeFileUnit,*,iostat=k) dumC
-                markers = markers + 1
-                if (k/=0) then
-                    markers = markers - 1
-                    exit
-                endif
-            enddo
+            ! markers = 0
+            ! do
+            !     read (inputParams%genotypeFileUnit,*,iostat=k) dumC
+            !     markers = markers + 1
+            !     if (k/=0) then
+            !         markers = markers - 1
+            !         exit
+            !     endif
+            ! enddo
 
-            if (markers /= inputParams%nsnp) then
-                write(0,*) "Error: The number of markers in the file of sequence data does not match the"
-                write(0,*) "       number of markers provider by the user is not even. Is the file corrupt?"
-                stop
-            end if
+            ! if (markers /= inputParams%nsnp) then
+            !     write(0,*) "Error: The number of markers in the file of sequence data does not match the"
+            !     write(0,*) "       number of markers provider by the user is not even. Is the file corrupt?"
+            !     stop
+            ! end if
 
         else
-
-            do
-                read (inputParams%genotypeFileUnit,*,iostat=k) dumC
-                nAnisG = nAnisG + 1
-                if (k/=0) then
-                    nAnisG = nAnisG - 1
-                    exit
-                endif
-            enddo
-
-            rewind(inputParams%genotypeFileUnit)
 
             if (inputParams%hmmoption == RUN_HMM_NGS) then
                 if(mod(nAnisG,2)==0) then
@@ -214,11 +192,6 @@ contains
                 endif
             endif
         end if
-
-        print*, " ",nAnisG," individuals in the genotype file"
-
-        ! This is incoherent with functions ReadInData and ReadInParameterFile
-        if (trim(inputParams%PedigreeFile)=="NoPedigree") nAnisRawPedigree=nAnisG
 
     end subroutine CountInSequenceData
 
@@ -243,39 +216,31 @@ contains
         implicit none
 
         type(AlphaImputeInput), pointer :: inputParams
-        integer, allocatable, dimension(:) :: Temp
         inputParams=> defaultInput
 
-        allocate(Temp(inputParams%nsnp))
-        allocate(GenotypeId(nAnisG))
-        allocate(Genos(0:nAnisG,inputParams%nsnp))
-        allocate(GenderId(nAnisRawPedigree))
-        allocate(GenderRaw(nAnisRawPedigree))
-
-        Genos(0,:)=9
-
+ 
         ! Read the pedigree information
-        ! print *,"file",inputParams%pedigreefile
-        ! print *,"size:",nAnisRawPedigree
-        ! ped = initPedigree(inputParams%pedigreefile)
-        ! Read the genotype file
+
+        ! TODO this needs reimplemented 
         if (inputParams%hmmoption /= RUN_HMM_NGS) then
-            rewind(inputParams%genotypeFileUnit)
-            if (.not. inputParams%PlinkFormat) then
-                call ReadGenos(inputParams%genotypeFileUnit)
-            else
-                call ReadPlink(inputParams%genotypeFileUnit)
-            end if
+            ! if (inputParams%PlinkFormat) then
+            !     call ReadPlink(inputParams%genotypeFileUnit)
+            ! end if
         endif
         close(inputParams%pedigreeFileUnit)
-        close(inputParams%genotypeFileUnit)
 
         ! Read the gender file if imputing the sex chromosome
-        if (inputParams%SexOpt==1) then
-            ped = initPedigree(inputParams%pedigreefile, nAnisRawPedigree,inputParams%genderFile)
-        else 
-            ped = initPedigree(inputParams%pedigreefile, nAnisRawPedigree)
-        endif
+
+        if (trim(inputParams%pedigreefile) /= "NoPedigree") then
+            if (inputParams%SexOpt==1) then
+                ped = initPedigree(inputParams%GenotypeFile,nSnp=inputParams%nsnp, pedfile%inputparams%pedigreefile, genderfile=inputParams%genderFile)
+            else 
+                ped = initPedigree(inputParams%GenotypeFile,nSnp=inputParams%nsnp, pedfile%inputparams%pedigreefile)
+            endif
+        else
+
+            ! init pedigree from genotype file
+            ped = initPedigree(inputParams%GenotypeFile, nsnp=inputParams%nsnp)
         deallocate(temp)
     end subroutine ReadInData
 
@@ -292,11 +257,12 @@ contains
         type(AlphaImputeInput), pointer :: inputParams
         logical :: opened, named
         character(len=300) :: ReadsFile
+        character(len=IDLENGTH) :: tmpID
         integer, allocatable,dimension (:) :: ReferAlleleLine, AlterAlleleLine
 
         inputParams => defaultInput
-        allocate(ReferAllele(0:nAnisG,inputParams%nsnp))
-        allocate(AlterAllele(0:nAnisG,inputParams%nsnp))
+        allocate(ReferAllele(0:ped%nGenotyped,inputParams%nsnp))
+        allocate(AlterAllele(0:ped%nGenotyped,inputParams%nsnp))
         allocate(ReferAlleleLine(inputParams%nsnp))
         allocate(AlterAlleleLine(inputParams%nsnp))
 
@@ -320,15 +286,20 @@ contains
 #endif
 
         if (inputParams%VCFFormat) then
-            call readVCF(ReadsFileUnit, GenotypeId, ReferAllele, AlterAllele, inputParams%nsnp, inputParams%nsnp, 1, inputParams%nsnp, nAnisG)
+            print *, "VCF currently not supported"
+            ! TODO reimplement this
+            ! call readVCF(ReadsFileUnit, GenotypeId, ReferAllele, AlterAllele, inputParams%nsnp, inputParams%nsnp, 1, inputParams%nsnp, nAnisG)
         else
-            do i=1,nAnisG
-                read (ReadsFileUnit,*) GenotypeId(i), ReferAllele(i,:)
-                read (ReadsFileUnit,*) GenotypeId(i), AlterAllele(i,:)
+            do i=1,ped%nGenotyped
+                ! read (ReadsFileUnit,*) GenotypeId(i), ReferAllele(i,:)
+                ! read (ReadsFileUnit,*) GenotypeId(i), AlterAllele(i,:)
+                ! TODO not sure what this is doing
+                read (ReadsFileUnit,*) tmpID, ReferAllele(i,:)
+                read (ReadsFileUnit,*) tmpID, AlterAllele(i,:)
             end do
         end if
 
-        do i=1,nAnisG
+        do i=1,ped%nGenotyped
             do j=1,inputParams%nsnp
                 if (ReferAllele(i,j)>=MAX_READS_COUNT) ReferAllele(i,j)=MAX_READS_COUNT-1
                 if (AlterAllele(i,j)>=MAX_READS_COUNT) AlterAllele(i,j)=MAX_READS_COUNT-1
@@ -337,7 +308,7 @@ contains
         enddo
 
         open(unit=999, file='borrar.txt',status='unknown')
-        do i =1, nAnisG
+        do i =1, ped%nGenotyped
             write(999,'(a20,100i2)') ReferAllele(i,:)
             write(999,'(a20,100i2)') AlterAllele(i,:)
         end do
@@ -430,98 +401,56 @@ contains
         end do
     end subroutine readVCF
 
-
     !#############################################################################################################################################################################################################################
-    subroutine ReadGenos(GenoFileUnit)
+    ! subroutine ReadPlink(GenoFileUnit)
 
-        use Global
-        use alphaimputeinmod
-        implicit none
 
-        integer, intent(inout) :: GenoFileUnit
-        integer :: i,j
-        integer,allocatable,dimension(:) :: temp
-        type(AlphaImputeInput), pointer :: inputParams
-        logical :: opened, named
-        character(len=300) :: GenoFile
+    ! TODO need to add back in plink support
+    !     use Global
+    !     use alphaimputeinmod
+    !     implicit none
 
-        inputParams => defaultInput
+    !     integer, intent(inout) :: GenoFileUnit
+    !     integer :: i,j
+    !     character(len=2),allocatable,dimension(:) :: temp
+    !     type(AlphaImputeInput), pointer :: inputParams
+    !     logical :: opened, named
 
-        allocate(temp(inputParams%nSnp))
+    !     character(len=300) :: dumC
+    !     character(len=300) :: GenoFile
 
-        if (.not. allocated(Genos)) then
-            allocate(Genos(0:nAnisG,inputParams%nsnp))
-        endif
+    !     inputParams => defaultInput
 
-        Genos(0,:)=9
+    !     allocate(temp(inputParams%nSnp))
 
-        inquire(unit=GenoFileUnit, opened=opened, named=named, name=GenoFile)
-        if (.NOT. opened .and. named) then
-            open(unit=GenoFileUnit, file=GenoFile, status='unknown')
-        else if (.NOT. named) then
-            ! write(0, *) "ERROR - Something went wrong when trying to read the file of pre-phased data"
-            open(newunit=GenoFileUnit, file=inputParams%GenotypeFile)
-        end if
+    !     if (.not. allocated(Genos)) then
+    !         allocate(Genos(0:nAnisG,inputParams%nsnp))
+    !     endif
+    !     Genos(0,:)=9
 
-        do i=1,nAnisG
-            read (GenoFileUnit,*) GenotypeId(i),Temp(:)
-            do j=1,inputParams%nsnp
-                if ((Temp(j)<0).or.(Temp(j)>2)) Temp(j)=9
-            enddo
-            Genos(i,:)=Temp(:)
-        enddo
-        close(GenoFileUnit)
-        deallocate(temp)
-    end subroutine ReadGenos
+    !     inquire(unit=GenoFileUnit, opened=opened, named=named, name=GenoFile)
+    !     if (.NOT. opened .and. named) then
+    !         open(unit=GenoFileUnit, file=GenoFile, status='unknown')
+    !     else if (.NOT. named) then
+    !         open(newunit=GenoFileUnit, file=inputParams%GenotypeFile)
+    !     end if
 
-    !#############################################################################################################################################################################################################################
-    subroutine ReadPlink(GenoFileUnit)
+    !     ! Skip the first line as is the head
+    !     read (GenoFileUnit,*) dumC
+    !     do i=1,nAnisG
+    !         read (GenoFileUnit,*) dumC,GenotypeId(i),dumC,dumC,dumC,dumC,Temp(:)
+    !         do j=1,inputParams%nsnp
+    !             if (Temp(j)=='NA') then
+    !                 Temp(j) = '9'
+    !             else if (Temp(j)/='NA') then
+    !             end if
+    !         enddo
+    !         read(Temp(:),*) Genos(i,:)
+    !     enddo
+    !     close(GenoFileUnit)
+    !     deallocate(temp)
 
-        use Global
-        use alphaimputeinmod
-        implicit none
-
-        integer, intent(inout) :: GenoFileUnit
-        integer :: i,j
-        character(len=2),allocatable,dimension(:) :: temp
-        type(AlphaImputeInput), pointer :: inputParams
-        logical :: opened, named
-
-        character(len=300) :: dumC
-        character(len=300) :: GenoFile
-
-        inputParams => defaultInput
-
-        allocate(temp(inputParams%nSnp))
-
-        if (.not. allocated(Genos)) then
-            allocate(Genos(0:nAnisG,inputParams%nsnp))
-        endif
-        Genos(0,:)=9
-
-        inquire(unit=GenoFileUnit, opened=opened, named=named, name=GenoFile)
-        if (.NOT. opened .and. named) then
-            open(unit=GenoFileUnit, file=GenoFile, status='unknown')
-        else if (.NOT. named) then
-            open(newunit=GenoFileUnit, file=inputParams%GenotypeFile)
-        end if
-
-        ! Skip the first line as is the head
-        read (GenoFileUnit,*) dumC
-        do i=1,nAnisG
-            read (GenoFileUnit,*) dumC,GenotypeId(i),dumC,dumC,dumC,dumC,Temp(:)
-            do j=1,inputParams%nsnp
-                if (Temp(j)=='NA') then
-                    Temp(j) = '9'
-                else if (Temp(j)/='NA') then
-                end if
-            enddo
-            read(Temp(:),*) Genos(i,:)
-        enddo
-        close(GenoFileUnit)
-        deallocate(temp)
-
-    end subroutine ReadPlink
+    ! end subroutine ReadPlink
 
     !---------------------------------------------------------------------------
     ! DESCRIPTION:

@@ -36,7 +36,6 @@ module Global
 
 
 
-    integer :: nAnisG,nAnisRawPedigree,nAnisP
     integer :: CountRawGenos,nAnisInGenderFile
     integer :: MaxLeftRightSwitch,MinSpan
     integer :: nObsDataRaw,UseGP
@@ -45,7 +44,7 @@ module Global
 
     integer,allocatable,dimension (:,:) :: Reads,ReferAllele,AlterAllele
     integer(kind=1),allocatable,dimension (:) :: SnpIncluded,RecIdHDIndex,GenderRaw
-    integer(kind=1),allocatable,dimension (:,:) :: Genos,TempGenos,TmpGenos,MSTermInfo
+    integer(kind=1),allocatable,dimension (:,:) :: TempGenos,TmpGenos,MSTermInfo
     integer(kind=1),allocatable,dimension (:,:) :: ImputeGenos,SireDam
     integer(kind=1),allocatable,dimension (:,:,:) :: ImputePhase,TmpPhase,GlobalWorkPhase
     integer,allocatable :: Setter(:),GpIndex(:,:),GlobalTmpCountInf(:,:)

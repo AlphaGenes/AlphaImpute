@@ -164,7 +164,7 @@ subroutine MaCHController(HMM)
 #ifdef DEBUG
     write(0,*) 'DEBUG: [SetUpEquations] ...'
 #endif
-
+    
     ! Set up Reference haplotypes and HMM parameters
     call SetUpEquations(HMM, nAnisG, nAnisInbred)
 
