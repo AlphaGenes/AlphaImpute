@@ -1499,6 +1499,9 @@ subroutine SetUpEquations(HMM, nGenotyped, nInbred)
     integer(kind=1),intent(in) :: HMM
     integer, intent(in) :: nGenotyped, nInbred
 
+    ! Initialize to missing haplotypes of the whole population
+    FullH=9
+
     if (HMM==RUN_HMM_NGS) then
         call SetUpEquationsReads(nGenotyped)
     else if (HMM==RUN_HMM_ONLY) then
