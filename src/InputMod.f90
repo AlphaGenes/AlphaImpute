@@ -45,162 +45,28 @@ contains
     ! PARAMETERS:
     !> @param[in]
     !---------------------------------------------------------------------------
-    subroutine CountInData
-        use Global
-        use AlphaImputeInMod
-        implicit none
+    ! subroutine CountInData
+    !     use Global
+    !     use AlphaImputeInMod
+    !     implicit none
 
-        type(AlphaImputeInput), pointer :: inputParams
-        inputParams => defaultInput
+    !     type(AlphaImputeInput), pointer :: inputParams
+    !     inputParams => defaultInput
 
-        if (inputParams%hmmoption == RUN_HMM_NGS) then
-            call CountInSequenceData
-        else
-            call CountInGenotypeData
-        end if
-    end subroutine CountInData
-
-    !---------------------------------------------------------------------------
-    ! DESCRIPTION:
-    !> @brief      Count the number of individuals
-    !
-    !> @details    This subroutine counts the number of individuals genotyped and
-    !>             the number of individuals in the pedigree.
-    !>             If no pedigree information is available, then these to counts
-    !>             are equal to the number of individuals genotyped.
-    !
-    !> @author     Roberto Antolin, roberto.antolin@roslin.ed.ac.uk
-    !
-    !> @date       Nov 10, 2016
-    !
-    ! PARAMETERS:
-    !> @param[in]
-    !---------------------------------------------------------------------------
-    subroutine CountInGenotypeData
-
-        use Global
-        use GlobalVariablesHmmMaCH
-        use AlphaImputeInMod
-        implicit none
-
-        integer :: k
-        character (len=300) :: dumC
-        type(AlphaImputeInput), pointer :: inputParams
-
-        inputParams => defaultInput
-        do
-            read (inputParams%pedigreeFileUnit,*,iostat=k) dumC
-            nAnisRawPedigree=nAnisRawPedigree+1
-            if (k/=0) then
-                nAnisRawPedigree=nAnisRawPedigree-1
-                exit            ! This forces to exit if an error is found
-            endif
-        enddo
-        rewind(inputParams%genotypeFileUnit)
-
-        print*, " ",nAnisRawPedigree," individuals in the pedigree file"
-        nObsDataRaw=nAnisRawPedigree
-
-        do
-            read (inputParams%genotypeFileUnit,*,iostat=k) dumC
-            nAnisG=nAnisG+1
-            if (k/=0) then
-                nAnisG=nAnisG-1
-                exit
-            endif
-        enddo
-
-        rewind(inputParams%genotypeFileUnit)
-
-        if (inputParams%hmmoption == RUN_HMM_NGS) then
-            if(mod(nAnisG,2)==0) then
-                nAnisG=nAnisG/2
-            else
-                write(0,*) "Error: The number of lines in the file of reads is not even. Is the file corrupt?"
-                write(0,*) "The program will now stop"
-                stop
-            endif
-        endif
-
-        print*, " ",nAnisG," individuals in the genotype file"
-
-        ! This is incoherent with functions ReadInData and ReadInParameterFile
-        if (trim(inputParams%PedigreeFile)=="NoPedigree") nAnisRawPedigree=nAnisG
-
-    end subroutine CountInGenotypeData
-
-    !---------------------------------------------------------------------------
-    ! DESCRIPTION:
-    !> @brief      Count the number of individuals
-    !
-    !> @details    This subroutine counts the number of individuals sequenced and
-    !>             the number of individuals in the pedigree.
-    !>             If no pedigree information is available, then these to counts
-    !>             are equal to the number of individuals genotyped.
-    !
-    !> @author     Roberto Antolin, roberto.antolin@roslin.ed.ac.uk
-    !
-    !> @date       Nov 10, 2016
-    !
-    ! PARAMETERS:
-    !> @param[in]
-    !---------------------------------------------------------------------------
-    subroutine CountInSequenceData
-        use Global
-        use GlobalVariablesHmmMaCH
-        use AlphaImputeInMod
-        implicit none
-
-        integer :: k, markers
-        character (len=1024*1024) :: dumC
-        type(AlphaImputeInput), pointer :: inputParams
-
-        inputParams => defaultInput
-
-
-        if (inputParams%VCFFormat) then
-            ! TODO need to add back in VCF support
-            ! read(inputParams%genotypeFileUnit,'(A)',iostat=k) dumC
-            ! nAnisG = nWords(trim(dumC)) - 5
-            ! print *, nAnisG
-
-            ! markers = 0
-            ! do
-            !     read (inputParams%genotypeFileUnit,*,iostat=k) dumC
-            !     markers = markers + 1
-            !     if (k/=0) then
-            !         markers = markers - 1
-            !         exit
-            !     endif
-            ! enddo
-
-            ! if (markers /= inputParams%nsnp) then
-            !     write(0,*) "Error: The number of markers in the file of sequence data does not match the"
-            !     write(0,*) "       number of markers provider by the user is not even. Is the file corrupt?"
-            !     stop
-            ! end if
-
-        else
-
-            if (inputParams%hmmoption == RUN_HMM_NGS) then
-                if(mod(nAnisG,2)==0) then
-                    nAnisG=nAnisG/2
-                else
-                    write(0,*) "Error: The number of lines in the file of reads is not even. Is the file corrupt?"
-                    write(0,*) "The program will now stop"
-                    stop
-                endif
-            endif
-        end if
-
-    end subroutine CountInSequenceData
+    !     if (inputParams%hmmoption == RUN_HMM_NGS) then
+    !         call CountInSequenceData
+    !         ! TODO need to add back in support for NGS
+    !     else
+    !         call CountInGenotypeData
+    !     end if
+    ! end subroutine CountInData
 
     !---------------------------------------------------------------------------
     ! DESCRIPTION:
     !> @brief      Read files
     !
     !> @details    This subroutine reads the pedigree data and the gender file
-    !>             in case of Sex Chromosome
+    !>             in case of Sex Chromosome, as well as genotype information
     !
     !> @author     Roberto Antolin, roberto.antolin@roslin.ed.ac.uk
     !
@@ -233,15 +99,15 @@ contains
 
         if (trim(inputParams%pedigreefile) /= "NoPedigree") then
             if (inputParams%SexOpt==1) then
-                ped = initPedigree(inputParams%GenotypeFile,nSnp=inputParams%nsnp, pedfile%inputparams%pedigreefile, genderfile=inputParams%genderFile)
+                ped = initPedigreeGenotypeFiles(inputParams%GenotypeFile,nSnp=inputParams%nsnp, pedfile=inputparams%pedigreefile, genderfile=inputParams%genderFile)
             else 
-                ped = initPedigree(inputParams%GenotypeFile,nSnp=inputParams%nsnp, pedfile%inputparams%pedigreefile)
+                ped = initPedigreeGenotypeFiles(inputParams%GenotypeFile,nSnp=inputParams%nsnp, pedfile=inputparams%pedigreefile)
             endif
         else
 
             ! init pedigree from genotype file
-            ped = initPedigree(inputParams%GenotypeFile, nsnp=inputParams%nsnp)
-        deallocate(temp)
+            ped = initPedigreeGenotypeFiles(inputParams%GenotypeFile, nsnp=inputParams%nsnp)
+        endif
     end subroutine ReadInData
 
     !#############################################################################################################################################################################################################################

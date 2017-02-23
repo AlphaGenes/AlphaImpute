@@ -92,7 +92,7 @@ CONTAINS
 
         allocate(gamete(nSnpHmm))
         gametesPhased=0
-        do ind=1,nAnisP
+        do ind=1,ped%pedigreeSize
             gamete=ImputePhase(ind,:,1)
             if (float(count(gamete(:)==1 .OR. gamete(:)==0))/nSnpHmm >= inputParams%imputedThreshold/100.0) then
                 gametesPhased=gametesPhased+1

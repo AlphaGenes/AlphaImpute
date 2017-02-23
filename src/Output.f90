@@ -280,68 +280,68 @@ contains
 
     !######################################################################################################################################################################################
 
-    subroutine ReReadGeneProbs
-        ! Read genotype probabilities from files and phase allele based in these probabilities.
-        ! This files should have been already created during previous calls to AlphaImpute (inputParams%restartOption<3)
-        ! Phasing information is store in the variable GlobalWorkPhase
-        use Global, only : GLOBALWORKPHASE, GPINDEX, nAnisP, GENEPROBTHRESH
-        use AlphaImputeInMod
-        implicit none
+!     subroutine ReReadGeneProbs !TODO this needs rewritten
+!         ! Read genotype probabilities from files and phase allele based in these probabilities.
+!         ! This files should have been already created during previous calls to AlphaImpute (inputParams%restartOption<3)
+!         ! Phasing information is store in the variable GlobalWorkPhase
+!         use Global, only : GLOBALWORKPHASE, GPINDEX, GENEPROBTHRESH
+!         use AlphaImputeInMod
+!         implicit none
 
 
-        integer :: h,i,j,dum,StSnp,EnSnp
-        real, allocatable, dimension(:,:) :: PatAlleleProb,MatAlleleProb,GeneProbWork
-        character(len=300) :: filout
-        type(AlphaImputeInput), pointer :: inputParams
+!         integer :: h,i,j,dum,StSnp,EnSnp
+!         real, allocatable, dimension(:,:) :: PatAlleleProb,MatAlleleProb,GeneProbWork
+!         character(len=300) :: filout
+!         type(AlphaImputeInput), pointer :: inputParams
 
 
 
-        inputParams => defaultInput
+!         inputParams => defaultInput
 
-        allocate(PatAlleleProb(inputParams%nsnp,2))
-        allocate(MatAlleleProb(inputParams%nsnp,2))
-        allocate(GeneProbWork(inputParams%nsnp,4))
-        GlobalWorkPhase=9
-        do h=1,inputParams%nProcessors
-#ifdef OS_UNIX
-            write (filout,'("GeneProb/GeneProb"i0,"/GeneProbs.txt")')h          !here
-#else
-            write (filout,'("GeneProb\GeneProb"i0,"\GeneProbs.txt")')h          !here
-#endif
+!         allocate(PatAlleleProb(inputParams%nsnp,2))
+!         allocate(MatAlleleProb(inputParams%nsnp,2))
+!         allocate(GeneProbWork(inputParams%nsnp,4))
+!         GlobalWorkPhase=9
+!         do h=1,inputParams%nProcessors
+! #ifdef OS_UNIX
+!             write (filout,'("GeneProb/GeneProb"i0,"/GeneProbs.txt")')h          !here
+! #else
+!             write (filout,'("GeneProb\GeneProb"i0,"\GeneProbs.txt")')h          !here
+! #endif
 
-            ! TODOgeneprob info read here 
-            open (unit=110,file=trim(filout),status="unknown")
-            StSnp=GpIndex(h,1)          ! Where SNPs start
-            EnSnp=GpIndex(h,2)          ! Where SNPs end
-            do i=1,nAnisP                                           ! The number of lines of GeneProbs.txt files is = nAnisP x 4
-                do j=1,4                                            ! where 4 stands for the two paternal and the two maternal haplotypes
-                    read (110,*) dum,GeneProbWork(StSnp:EnSnp,j)
-                enddo
+!             ! TODOgeneprob info read here 
+!             open (unit=110,file=trim(filout),status="unknown")
+!             StSnp=GpIndex(h,1)          ! Where SNPs start
+!             EnSnp=GpIndex(h,2)          ! Where SNPs end
+!             do i=1,nAnisP                                           ! The number of lines of GeneProbs.txt files is = nAnisP x 4
+!                 do j=1,4                                            ! where 4 stands for the two paternal and the two maternal haplotypes
+!                     read (110,*) dum,GeneProbWork(StSnp:EnSnp,j)
+!                 enddo
 
-                ! GeneProbWork(:,1) == Probability 0-0 = Prob00
-                ! GeneProbWork(:,2) == Probability 0-1 = Prob01
-                ! GeneProbWork(:,3) == Probability 1-0 = Prob10
-                ! GeneProbWork(:,4) == Probability 1-1 = Prob11
-                PatAlleleProb(StSnp:EnSnp,1)=GeneProbWork(StSnp:EnSnp,1)+GeneProbWork(StSnp:EnSnp,2)    ! PatAlleleProb(:,1) == Probability Paternal allele is 0 = Prob00 + Prob01
-                PatAlleleProb(StSnp:EnSnp,2)=GeneProbWork(StSnp:EnSnp,3)+GeneProbWork(StSnp:EnSnp,4)    ! PatAlleleProb(:,2) == Probability Paternal allele is 1 = Prob10 + Prob11
-                MatAlleleProb(StSnp:EnSnp,1)=GeneProbWork(StSnp:EnSnp,1)+GeneProbWork(StSnp:EnSnp,3)    ! PatAlleleProb(:,3) == Probability Maternal allele is 0 = Prob00 + Prob10
-                MatAlleleProb(StSnp:EnSnp,2)=GeneProbWork(StSnp:EnSnp,2)+GeneProbWork(StSnp:EnSnp,4)    ! PatAlleleProb(:,4) == Probability Maternal allele is 1 = Prob01 + Prob11
+!                 ! GeneProbWork(:,1) == Probability 0-0 = Prob00
+!                 ! GeneProbWork(:,2) == Probability 0-1 = Prob01
+!                 ! GeneProbWork(:,3) == Probability 1-0 = Prob10
+!                 ! GeneProbWork(:,4) == Probability 1-1 = Prob11
+!                 PatAlleleProb(StSnp:EnSnp,1)=GeneProbWork(StSnp:EnSnp,1)+GeneProbWork(StSnp:EnSnp,2)    ! PatAlleleProb(:,1) == Probability Paternal allele is 0 = Prob00 + Prob01
+!                 PatAlleleProb(StSnp:EnSnp,2)=GeneProbWork(StSnp:EnSnp,3)+GeneProbWork(StSnp:EnSnp,4)    ! PatAlleleProb(:,2) == Probability Paternal allele is 1 = Prob10 + Prob11
+!                 MatAlleleProb(StSnp:EnSnp,1)=GeneProbWork(StSnp:EnSnp,1)+GeneProbWork(StSnp:EnSnp,3)    ! PatAlleleProb(:,3) == Probability Maternal allele is 0 = Prob00 + Prob10
+!                 MatAlleleProb(StSnp:EnSnp,2)=GeneProbWork(StSnp:EnSnp,2)+GeneProbWork(StSnp:EnSnp,4)    ! PatAlleleProb(:,4) == Probability Maternal allele is 1 = Prob01 + Prob11
 
-                do j=StSnp,EnSnp
-                    if (PatAlleleProb(j,1)>=GeneProbThresh) GlobalWorkPhase(i,j,1)=0
-                    if (PatAlleleProb(j,2)>=GeneProbThresh) GlobalWorkPhase(i,j,1)=1
-                    if (MatAlleleProb(j,1)>=GeneProbThresh) GlobalWorkPhase(i,j,2)=0
-                    if (MatAlleleProb(j,2)>=GeneProbThresh) GlobalWorkPhase(i,j,2)=1
-                enddo
-            enddo
-            close(110)
-        enddo
-        GlobalWorkPhase(0,:,:)=9
+!                 do j=StSnp,EnSnp
+!                     if (PatAlleleProb(j,1)>=GeneProbThresh) GlobalWorkPhase(i,j,1)=0
+!                     if (PatAlleleProb(j,2)>=GeneProbThresh) GlobalWorkPhase(i,j,1)=1
+!                     if (MatAlleleProb(j,1)>=GeneProbThresh) GlobalWorkPhase(i,j,2)=0
+!                     if (MatAlleleProb(j,2)>=GeneProbThresh) GlobalWorkPhase(i,j,2)=1
+!                 enddo
+!             enddo
+!             close(110)
+!         enddo
+!         GlobalWorkPhase(0,:,:)=9
 
-        deallocate(PatAlleleProb)
-        deallocate(MatAlleleProb)
-        deallocate(GeneProbWork)
-    end subroutine ReReadGeneProbs
+!         deallocate(PatAlleleProb)
+!         deallocate(MatAlleleProb)
+!         deallocate(GeneProbWork)
+!     end subroutine ReReadGeneProbs
 
 
 

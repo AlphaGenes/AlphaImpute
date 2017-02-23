@@ -10,6 +10,7 @@ MODULE Imputation
     use GlobalVariablesHmmMaCH
     use AlphaImputeInMod
     use InputMod
+    use ConstantModule
     implicit none
 
     type(AlphaImputeInput), pointer :: inputParams
@@ -18,7 +19,7 @@ CONTAINS
     SUBROUTINE ImputationManagement(apResult)
         use omp_lib
         use informationModule
-        use Output, only : ReadInPrePhasedData, ReReadGeneProbs
+        use Output, only : ReadInPrePhasedData
         use AlphaPhaseResultsDefinition
 
         type(AlphaPhaseResults), intent(in) :: apResult
@@ -43,22 +44,22 @@ write(0,*) 'DEBUG: Allocate memory for genotypes and haplotypes'
             if (allocated(ImputeGenos)) Then
                 deallocate(ImputeGenos)
             endif
-            allocate(ImputeGenos(0:nAnisP,inputParams%nsnp))
+            allocate(ImputeGenos(0:ped%pedigreeSize,inputParams%nsnp))
             if (allocated(ImputePhase)) Then
                 deallocate(ImputePhase)
             endif
-            allocate(ImputePhase(0:nAnisP,inputParams%nsnp,2))
+            allocate(ImputePhase(0:ped%pedigreeSize,inputParams%nsnp,2))
             ImputePhase=9
 
-            allocate(GlobalTmpCountInf(nAnisP,8))
+            allocate(GlobalTmpCountInf(ped%pedigreeSize,8))
 
-            allocate(MSTermInfo(nAnisP,2))
+            allocate(MSTermInfo(ped%pedigreeSize,2))
 
 #ifdef DEBUG
 write(0,*) 'DEBUG: Read Genotypes'
 #endif
 
-            call ped%addGenotypeInformation(inputParams%GenotypeFile,inputParams%nsnp,NanisG)
+            call ped%addGenotypeInformation(inputParams%GenotypeFile,inputParams%nsnp)
 
 
 
@@ -76,16 +77,18 @@ write(0,*) 'DEBUG: Mach Finished'
         else
 
             if (inputParams%RestartOption==4) then
-                allocate(ImputeGenos(0:nAnisP,inputParams%nsnp))
-                allocate(ImputePhase(0:nAnisP,inputParams%nsnp,2))
+                allocate(ImputeGenos(0:ped%pedigreeSize,inputParams%nsnp))
+                allocate(ImputePhase(0:ped%pedigreeSize,inputParams%nsnp,2))
             else
                 if (inputParams%sexopt==0) then
                     ! Impute initial genotypes from calculated genotype probabilities
                     if (inputParams%BypassGeneProb==0) then
-                        allocate(ImputeGenos(0:nAnisP,inputParams%nsnp))
-                        allocate(ImputePhase(0:nAnisP,inputParams%nsnp,2))
-                        allocate(GlobalWorkPhase(0:nAnisP,inputParams%nsnp,2))
-                        call ReReadGeneProbs
+                        allocate(ImputeGenos(0:ped%pedigreeSize,inputParams%nsnp))
+                        allocate(ImputePhase(0:ped%pedigreeSize,inputParams%nsnp,2))
+                        allocate(GlobalWorkPhase(0:ped%pedigreeSize,inputParams%nsnp,2))
+
+                        ! TODO get geneprobs back in
+                        ! call ReReadGeneProbs
                     else
                         ! Phase in the homozygous case for the SEX CHROMOSOME
                         ! WARNING: NOTHING IS DONE!!
@@ -96,7 +99,7 @@ write(0,*) 'DEBUG: Mach Finished'
                     call InitialiseArrays       ! This is similar to InsteadOfReReadGeneProb subroutine but allocating ImputePhase
                     call GeneProbPhase          ! Recover and store information about which and how many alleles/SNPs have been genotyped/phased
                 else
-                    allocate(MSTermInfo(nAnisP,2))
+                    allocate(MSTermInfo(ped%pedigreeSize,2))
                     MSTermInfo=0
                 endif
 
@@ -228,7 +231,7 @@ write(0,*) 'DEBUG: Mach Finished'
         implicit none
 
         integer :: m,e,g,i,j,nCore,nGlobalLoop,CoreLength,CoreStart,CoreEnd,CompPhase
-        integer :: LoopStart,Offset,AnimalOn(nAnisP,2)
+        integer :: LoopStart,Offset,AnimalOn(ped%pedigreeSize,2)
         integer ::GamA,GamB
 
         integer,allocatable,dimension (:,:) :: LoopIndex
@@ -263,7 +266,7 @@ write(0,*) 'DEBUG: Mach Finished'
             LoopIndex(i,2)=int(float(inputParams%nsnp)/LoopIndex(i,1))
         enddo
 
-        allocate(Temp(nAnisP,inputParams%nsnp,2,2))
+        allocate(Temp(ped%pedigreeSize,inputParams%nsnp,2,2))
         Temp=0
         AnimalOn=0
 
@@ -301,13 +304,13 @@ write(0,*) 'DEBUG: Mach Finished'
                         deallocate(MissImputePhase)
                     end if
 
-                    allocate(BitImputePhase(numSections,2,0:nAnisP))
-                    allocate(MissImputePhase(numSections,2,0:nAnisP))
+                    allocate(BitImputePhase(numSections,2,0:ped%pedigreeSize))
+                    allocate(MissImputePhase(numSections,2,0:ped%pedigreeSize))
 
                     BitImputePhase = 0
                     MissImputePhase = 0
 
-                    do i = 1, nAnisP
+                    do i = 1, ped%pedigreeSize - ped%nDummys
                         do e = 1, 2
                             curSection = 1
                             curPos = 1
@@ -333,7 +336,7 @@ write(0,*) 'DEBUG: Mach Finished'
                         !$OMP PARALLEL DO &
                         !$OMP DEFAULT(SHARED) &
                         !$OMP PRIVATE(i,j,e,CompPhase,GamA,GamB,curPos,curSection, parent)
-                        do i=1,nAnisP
+                        do i=1,ped%pedigreeSize-ped%ndummys
 
                             do e=1,2
 
@@ -441,7 +444,7 @@ write(0,*) 'DEBUG: Mach Finished'
         ! The individual has two haplotypes
         do e=1,2
             do j=1,inputParams%nsnp
-                do i=1,nAnisP
+                do i=1,ped%pedigreeSize- ped%nDummys
                     if (AnimalOn(i,e)==1) then
                         if ((inputParams%sexopt==0).or.(ped%pedigree(i)%gender==inputParams%HomGameticStatus)) then
 
@@ -457,7 +460,7 @@ write(0,*) 'DEBUG: Mach Finished'
 
         ! The individual is has one haplotype: In Sex Chromosome, the heterogametic case
         do j=1,inputParams%nsnp
-            do i =1, nAnisP
+            do i =1, ped%pedigreeSize- ped%nDummys
                 if ((inputParams%sexopt==1).and.(ped%pedigree(i)%gender==inputParams%HetGameticStatus)) then
                     if (AnimalOn(i,inputParams%HomGameticStatus)==1) then
                         if (ImputePhase(i,j,inputParams%HomGameticStatus)==9) then
@@ -502,7 +505,7 @@ write(0,*) 'DEBUG: Mach Finished'
         implicit none
 
         integer :: f,e,h,g,i,j,l,nCore,nHap,nGlobalLoop,CoreLength,CoreStart,CoreEnd,InLib,Count0,Count1
-        integer :: Counter,BanBoth(2),Ban(2),AnimalOn(nAnisP,2)
+        integer :: Counter,BanBoth(2),Ban(2),AnimalOn(ped%pedigreeSize,2)
         integer :: LoopStart,OffSet
 
         integer,allocatable,dimension (:,:) :: HapLib,LoopIndex,HapElim
@@ -535,7 +538,7 @@ write(0,*) 'DEBUG: Mach Finished'
             LoopIndex(i,2)=int(float(inputParams%nsnp)/LoopIndex(i,1))
         enddo
 
-        allocate(Temp(nAnisP,inputParams%nsnp,2,2))
+        allocate(Temp(ped%pedigreeSize,inputParams%nsnp,2,2))
         Temp=0
         AnimalOn=0
 
@@ -543,7 +546,7 @@ write(0,*) 'DEBUG: Mach Finished'
         ! f is a variable to simulate shift or no-shift phasing
         do f=1,2
             ! Allocate the Internal Haplotype Library
-            allocate(HapLib(nAnisP*2,inputParams%nsnp))
+            allocate(HapLib(ped%pedigreeSize*2,inputParams%nsnp))
             do l=LoopStart,nGlobalLoop
 
                 ! Simulate phase without shift
@@ -580,10 +583,10 @@ write(0,*) 'DEBUG: Mach Finished'
                         deallocate(MissImputePhase)
                     end if
 
-                    allocate(BitHapLib(nAnisP*2,numSections))
-                    allocate(MissHapLib(nAnisP*2,numSections))
-                    allocate(BitImputePhase(0:nAnisP,numSections,2))
-                    allocate(MissImputePhase(0:nAnisP,numSections,2))
+                    allocate(BitHapLib(ped%pedigreeSize*2,numSections))
+                    allocate(MissHapLib(ped%pedigreeSize*2,numSections))
+                    allocate(BitImputePhase(0:ped%pedigreeSize,numSections,2))
+                    allocate(MissImputePhase(0:ped%pedigreeSize,numSections,2))
 
                     BitHapLib = 0
                     MissHapLib = 0
@@ -594,7 +597,7 @@ write(0,*) 'DEBUG: Mach Finished'
                     curPos = 1
                     do j = CoreStart, CoreEnd
                         do e = 1, 2
-                            do i = 1, nAnisP
+                            do i = 1, ped%pedigreeSize- ped%nDummys
                                 select case (ImputePhase(i, j, e))
                                 case (1)
                                     BitImputePhase(i, curSection, e) = ibset(BitImputePhase(i, curSection, e), curPos)
@@ -604,7 +607,7 @@ write(0,*) 'DEBUG: Mach Finished'
                             end do
                         end do
 
-                        do i = 1, nAnisP*2
+                        do i = 1, (ped%pedigreeSize- ped%nDummys)*2
                             MissHapLib(i, curSection) = IBSET(MissHapLib(i, curSection), curPos)
                         end do
 
@@ -618,7 +621,7 @@ write(0,*) 'DEBUG: Mach Finished'
                     !$!OMP PARALLEL DO ORDERED&
                     !$!OMP DEFAULT(SHARED) &
                     !$!OMP PRIVATE(i,j,e,h,InLib)
-                    do i=1,nAnisP
+                    do i=1,ped%pedigreeSize- ped%nDummys
                         do e=1,2
                             ! If GeneProbPhase has been executed, that is, if not considering the Sex Chromosome, then MSTermInfo={0,1}.
                             ! Else, if Sex Chromosome, then MSTermInfo is 0 always
@@ -665,12 +668,12 @@ write(0,*) 'DEBUG: Mach Finished'
                     !          and phasing steps.
                     allocate(BitWork(numSections,2))
                     allocate(MissWork(numSections,2))
-                    allocate(HapElim(nAnisP*2,2))
+                    allocate(HapElim(ped%pedigreeSize*2,2))
                     HapElim = 0 !  changed from HapElim=1 to improve speed
                     !$OMP PARALLEL DO &
                     !$OMP DEFAULT(SHARED) &
                     !$OMP PRIVATE(i,j,e,h,HapElim,BanBoth,counter,Count0,Count1,Ban,curPos,curSection,BitWork,MissWork,BitGeno)
-                    do i=1,nAnisP
+                    do i=1,ped%pedigreeSize- ped%nDummys
 
 
                         BanBoth=0
@@ -826,7 +829,7 @@ write(0,*) 'DEBUG: Mach Finished'
         do e=1,2
             !$OMP DO PRIVATE(i,j)
             do j=1,inputParams%nsnp
-                do i=1,nAnisP
+                do i=1,ped%pedigreeSize- ped%nDummys
                     ! If GeneProbPhase has been executed, that is, if not considering the Sex Chromosome, then MSTermInfo={0,1}.
                     ! Else, if Sex Chromosome, then MSTermInfo is 0 always
                     ! So, if a Conservative imputation of haplotypes is selected, this DO statement will do nothing
@@ -884,61 +887,52 @@ write(0,*) 'DEBUG: Mach Finished'
         implicit none
 
         integer :: e,g,h,i,j,GamA,GamB,nAnisHD,PosHDInd
-        integer :: StartSnp,EndSnp,Gam1,Gam2,AnimalOn(nAnisP,2)
+        integer :: StartSnp,EndSnp,Gam1,Gam2,AnimalOn(ped%pedigreeSize,2)
         integer,allocatable,dimension (:) :: PosHD
         integer,allocatable,dimension (:,:,:) :: PhaseHD
         integer(kind=8), allocatable, dimension(:,:,:) :: BitPhaseHD, BitImputePhase, MissPhaseHD, MissImputePhase
         integer(kind=1),allocatable,dimension (:,:,:,:) :: Temp
 
-        character(len=1000) :: FileName,FileNamePhase
         type(AlphaPhaseResults) :: apResult
-        type(CoreIndex) :: CoreI
         type(BitSection) :: Section
+
+        type(AlphaPhaseResults) :: apResults
+
 
         integer :: numSections, curSection, curPos
 
+    
         inputParams => defaultInput
         ! Number of animals that have been HD phased
         nAnisHD=(count(Setter(:)==1))
 
-        allocate(Temp(nAnisP,inputParams%nsnp,2,2))
+        allocate(Temp(ped%pedigreeSize,inputParams%nsnp,2,2))
         allocate(PhaseHD(nAnisHD,inputParams%nsnp,2))
-        allocate(PosHD(nAnisP))
+        allocate(PosHD(ped%pedigreeSize))
         PosHD=0
         Temp=0
         AnimalOn=0
         ! FOR EACH CORE OF EACH ROUND OF THE LRPHLI
         do h=1,inputParams%nPhaseInternal
-            ! Get HIGH DENSITY phase information of this phasing step and information
-            ! of core indexes
-            FileName=""
-            FileNamePhase=""
-            if (inputParams%ManagePhaseOn1Off0==0) then
-                FileName = getFileNameCoreIndex(trim(inputParams%phasePath),h)
-                FileNamePhase = getFileNameFinalPhase(trim(inputParams%phasePath),h)
-            else
-                FileName = getFileNameCoreIndex(h)
-                FileNamePhase = getFileNameFinalPhase(h)
-            end if
-
-            ! Get core information of number of cores and allocate start and end cores information
-            CoreI = ReadCores(FileName)
-
+           
+        !    TODOPhase read in phase info here if not red
             ! Get phase information
-            call ReadPhased(nAnisHD, FileNamePhase, Ped, PhaseHD, PosHD)
+            ! call ReadPhased(nAnisHD, FileNamePhase, Ped, PhaseHD, PosHD)
 
-            do g=1,CoreI%nCores
+            startSnp = 1
+            EndSnp = 0
+            do g=1,size(apResults%cores)
                 ! Initialize Start and End snps of the cores
-                StartSnp=CoreI%StartSnp(g)
-                EndSnp=CoreI%EndSnp(g)
+                StartSnp=EndSnp + 1
+                EndSnp=startSnp + apResults%cores(g)%getNCoreSnp()
 
                 Section = BitSection((EndSnp - StartSnp + 1), 64)
                 numSections = Section%numSection
 
                 allocate(BitPhaseHD(nAnisHD,numSections,2))
-                allocate(BitImputePhase(0:nAnisP,numSections,2))
+                allocate(BitImputePhase(0:ped%pedigreeSize,numSections,2))
                 allocate(MissPhaseHD(nAnisHD,numSections,2))
-                allocate(MissImputePhase(0:nAnisP,numSections,2))
+                allocate(MissImputePhase(0:ped%pedigreeSize,numSections,2))
 
                 BitPhaseHD = 0
                 MissPhaseHD = 0
@@ -962,7 +956,7 @@ write(0,*) 'DEBUG: Mach Finished'
                             end select
                         end do
 
-                        do i = 1, nAnisP
+                        do i = 1, ped%pedigreeSize- ped%nDummys
                             select case (ImputePhase(i, j, e))
                             case (1)
                                 BitImputePhase(i, curSection, e) = ibset(BitImputePhase(i, curSection, e), curPos)
@@ -982,7 +976,7 @@ write(0,*) 'DEBUG: Mach Finished'
                 !$OMP PARALLEL DO &
                 !$OMP DEFAULT(SHARED) &
                 !$OMP PRIVATE(i,j,e,PosHDInd,Gam1,Gam2,GamA,GamB)
-                do i=1,nAnisP
+                do i=1,ped%pedigreeSize- ped%nDummys
                     ! Look for possible gametes through the Haplotype
                     ! Library constructed during the phasing step
                     PosHDInd=PosHD(i)         ! Index of the individual in the HD phase information
@@ -1078,7 +1072,7 @@ write(0,*) 'DEBUG: Mach Finished'
 
         do e=1,2
             do j=1,inputParams%nsnp
-                do i=1,nAnisP
+                do i=1,ped%pedigreeSize- ped%nDummys
                     if (AnimalOn(i,e)==1) then
                         if (ImputePhase(i,j,e)==9) then
                             ! Impute phase allele with the most significant code for that allele across haplotypes
@@ -1120,30 +1114,28 @@ write(0,*) 'DEBUG: Mach Finished'
 
         use Global
 
-        use PhaseRounds
         use HaplotypeBits
         use Utils
         use alphaimputeinmod
         implicit none
 
         integer :: e,g,h,i,j,PedId,GamA,GamB,nAnisHD,PosHDInd
-        integer :: StartSnp,EndSnp,AnimalOn(nAnisP,2)
+        integer :: StartSnp,EndSnp,AnimalOn(ped%pedigreeSize,2)
         integer,allocatable,dimension (:) :: PosHD
         integer,allocatable,dimension (:,:,:) :: PhaseHD
         integer(kind=1),allocatable,dimension (:,:,:,:) :: Temp
         integer(kind=8), allocatable, dimension(:,:,:) :: BitPhaseHD, BitImputePhase, MissPhaseHD, MissImputePhase
 
         character(len=1000) :: FileName,FileNamePhase
-        type(CoreIndex) :: CoreI
         type(BitSection) :: Section
         integer :: numSections, curSection, curPos
 
         inputParams => defaultInput
         nAnisHD=(count(Setter(:)==1))
 
-        allocate(Temp(nAnisP,inputParams%nsnp,2,2))
+        allocate(Temp(ped%pedigreeSize,inputParams%nsnp,2,2))
         allocate(PhaseHD(nAnisHD,inputParams%nsnp,2))
-        allocate(PosHD(nAnisP))
+        allocate(PosHD(ped%pedigreeSize))
         PosHD=0
         Temp=0
         AnimalOn=0
@@ -1159,18 +1151,19 @@ write(0,*) 'DEBUG: Mach Finished'
             ! Get phase information
             call ReadPhased(nAnisHD, FileNamePhase, ped, PhaseHD, PosHD)
 
-            do g=1,CoreI%nCores
+            do g=1,size(apResults%cores)
                 ! Initialize Start and End snps of the cores
-                StartSnp=CoreI%StartSnp(g)
-                EndSnp=CoreI%EndSnp(g)
+                StartSnp=EndSnp + 1
+                EndSnp=startSnp + apResults%cores(g)%getNCoreSnp()
+
 
                 Section = BitSection((EndSnp - StartSnp + 1), 64)
                 numSections = Section%numSections
 
                 allocate(BitPhaseHD(nAnisHD,numSections,2))
-                allocate(BitImputePhase(0:nAnisP,numSections,2))
+                allocate(BitImputePhase(0:ped%pedigreeSize,numSections,2))
                 allocate(MissPhaseHD(nAnisHD,numSections,2))
-                allocate(MissImputePhase(0:nAnisP,numSections,2))
+                allocate(MissImputePhase(0:ped%pedigreeSize,numSections,2))
 
                 BitPhaseHD = 0
                 MissPhaseHD = 0
@@ -1192,7 +1185,7 @@ write(0,*) 'DEBUG: Mach Finished'
                             end select
                         end do
 
-                        do i = 1, nAnisP
+                        do i = 1, ped%pedigreeSize- ped%nDummys
                             select case (ImputePhase(i, j, e))
                             case (1)
                                 BitImputePhase(i, curSection, e) = ibset(BitImputePhase(i, curSection, e), curPos)
@@ -1215,7 +1208,7 @@ write(0,*) 'DEBUG: Mach Finished'
                     !$OMP PARALLEL DO &
                     !$OMP DEFAULT(SHARED) &
                     !$OMP PRIVATE(i,j,e,PedId,PosHDInd,GamA,GamB,parent)
-                    do i=1,nAnisP
+                    do i=1,ped%pedigreeSize- ped%nDummys
 
                         do e=1,2
                             PedId=e+1
@@ -1310,7 +1303,7 @@ write(0,*) 'DEBUG: Mach Finished'
 
         do e=1,2
             do j=1,inputParams%nsnp
-                do i=1,nAnisP
+                do i=1,ped%pedigreeSize- ped%nDummys
                     if (AnimalOn(i,e)==1) then
                         if ((inputParams%sexopt==0).or.(ped%pedigree(i)%gender==inputParams%HomGameticStatus)) then
                             if (ImputePhase(i,j,e)==9) then
@@ -1330,7 +1323,7 @@ write(0,*) 'DEBUG: Mach Finished'
         end do
 
         do j=1,inputParams%nsnp
-            do i = 1, nAnisP
+            do i = 1, ped%pedigreeSize- ped%nDummys
                 if ((inputParams%sexopt==1).and.(ped%pedigree(i)%gender==inputParams%HetGameticStatus)) then
                     if (AnimalOn(i,inputParams%HomGameticStatus)==1) then
 
@@ -1375,7 +1368,6 @@ write(0,*) 'DEBUG: Mach Finished'
         ! This subroutine corresponds to Major sub-step 3 from Hickey et al., 2012 (Appendix A)
 
         use Global
-        use PhaseRounds
         use Utils
         use HaplotypeBits
         use alphaimputeinmod
@@ -1383,7 +1375,7 @@ write(0,*) 'DEBUG: Mach Finished'
 
 
         integer :: l,i,j,k,h,e,f,g,CoreLength,nHap,CountAB(inputParams%nsnp,0:1),Work(inputParams%nsnp,2),TempCount
-        integer :: StartSnp,EndSnp,PatMatDone(2),Counter,BanBoth(2),Ban(2),AnimalOn(nAnisP,2)
+        integer :: StartSnp,EndSnp,PatMatDone(2),Counter,BanBoth(2),Ban(2),AnimalOn(ped%pedigreeSize,2)
         integer,allocatable,dimension (:,:,:,:) :: Temp
         integer(kind=1),allocatable,dimension (:,:) :: HapLib,HapCand
 
@@ -1391,15 +1383,14 @@ write(0,*) 'DEBUG: Mach Finished'
         integer(kind=8), allocatable, dimension(:,:) :: BitHapLib, MissHapLib
 
         integer :: UHLib
-        character(len=1000) :: FileName
-        type(CoreIndex) :: CoreI
+        type(AlphaPhaseResults) :: apResults
 
         type(BitSection) :: Section
         integer :: numSections, curSection, curPos
 
         inputParams => defaultInput
-        ! Temp(nAnisP, inputParams%nsnps, PatHap, Phase)
-        allocate(Temp(0:nAnisP,inputParams%nsnp,2,2))
+        ! Temp(ped%pedigreeSize, inputParams%nsnps, PatHap, Phase)
+        allocate(Temp(0:ped%pedigreeSize,inputParams%nsnp,2,2))
         Temp=0
 
         AnimalOn=0
@@ -1413,20 +1404,21 @@ write(0,*) 'DEBUG: Mach Finished'
                 FileName = getFileNameCoreIndex(h)
             end if
 
+            ! if aphase info not read in, 
             ! Get core information of number of cores and allocate start and end cores information
             CoreI = ReadCores(FileName)
 
-            do g=1,CoreI%nCores
+            do g=1,size(apResults%cores)
                 ! Initialize Start and End snps of the cores
-                StartSnp=CoreI%StartSnp(g)
-                EndSnp=CoreI%EndSnp(g)
+                StartSnp=EndSnp + 1
+                EndSnp=startSnp + apResults%cores(g)%getNCoreSnp()
 
                 CoreLength=(EndSnp-StartSnp)+1
                 Section = BitSection(CoreLength, 64)
                 numSections = Section%numSections
 
-                allocate(BitImputePhase(0:nAnisP,numSections,2))
-                allocate(MissImputePhase(0:nAnisP,numSections,2))
+                allocate(BitImputePhase(0:ped%pedigreeSize,numSections,2))
+                allocate(MissImputePhase(0:ped%pedigreeSize,numSections,2))
 
                 BitImputePhase = 0
                 MissImputePhase = 0
@@ -1435,7 +1427,7 @@ write(0,*) 'DEBUG: Mach Finished'
                     curSection = 1
                     curPos = 1
                     do j = StartSnp, EndSnp
-                        do i = 1, nAnisP
+                        do i = 1, ped%pedigreeSize- ped%nDummys
                             select case (ImputePhase(i, j, e))
                             case (1)
                                 BitImputePhase(i, curSection, e) = ibset(BitImputePhase(i, curSection, e), curPos)
@@ -1498,7 +1490,7 @@ write(0,*) 'DEBUG: Mach Finished'
                     !$OMP PARALLEL DO &
                     !$OMP DEFAULT(SHARED) &
                     !$OMP PRIVATE(i,e,f,j,k,TempCount,CountAB,Counter,PatMatDone,Work,BanBoth,Ban,HapCand)
-                    do i=1,nAnisP
+                    do i=1,ped%pedigreeSize- ped%nDummys
                         ! The number of candidate haplotypes is the total number of haps in the library times
                         ! 2 (Paternal and maternal candidates)
                         allocate(HapCand(nHap,2))
@@ -1629,7 +1621,7 @@ write(0,*) 'DEBUG: Mach Finished'
             ! Else, if Sex Chromosome, then MSTermInfo is 0 always
             ! So, if a Conservative imputation of haplotypes is selected, this DO statement will do nothing
 
-            do i=1,nAnisP
+            do i=1,ped%pedigreeSize- ped%nDummys
                 do e=1,2
                     if (ped%pedigree(i)%isDummyBasedOnIndex(e)) cycle
                     if (AnimalOn(i,e)==1) then
@@ -1691,8 +1683,8 @@ write(0,*) 'DEBUG: Mach Finished'
         nAnisHD=(count(Setter(:)==1))
 
         allocate(PhaseHD(nAnisHD,inputParams%nsnp,2,2))     ! HIGH DENSITY PHASING: PhaseHD = (Animals, SNPs, Haplotypes, Nonshifted and Shifted phasing)
-        allocate(AnimRecomb(nAnisP,2))
-        allocate(PosHD(nAnisP))
+        allocate(AnimRecomb(ped%pedigreeSize,2))
+        allocate(PosHD(ped%pedigreeSize))
         AnimRecomb=0
         PosHD=0
 
@@ -1802,7 +1794,7 @@ write(0,*) 'DEBUG: Mach Finished'
             StartSnp=CoreIA%StartSnp(g)
             EndSnp=CoreIA%EndSnp(g)
             CoreLength=(EndSnp-StartSnp)+1
-            do i=1,nAnisP
+            do i=1,ped%pedigreeSize- ped%nDummys
                 ! If I have no parents and if I am somebody
                 if (ped%pedigree(i)%founder .and.(PosHD(i)/=0)) then
                     CountDisagree=0
@@ -1876,7 +1868,7 @@ write(0,*) 'DEBUG: Mach Finished'
 
                     CompLength=abs(UpToSnp-StartSnp)+1
 
-                    do i=1,nAnisP
+                    do i=1,ped%pedigreeSize- ped%nDummys
                         if (ped%pedigree(i)%founder .and.(PosHD(i)/=0).and.(AnimRecomb(i,RL)==0)) then
                             C1=0
                             C2=0
@@ -1951,7 +1943,7 @@ write(0,*) 'DEBUG: Mach Finished'
                         FillInEnd=StartSnp
                     endif
                     CompLength=abs(UpToSnp-StartSnp)+1
-                    do i=1,nAnisP
+                    do i=1,ped%pedigreeSize- ped%nDummys
                         if ( ped%pedigree(i)%founder .and.(PosHD(i)/=0).and.(AnimRecomb(i,RL)==0)) then
                             C1=0
                             C2=0
@@ -2028,7 +2020,7 @@ write(0,*) 'DEBUG: Mach Finished'
 
         ! TODOPHASE make this function read in new files 
 
-        do i=1,nAnisP
+        do i=1,ped%pedigreeSize- ped%nDummys
             read (43,*) dum,dum,dum,ImputeGenos(i,:)
             do j=1,inputParams%nsnp
                 if (ImputeGenos(i,j)==0) ImputePhase(i,j,:)=0
@@ -2084,7 +2076,7 @@ write(0,*) 'DEBUG: Mach Finished'
         inputParams => defaultInput
 
         do j=1,inputParams%nsnp
-            do i=1,nAnisP
+            do i=1,ped%pedigreeSize- ped%nDummys
                 if (ped%pedigree(i)%gender==inputParams%HetGameticStatus) then
                     if ((ImputePhase(i,j,1)==9).and.(ImputePhase(i,j,2)/=9)) then
                         ImputePhase(i,j,1)=ImputePhase(i,j,2)
@@ -2112,7 +2104,7 @@ write(0,*) 'DEBUG: Mach Finished'
 
         inputParams => defaultInput
         do j=1,inputParams%nsnp
-            do i=1,nAnisP
+            do i=1,ped%pedigreeSize- ped%nDummys
                 if (ImputeGenos(i,j)==9) then
                     if ((ImputePhase(i,j,1)/=9).and.(ImputePhase(i,j,2)/=9)) then
                         ImputeGenos(i,j)=sum(ImputePhase(i,j,:))
@@ -2137,7 +2129,7 @@ write(0,*) 'DEBUG: Mach Finished'
         integer :: i,j
 
         do j=1,inputParams%nsnp
-            do i=1,nAnisP
+            do i=1,ped%pedigreeSize- ped%nDummys
                 if (ImputeGenos(i,j)/=9) then
                     if ((ImputePhase(i,j,1)/=9).and.(ImputePhase(i,j,2)==9)) then
                         ImputePhase(i,j,2)=ImputeGenos(i,j)-ImputePhase(i,j,1)
@@ -2166,7 +2158,7 @@ write(0,*) 'DEBUG: Mach Finished'
         integer :: e,i,j,ParId
 
         inputParams => defaultInput
-        do i=1,nAnisP
+        do i=1,ped%pedigreeSize- ped%nDummys
             if (inputParams%sexopt==0 .or. (inputParams%sexopt==1 .and. ped%pedigree(i)%gender/=inputParams%HetGameticStatus) ) then     ! If individual is homogametic
                 do e=1,2
                     if (ped%pedigree(i)%isDummyBasedOnIndex(e+1)) cycle
@@ -2213,7 +2205,7 @@ write(0,*) 'DEBUG: Mach Finished'
         integer :: i,j,k,l,Count1,Count0
         type(individual), pointer :: tmpChild
         inputParams => defaultInput
-        do i=1,nAnisP
+        do i=1,ped%pedigreeSize- ped%nDummys
             do j=1,2
                 if (ped%pedigree(i)%nOffs /= 0) then       ! check that animal i,j is a sire or a dam
 
@@ -2359,7 +2351,7 @@ write(0,*) 'DEBUG: Mach Finished'
                 open (unit=110,file=trim(filout),status="unknown")
                 StSnp=GpIndex(h,1)
                 EnSnp=GpIndex(h,2)
-                do i=1,nAnisP
+                do i=1,ped%pedigreeSize- ped%nDummys
                     do j=1,4
                         read (110,*) dum,GeneProbWork(StSnp:EnSnp,j)
                     enddo
@@ -2389,11 +2381,11 @@ write(0,*) 'DEBUG: Mach Finished'
         open(unit=102,file="." // DASH // "Miscellaneous" // "IndividualSnpInformativeness.txt", status="unknown")
         open(unit=103,file="." // DASH // "Miscellaneous" // "IndividualMendelianInformativeness.txt", status="unknown")
 
-        allocate(GlobalTmpCountInf(nAnisP,8))
-        allocate(MSTermInfo(nAnisP,2))
+        allocate(GlobalTmpCountInf(ped%pedigreeSize,8))
+        allocate(MSTermInfo(ped%pedigreeSize,2))
 
         MSTermInfo=0
-        do i=1,nAnisP
+        do i=1,ped%pedigreeSize- ped%nDummys
             if (ped%pedigree(i)%Genotyped) MSTermInfo(i,:)=1
             TmpInfor(:,:)=-99
             GlobalTmpCountInf(i,:)=0
@@ -2642,7 +2634,7 @@ write(0,*) 'DEBUG: Mach Finished'
 
         MaxLeftRightSwitch=4; MinSpan=200
 
-        do i=1,nAnisP
+        do i=1,ped%pedigreeSize- ped%nDummys
             HetEnd=-1
             HetStart=-1
             ! For each gamete
@@ -2892,7 +2884,7 @@ write(0,*) 'DEBUG: Mach Finished'
         enddo
 
         ! Impute phase for the Heterogametic chromosome from the Homogametic one, which has been already phased
-        do i=1,nAnisP
+        do i=1,ped%pedigreeSize- ped%nDummys
             if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==inputParams%hetGameticStatus)) then
                 ImputePhase(i,:,inputParams%hetGameticStatus)=ImputePhase(i,:,inputParams%HomGameticStatus)     !JohnHickey changed the j to :
                 GlobalWorkPhase(i,:,:)=ImputePhase(i,:,:)
@@ -2954,7 +2946,7 @@ write(0,*) 'DEBUG: Mach Finished'
         ImputePhase(0,:,:)=9
         ImputeGenos(0,:)=9
 
-        do i=1,nAnisP
+        do i=1,ped%pedigreeSize- ped%nDummys
             HetEnd=-1
             HetStart=-1
 
@@ -3192,7 +3184,7 @@ write(0,*) 'DEBUG: Mach Finished'
         enddo
 
         ! Impute phase for the Heterogametic chromosome from the Homogametic one, which has been already phased
-        do i=1,nAnisP
+        do i=1,ped%pedigreeSize- ped%nDummys
             if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==inputParams%hetGameticStatus)) then
                 !ImputePhase(i,j,inputParams%hetGameticStatus)=ImputePhase(i,j,inputParams%HomGameticStatus)
                 ImputePhase(i,:,inputParams%hetGameticStatus)=ImputePhase(i,:,inputParams%HomGameticStatus)     !JohnHickey changed the j to :
