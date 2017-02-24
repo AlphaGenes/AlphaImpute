@@ -922,11 +922,11 @@ write(0,*) 'DEBUG: Mach Finished'
             EndSnp = 0
             
 
-            do unknownFreeIterator=1,nResults
+            do unknownFreeIterator=1,apresults%nResults
                 do g=1,size(apResults%results(unknownFreeIterator)%cores)
                     ! Initialize Start and End snps of the cores
-                    StartSnp=apResults%startIndexes(g)
-                    EndSnp=apResults%endIndexes(g) 
+                    StartSnp=apResults%results(unknownFreeIterator)%startIndexes(g)
+                    EndSnp=apResults%results(unknownFreeIterator)%endIndexes(g) 
 
                     Section = BitSection((EndSnp - StartSnp + 1), 64)
                     numSections = Section%numSections
@@ -1150,17 +1150,17 @@ write(0,*) 'DEBUG: Mach Finished'
         ! TODOPHASE if phase stuff hasn't been read in, read it in here
 
 
-        do h=1,inputParams%nPhaseInternal
+        do h=1,apResults%nResults
            
 
 
             ! Get phase information
             call ReadPhased(nAnisHD, FileNamePhase, ped, PhaseHD, PosHD)
 
-            do g=1,size(apResults%cores)
+            do g=1,size(apResults%results(h)%cores)
                 ! Initialize Start and End snps of the cores
-                StartSnp= apResults%startIndexes(g)
-                EndSnp=apResults%endIndexes(g)
+                StartSnp= apResults%results(h)%startIndexes(g)
+                EndSnp=apResults%results(h)%endIndexes(g)
 
 
                 Section = BitSection((EndSnp - StartSnp + 1), 64)
@@ -1410,8 +1410,8 @@ write(0,*) 'DEBUG: Mach Finished'
             ! Get core information of number of cores and allocate start and end cores information
             do g=1,size(apResults%results(h)%cores)
                 ! Initialize Start and End snps of the cores
-                StartSnp=apResults%startIndexes(g)
-                EndSnp=apResults%endIndexes(g)
+                StartSnp=apResults%results(h)%startIndexes(g)
+                EndSnp=apResults%results(h)%endIndexes(g)
 
                 CoreLength=(EndSnp-StartSnp)+1
                 Section = BitSection(CoreLength, 64)
@@ -1444,12 +1444,7 @@ write(0,*) 'DEBUG: Mach Finished'
                     end do
                 end do
 
-                if (inputParams%ManagePhaseOn1Off0==0) then
-                    FileName = getFileNameHapLib(trim(inputParams%phasePath),h,g)
-                else
-                    FileName = getFileNameHapLib(h,g)
-                end if
-                
+               
 
                 ! ! TODO phase read in haplib (unformatted!!!)
                 ! open (newunit=UHLib,file=trim(FileName),status="old",form="unformatted")
@@ -1612,7 +1607,7 @@ write(0,*) 'DEBUG: Mach Finished'
                     deallocate(HapLib)
                     deallocate(BitHapLib)
                     deallocate(MissHapLib)
-                endif
+                
                 deallocate(BitImputePhase)
                 deallocate(MissImputePhase)
             enddo
@@ -1706,7 +1701,7 @@ write(0,*) 'DEBUG: Mach Finished'
         ! Get core information of number of cores and allocate start and end cores information
 
         ! Select the core in the middle
-        MiddleCoreA=size(apresults%nResults)/4
+        MiddleCoreA=apresults%nResults/4
         if (MiddleCoreA==0) MiddleCoreA=1
 
         ! Get HIGH DENSITY phase information of this phasing step
@@ -1714,16 +1709,16 @@ write(0,*) 'DEBUG: Mach Finished'
         
 
         ! TODOPhase write a toArray function for haplotypes
-        phaseHD = apResults%results(MiddleCoreA)%getFullPhase()
+        ! phaseHD = apResults%results(MiddleCoreA)%getFullPhase()
 
         ! Impute HD phase of the middle core of the middle phasing step
         ! WARNING: Why to impute phase information only for this case?
-        middleCoreIndex = apresults%results(middleCore)%nCores/2
+        middleCoreIndex = apresults%results(MiddleCoreA)%nCores/2
         if (middleCoreIndex == 0) then
             middleCoreIndex = 1
         endif
-        StartSnp=apresults%results(middleCore)%startIndexes(middleCoreIndex)
-        EndSnp=apresults%results(middleCore)%endIndexes(middleCoreIndex)
+        StartSnp=apresults%results(middleCoreA)%startIndexes(middleCoreIndex)
+        EndSnp=apresults%results(middleCoreA)%endIndexes(middleCoreIndex)
         CoreLength=(EndSnp-StartSnp)+1
         do i=1,ped%pedigreeSize- ped%nDummys
             ! If I have no parents and if I am somebody
@@ -1854,8 +1849,9 @@ write(0,*) 'DEBUG: Mach Finished'
                         UpToSnp=apresults%results(UpToCoreB)%endIndexes(middleCoreIndex)
                     end if
                 else                                    ! if EVEN
+                ! TODO discuss with roberto on monday
                     do g=1,size(apresults%cores)
-                        if ((apresults%results(g)%startIndexes(middleCoreIndex)<UptoSnp).and.(apresults%results(g)%endIndexes(middleCoreIndex))>UptoSnp)) then
+                        if ((apresults%results(g)%startIndexes(middleCoreIndex)<UptoSnp).and.(apresults%results(g)%endIndexes(middleCoreIndex))>UptoSnp) then
                             UpToCoreA=g
                             exit
                         endif
