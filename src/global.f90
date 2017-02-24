@@ -63,6 +63,6 @@ module Global
     real(kind=real32),allocatable :: xnumrelmatHold(:)
     integer :: NRMmem, shell, shellmax, shellWarning
 
-    type(AlphaPhaseResults) :: apResults !TODO make this into array to support MPIing.
+    type(AlphaPhaseResultsContainer) :: apResults
 end module Global
 

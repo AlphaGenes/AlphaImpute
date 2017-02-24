@@ -892,7 +892,7 @@ write(0,*) 'DEBUG: Mach Finished'
         integer,allocatable,dimension (:,:,:) :: PhaseHD
         integer(kind=8), allocatable, dimension(:,:,:) :: BitPhaseHD, BitImputePhase, MissPhaseHD, MissImputePhase
         integer(kind=1),allocatable,dimension (:,:,:,:) :: Temp
-
+        integer :: unknownFreeIterator
         
         type(BitSection) :: Section
 
@@ -920,57 +920,61 @@ write(0,*) 'DEBUG: Mach Finished'
 
             startSnp = 1
             EndSnp = 0
-            do g=1,size(apResults%cores)
-                ! Initialize Start and End snps of the cores
-                StartSnp=apResults%startIndexes(g)
-                EndSnp=apResults%endIndexes(g) 
+            
 
-                Section = BitSection((EndSnp - StartSnp + 1), 64)
-                numSections = Section%numSections
+            do unknownFreeIterator=1,nResults
+                do g=1,size(apResults%results(unknownFreeIterator)%cores)
+                    ! Initialize Start and End snps of the cores
+                    StartSnp=apResults%startIndexes(g)
+                    EndSnp=apResults%endIndexes(g) 
 
-                allocate(BitPhaseHD(nAnisHD,numSections,2))
-                allocate(BitImputePhase(0:ped%pedigreeSize,numSections,2))
-                allocate(MissPhaseHD(nAnisHD,numSections,2))
-                allocate(MissImputePhase(0:ped%pedigreeSize,numSections,2))
+                    Section = BitSection((EndSnp - StartSnp + 1), 64)
+                    numSections = Section%numSections
 
-                BitPhaseHD = 0
-                MissPhaseHD = 0
-                BitImputePhase = 0
-                MissImputePhase = 0
+                    allocate(BitPhaseHD(nAnisHD,numSections,2))
+                    allocate(BitImputePhase(0:ped%pedigreeSize,numSections,2))
+                    allocate(MissPhaseHD(nAnisHD,numSections,2))
+                    allocate(MissImputePhase(0:ped%pedigreeSize,numSections,2))
 
-                do e=1,2
-                    curSection = 1
-                    curPos = 1
+                    BitPhaseHD = 0
+                    MissPhaseHD = 0
+                    BitImputePhase = 0
+                    MissImputePhase = 0
 
-                    do j = StartSnp, EndSnp
+                    do e=1,2
+                        curSection = 1
+                        curPos = 1
 
-                        do i = 1, nAnisHD
-                            select case (PhaseHD(i, j, e))
-                            case (1)
-                                ! set that phase information exists
-                                BitPhaseHD(i, curSection, e) = ibset(BitPhaseHD(i, curSection, e), curPos)
-                            case (9)
-                                ! set that missing iformation does not
-                                MissPhaseHD(i, curSection, e) = ibset(MissPhaseHD(i, curSection, e), curPos)
-                            end select
+                        do j = StartSnp, EndSnp
+
+                            do i = 1, nAnisHD
+                                select case (PhaseHD(i, j, e))
+                                case (1)
+                                    ! set that phase information exists
+                                    BitPhaseHD(i, curSection, e) = ibset(BitPhaseHD(i, curSection, e), curPos)
+                                case (9)
+                                    ! set that missing iformation does not
+                                    MissPhaseHD(i, curSection, e) = ibset(MissPhaseHD(i, curSection, e), curPos)
+                                end select
+                            end do
+
+                            do i = 1, ped%pedigreeSize- ped%nDummys
+                                select case (ImputePhase(i, j, e))
+                                case (1)
+                                    BitImputePhase(i, curSection, e) = ibset(BitImputePhase(i, curSection, e), curPos)
+                                case (9)
+                                    MissImputePhase(i, curSection, e) = ibset(MissImputePhase(i, curSection, e), curPos)
+                                end select
+                            end do
+
+                            curPos = curPos + 1
+                            if (curPos == 65) then
+                                curPos = 1
+                                curSection = curSection + 1
+                            end if
                         end do
-
-                        do i = 1, ped%pedigreeSize- ped%nDummys
-                            select case (ImputePhase(i, j, e))
-                            case (1)
-                                BitImputePhase(i, curSection, e) = ibset(BitImputePhase(i, curSection, e), curPos)
-                            case (9)
-                                MissImputePhase(i, curSection, e) = ibset(MissImputePhase(i, curSection, e), curPos)
-                            end select
-                        end do
-
-                        curPos = curPos + 1
-                        if (curPos == 65) then
-                            curPos = 1
-                            curSection = curSection + 1
-                        end if
                     end do
-                end do
+                enddo
 
                 !$OMP PARALLEL DO &
                 !$OMP DEFAULT(SHARED) &
@@ -1385,7 +1389,7 @@ write(0,*) 'DEBUG: Mach Finished'
         integer(kind=8), allocatable, dimension(:,:,:) :: BitImputePhase, MissImputePhase
         integer(kind=8), allocatable, dimension(:,:) :: BitHapLib, MissHapLib
 
-        integer :: UHLib
+        integer :: UHLib,it
         
 
         type(BitSection) :: Section
@@ -1398,14 +1402,13 @@ write(0,*) 'DEBUG: Mach Finished'
 
         AnimalOn=0
 
-        do h=1,inputParams%nPhaseInternal
+        do h=1,apResults%nResults
             ! Get HIGH DENSITY phase information of this phasing step and information
             ! of core indexes
 
             ! TODOPHASE read in here if aphase info not read in, 
             ! Get core information of number of cores and allocate start and end cores information
-
-            do g=1,size(apResults%cores)
+            do g=1,size(apResults%results(h)%cores)
                 ! Initialize Start and End snps of the cores
                 StartSnp=apResults%startIndexes(g)
                 EndSnp=apResults%endIndexes(g)
@@ -1668,13 +1671,14 @@ write(0,*) 'DEBUG: Mach Finished'
 
         implicit none
 
-        integer :: e,h,i,g,j,MiddlePhaseRun,MiddleCoreA,MiddleCoreB,CoreLength,nAnisHD,CountDisagree
+        integer :: e,h,i,g,j,MiddlePhaseRun,MiddleCoreA,CoreLength,nAnisHD,CountDisagree
         integer :: CompPhaseRun,CompJump,StartSnp,EndSnp,UptoRightSnp,UptoLeftSnp,UpToCoreA,UpToCoreB,C1,C2,C3,C4,Recmb,CompLength,RL
         integer :: UpToSnp,StPt,EndPt,FillInSt,FillInEnd
         integer,allocatable,dimension (:) :: PosHD
         ! integer,allocatable,dimension (:,:) :: CoreIndexA,CoreIndexB,AnimRecomb
         integer,allocatable,dimension (:,:) :: AnimRecomb
         integer,allocatable,dimension (:,:,:,:) :: PhaseHD
+        integer :: middleCoreIndex
         character(len=1000) :: FileName,dumC
         
 
@@ -1698,118 +1702,47 @@ write(0,*) 'DEBUG: Mach Finished'
         end if
         CompPhaseRun=MiddlePhaseRun+CompJump
 
-        ! The different "PhasingResults/CoreIndex.txt" files are created
-        ! by AlphaPhase when it is called during PhasingManagement
-
-        ! Get HIGH DENSITY phase information of this phasing step and information
-        ! of core indexes
-        if (inputParams%ManagePhaseOn1Off0==0) then
-            FileName = getFileNameCoreIndex(trim(inputParams%phasePath),MiddlePhaseRun)
-        else
-            FileName = getFileNameCoreIndex(MiddlePhaseRun)
-        end if
 
         ! Get core information of number of cores and allocate start and end cores information
 
         ! Select the core in the middle
-        MiddleCoreA=size(apresults%cores)/2
+        MiddleCoreA=size(apresults%nResults)/4
         if (MiddleCoreA==0) MiddleCoreA=1
-
-        ! Get HIGH DENSITY phase information of this phasing step and information
-        ! of core indexes
-        if (inputParams%ManagePhaseOn1Off0==0) then
-            FileName = getFileNameCoreIndex(trim(inputParams%phasePath),CompPhaseRun)
-        else
-            FileName = getFileNameCoreIndex(CompPhaseRun)
-        end if
-
-        ! Get core information of number of cores and allocate start and end cores information
-
-        ! Select the core in the middle
-        MiddleCoreB=size(apresults%cores)/2
-        if (MiddleCoreB==0) MiddleCoreB=1
 
         ! Get HIGH DENSITY phase information of this phasing step
         ! WARNING: If I only want to phase base animals, why do I need to read the whole file?
-#ifdef OS_UNIX
-        if (inputParams%ManagePhaseOn1Off0==0) then
-            write (FileName,'(a,"/Phase",i0,"/PhasingResults/FinalPhase.txt")') trim(inputParams%phasePath),MiddlePhaseRun
-        else
-            write (FileName,'("./Phasing/Phase",i0,"/PhasingResults/FinalPhase.txt")')MiddlePhaseRun
-        endif
-#else
-        if (inputParams%ManagePhaseOn1Off0==0) then
-            write (FileName,'(a,"\Phase",i0,"\PhasingResults\FinalPhase.txt")') trim(inputParams%phasePath),MiddlePhaseRun
-        else
-            write (FileName,'(".\Phasing\Phase",i0,"\PhasingResults\FinalPhase.txt")')MiddlePhaseRun
-        endif
-#endif
-        block
-            integer :: tmpIndex
-            open (unit=2001,file=trim(FileName),status="old")
-            !TODOPhase finalPhase read int PhaseHD 
-            do i=1,nAnisHD
-                read (2001,*) dumC,PhaseHD(i,:,1,1)
-                read (2001,*) dumC,PhaseHD(i,:,2,1)
+        
 
-                tmpIndex = ped%dictionary%getValue(dumC)
-                if (tmpIndex /= DICT_NULL) then
-                    PosHD(tmpIndex)=i
-
-                else
-                    write(error_unit,*) "WARNING - HD Phase information for animal not in the pedigree"
-                endif
-            enddo
-        endblock
-        close(2001)
-
-#ifdef OS_UNIX
-        if (inputParams%ManagePhaseOn1Off0==0) then
-            write (FileName,'(a,"/Phase",i0,"/PhasingResults/FinalPhase.txt")') trim(inputParams%phasePath),CompPhaseRun
-        else
-            write (FileName,'("./Phasing/Phase",i0,"/PhasingResults/FinalPhase.txt")')CompPhaseRun
-        endif
-#else
-        if (inputParams%ManagePhaseOn1Off0==0) then
-            write (FileName,'(a,"\Phase",i0,"\PhasingResults\FinalPhase.txt")') trim(inputParams%phasePath),CompPhaseRun
-        else
-            write (FileName,'(".\Phasing\Phase",i0,"\PhasingResults\FinalPhase.txt")')CompPhaseRun
-        endif
-#endif
-
-        open (unit=2001,file=trim(FileName),status="old")
-        do i=1,nAnisHD
-            read (2001,*) dumC,PhaseHD(i,:,1,2)
-            read (2001,*) dumC,PhaseHD(i,:,2,2)
-            ! It is assumed that there is no difference in both FinalPhase files in terms of animals
-        enddo
-        close(2001)
+        ! TODOPhase write a toArray function for haplotypes
+        phaseHD = apResults%results(MiddleCoreA)%getFullPhase()
 
         ! Impute HD phase of the middle core of the middle phasing step
         ! WARNING: Why to impute phase information only for this case?
-        do g=1,MiddleCoreA        ! Why is it necessary a loop here?
-            StartSnp=CoreIA%StartSnp(g)
-            EndSnp=CoreIA%EndSnp(g)
-            CoreLength=(EndSnp-StartSnp)+1
-            do i=1,ped%pedigreeSize- ped%nDummys
-                ! If I have no parents and if I am somebody
-                if (ped%pedigree(i)%founder .and.(PosHD(i)/=0)) then
-                    CountDisagree=0
-                    ! Check if the two haplotypes are equal
-                    do j=StartSnp,EndSnp
-                        if (ImputePhase(i,j,1)/=ImputePhase(i,j,2)) then
-                            CountDisagree=CountDisagree+1
-                            if (CountDisagree>1) exit
-                        endif
-                    enddo
-                    ! If haplotypes are equal
-                    ! Impute High Density phase
-                    if (CountDisagree==0) then
-                        ImputePhase(i,StartSnp:EndSnp,1)=PhaseHD(PosHD(i),StartSnp:EndSnp,1,1)
-                        ImputePhase(i,StartSnp:EndSnp,2)=PhaseHD(PosHD(i),StartSnp:EndSnp,2,1)
+        middleCoreIndex = apresults%results(middleCore)%nCores/2
+        if (middleCoreIndex == 0) then
+            middleCoreIndex = 1
+        endif
+        StartSnp=apresults%results(middleCore)%startIndexes(middleCoreIndex)
+        EndSnp=apresults%results(middleCore)%endIndexes(middleCoreIndex)
+        CoreLength=(EndSnp-StartSnp)+1
+        do i=1,ped%pedigreeSize- ped%nDummys
+            ! If I have no parents and if I am somebody
+            if (ped%pedigree(i)%founder .and.(PosHD(i)/=0)) then
+                CountDisagree=0
+                ! Check if the two haplotypes are equal
+                do j=StartSnp,EndSnp
+                    if (ImputePhase(i,j,1)/=ImputePhase(i,j,2)) then
+                        CountDisagree=CountDisagree+1
+                        if (CountDisagree>1) exit
                     endif
+                enddo
+                ! If haplotypes are equal
+                ! Impute High Density phase
+                if (CountDisagree==0) then
+                    ImputePhase(i,StartSnp:EndSnp,1)=PhaseHD(PosHD(i),StartSnp:EndSnp,1,1)
+                    ImputePhase(i,StartSnp:EndSnp,2)=PhaseHD(PosHD(i),StartSnp:EndSnp,2,1)
                 endif
-            enddo
+            endif
         enddo
 
         UpToRightSnp=EndSnp
@@ -1835,28 +1768,33 @@ write(0,*) 'DEBUG: Mach Finished'
 
             h=0
             do ! Repeat till all SNPs have been covered
-                if ((CoreIA%nCores==1).and.(CoreIB%nCores==1)) exit   ! If the number of cores is 1, EXIT
+                if (apResults%nResults==1) exit   ! If the number of cores is 1, EXIT
                 ! This will force the subroutine to finish
                 ! since it will be exit from both DO statements
                 h=h+1
+                middleCoreIndex = apresults%results(CompPhaseRun)%nCores/2
+                if (middleCoreIndex == 0) then
+                    middleCoreIndex = 1
+                endif
                 if (mod(h,2)/=0) then                   ! If ODD
-                    do g=1,CoreIB%nCores
-                        if ((CoreIB%StartSnp(g)<UptoSnp).and.(CoreIB%EndSnp(g)>UptoSnp)) then
+                    do g=1,apresults%nResults
+                        
+                        if ((apresults%results(g)%startIndexes(middleCoreIndex)<UptoSnp).and.(apresults%results(g)%endIndexes(middleCoreIndex)>UptoSnp)) then
                             UpToCoreB=g
                             exit
                         endif
                     enddo
                     if (e==1) then
-                        StartSnp=CoreIB%StartSnp(UpToCoreB)
-                        EndSnp=CoreIB%EndSnp(UpToCoreB)
+                        StartSnp=apresults%results(UpToCoreB)%startIndexes(middleCoreIndex)
+                        EndSnp=apresults%results(UpToCoreB)%endIndexes(middleCoreIndex)
 
                         StPt=StartSnp
                         EndPt=UpToSnp
                         FillInSt=StartSnp
                         FillInEnd=EndSnp
                     else
-                        StartSnp=CoreIB%EndSnp(UpToCoreB)
-                        EndSnp=CoreIB%StartSnp(UpToCoreB)
+                        StartSnp=apresults%results(UpToCoreB)%endIndexes(middleCoreIndex)
+                        EndSnp=apresults%results(UpToCoreB)%startIndexes(middleCoreIndex)
                         StPt=UpToSnp
                         EndPt=StartSnp
                         FillInSt=EndSnp
@@ -1911,27 +1849,28 @@ write(0,*) 'DEBUG: Mach Finished'
                         endif
                     enddo
                     if (RL == 1) then
-                        UpToSnp=CoreIB%StartSnp(UpToCoreB)
+                        UpToSnp=apresults%results(UpToCoreB)%startIndexes(middleCoreIndex)
                     else
-                        UpToSnp=CoreIB%EndSnp(UpToCoreB)
+                        UpToSnp=apresults%results(UpToCoreB)%endIndexes(middleCoreIndex)
                     end if
                 else                                    ! if EVEN
                     do g=1,size(apresults%cores)
-                        if ((apresults%startIndexes(g)<UptoSnp).and.(apresults%endIndexes(g)>UptoSnp)) then
+                        if ((apresults%results(g)%startIndexes(middleCoreIndex)<UptoSnp).and.(apresults%results(g)%endIndexes(middleCoreIndex))>UptoSnp)) then
                             UpToCoreA=g
                             exit
                         endif
                     enddo
-                       StartSnp=apresults%startIndexes(UpToCoreA)
-                        EndSnp=apresults%endIndexes(UpToCoreA)
-                    if (e==1) then
 
+                    if (e==1) then
+                        startSnp = apresults%results(UpToCoreA)%startIndexes(middleCoreIndex)
+                        endSnp = apresults%results(UpToCoreA)%endIndexes(middleCoreIndex)
                         StPt=StartSnp
                         EndPt=UpToSnp
                         FillInSt=StartSnp
                         FillInEnd=EndSnp
                     else
-
+                        startSnp = apresults%results(UpToCoreA)%endIndexes(middleCoreIndex)
+                        endSnp = apresults%results(UpToCoreA)%startIndexes(middleCoreIndex)
                         StPt=UpToSnp
                         EndPt=StartSnp
                         FillInSt=EndSnp
@@ -1974,9 +1913,10 @@ write(0,*) 'DEBUG: Mach Finished'
                     enddo
 
                     if (RL == 1) then
-                        UpToSnp=apresults%startIndexes(UpToCoreA)
+                        UpToSnp= apresults%results(UpToCoreA)%startIndexes(middleCoreIndex)
+
                     else
-                        UpToSnp=apresults%endIndexes(UpToCoreA)
+                        UpToSnp= apresults%results(UpToCoreA)%endIndexes(middleCoreIndex)
                     end if
                 endif
 
