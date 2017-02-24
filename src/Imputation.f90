@@ -893,10 +893,9 @@ write(0,*) 'DEBUG: Mach Finished'
         integer(kind=8), allocatable, dimension(:,:,:) :: BitPhaseHD, BitImputePhase, MissPhaseHD, MissImputePhase
         integer(kind=1),allocatable,dimension (:,:,:,:) :: Temp
 
-        type(AlphaPhaseResults) :: apResult
+        
         type(BitSection) :: Section
 
-        type(AlphaPhaseResults) :: apResults
 
 
         integer :: numSections, curSection, curPos
@@ -923,11 +922,11 @@ write(0,*) 'DEBUG: Mach Finished'
             EndSnp = 0
             do g=1,size(apResults%cores)
                 ! Initialize Start and End snps of the cores
-                StartSnp=EndSnp + 1
-                EndSnp=startSnp + apResults%cores(g)%getNCoreSnp()
+                StartSnp=apResults%startIndexes(g)
+                EndSnp=apResults%endIndexes(g) 
 
                 Section = BitSection((EndSnp - StartSnp + 1), 64)
-                numSections = Section%numSection
+                numSections = Section%numSections
 
                 allocate(BitPhaseHD(nAnisHD,numSections,2))
                 allocate(BitImputePhase(0:ped%pedigreeSize,numSections,2))
@@ -1130,6 +1129,9 @@ write(0,*) 'DEBUG: Mach Finished'
         type(BitSection) :: Section
         integer :: numSections, curSection, curPos
 
+        
+
+
         inputParams => defaultInput
         nAnisHD=(count(Setter(:)==1))
 
@@ -1153,8 +1155,8 @@ write(0,*) 'DEBUG: Mach Finished'
 
             do g=1,size(apResults%cores)
                 ! Initialize Start and End snps of the cores
-                StartSnp=EndSnp + 1
-                EndSnp=startSnp + apResults%cores(g)%getNCoreSnp()
+                StartSnp= apResults%startIndexes(g)
+                EndSnp=apResults%endIndexes(g)
 
 
                 Section = BitSection((EndSnp - StartSnp + 1), 64)
@@ -1371,6 +1373,7 @@ write(0,*) 'DEBUG: Mach Finished'
         use Utils
         use HaplotypeBits
         use alphaimputeinmod
+        use AlphaPhaseResultsDefinition
         implicit none
 
 
@@ -1383,7 +1386,7 @@ write(0,*) 'DEBUG: Mach Finished'
         integer(kind=8), allocatable, dimension(:,:) :: BitHapLib, MissHapLib
 
         integer :: UHLib
-        type(AlphaPhaseResults) :: apResults
+        
 
         type(BitSection) :: Section
         integer :: numSections, curSection, curPos
@@ -1398,20 +1401,14 @@ write(0,*) 'DEBUG: Mach Finished'
         do h=1,inputParams%nPhaseInternal
             ! Get HIGH DENSITY phase information of this phasing step and information
             ! of core indexes
-            if (inputParams%ManagePhaseOn1Off0==0) then
-                FileName = getFileNameCoreIndex(trim(inputParams%phasePath),h)
-            else
-                FileName = getFileNameCoreIndex(h)
-            end if
 
-            ! if aphase info not read in, 
+            ! TODOPHASE read in here if aphase info not read in, 
             ! Get core information of number of cores and allocate start and end cores information
-            CoreI = ReadCores(FileName)
 
             do g=1,size(apResults%cores)
                 ! Initialize Start and End snps of the cores
-                StartSnp=EndSnp + 1
-                EndSnp=startSnp + apResults%cores(g)%getNCoreSnp()
+                StartSnp=apResults%startIndexes(g)
+                EndSnp=apResults%endIndexes(g)
 
                 CoreLength=(EndSnp-StartSnp)+1
                 Section = BitSection(CoreLength, 64)
@@ -1449,18 +1446,21 @@ write(0,*) 'DEBUG: Mach Finished'
                 else
                     FileName = getFileNameHapLib(h,g)
                 end if
-                open (newunit=UHLib,file=trim(FileName),status="old",form="unformatted")
+                
 
-                ! Read the number of Hap in the library and how long they are
-                read(UHLib) nHap,CoreLength
+                ! ! TODO phase read in haplib (unformatted!!!)
+                ! open (newunit=UHLib,file=trim(FileName),status="old",form="unformatted")
 
-                if(nHap/=0) then
-                    ! Allocate the Haplo,alLibrary and read it from file
-                    allocate(HapLib(nHap, CoreLength))
-                    do l=1,nHap
-                        read(UHLib) HapLib(l,:)
-                    enddo
-                    close (UHLib)
+                ! ! Read the number of Hap in the library and how long they are
+                ! read(UHLib) nHap,CoreLength
+
+                ! if(nHap/=0) then
+                !     ! Allocate the Haplo,alLibrary and read it from file
+                !     allocate(HapLib(nHap, CoreLength))
+                !     do l=1,nHap
+                !         read(UHLib) HapLib(l,:)
+                !     enddo
+                !     close (UHLib)
 
                     allocate(BitHapLib(nHap,numSections))
                     allocate(MissHapLib(nHap,numSections))
@@ -1662,10 +1662,9 @@ write(0,*) 'DEBUG: Mach Finished'
 
         use Global
         use ISO_Fortran_Env
-
-        use PhaseRounds
         use Utils
         use alphaimputeinmod
+        use AlphaPhaseResultsDefinition
 
         implicit none
 
@@ -1677,7 +1676,7 @@ write(0,*) 'DEBUG: Mach Finished'
         integer,allocatable,dimension (:,:) :: AnimRecomb
         integer,allocatable,dimension (:,:,:,:) :: PhaseHD
         character(len=1000) :: FileName,dumC
-        type(CoreIndex) :: CoreIA, CoreIB
+        
 
         inputParams => defaultInput
         nAnisHD=(count(Setter(:)==1))
@@ -1711,10 +1710,9 @@ write(0,*) 'DEBUG: Mach Finished'
         end if
 
         ! Get core information of number of cores and allocate start and end cores information
-        CoreIA = ReadCores(FileName)
 
         ! Select the core in the middle
-        MiddleCoreA=int(CoreIA%nCores)/2
+        MiddleCoreA=size(apresults%cores)/2
         if (MiddleCoreA==0) MiddleCoreA=1
 
         ! Get HIGH DENSITY phase information of this phasing step and information
@@ -1726,10 +1724,9 @@ write(0,*) 'DEBUG: Mach Finished'
         end if
 
         ! Get core information of number of cores and allocate start and end cores information
-        CoreIB = ReadCores(FileName)
 
         ! Select the core in the middle
-        MiddleCoreB=int(CoreIB%nCores)/2
+        MiddleCoreB=size(apresults%cores)/2
         if (MiddleCoreB==0) MiddleCoreB=1
 
         ! Get HIGH DENSITY phase information of this phasing step
@@ -1790,7 +1787,7 @@ write(0,*) 'DEBUG: Mach Finished'
 
         ! Impute HD phase of the middle core of the middle phasing step
         ! WARNING: Why to impute phase information only for this case?
-        do g=MiddleCoreA,MiddleCoreA        ! Why is it necessary a loop here?
+        do g=1,MiddleCoreA        ! Why is it necessary a loop here?
             StartSnp=CoreIA%StartSnp(g)
             EndSnp=CoreIA%EndSnp(g)
             CoreLength=(EndSnp-StartSnp)+1
@@ -1919,23 +1916,21 @@ write(0,*) 'DEBUG: Mach Finished'
                         UpToSnp=CoreIB%EndSnp(UpToCoreB)
                     end if
                 else                                    ! if EVEN
-                    do g=1,CoreIA%nCores
-                        if ((CoreIA%StartSnp(g)<UptoSnp).and.(CoreIA%EndSnp(g)>UptoSnp)) then
+                    do g=1,size(apresults%cores)
+                        if ((apresults%startIndexes(g)<UptoSnp).and.(apresults%endIndexes(g)>UptoSnp)) then
                             UpToCoreA=g
                             exit
                         endif
                     enddo
+                       StartSnp=apresults%startIndexes(UpToCoreA)
+                        EndSnp=apresults%endIndexes(UpToCoreA)
                     if (e==1) then
-                        StartSnp=CoreIA%StartSnp(UpToCoreA)
-                        EndSnp=CoreIA%EndSnp(UpToCoreA)
 
                         StPt=StartSnp
                         EndPt=UpToSnp
                         FillInSt=StartSnp
                         FillInEnd=EndSnp
                     else
-                        StartSnp=CoreIA%StartSnp(UpToCoreA)
-                        EndSnp=CoreIA%EndSnp(UpToCoreA)
 
                         StPt=UpToSnp
                         EndPt=StartSnp
@@ -1979,9 +1974,9 @@ write(0,*) 'DEBUG: Mach Finished'
                     enddo
 
                     if (RL == 1) then
-                        UpToSnp=CoreIA%StartSnp(UpToCoreA)
+                        UpToSnp=apresults%startIndexes(UpToCoreA)
                     else
-                        UpToSnp=CoreIA%EndSnp(UpToCoreA)
+                        UpToSnp=apresults%endIndexes(UpToCoreA)
                     end if
                 endif
 
@@ -2031,7 +2026,7 @@ write(0,*) 'DEBUG: Mach Finished'
 
         do i=1, ped%nGenotyped
             tmpGenoIndexed = ped%genotypeMap(i)
-            ImputeGenos(i,:) = ped%pedigree(ped%genotypeMap(i))%toIntegerArray()
+            ImputeGenos(i,:) = ped%pedigree(ped%genotypeMap(i))%individualGenotype%toIntegerArray()
 
         enddo
 

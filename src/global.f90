@@ -32,6 +32,7 @@ module Global
     use PARAMETERS
     use iso_fortran_env
     use PedigreeModule
+    use AlphaPhaseResultsDefinition
     implicit none
 
 
@@ -61,5 +62,7 @@ module Global
 
     real(kind=real32),allocatable :: xnumrelmatHold(:)
     integer :: NRMmem, shell, shellmax, shellWarning
+
+    type(AlphaPhaseResults) :: apResults !TODO make this into array to support MPIing.
 end module Global
 
