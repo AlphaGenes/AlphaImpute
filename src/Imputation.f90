@@ -16,13 +16,12 @@ MODULE Imputation
     type(AlphaImputeInput), pointer :: inputParams
 CONTAINS
 
-    SUBROUTINE ImputationManagement(apResult)
+    SUBROUTINE ImputationManagement
         use omp_lib
         use informationModule
         use Output, only : ReadInPrePhasedData
         use AlphaPhaseResultsDefinition
 
-        type(AlphaPhaseResults), intent(in) :: apResult
         integer :: loop
         character(len=150) :: timeOut
 
@@ -1850,7 +1849,7 @@ write(0,*) 'DEBUG: Mach Finished'
                     end if
                 else                                    ! if EVEN
                 ! TODO discuss with roberto on monday
-                    do g=1,size(apresults%cores)
+                    do g=1,apresults%nResults
                         if ((apresults%results(g)%startIndexes(middleCoreIndex)<UptoSnp).and.(apresults%results(g)%endIndexes(middleCoreIndex))>UptoSnp) then
                             UpToCoreA=g
                             exit
@@ -1873,7 +1872,7 @@ write(0,*) 'DEBUG: Mach Finished'
                         FillInEnd=StartSnp
                     endif
                     CompLength=abs(UpToSnp-StartSnp)+1
-                    do i=1,ped%pedigreeSize- ped%nDummys
+                    do i=1,ped%pedigreeSize- ped%nDummys 
                         if ( ped%pedigree(i)%founder .and.(PosHD(i)/=0).and.(AnimRecomb(i,RL)==0)) then
                             C1=0
                             C2=0

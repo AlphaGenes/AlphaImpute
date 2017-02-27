@@ -46,7 +46,7 @@ subroutine MaCHController(HMM)
     end if
 
     ! Number of animals in the HMM
-    nIndHmmMaCH = nAnisG + nAnisInbred
+    nIndHmmMaCH = ped%nGenotyped + nAnisInbred
 
     ! ALLOCATE MEMORY
 #ifdef DEBUG
@@ -144,7 +144,7 @@ subroutine MaCHController(HMM)
 #endif
 
     ! Populate genotype and phased data from input
-    call ParseMaCHData(HMM, InbredHmmMaCH, nAnisG, nAnisInbred)
+    call ParseMaCHData(HMM, InbredHmmMaCH, ped%nGenotyped, nAnisInbred)
     if (nAnisInbred > 0) then
         deallocate(InbredHmmMaCH)
     end if
@@ -166,7 +166,7 @@ subroutine MaCHController(HMM)
 #endif
     
     ! Set up Reference haplotypes and HMM parameters
-    call SetUpEquations(HMM, nAnisG, nAnisInbred)
+    call SetUpEquations(HMM, ped%nGenotyped, nAnisInbred)
 
     open (unit=6,form='formatted')
 
@@ -469,20 +469,13 @@ subroutine ParseMaCHDataGenos(nGenotyped)
         tmpID = ped%dictionary%getValue(GenotypeID(j))
         if (tmpID /=DICT_NULL) then
             GlobalHmmID(j) = tmpID
-            if (tmpID > nAnisP) then
+            if (tmpID > ped%pedigreeSize) then
                 write(error_unit,*) "ERROR: GENOTYPE ID OUT OF RANGE:",tmpID,",",GenotypeID(j)
             endif
         else
                 write(error_unit,*) "WARNING: GENOTYPE ID NOT IN PEDIGREE:",GenotypeID(j)
         end if
     end do
-    !     do i = 1, nAnisP
-    !         if (trim(Id(i)) == trim(GenotypeID(j))) then
-    !             GlobalHmmID(j) = i
-    !         end if
-    !     end do
-    ! end do
-
 
     do i=1,nGenotyped
         ! Check if individual is in the genotype file
@@ -601,7 +594,7 @@ subroutine MaCHForInd(CurrentInd, HMM)
             call SampleChromosomes(CurrentInd,StartSnp,StopSnp)
         end if
     else
-        if (nGametesPhased/float(2*nAnisP)>inputParams%phasedThreshold/100.0) then
+        if (nGametesPhased/float(2*(ped%pedigreeSize-ped%nDummys))>inputParams%phasedThreshold/100.0) then
             if (GlobalHmmPhasedInd(CurrentInd,1)/=.TRUE. .AND. GlobalHmmPhasedInd(CurrentInd,2)/=.TRUE.) Then
                 allocate(ForwardProbs(states,nSnpHmm))
                 call ForwardAlgorithm(CurrentInd)
@@ -1553,7 +1546,7 @@ subroutine SetUpEquationsGenotypesHaploid(nGenotyped)
     inputParams => defaultInput
     ! If the number of phased gametes from AlphaImpute is above a threshold, then
     ! haploytpes produced from AlphaImpute are used in the model (FullH)
-    if (nGametesPhased/float(2*nAnisP)>phasedThreshold/100.0) then
+    if (nGametesPhased/float(2*(ped%pedigreeSize-ped%nDummys))>phasedThreshold/100.0) then
         do i=1,nGenotyped
             FullH(i,:,:)=PhaseHmmMaCH(i,:,:)
 
@@ -2012,7 +2005,7 @@ subroutine ExtractTemplate(HMM, forWhom, nGenotyped)
     if (HMM==RUN_HMM_ONLY) then
         call ExtractTemplateHaps(forWhom,Shuffle1,Shuffle2)
     else
-        if (nGametesPhased/float(2*nAnisP)>phasedThreshold/100.0) then
+        if (nGametesPhased/float(2*(ped%pedigreeSize-ped%nDummys))>phasedThreshold/100.0) then
             ! If the number of phased gametes with AlphaImpute is above
             ! a threshold, then template is populated with the phased data
             call ExtractTemplateByHaps(forWhom,Shuffle1,Shuffle2)
