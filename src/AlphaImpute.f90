@@ -1506,34 +1506,43 @@ contains
             allocate(ImputeGenos(0:ped%pedigreeSize-ped%nDummys,inputParams%nsnp))
             allocate(ImputePhase(0:ped%pedigreeSize-ped%nDummys,inputParams%nsnp,2))
 
-            Genos(0,:)=9
             GlobalWorkPhase=9
             do i=1,ped%pedigreeSize-ped%nDummys
                 do j=1,inputParams%nsnp                                                     ! Phase in the homozygous case
-                    if (Genos(i,j)==0) GlobalWorkPhase(i,j,:)=0
-                    if (Genos(i,j)==2) GlobalWorkPhase(i,j,:)=1
+                    
+                    if (ped%pedigree(i)%individualGenotype%getGenotype(j)==0) then
+                        GlobalWorkPhase(i,j,:)=0
+                    else if (ped%pedigree(i)%individualGenotype%getGenotype(j)==2) then
+                        GlobalWorkPhase(i,j,:)=1
+                    endif
                 enddo
                 if (ped%pedigree(i)%gender/=inputParams%hetGameticStatus) then                        ! Am I homogametic?
                     do e=1,2                                                    ! Phase a single haplotype whenever my parents are homozygous
                         ParId=ped%pedigree(i)%getSireDamNewIDByIndex(e+1)
                         do j=1,inputParams%nsnp
-                            if (Genos(ParId,j)==0) GlobalWorkPhase(i,j,e)=0
-                            if (Genos(ParId,j)==2) GlobalWorkPhase(i,j,e)=1
+                            if (ped%pedigree(parId)%individualGenotype%getGenotype(j)==0) then
+                                GlobalWorkPhase(i,j,e)=0
+
+                            else if (ped%pedigree(parId)%individualGenotype%getGenotype(j)==2) then
+                                GlobalWorkPhase(i,j,e)=1
+                            endif
                         enddo
                     enddo
                 else                                                            ! Am I heterogametic?
                     ParId=ped%pedigree(i)%getSireDamNewIDByIndex(inputParams%HomGameticStatus+1)
                     do j=1,inputParams%nsnp                                                 ! Phase the two haplotypes whenever my homogametic parent is homozygous
-                        if (Genos(ParId,j)==0) GlobalWorkPhase(i,j,:)=0
-                        if (Genos(ParId,j)==2) GlobalWorkPhase(i,j,:)=1
+                        if (ped%pedigree(parId)%individualGenotype%getGenotype(j)==0) then
+                            GlobalWorkPhase(i,j,:)=0
+                        else if (ped%pedigree(parId)%individualGenotype%getGenotype(j)==2) then
+                            GlobalWorkPhase(i,j,:)=1
+                        endif 
                     enddo
                 endif
             enddo
 
             GlobalWorkPhase(0,:,:)=9
-            ImputeGenos=9
-            ImputePhase=9
-            ImputeGenos(:,:)=Genos(:,:)
+            
+            ImputeGenos(:,:)=ped%getGenotypesAsArray()
             ImputePhase(:,:,:)=GlobalWorkPhase(:,:,:)
 
             allocate(GlobalTmpCountInf(ped%pedigreeSize-ped%nDummys,6))
@@ -1544,37 +1553,43 @@ contains
             allocate(ImputeGenos(0:ped%pedigreeSize-ped%nDummys,inputParams%nsnp))
             allocate(ImputePhase(0:ped%pedigreeSize-ped%nDummys,inputParams%nsnp,2))
 
-            Genos(0,:)=9
             GlobalWorkPhase=9
             do i=1,ped%pedigreeSize-ped%nDummys
                 do j=1,inputParams%nsnp                                                     ! Phase in the homozygous case
-                    if (Genos(i,j)==0) GlobalWorkPhase(i,j,:)=0
-                    if (Genos(i,j)==2) GlobalWorkPhase(i,j,:)=1
+                    if (ped%pedigree(i)%individualGenotype%getGenotype(j)==0) then
+                        GlobalWorkPhase(i,j,:)=0
+                    else if (ped%pedigree(i)%individualGenotype%getGenotype(j)==2) then
+                        GlobalWorkPhase(i,j,:)=1
+                    endif
                 enddo
                 if (associated(ped%pedigree(i)%sirePointer)) then
                     if (ped%pedigree(i)%sirePointer%isDummy) exit
                     ParId=ped%pedigree(i)%sirePointer%id
 
                     do j=1,inputParams%nsnp                                                     ! Phase if my father is homozygous
-                        if (Genos(ParId,j)==0) GlobalWorkPhase(i,j,1)=0
-                        if (Genos(ParId,j)==2) GlobalWorkPhase(i,j,1)=1
+                        if (ped%pedigree(ParId)%individualGenotype%getGenotype(j)==0) then
+                            GlobalWorkPhase(i,j,1)=0
+                        else if (ped%pedigree(ParId)%individualGenotype%getGenotype(j)==2) then
+                            GlobalWorkPhase(i,j,1)=1
+                        endif 
                     enddo
                 endif
                 if (associated(ped%pedigree(i)%damPointer)) then
                     if (ped%pedigree(i)%damPointer%isDummy) exit
                     ParId=ped%pedigree(i)%damPointer%id
                     do j=1,inputParams%nsnp                                                     ! Phase if my mother is homozygous
-                        if (Genos(ParId,j)==0) GlobalWorkPhase(i,j,2)=0
-                        if (Genos(ParId,j)==2) GlobalWorkPhase(i,j,2)=1
+                        if (ped%pedigree(ParId)%individualGenotype%getGenotype(j)==0) then
+                            GlobalWorkPhase(i,j,2)=0
+                        else if (ped%pedigree(ParId)%individualGenotype%getGenotype(j)==2) then
+                            GlobalWorkPhase(i,j,2)=1
+                        endif 
                     enddo
                 endif
 
             enddo
 
             GlobalWorkPhase(0,:,:)=9
-            ImputeGenos=9
-            ImputePhase=9
-            ImputeGenos(:,:)=Genos(:,:)
+            ImputeGenos(:,:)=ped%getGenotypesAsArray()
             ImputePhase(:,:,:)=GlobalWorkPhase(:,:,:)
 
         endif
@@ -1632,15 +1647,15 @@ contains
 
 
         do i=1,ped%pedigreeSize-ped%nDummys
-            write (104,'(i16,1x,i16,1x,i16,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%getIntegerVectorOfRecodedIdsNoDummy(),Genos(i,:)
-            if (Setter(i)==1) write (105,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%originalID,Genos(i,:)
+            write (104,'(i16,1x,i16,1x,i16,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%getIntegerVectorOfRecodedIdsNoDummy(), ped%pedigree(i)%individualGenotype%toIntegerArray()
+            if (Setter(i)==1) write (105,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%originalID,ped%pedigree(i)%individualGenotype%toIntegerArray()
         enddo
         call flush(104)
         call flush(105)
         close(104)
         close(105)
 
-        CountRawGenos=count(Genos(:,:)/=9)
+        CountRawGenos=ped%getNumGenotypesMissing()
 
         do i=1,nObsDataRaw
             write (103,'(4a20)') Ped%pedigree(i)%originalID,Ped%pedigree(i)%sireID,Ped%pedigree(i)%damID
@@ -1923,13 +1938,6 @@ contains
 
         if (inputParams%MultiHD/=0 .or. inputParams%IntEditStat==0) then
             nSnpR=inputParams%nsnp
-            ! TODO tidy this up - should not need deallocate here
-            if (allocated(genos)) then
-                deallocate(genos)
-            endif
-            allocate(Genos(0:ped%pedigreeSize-ped%nDummys,inputParams%nsnp))
-            Genos=TempGenos
-            deallocate(TempGenos)
             if (inputParams%managephaseon1off0==1) SnpIncluded(:)=1
         else
             if (inputParams%managephaseon1off0==1) then
@@ -1942,47 +1950,24 @@ contains
                 nSnpR=count(SnpIncluded(:)==1)
             endif
             if (nSnpR==inputParams%nsnp) then
-                if (.not. allocated(Genos)) then
-                    allocate(Genos(0:ped%pedigreeSize-ped%nDummys,inputParams%nsnp))
-                endif
-                Genos=TempGenos
-                deallocate(TempGenos)
                 SnpIncluded(:)=1
             else
-                ! TODO this should not need to be done
-                if (allocated(genos)) then
-                    deallocate(genos)
-                endif
-                allocate(Genos(0:ped%pedigreeSize-ped%nDummys,nSnpR))
-                Genos(0,:)=9
                 if (inputParams%managephaseon1off0==1) then
                     k=0
                     do j=1,inputParams%nsnp
                         if ((SnpSummary(j)<inputParams%PercSnpMiss).and.((TempFreq(j)>0.00000001).and.(TempFreq(j)<0.9999999))) then
                             k=k+1
-                            Genos(:,k)=TempGenos(:,j)
                             SnpIncluded(j)=1
                         endif
                     enddo
-                    deallocate(TempGenos)
-                    inputParams%nsnp=nSnpR
-                else
-                    k=0
-                    do j=1,inputParams%nsnp
-                        if (SnpIncluded(j)==1) then
-                            k=k+1
-                            Genos(:,k)=TempGenos(:,j)
-                        endif
-                    enddo
-                    deallocate(TempGenos)
                     inputParams%nsnp=nSnpR
                 endif
             endif
             if (inputParams%UserDefinedHD==0) then
                 Setter(1:ped%pedigreeSize-ped%nDummys)=1
                 RecIdHDIndex(1:ped%pedigreeSize-ped%nDummys)=1
-                do i=1,ped%pedigreeSize-ped%nDummys
-                    CountMiss=count(Genos(i,:)==9)
+                do i=1,ped%nGenotyped
+                    CountMiss=ped%pedigree(ped%genotypeMap(i))%individualGenotype%numMissing()
                     if ((float(CountMiss)/inputParams%nsnp)>(1.0-inputParams%SecondPercGenoForHD)) then
                         Setter(i)=0
                         RecIdHDIndex(i)=0
@@ -1990,9 +1975,9 @@ contains
                 enddo
                 CountHD=count(Setter(:)==1)
             else
-                do i=1,ped%pedigreeSize-ped%nDummys
+                do i=1,ped%nGenotyped
                     if (Setter(i)==1) then
-                        CountMiss=count(Genos(i,:)==9)
+                        CountMiss=ped%pedigree(ped%genotypeMap(i))%individualGenotype%numMissing()
                         if ((float(CountMiss)/inputParams%nsnp)>(1.0-inputParams%SecondPercGenoForHD)) then
                             Setter(i)=0
                             RecIdHDIndex(i)=0
@@ -2203,16 +2188,18 @@ contains
 
                     ! Look for mendelenian errors
                     do j=1,inputParams%nsnp
-                        if ((Genos(IndId,j)/=9).and.(Genos(ParId,j)/=9)) then
+                        
+                        ! TODO can probably do the following better with new genotype class
+                        if ((ped%pedigree(IndId)%individualGenotype%getGenotype(j)/=9).and.(ped%pedigree(parId)%individualGenotype%getGenotype(j)/=9)) then
                             CountBothGeno=CountBothGeno+1
-                            if (Genos(ParID,j)/=1) then
+                            if (ped%pedigree(parId)%individualGenotype%getGenotype(j)/=1) then
                                 nHomoParent = nHomoParent+1
-                                if ( Genos(IndID,j)/=1) then
+                                if ( ped%pedigree(IndId)%individualGenotype%getGenotype(j)/=1) then
                                     nBothHomo =  nBothHomo + 1
                                 end if
                             end if
-                            if ((Genos(IndId,j)==0).and.(Genos(ParId,j)==2)) CountDisagree=CountDisagree+1
-                            if ((Genos(IndId,j)==2).and.(Genos(ParId,j)==0)) CountDisagree=CountDisagree+1
+                            if ((ped%pedigree(IndId)%individualGenotype%getGenotype(j)==0).and.(ped%pedigree(parId)%individualGenotype%getGenotype(j)==2)) CountDisagree=CountDisagree+1
+                            if ((ped%pedigree(IndId)%individualGenotype%getGenotype(j)==2).and.(ped%pedigree(parId)%individualGenotype%getGenotype(j)==0)) CountDisagree=CountDisagree+1
                         endif
                     enddo
                     if ((float(CountDisagree)/CountBothGeno)>DisagreeThreshold) then ! Mendelenian error
@@ -2230,14 +2217,14 @@ contains
                     else
                         ! Remove genotype of proband and parent
                         do j=1,inputParams%nsnp
-                            if ((Genos(IndId,j)/=9).and.(Genos(ParId,j)/=9)) then
-                                if ((Genos(IndId,j)==0).and.(Genos(ParId,j)==2)) then
-                                    Genos(IndId,j)=9
-                                    Genos(ParId,j)=9
+                            if ((ped%pedigree(IndId)%individualGenotype%getGenotype(j)/=9).and.(ped%pedigree(parId)%individualGenotype%getGenotype(j)/=9)) then
+                                if ((ped%pedigree(IndId)%individualGenotype%getGenotype(j)==0).and.(ped%pedigree(parId)%individualGenotype%getGenotype(j)==2)) then
+                                    call ped%pedigree(IndId)%individualGenotype%setGenotype(j,9)
+                                    call ped%pedigree(parId)%individualGenotype%setGenotype(j,9)
                                 endif
-                                if ((Genos(IndId,j)==2).and.(Genos(ParId,j)==0)) then
-                                    Genos(IndId,j)=9
-                                    Genos(ParId,j)=9
+                                if ((ped%pedigree(IndId)%individualGenotype%getGenotype(j)==2).and.(ped%pedigree(parId)%individualGenotype%getGenotype(j)==0)) then
+                                    call ped%pedigree(IndId)%individualGenotype%setGenotype(j,9)
+                                    call ped%pedigree(parId)%individualGenotype%setGenotype(j,9)
                                 endif
                             endif
                         enddo
@@ -2267,19 +2254,6 @@ contains
                 endif
             enddo
         endif
-
-        allocate(TempGenos(0:ped%pedigreeSize,inputParams%nsnp))
-
-        TempGenos=9
-        do i=1,ped%nGenotyped
-            tmpId = ped%dictionary%getValue(GenotypeId(i))
-            if (tmpId /= dict_null) then
-                TempGenos(tmpId,:)=Genos(i,:)
-                if (count(TempGenos(tmpId,:)/=9)>0) ped%pedigree(tmpId)%genotyped=.true.
-            endif
-        enddo
-        ! do i=1,ped%nGenotyped
-        ! print *, TempGenos
 
     end subroutine CheckParentage
     !#############################################################################################################################################################################################################################
@@ -3254,7 +3228,6 @@ program AlphaImpute
     if (inputParams%hmmoption /= RUN_HMM_NGS) then
         if (inputParams%restartOption<OPT_RESTART_PHASING) call MakeDirectories(RUN_HMM_NULL)
 
-        call CountInData
         call ReadInData
         !call cpu_time(start)
         call SnpCallRate
@@ -3272,7 +3245,6 @@ program AlphaImpute
     else
 
         call MakeDirectories(RUN_HMM_NGS)
-        call CountInData
         call ReadInData
         call SnpCallRate
         allocate(Reads(ped%nGenotyped,inputParams%nsnp))
@@ -3294,7 +3266,7 @@ program AlphaImpute
         print*, ""
         print*, "Bypass calculation of probabilities and phasing"
 
-    else
+    else ! if hmm option is not ngs or only
         write(6,*) " "
         write(6,*) " ","Data editing completed"
 
@@ -3311,7 +3283,7 @@ program AlphaImpute
                 ! WriteOutResults is a piece of shit and makes life hard
                 
                 
-                call ped%addGenotypeInformation(Genos)
+                ! call ped%addGenotypeInformation(Genos)
                 
                 call runGeneProbAlphaImpute(1, inputParams%nsnp, ped, GenosProbs, MAF)
                 call WriteProbabilities("./Results/GenotypeProbabilities.txt", GenosProbs, ped,ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
