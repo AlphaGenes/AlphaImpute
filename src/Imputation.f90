@@ -1154,7 +1154,6 @@ write(0,*) 'DEBUG: Mach Finished'
 
 
             ! Get phase information
-            call ReadPhased(nAnisHD, FileNamePhase, ped, PhaseHD, PosHD)
 
             do g=1,size(apResults%results(h)%cores)
                 ! Initialize Start and End snps of the cores
@@ -1380,7 +1379,7 @@ write(0,*) 'DEBUG: Mach Finished'
         implicit none
 
 
-        integer :: l,i,j,k,h,e,f,g,CoreLength,nHap,CountAB(inputParams%nsnp,0:1),Work(inputParams%nsnp,2),TempCount
+        integer :: i,j,k,h,e,f,g,CoreLength,nHap,CountAB(inputParams%nsnp,0:1),Work(inputParams%nsnp,2),TempCount
         integer :: StartSnp,EndSnp,PatMatDone(2),Counter,BanBoth(2),Ban(2),AnimalOn(ped%pedigreeSize,2)
         integer,allocatable,dimension (:,:,:,:) :: Temp
         integer(kind=1),allocatable,dimension (:,:) :: HapLib,HapCand

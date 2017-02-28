@@ -40,6 +40,7 @@ contains
 
     subroutine PhasingManagementNew(results)
         use AlphaImputeInMod
+        use omp_lib
         use AlphaPhaseParametersDefinition
         use AlphaPhaseFunctions
         use AlphaPhaseResultsDefinition
@@ -48,18 +49,28 @@ contains
 
         type(AlphaImputeInput), pointer :: inputParams
         type(AlphaPhaseParameters) :: params
-        type(AlphaPhaseResults), intent(out) :: results
+        type(AlphaPhaseResultsContainer), intent(out) :: results
+        integer :: nCoreLengths,i
 
+        nCoreLengths = size(inputParams%CoreAndTailLengths)
+        allocate(results%results(nCoreLengths))
         params = AlphaPhaseParameters()
 
-        ! TODO openMP this in alphaphase
-        ! TODO fix core and tail length definition
-        ! how to parallelize, surely best to do by core? 
-        params%CoreAndTailLength = inputParams%CoreAndTailLengths(1)
-        params%itterateNumber = inputParams%PhaseNIterations
-        params%PercGenoHaploDisagree = inputParams%GenotypeErrorPhase
-        results = phaseAndCreateLibraries(ped, params, quiet=.true.)
+    
+        call omp_set_nested(.true.)
 
+
+        !$OMP parallel DO schedule(dynamic) &
+        !$OMP FIRSTPRIVATE(params)
+        do i= 1, nCoreLengths
+
+            params%CoreAndTailLength = inputParams%CoreAndTailLengths(i)
+            params%itterateNumber = inputParams%PhaseNIterations
+            params%PercGenoHaploDisagree = inputParams%GenotypeErrorPhase
+            results%results(i) = phaseAndCreateLibraries(ped, params, quiet=.true.)
+        enddo 
+
+        !$omp end parallel do
 
 
     end subroutine PhasingManagementNew
@@ -199,7 +210,7 @@ contains
     subroutine IterateGeneProbsNew(GenosProbs)
 
         use iso_fortran_env
-        use global, only : Maf,GpIndex,ImputePhase,ImputeGenos, ped,ProbImputePhase, ProbImputeGenos
+        use global, only : Maf,ImputePhase,ImputeGenos, ped,ProbImputePhase, ProbImputeGenos
         use AlphaImputeInMod
         use GeneProbModule , only : runGeneProbAlphaImpute
         use imputation, only : PhaseComplement
@@ -908,7 +919,8 @@ contains
 #ifdef DEBUG
                 write(0,*) 'DEBUG: Write phase, genotypes and probabilities into files [WriteOutResults]'
 #endif
-                ! call CheckImputationInconsistencies(ImputeGenos, ImputePhase, ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
+                ! call CheckImputationInconsistencies(ImputeGenos, ImputePhase, nAnisP, inputParams%nsnp)
+                !  TODO remove
                 BLOCK
                     integer :: hmmID
                     do i=1, ped%nGenotyped
@@ -1097,7 +1109,7 @@ contains
         WorkPhase=9
         if (inputParams%SexOpt==0) then
             if (inputParams%bypassgeneprob==0) then
-                call ReReadGeneProbs
+                ! TODO read in gene prob info here
             else
                 call InsteadOfReReadGeneProb
             endif
@@ -1665,10 +1677,11 @@ contains
 
 
         !ANDREAS AND JOHN CHANGE ON FRIDAY - POSSIBLY REMOVE
+        ! TODO: IT SHOULD BE REMOVED OR CHANGE SUBROUTINE'S NAME AT LEAST!
         if (inputParams%SexOpt==1) then                 ! Sex chromosome
             call InsteadOfGeneProb          ! Calculate Genotype Probabilities
         else                                ! Not sex chromosome
-            if (inputParams%bypassgeneprob==1) then     ! Do I have to bypass Genotype Probabilities?
+            if (inputParams%bypassgeneprob==1 .OR. inputParams%hmmoption == RUN_HMM_ONLY) then
                 call InsteadOfGeneProb
             endif
         endif

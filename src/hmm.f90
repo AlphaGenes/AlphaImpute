@@ -164,7 +164,7 @@ subroutine MaCHController(HMM)
 #ifdef DEBUG
     write(0,*) 'DEBUG: [SetUpEquations] ...'
 #endif
-    
+
     ! Set up Reference haplotypes and HMM parameters
     call SetUpEquations(HMM, ped%nGenotyped, nAnisInbred)
 
@@ -193,13 +193,13 @@ subroutine MaCHController(HMM)
         t1 = omp_get_wtime()
         write(0,*) 'DEBUG: Begin paralellisation [MaCHController]'
 #endif
+
         !$OMP PARALLEL DO DEFAULT(shared)
-        !$!OMP DO
         do i=1,nIndHmmMaCH
             call MaCHForInd(i, HMM)
         enddo
-        !$!OMP END DO
         !$OMP END PARALLEL DO
+
 #if DEBUG.EQ.1
         t2 = omp_get_wtime()
         tT = tT + (t2-t1)
@@ -386,7 +386,6 @@ subroutine ParseMaCHDataNGS(nGenotyped)
     integer :: i, j, nHaps, HapsLeft
     type(AlphaImputeInput), pointer :: inputParams
     character(len=20), allocatable :: HapList(:)
-    character(len=20) :: aux
 
     interface
         subroutine getHapList(HapListUnit, ListIds, nHaps)
@@ -476,6 +475,12 @@ subroutine ParseMaCHDataGenos(nGenotyped)
                 write(error_unit,*) "WARNING: GENOTYPE ID NOT IN PEDIGREE:",GenotypeID(j)
         end if
     end do
+    !     do i = 1, ped%pedigreeSize
+    !         if (trim(Id(i)) == trim(GenotypeID(j))) then
+    !             GlobalHmmID(j) = i
+    !         end if
+    !     end do
+    ! end do
 
     do i=1,nGenotyped
         ! Check if individual is in the genotype file
@@ -558,7 +563,7 @@ subroutine MaCHForInd(CurrentInd, HMM)
     integer(kind=1), intent(in) :: HMM
 
     ! Local variables
-    integer :: genotype, i, states
+    integer :: genotypeInt, i, states
     integer :: StartSnp, StopSnp
 
     inputParams => defaultInput
@@ -594,7 +599,7 @@ subroutine MaCHForInd(CurrentInd, HMM)
             call SampleChromosomes(CurrentInd,StartSnp,StopSnp)
         end if
     else
-        if (nGametesPhased/float(2*(ped%pedigreeSize-ped%nDummys))>inputParams%phasedThreshold/100.0) then
+        if (nGametesPhased/float(2*ped%pedigreeSize)>inputParams%phasedThreshold/100.0) then
             if (GlobalHmmPhasedInd(CurrentInd,1)/=.TRUE. .AND. GlobalHmmPhasedInd(CurrentInd,2)/=.TRUE.) Then
                 allocate(ForwardProbs(states,nSnpHmm))
                 call ForwardAlgorithm(CurrentInd)
@@ -634,10 +639,10 @@ subroutine MaCHForInd(CurrentInd, HMM)
 #endif
     if (GlobalRoundHmm>inputParams%hmmburninround) then
         do i=1,nSnpHmm
-            genotype = FullH(CurrentInd,i,1)+FullH(CurrentInd,i,2)
-            if (genotype==2) then
+            genotypeInt = FullH(CurrentInd,i,1)+FullH(CurrentInd,i,2)
+            if (genotypeInt==2) then
                 GenosCounts(CurrentInd,i,2)=GenosCounts(CurrentInd,i,2)+1
-            elseif (genotype==1) then
+            elseif (genotypeInt==1) then
                 GenosCounts(CurrentInd,i,1)=GenosCounts(CurrentInd,i,1)+1
             endif
             ! GenosCounts(CurrentInd,i,1)=(GlobalRoundHmm-inputParams%hmmburninround) - GenosCounts(CurrentInd,i,2) - GenosCounts(CurrentInd,i,3)
@@ -1036,7 +1041,7 @@ subroutine ImputeAlleles(CurrentInd,CurrentMarker,State1,State2)
     integer,intent(in) :: CurrentInd,CurrentMarker,State1,State2
 
     ! Local variables
-    integer :: Imputed1,Imputed2,Genotype,Differences, Thread
+    integer :: Imputed1,Imputed2,genotypeInt,Differences, Thread
 
     Thread = omp_get_thread_num()
     ! These will be the observed imputed alleles defined by the state:
@@ -1045,22 +1050,22 @@ subroutine ImputeAlleles(CurrentInd,CurrentMarker,State1,State2)
     Imputed2=SubH(State2,CurrentMarker)
 
     ! This is the individual observed genotype
-    Genotype=GenosHmmMaCH(CurrentInd,CurrentMarker)
+    genotypeInt=GenosHmmMaCH(CurrentInd,CurrentMarker)
 
-    if ((Genotype/=0).and.(Genotype/=2)) then
+    if ((genotypeInt/=0).and.(genotypeInt/=2)) then
         FullH(CurrentInd,CurrentMarker,1)=Imputed1
         FullH(CurrentInd,CurrentMarker,2)=Imputed2
     endif
 
     ! If genotype is missing, skip
-    if (Genotype==3) return
+    if (genotypeInt==3) return
 
     ! Difference between the observed genotype and the gentoype implied by
     ! the state S=(State1, State2)
-    Differences=abs(Genotype - (Imputed1+Imputed2))
+    Differences=abs(genotypeInt - (Imputed1+Imputed2))
 
     ! If allele is heterozygous, there is uncertainty
-    if ((Genotype==1).and.(Differences==0)) then
+    if ((genotypeInt==1).and.(Differences==0)) then
         !$OMP ATOMIC
         ErrorUncertainty(CurrentMarker)=ErrorUncertainty(CurrentMarker)+1
 
@@ -1076,7 +1081,7 @@ subroutine ImputeAlleles(CurrentInd,CurrentMarker,State1,State2)
     endif
 
     ! If gentoype is homozygous or missing, the skip
-    if (Genotype/=1) return
+    if (genotypeInt/=1) return
 
     ! If the observed allele is homozygous but the genotype is heterozygous
     if (Imputed1==Imputed2) then
@@ -1351,7 +1356,7 @@ subroutine ConditionOnData(CurrentInd,Marker)
     integer, intent(in) :: CurrentInd, Marker
     type(AlphaImputeInput), pointer :: inputParams
     ! Local variables
-    integer :: i, j, Index, genotype, RefAll, AltAll
+    integer :: i, j, Index, genotypeInt, RefAll, AltAll
     double precision :: Factors(0:1), cond_probs(0:2)
 
     inputParams => defaultInput
@@ -1364,8 +1369,8 @@ subroutine ConditionOnData(CurrentInd,Marker)
         RefAll = ReferAllele(CurrentInd,Marker)
         AltAll = AlterAllele(CurrentInd,Marker)
     else
-        genotype = GenosHmmMaCH(CurrentInd,Marker)
-        if (genotype==MISSING) then
+        genotypeInt = GenosHmmMaCH(CurrentInd,Marker)
+        if (genotypeInt==MISSING) then
             return
         endif
     endif
@@ -1387,10 +1392,10 @@ subroutine ConditionOnData(CurrentInd,Marker)
         if (inputParams%HMMOption /= RUN_HMM_NGS) then
             ! Probability to observe genotype SubH(i) being the true
             ! genotype GenosHmmMaCH in locus Marker
-            Factors(0) = Penetrance(Marker,SubH(i,Marker),genotype)
+            Factors(0) = Penetrance(Marker,SubH(i,Marker),genotypeInt)
             ! Probability to observe genotype SubH(i)+1 being the true
             ! genotype GenosHmmMaCH in locus Marker
-            Factors(1) = Penetrance(Marker,SubH(i,Marker)+1,genotype)
+            Factors(1) = Penetrance(Marker,SubH(i,Marker)+1,genotypeInt)
         else
             ! Probability to observe genotype SubH(i) being the true
             ! genotype GenosHmmMaCH in locus Marker
@@ -1494,6 +1499,9 @@ subroutine SetUpEquations(HMM, nGenotyped, nInbred)
     integer(kind=1),intent(in) :: HMM
     integer, intent(in) :: nGenotyped, nInbred
 
+    ! Initialize to missing haplotypes of the whole population
+    FullH=9
+
     if (HMM==RUN_HMM_NGS) then
         call SetUpEquationsReads(nGenotyped)
     else if (HMM==RUN_HMM_ONLY) then
@@ -1546,7 +1554,7 @@ subroutine SetUpEquationsGenotypesHaploid(nGenotyped)
     inputParams => defaultInput
     ! If the number of phased gametes from AlphaImpute is above a threshold, then
     ! haploytpes produced from AlphaImpute are used in the model (FullH)
-    if (nGametesPhased/float(2*(ped%pedigreeSize-ped%nDummys))>phasedThreshold/100.0) then
+    if (nGametesPhased/float(2*ped%pedigreeSize)>phasedThreshold/100.0) then
         do i=1,nGenotyped
             FullH(i,:,:)=PhaseHmmMaCH(i,:,:)
 
@@ -1582,7 +1590,7 @@ subroutine SetUpEquationsGenotypesHaploid(nGenotyped)
         ! Overwrite haplotypes to use phased data in case phased haplotypes from
         ! AlphaImpute are available
 
-        ! if (nGametesPhased/float(2*nAnisP)>phasedThreshold/100.0) then
+        ! if (nGametesPhased/float(2*ped%pedigreeSize)>phasedThreshold/100.0) then
 
         do i=1,nGenotyped      ! For every Individual in the Genotype file
             if (GlobalHmmPhasedInd(i,1)==.TRUE.) then
@@ -2005,7 +2013,7 @@ subroutine ExtractTemplate(HMM, forWhom, nGenotyped)
     if (HMM==RUN_HMM_ONLY) then
         call ExtractTemplateHaps(forWhom,Shuffle1,Shuffle2)
     else
-        if (nGametesPhased/float(2*(ped%pedigreeSize-ped%nDummys))>phasedThreshold/100.0) then
+        if (nGametesPhased/float(2*ped%pedigreeSize)>phasedThreshold/100.0) then
             ! If the number of phased gametes with AlphaImpute is above
             ! a threshold, then template is populated with the phased data
             call ExtractTemplateByHaps(forWhom,Shuffle1,Shuffle2)
