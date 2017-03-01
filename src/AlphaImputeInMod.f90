@@ -280,7 +280,7 @@ contains
             case("numberphasingruns")
                 this%noPhasing = 1
 
-                if (ToLower(trim(second(1))) == "phasedone") then
+                if (ToLower(trim(second(1))) == "phasedone") then  !phasedone,path,nphaseruns
                     if (size(second) /=3) then
                         goto 4051
                     endif

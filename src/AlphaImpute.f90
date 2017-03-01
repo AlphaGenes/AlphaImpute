@@ -522,10 +522,6 @@ contains
         allocate(WorkTmp(inputParams%nSnpRaw))
 
 
-        ! TODO deleted the following because am using new pedigree structure
-        ! if (inputParams%hmmoption==RUN_HMM_NGS) then
-        !     ped%pedigreeSize-ped%nDummys = ped%nGenotyped
-        ! endif
 
         write(cm,'(I7)') inputParams%nSnpRaw !for formatting
         cm = adjustl(cm)
@@ -608,8 +604,8 @@ contains
                 end if
                 allocate(ImputeGenos(0:ped%nGenotyped,inputParams%nSnp))
                 allocate(ImputePhase(0:ped%nGenotyped,inputParams%nSnp,2))
-                allocate(ProbImputeGenos(0:ped%pedigreeSize-ped%nDummys,inputParams%nSnp))
-                allocate(ProbImputePhase(0:ped%pedigreeSize-ped%nDummys,inputParams%nSnp,2))
+                allocate(ProbImputeGenos(0:ped%nGenotyped,inputParams%nSnp))
+                allocate(ProbImputePhase(0:ped%nGenotyped,inputParams%nSnp,2))
                 allocate(Maf(inputParams%nSnp))
 
                 ImputeGenos = 9
@@ -667,7 +663,7 @@ contains
                     do i=1,ped%nGenotyped
                         ! TODO: Remove this variable with the isssue is really fixed
                         ! hmmID = GlobalHmmID(i)
-                        hmmID = i
+                        hmmID = ped%genotypeMap(i)
                         write (53,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(hmmID)%originalID,ImputePhase(i,:,1)
                         write (53,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(hmmID)%originalID,ImputePhase(i,:,2)
                         write (54,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(hmmID)%originalID,ImputeGenos(i,:)
@@ -878,10 +874,7 @@ contains
                 do j=1,inputParams%nsnp
                         l=l+1
                         do i=1,ped%nGenotyped
-                            ! if (GlobalHmmID(i) > ped%pedigreeSize-ped%nDummys ) then
-                            !     GlobalHmmID(i) = 0
-                            !     ! TODO this means animal is a dummy - need to deal with this
-                            ! endif
+
                             ProbImputeGenos(i,j)   = ProbImputeGenosHmm(i,j)
                             ProbImputePhase(i,j,1) = ProbImputePhaseHmm(i,j,1)
                             ProbImputePhase(i,j,2) = ProbImputePhaseHmm(i,j,2)
@@ -1675,9 +1668,6 @@ contains
         call flush(103)
         close(103)
 
-
-        !ANDREAS AND JOHN CHANGE ON FRIDAY - POSSIBLY REMOVE
-        ! TODO: IT SHOULD BE REMOVED OR CHANGE SUBROUTINE'S NAME AT LEAST!
         if (inputParams%SexOpt==1) then                 ! Sex chromosome
             call InsteadOfGeneProb          ! Calculate Genotype Probabilities
         else                                ! Not sex chromosome
@@ -2096,7 +2086,6 @@ contains
                 ! if the proband is heterogametic, and
                 ! considering the heterogametic parent, then avoid!!
                 if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==inputParams%hetGameticStatus).and. ((k-1)==inputParams%hetGameticStatus)) TurnOn=0
-                ! TODO check value of k here
                 if (tmpParentId /= 0) then
                     if (ped%pedigree(tmpParentId)%isDummy) cycle
                     ! if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==inputParams%hetGameticStatus).and. (pedigree%(i)%parent(k-1)%gender==inputParams%hetGameticStatus)) TurnOn=0
@@ -2168,13 +2157,7 @@ contains
         open (unit=101,file="." // DASH // "Miscellaneous" // DASH // "PedigreeMistakes.txt",status="unknown")
 
 
-        do j=1,ped%nGenotyped
-            tmpID = ped%dictionary%getValue(trim(GenotypeId(j)))
-            if (tmpID /= DICT_NULL) then
-                ped%pedigree(tmpID)%genotypePosition = j
-                ped%pedigree(tmpID)%Genotyped = .true.
-            endif
-        enddo
+
 
         CountChanges=0
         nHomoParent = 0
@@ -2182,8 +2165,8 @@ contains
         do e=1,2                    ! Do whatever this does, first on males and then on females
             ParPos=e+1              ! Index in the Genotype and Pedigree matrices for sires and dams
             do i=1,ped%pedigreeSize
-                IndId=ped%pedigree(i)%genotypePosition            ! My Id
-                ParId=ped%pedigree(i)%getSireDamGenotypePositionByIndex(e+1)       ! Paternal Id,
+                IndId=ped%pedigree(i)%id           ! My Id
+                ParId=ped%pedigree(i)%getSireDamNewIDByIndex(e+1)       ! Paternal Id,
                 TurnOn=1
                 ! GenderRaw: Says whether the proband is a male or a female
                 ! If there are sex cromosome information, and
@@ -2193,7 +2176,7 @@ contains
                 if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==inputParams%hetGameticStatus).and.((ParPos-1)==inputParams%hetGameticStatus)) TurnOn=0
 
                 ! Consider the Homogametic probands and the heterogametic proband with homogametic parent
-                if ((IndId/=0).and.(ParId/=0).and.(TurnOn==1)) then
+                if ((ped%pedigree(IndId)%genotyped.and. ped%pedigree(parId)%genotyped).and.(TurnOn==1)) then
                     CountBothGeno=0
                     CountDisagree=0
                     nHomoParent = 0
