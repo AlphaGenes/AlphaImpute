@@ -71,7 +71,8 @@ contains
 
             params%CoreAndTailLength = inputParams%CoreAndTailLengths(i)
             params%itterateNumber = inputParams%PhaseNIterations
-            params%jump = 1
+            params%jump = inputParams%CoreAndTailLengths(i)
+            ! TODO check this with roberto
             params%PercGenoHaploDisagree = inputParams%GenotypeErrorPhase
             results%results(i) = phaseAndCreateLibraries(ped, params, quiet=.true.)
         enddo 
