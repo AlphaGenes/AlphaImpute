@@ -99,10 +99,15 @@ contains
 
         if (trim(inputParams%pedigreefile) /= "NoPedigree") then
             if (inputParams%SexOpt==1) then
-                ped = initPedigreeGenotypeFiles(inputParams%GenotypeFile,nSnp=inputParams%nsnp, pedfile=inputparams%pedigreefile, genderfile=inputParams%genderFile)
+                ped = PedigreeHolder(inputParams%pedigreefile,genderfile=inputParams%genderFile)
             else 
-                ped = initPedigreeGenotypeFiles(inputParams%GenotypeFile,nSnp=inputParams%nsnp, pedfile=inputparams%pedigreefile)
+                ped = PedigreeHolder(inputParams%pedigreefile)
+
             endif
+
+            call ped%addGenotypeInformationFromFile(inputParams%GenotypeFile,inputParams%nsnp)
+
+
         else
 
             ! init pedigree from genotype file

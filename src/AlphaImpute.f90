@@ -1,4 +1,20 @@
-#ifdef OS_UNIX
+#ifdef _WIN32
+
+#define STRINGIFY(x)#x
+#define TOSTRING(x) STRINGIFY(x)
+
+#DEFINE DASH "\"
+#DEFINE COPY "copy"
+#DEFINE MD "md"
+#DEFINE RMDIR "RMDIR /S /Q"
+#DEFINE RM "del"
+#DEFINE RENAME "MOVE /Y"
+#DEFINE SH "BAT"
+#DEFINE EXE ".exe"
+#DEFINE NULL " >NUL"
+
+
+#else
 
 #define STRINGIFY(x)#x
 #define TOSTRING(x) STRINGIFY(x)
@@ -13,20 +29,7 @@
 #DEFINE EXE ""
 #DEFINE NULL ""
 
-#else
 
-#define STRINGIFY(x)#x
-#define TOSTRING(x) STRINGIFY(x)
-
-#DEFINE DASH "\"
-#DEFINE COPY "copy"
-#DEFINE MD "md"
-#DEFINE RMDIR "RMDIR /S /Q"
-#DEFINE RM "del"
-#DEFINE RENAME "MOVE /Y"
-#DEFINE SH "BAT"
-#DEFINE EXE ".exe"
-#DEFINE NULL " >NUL"
 #endif
 
 !#############################################################################################################################################################################################################################
@@ -2176,54 +2179,49 @@ contains
                 if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==inputParams%hetGameticStatus).and.((ParPos-1)==inputParams%hetGameticStatus)) TurnOn=0
 
                 ! Consider the Homogametic probands and the heterogametic proband with homogametic parent
-                if ((ped%pedigree(IndId)%genotyped.and. ped%pedigree(parId)%genotyped).and.(TurnOn==1)) then
-                    CountBothGeno=0
-                    CountDisagree=0
-                    nHomoParent = 0
-                    nBothHomo = 0
+                if (parId /= 0 ) then
+                    if ((ped%pedigree(IndId)%genotyped.and. ped%pedigree(parId)%genotyped).and.(TurnOn==1)) then
+                        CountBothGeno=0
+                        CountDisagree=0
+                        nHomoParent = 0
+                        nBothHomo = 0
 
-                    ! Look for mendelenian errors
-                    do j=1,inputParams%nsnp
-                        
-                        ! TODO can probably do the following better with new genotype class
-                        if ((ped%pedigree(IndId)%individualGenotype%getGenotype(j)/=9).and.(ped%pedigree(parId)%individualGenotype%getGenotype(j)/=9)) then
-                            CountBothGeno=CountBothGeno+1
-                            if (ped%pedigree(parId)%individualGenotype%getGenotype(j)/=1) then
-                                nHomoParent = nHomoParent+1
-                                if ( ped%pedigree(IndId)%individualGenotype%getGenotype(j)/=1) then
-                                    nBothHomo =  nBothHomo + 1
-                                end if
-                            end if
-                            if ((ped%pedigree(IndId)%individualGenotype%getGenotype(j)==0).and.(ped%pedigree(parId)%individualGenotype%getGenotype(j)==2)) CountDisagree=CountDisagree+1
-                            if ((ped%pedigree(IndId)%individualGenotype%getGenotype(j)==2).and.(ped%pedigree(parId)%individualGenotype%getGenotype(j)==0)) CountDisagree=CountDisagree+1
-                        endif
-                    enddo
-                    if ((float(CountDisagree)/CountBothGeno)>DisagreeThreshold) then ! Mendelenian error
-                        write (101,'(2a20,4I,3f5.3)') &
-                            Ped%pedigree(i)%originalID, Ped%pedigree(i)%getSireDamByIndex(ParPos), CountDisagree, CountBothGeno, nHomoParent, nBothHomo, &
-                            float(CountDisagree)/CountBothGeno, float(CountDisagree)/nHomoParent, float(CountDisagree)/nBothHomo
-                        CountChanges=CountChanges+1
-                        if (parPos == 2) then
-                            ped%pedigree(i)%sirePointer => null()
-                            ped%pedigree(i)%sireID = '0'
-                        else if (parPos == 3) then
-                            ped%pedigree(i)%damPointer => null()
-                            ped%pedigree(i)%damId = '0'
-                        endif
-                    else
-                        ! Remove genotype of proband and parent
+                        ! Look for mendelenian errors
                         do j=1,inputParams%nsnp
+                            
+                            ! TODO can probably do the following better with new genotype class
                             if ((ped%pedigree(IndId)%individualGenotype%getGenotype(j)/=9).and.(ped%pedigree(parId)%individualGenotype%getGenotype(j)/=9)) then
-                                if ((ped%pedigree(IndId)%individualGenotype%getGenotype(j)==0).and.(ped%pedigree(parId)%individualGenotype%getGenotype(j)==2)) then
-                                    call ped%pedigree(IndId)%individualGenotype%setGenotype(j,9)
-                                    call ped%pedigree(parId)%individualGenotype%setGenotype(j,9)
-                                endif
-                                if ((ped%pedigree(IndId)%individualGenotype%getGenotype(j)==2).and.(ped%pedigree(parId)%individualGenotype%getGenotype(j)==0)) then
-                                    call ped%pedigree(IndId)%individualGenotype%setGenotype(j,9)
-                                    call ped%pedigree(parId)%individualGenotype%setGenotype(j,9)
-                                endif
+                                CountBothGeno=CountBothGeno+1
+                                if (ped%pedigree(parId)%individualGenotype%getGenotype(j)/=1) then
+                                    nHomoParent = nHomoParent+1
+                                    if ( ped%pedigree(IndId)%individualGenotype%getGenotype(j)/=1) then
+                                        nBothHomo =  nBothHomo + 1
+                                    end if
+                                end if
+                                if ((ped%pedigree(IndId)%individualGenotype%getGenotype(j)==0).and.(ped%pedigree(parId)%individualGenotype%getGenotype(j)==2)) CountDisagree=CountDisagree+1
+                                if ((ped%pedigree(IndId)%individualGenotype%getGenotype(j)==2).and.(ped%pedigree(parId)%individualGenotype%getGenotype(j)==0)) CountDisagree=CountDisagree+1
                             endif
                         enddo
+                        if ((float(CountDisagree)/CountBothGeno)>DisagreeThreshold) then ! Mendelenian error
+                            write (101,'(2a20,4I,3f5.3)') &
+                                Ped%pedigree(i)%originalID, Ped%pedigree(i)%getSireDamByIndex(ParPos), CountDisagree, CountBothGeno, nHomoParent, nBothHomo, &
+                                float(CountDisagree)/CountBothGeno, float(CountDisagree)/nHomoParent, float(CountDisagree)/nBothHomo
+                            CountChanges=CountChanges+1
+                        else
+                            ! Remove genotype of proband and parent
+                            do j=1,inputParams%nsnp
+                                if ((ped%pedigree(IndId)%individualGenotype%getGenotype(j)/=9).and.(ped%pedigree(parId)%individualGenotype%getGenotype(j)/=9)) then
+                                    if ((ped%pedigree(IndId)%individualGenotype%getGenotype(j)==0).and.(ped%pedigree(parId)%individualGenotype%getGenotype(j)==2)) then
+                                        call ped%pedigree(IndId)%individualGenotype%setGenotype(j,9)
+                                        call ped%pedigree(parId)%individualGenotype%setGenotype(j,9)
+                                    endif
+                                    if ((ped%pedigree(IndId)%individualGenotype%getGenotype(j)==2).and.(ped%pedigree(parId)%individualGenotype%getGenotype(j)==0)) then
+                                        call ped%pedigree(IndId)%individualGenotype%setGenotype(j,9)
+                                        call ped%pedigree(parId)%individualGenotype%setGenotype(j,9)
+                                    endif
+                                endif
+                            enddo
+                        endif
                     endif
                 endif
             enddo
@@ -2250,6 +2248,10 @@ contains
                 endif
             enddo
         endif
+
+        allocate(TempGenos(0:ped%pedigreeSize,inputParams%nsnp))
+        tempGenos(0,:) = 9
+        tempGenos(1:ped%nGenotyped,:) = ped%getGenotypesAsArray()
 
     end subroutine CheckParentage
     !#############################################################################################################################################################################################################################
