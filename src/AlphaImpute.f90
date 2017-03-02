@@ -55,6 +55,7 @@ contains
         type(AlphaPhaseResultsContainer), intent(out) :: results
         integer :: nCoreLengths,i
 
+        inputParams=> defaultInput
         nCoreLengths = size(inputParams%CoreAndTailLengths)
         allocate(results%results(nCoreLengths))
         params = AlphaPhaseParameters()
@@ -63,151 +64,23 @@ contains
         call omp_set_nested(.true.)
 
 
-        !$OMP parallel DO schedule(dynamic) &
-        !$OMP FIRSTPRIVATE(params)
+        print *, "Running AlphaPhase"
+       !! ! $OMP parallel DO schedule(dynamic) &
+       ! ! $OMP FIRSTPRIVATE(params)
         do i= 1, nCoreLengths
 
             params%CoreAndTailLength = inputParams%CoreAndTailLengths(i)
             params%itterateNumber = inputParams%PhaseNIterations
+            params%jump = 1
             params%PercGenoHaploDisagree = inputParams%GenotypeErrorPhase
             results%results(i) = phaseAndCreateLibraries(ped, params, quiet=.true.)
         enddo 
 
-        !$omp end parallel do
+        !!$omp end parallel do
 
 
     end subroutine PhasingManagementNew
     !#############################################################################################################################################################################################################################
-
-!     subroutine PhasingManagement
-!         use Global
-!         use AlphaImputeInMod
-!         implicit none
-
-!         type(AlphaImputeInput), pointer :: inputParams
-!         integer :: i,StartJob,Tmp,ProcUsed
-!         integer, allocatable, dimension(:) :: jobsDone, JobsStarted
-!         character(len=300) :: filout,infile
-!         logical :: FileExists
-
-!         inputParams=> defaultInput
-
-!         allocate(JobsDone(inputParams%nPhaseInternal))
-!         allocate(JobsStarted(inputParams%nPhaseInternal))
-!         print*, " "
-!         print*, " ","       Performing the phasing of the data"
-!         !if (PicVersion==.FALSE.) then
-! #if CLUSTER==1
-!         open (unit=107,file="TempPhase1.sh",status="unknown")
-!         write (filout,'("cd Phasing/")')
-!         write(f,'(i0)') inputParams%nPhaseInternal
-!         write (107,*) trim(filout)
-!         write(107,*) "cp ../../../SharedFiles/AlphaImpute_scripts/runSubmitPhasing.sh ."
-!         write(107,*) "cp ../../../SharedFiles/AlphaImpute_scripts/submitPhasing.sh ."
-!         write(107,'(a,a)') "./runSubmitPhasing.sh ",trim(f)
-!         print*, " "
-!         close (107)
-!         call system("chmod +x TempPhase1.sh")
-!         call system("./TempPhase1.sh")
-!         call system("rm TempPhase1.sh")
-
-!         ! Check that every process has finished before AlphaImpute goes on with imputation
-!         if (inputParams%restartOption/=OPT_RESTART_PHASING) Then
-!             JobsDone(:)=0
-!             do
-!                 do i=1,inputParams%nPhaseInternal
-!                     if ((ManagePhaseOn1Off0==0).and.(NoPhasing==1)) then
-!                         write (filout,'(a,"/Phase"i0,"/PhasingResults/Timer.txt")') trim(inputParams%PhasePath), i
-!                     else
-!                         write (filout,'("./Phasing/Phase"i0,"/PhasingResults/Timer.txt")')i
-!                     end if
-
-!                     inquire(file=trim(filout),exist=FileExists)
-!                     if ((FileExists .eqv. .true.).and.(JobsDone(i)==0)) then
-!                         print*, " ","AlphaPhase job ",i," done"
-!                         JobsDone(i)=1
-!                     endif
-!                 enddo
-!                 call sleep(SleepParameter)
-!                 if (sum(JobsDone(:))==inputParams%nPhaseInternal) exit
-!             enddo
-!         endif
-
-! #else
-!         open (unit=107,file="TempPhase1.sh",status="unknown")
-!         JobsStarted=0
-!         ProcUsed=0
-!         do i=1,inputParams%nprocessors
-!             ProcUsed=ProcUsed+1
-!             if ((inputParams%ManagePhaseOn1Off0==0).and.(inputParams%NoPhasing==1)) then
-!                 write (infile,'("cd "a,"/Phase"i0)') trim(inputParams%PhasePath), i
-!             else
-!                 write (infile,'("cd Phasing/Phase"i0)')i
-!             end if
-
-!             write (107,*) trim(infile)
-!             if (AlphaPhasePresent==0) write (107,*) "nohup sh -c ""AlphaPhase > out 2>&1"" >/dev/null &"
-!             if (AlphaPhasePresent==1) write (107,*) "nohup sh -c ""./AlphaPhase > out 2>&1"" >/dev/null &"
-!             write (107,*) "cd ../.."
-!             JobsStarted(i)=1
-!             if (ProcUsed==inputParams%nPhaseInternal) exit
-!         enddo
-!         StartJob=ProcUsed
-!         close (107)
-!         call system("chmod +x TempPhase*.sh")
-!         call system("./TempPhase1.sh")
-!         Tmp=inputParams%nprocessors
-!         JobsDone(:)=0
-
-!         if (inputParams%nProcessors<inputParams%nPhaseInternal) then
-!             print*, "ERROR - To use this Restart option you need as many processors as phasing internal jobs"
-!             stop
-!         endif
-
-!         ! Check that every process has finished before go on
-!         do
-!             do i=1,inputParams%nPhaseInternal
-!                 if ((inputParams%ManagePhaseOn1Off0==0).and.(inputParams%NoPhasing==1)) then
-!                     write (filout,'(a,"/Phase"i0,"/PhasingResults/Timer.txt")') trim(inputParams%PhasePath), i
-!                 else
-!                     write (filout,'("./Phasing/Phase"i0,"/PhasingResults/Timer.txt")')i
-!                 end if
-
-!                 inquire(file=trim(filout),exist=FileExists)
-!                 if ((FileExists .eqv. .true.).and.(JobsDone(i)==0)) then
-!                     print*, " ","AlphaPhase job ",i," done"
-!                     JobsDone(i)=1
-!                     if ((sum(JobsStarted(:))<inputParams%nPhaseInternal).and.(sum(JobsDone(:))<inputParams%nPhaseInternal)) then
-!                         Tmp=Tmp+1
-!                         JobsStarted(Tmp)=1
-!                         write (filout,'("TempPhase"i0,".sh")')Tmp
-!                         open (unit=107,file=trim(filout),status="unknown")
-!                         if ((inputParams%ManagePhaseOn1Off0==0).and.(inputParams%NoPhasing==1)) then
-!                             write (infile,'("cd "a,"/Phase"i0)') trim(inputParams%PhasePath), Tmp
-!                         else
-!                             write (infile,'("cd Phasing/Phase"i0)')Tmp
-!                         end if
-!                         write (107,*) trim(infile)
-!                         if (AlphaPhasePresent==0) write (107,*) "nohup sh -c ""AlphaPhase > out 2>&1"" >/dev/null &"
-!                         if (AlphaPhasePresent==1) write (107,*) "nohup sh -c ""./AlphaPhase > out 2>&1"" >/dev/null &"
-!                         close(107)
-!                         call system("chmod +x TempPhase*.sh")
-!                         call system("./" // filout)
-!                     endif
-!                 endif
-!             enddo
-!             call sleep(SleepParameter)
-!             if (sum(JobsDone(:))==inputParams%nPhaseInternal) exit
-!         enddo
-!         call system("rm TempPhase*.sh")
-!         !endif
-! #endif
-!         deallocate(JobsDone)
-!         deallocate(JobsStarted)
-!     end subroutine PhasingManagement
- 
-
-!#############################################################################################################################################################################################################################
 
 ! TODOGENEPROB currently working on tihs
     subroutine IterateGeneProbsNew(GenosProbs)
@@ -3271,47 +3144,48 @@ program AlphaImpute
         if (inputParams%SexOpt==0) then
             select case (inputParams%bypassgeneprob)
             
-        case (0)
+                case (0)
 
-            if (inputParams%restartOption== OPT_RESTART_ALL .or. inputParams%restartOption== OPT_RESTART_GENEPROB) Then
+                    if (inputParams%restartOption== OPT_RESTART_ALL .or. inputParams%restartOption== OPT_RESTART_GENEPROB) Then
 
-                ! TODOGeneprob run gneeprob here
+                        ! TODOGeneprob run gneeprob here
 
-                ! call ped%addGenotypeInformation(imputeGenos)
-                ! WriteOutResults is a piece of shit and makes life hard
-                
-                
-                ! call ped%addGenotypeInformation(Genos)
-                
-                call runGeneProbAlphaImpute(1, inputParams%nsnp, ped, GenosProbs, MAF)
-                call WriteProbabilities("./Results/GenotypeProbabilities.txt", GenosProbs, ped,ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
-            endif
+                        ! call ped%addGenotypeInformation(imputeGenos)
+                        ! WriteOutResults is a piece of shit and makes life hard
+                        
+                        
+                        ! call ped%addGenotypeInformation(Genos)
+                        
+                        call runGeneProbAlphaImpute(1, inputParams%nsnp, ped, GenosProbs, MAF)
+                        call WriteProbabilities("./Results/GenotypeProbabilities.txt", GenosProbs, ped,ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
+                    endif
 
-            ! deallocate(GenosProbs)
+                    ! deallocate(GenosProbs)
 
-            if (inputParams%restartOption==OPT_RESTART_GENEPROB) then
-                stop
-            endif
-            write(6,*) " "
-            write(6,*) " ","Genotype probabilities calculated"
-            !        endif
-        case (2)
-            markers = inputParams%nsnp
-            if (inputParams%outopt==1) then
-                markers = inputParams%nSnpRaw
-            end if
-            allocate(GenosProbs(ped%nDummys+ ped%pedigreeSize-ped%nDummys, markers, 2))
-            call readInGeneProbData(GenosProbs)
-            ! TODO may not need
-            call WriteProbabilities("./Results/GenotypeProbabilities.txt", GenosProbs, ped,ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
-            deallocate(GenosProbs)
-            write(6,*) "Restart option 1 stops program after genotype probabilities have been outputted"
-            stop
-        case default
-            print *, "ERROR: BYPAS GENEPROB SET INCORRECTLY"
-            stop 1
-        end select
-    endif
+                    if (inputParams%restartOption==OPT_RESTART_GENEPROB) then
+                        write(6,*) "Restart option 1 stops program after Geneprobs jobs have finished"
+                        stop
+                    endif
+                    write(6,*) " "
+                    write(6,*) " ","Genotype probabilities calculated"
+                    !        endif
+                case (2)
+                    markers = inputParams%nsnp
+                    if (inputParams%outopt==1) then
+                        markers = inputParams%nSnpRaw
+                    end if
+                    allocate(GenosProbs(ped%nDummys+ ped%pedigreeSize-ped%nDummys, markers, 2))
+                    call readInGeneProbData(GenosProbs)
+                    ! TODO may not need
+                    call WriteProbabilities("./Results/GenotypeProbabilities.txt", GenosProbs, ped,ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
+                    deallocate(GenosProbs)
+                    write(6,*) "Restart option 1 stops program after genotype probabilities have been outputted"
+                    stop
+                case default
+                    print *, "ERROR: BYPAS GENEPROB SET INCORRECTLY"
+                    stop 1
+            end select
+        endif
 
 
 

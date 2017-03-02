@@ -50,7 +50,7 @@ contains
         use alphaimputeinmod
         character(len=*), intent(IN) :: outFile
         integer, intent(IN) :: nAnims, nSnps
-        integer, intent(IN) :: Indexes(nAnims)
+        integer, intent(IN) :: Indexes(:)
         type(AlphaImputeInput), pointer :: inputParams
         ! character*(20), intent(IN) :: Ids(:)
         ! Local variables
@@ -95,7 +95,7 @@ contains
         character(len=*), intent(IN) :: outFile
         integer, intent(IN) :: nSnps,nAnims
         type(pedigreeHolder), intent(IN) :: ped
-        double precision, intent(IN) :: GenosProbs(ped%pedigreesize-ped%nDummys,nSnps,2)
+        double precision, intent(IN) :: GenosProbs(:,:,:)
 
         ! Local Variable
         integer :: i!,j,k, n0, n1, n2
@@ -119,7 +119,7 @@ contains
         character(len=*), intent(IN) :: file
         integer, intent(IN) :: nSnps,nAnims
         type(pedigreeHolder), intent(INOUT) :: ped
-        double precision, intent(out) :: GenosProbs(ped%pedigreesize-ped%nDummys,nSnps,2)
+        double precision, intent(out) :: GenosProbs(:,:,:)
         integer :: fileUnit        
         integer :: i
 
