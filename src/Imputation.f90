@@ -890,7 +890,7 @@ write(0,*) 'DEBUG: Mach Finished'
     !#############################################################################################################################################################################################################################
 
 
-    ! TODO fix this 
+    ! TODO fix this
     SUBROUTINE PhaseElimination
         ! Candidate haplotype library imputation of alleles.
         ! For each core of each round of the LRPHLI algorithm, all haplotypes that have been found and
@@ -921,14 +921,14 @@ write(0,*) 'DEBUG: Mach Finished'
         integer(kind=8), allocatable, dimension(:,:,:) :: BitPhaseHD, BitImputePhase, MissPhaseHD, MissImputePhase
         integer(kind=1),allocatable,dimension (:,:,:,:) :: Temp
         integer :: unknownFreeIterator
-        
+
         type(BitSection) :: Section
 
 
 
         integer :: numSections, curSection, curPos
 
-    
+
         inputParams => defaultInput
         ! Number of animals that have been HD phased
         nAnisHD=(count(Setter(:)==1))
@@ -941,20 +941,20 @@ write(0,*) 'DEBUG: Mach Finished'
         AnimalOn=0
         ! FOR EACH CORE OF EACH ROUND OF THE LRPHLI
         do h=1,inputParams%nPhaseInternal
-           
+
         !    TODOPhase read in phase info here if not red
             ! Get phase information
             ! call ReadPhased(nAnisHD, FileNamePhase, Ped, PhaseHD, PosHD)
 
             startSnp = 1
             EndSnp = 0
-            
+
 
             do unknownFreeIterator=1,apresults%nResults
                 do g=1,size(apResults%results(unknownFreeIterator)%cores)
                     ! Initialize Start and End snps of the cores
                     StartSnp=apResults%results(unknownFreeIterator)%startIndexes(g)
-                    EndSnp=apResults%results(unknownFreeIterator)%endIndexes(g) 
+                    EndSnp=apResults%results(unknownFreeIterator)%endIndexes(g)
 
                     Section = BitSection((EndSnp - StartSnp + 1), 64)
                     numSections = Section%numSections
@@ -1161,7 +1161,7 @@ write(0,*) 'DEBUG: Mach Finished'
         type(BitSection) :: Section
         integer :: numSections, curSection, curPos
 
-        
+
 
 
         inputParams => defaultInput
@@ -1179,7 +1179,7 @@ write(0,*) 'DEBUG: Mach Finished'
 
 
         do h=1,apResults%nResults
-           
+
 
 
             ! Get phase information
@@ -1417,7 +1417,7 @@ write(0,*) 'DEBUG: Mach Finished'
         integer(kind=8), allocatable, dimension(:,:) :: BitHapLib, MissHapLib
 
         integer :: UHLib,it
-        
+
 
         type(BitSection) :: Section
         integer :: numSections, curSection, curPos
@@ -1433,7 +1433,7 @@ write(0,*) 'DEBUG: Mach Finished'
             ! Get HIGH DENSITY phase information of this phasing step and information
             ! of core indexes
 
-            ! TODOPHASE read in here if aphase info not read in, 
+            ! TODOPHASE read in here if aphase info not read in,
             ! Get core information of number of cores and allocate start and end cores information
             do g=1,size(apResults%results(h)%cores)
                 ! Initialize Start and End snps of the cores
@@ -1471,7 +1471,7 @@ write(0,*) 'DEBUG: Mach Finished'
                     end do
                 end do
 
-               
+
 
                 ! ! TODO phase read in haplib (unformatted!!!)
                 ! open (newunit=UHLib,file=trim(FileName),status="old",form="unformatted")
@@ -1634,7 +1634,7 @@ write(0,*) 'DEBUG: Mach Finished'
                     deallocate(HapLib)
                     deallocate(BitHapLib)
                     deallocate(MissHapLib)
-                
+
                 deallocate(BitImputePhase)
                 deallocate(MissImputePhase)
             enddo
@@ -1702,7 +1702,7 @@ write(0,*) 'DEBUG: Mach Finished'
         integer,allocatable,dimension (:,:,:,:) :: PhaseHD
         integer :: middleCoreIndex
         character(len=1000) :: FileName,dumC
-        
+
 
         inputParams => defaultInput
         nAnisHD=(count(Setter(:)==1))
@@ -1713,27 +1713,19 @@ write(0,*) 'DEBUG: Mach Finished'
         AnimRecomb=0
         PosHD=0
 
-        ! Select the phasing in the middle
-        MiddlePhaseRun=(int(inputParams%nPhaseInternal)/4)
-        if (MiddlePhaseRun==0) then
-            MiddlePhaseRun=1
-        end if
-        CompJump=int(inputParams%nPhaseInternal)/2
-        if (CompJump==0) then
-            CompJump=1             ! This is only possible if no phasing info is available
-        end if
-        CompPhaseRun=MiddlePhaseRun+CompJump
-
-
         ! Get core information of number of cores and allocate start and end cores information
 
         ! Select the core in the middle
         MiddleCoreA=apresults%nResults/4
         if (MiddleCoreA==0) MiddleCoreA=1
 
+        CompJump = apresults%nResults/2
+        if (CompJump==0) CompJump=1
+        MiddleCoreShift = MiddleCoreA + CompJump
+
         ! Get HIGH DENSITY phase information of this phasing step
         ! WARNING: If I only want to phase base animals, why do I need to read the whole file?
-        
+
 
         ! TODOPhase write a toArray function for haplotypes
         ! phaseHD = apResults%results(MiddleCoreA)%getFullPhase()
@@ -1744,6 +1736,12 @@ write(0,*) 'DEBUG: Mach Finished'
         if (middleCoreIndex == 0) then
             middleCoreIndex = 1
         endif
+
+        middleCoreIndexShift = apresults%results(MiddleCoreShift)%nCores/2
+        if (middleCoreIndexShift == 0) then
+            middleCoreIndexShift = 1
+        endif
+
         StartSnp=apresults%results(middleCoreA)%startIndexes(middleCoreIndex)
         EndSnp=apresults%results(middleCoreA)%endIndexes(middleCoreIndex)
         CoreLength=(EndSnp-StartSnp)+1
@@ -1790,33 +1788,30 @@ write(0,*) 'DEBUG: Mach Finished'
 
             h=0
             do ! Repeat till all SNPs have been covered
-                if (apResults%nResults==1) exit   ! If the number of cores is 1, EXIT
+                if ((apResults%results(middleCoreIndex)%nCores==1)&
+                    .AND.(apResults%results(middleCoreIndexShift)%nCores==1)) exit ! If the number of cores is 1, EXIT
                 ! This will force the subroutine to finish
                 ! since it will be exit from both DO statements
                 h=h+1
-                middleCoreIndex = apresults%results(CompPhaseRun)%nCores/2
-                if (middleCoreIndex == 0) then
-                    middleCoreIndex = 1
-                endif
                 if (mod(h,2)/=0) then                   ! If ODD
-                    do g=1,apresults%nResults
-                        
-                        if ((apresults%results(g)%startIndexes(middleCoreIndex)<UptoSnp).and.(apresults%results(g)%endIndexes(middleCoreIndex)>UptoSnp)) then
+                    do g=1,apresults%results(MiddleCoreShift)%nCores
+
+                        if ((apresults%results(g)%startIndexes(middleCoreIndexShift)<UptoSnp).and.(apresults%results(g)%endIndexes(middleCoreIndexShift)>UptoSnp)) then
                             UpToCoreB=g
                             exit
                         endif
                     enddo
                     if (e==1) then
-                        StartSnp=apresults%results(UpToCoreB)%startIndexes(middleCoreIndex)
-                        EndSnp=apresults%results(UpToCoreB)%endIndexes(middleCoreIndex)
+                        StartSnp=apresults%results(UpToCoreB)%startIndexes(middleCoreIndexShift)
+                        EndSnp=apresults%results(UpToCoreB)%endIndexes(middleCoreIndexShift)
 
                         StPt=StartSnp
                         EndPt=UpToSnp
                         FillInSt=StartSnp
                         FillInEnd=EndSnp
                     else
-                        StartSnp=apresults%results(UpToCoreB)%endIndexes(middleCoreIndex)
-                        EndSnp=apresults%results(UpToCoreB)%startIndexes(middleCoreIndex)
+                        StartSnp=apresults%results(UpToCoreB)%endIndexes(middleCoreIndexShift)
+                        EndSnp=apresults%results(UpToCoreB)%startIndexes(middleCoreIndexShift)
                         StPt=UpToSnp
                         EndPt=StartSnp
                         FillInSt=EndSnp
@@ -1871,9 +1866,9 @@ write(0,*) 'DEBUG: Mach Finished'
                         endif
                     enddo
                     if (RL == 1) then
-                        UpToSnp=apresults%results(UpToCoreB)%startIndexes(middleCoreIndex)
+                        UpToSnp=apresults%results(UpToCoreB)%startIndexes(middleCoreIndexShift)
                     else
-                        UpToSnp=apresults%results(UpToCoreB)%endIndexes(middleCoreIndex)
+                        UpToSnp=apresults%results(UpToCoreB)%endIndexes(middleCoreIndexShift)
                     end if
                 else                                    ! if EVEN
                 ! TODO discuss with roberto on monday
@@ -1900,7 +1895,7 @@ write(0,*) 'DEBUG: Mach Finished'
                         FillInEnd=StartSnp
                     endif
                     CompLength=abs(UpToSnp-StartSnp)+1
-                    do i=1,ped%pedigreeSize- ped%nDummys 
+                    do i=1,ped%pedigreeSize- ped%nDummys
                         if ( ped%pedigree(i)%founder .and.(PosHD(i)/=0).and.(AnimRecomb(i,RL)==0)) then
                             C1=0
                             C2=0
@@ -1976,7 +1971,7 @@ write(0,*) 'DEBUG: Mach Finished'
 
 
 
-        ! TODOPHASE make this function read in new files 
+        ! TODOPHASE make this function read in new files
 
         do i=1,ped%pedigreeSize- ped%nDummys
             read (43,*) dum,dum,dum,ImputeGenos(i,:)
@@ -2287,7 +2282,7 @@ write(0,*) 'DEBUG: Mach Finished'
         !!   * IndividualMendelianInformativeness.txt
 
         use Global
-        ! TODOphase this all needs redone 
+        ! TODOphase this all needs redone
         use alphaimputeinmod
 
         implicit none
