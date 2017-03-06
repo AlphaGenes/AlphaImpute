@@ -1700,7 +1700,7 @@ write(0,*) 'DEBUG: Mach Finished'
         ! integer,allocatable,dimension (:,:) :: CoreIndexA,CoreIndexB,AnimRecomb
         integer,allocatable,dimension (:,:) :: AnimRecomb
         integer,allocatable,dimension (:,:,:,:) :: PhaseHD
-        integer :: middleCoreIndex
+        integer :: middleCoreIndex,MiddleCoreShift,middleCoreIndexShift
         character(len=1000) :: FileName,dumC
 
 
@@ -1962,7 +1962,7 @@ write(0,*) 'DEBUG: Mach Finished'
 
         integer :: i,j,dum
         integer :: tmpGenoIndexed
-        ImputeGenos=9
+        ! ImputeGenos=9
         ImputePhase=9
         inputParams => defaultInput
         ! Get information from RecodedGeneProbInput.txt which has been created in Makefiles subroutine
@@ -1972,9 +1972,9 @@ write(0,*) 'DEBUG: Mach Finished'
 
 
         ! TODOPHASE make this function read in new files
-
+        imputeGenos = ped%getGenotypesAsArray()
         do i=1,ped%pedigreeSize- ped%nDummys
-            read (43,*) dum,dum,dum,ImputeGenos(i,:)
+            ! read (43,*) dum,dum,dum,ImputeGenos(i,:)
             do j=1,inputParams%nsnp
                 if (ImputeGenos(i,j)==0) ImputePhase(i,j,:)=0
                 if (ImputeGenos(i,j)==2) ImputePhase(i,j,:)=1
@@ -1985,13 +1985,13 @@ write(0,*) 'DEBUG: Mach Finished'
         do i=1, ped%nGenotyped
             tmpGenoIndexed = ped%genotypeMap(i)
             ImputeGenos(i,:) = ped%pedigree(ped%genotypeMap(i))%individualGenotype%toIntegerArray()
-
+            do j=1,inputParams%nsnp
+                if (ImputeGenos(i,j)==0) ImputePhase(i,j,:)=0
+                if (ImputeGenos(i,j)==2) ImputePhase(i,j,:)=1 
+            enddo
         enddo
 
-        do j=1,inputParams%nsnp
-            if (ImputeGenos(i,j)==0) ImputePhase(i,j,:)=0
-            if (ImputeGenos(i,j)==2) ImputePhase(i,j,:)=1
-        enddo
+
 
     end subroutine InitialiseArrays
 
@@ -2293,28 +2293,28 @@ write(0,*) 'DEBUG: Mach Finished'
         character(len=300) :: filout
 
         inputParams => defaultInput
+
+        if (allocated(imputeGenos)) then
+            deallocate(imputeGenos)
+            allocate(imputeGenos(0:ped%pedigreeSize- ped%nDummys,inputParams%nSnp ))
+        endif
+        
         if (inputParams%BypassGeneProb==0) then
             ! Get information from GeneProb
-            do h=1,inputParams%nProcessors
-#ifdef OS_UNIX
-                write (filout,'("./GeneProb/GeneProb"i0,"/GeneProbs.txt")')h            !here
-#else
-                write (filout,'(".\GeneProb\GeneProb"i0,"\GeneProbs.txt")')h            !here
-#endif
-                open (unit=110,file=trim(filout),status="unknown")
-                StSnp=GpIndex(h,1)
-                EnSnp=GpIndex(h,2)
+                if (.not. allocated(GenosProbs)) then
+                    ! read it in from file
+                endif
+
+                StSnp=1
+                EnSnp=inputParams%nSnp
                 do i=1,ped%pedigreeSize- ped%nDummys
-                    do j=1,4
-                        read (110,*) dum,GeneProbWork(StSnp:EnSnp,j)
-                    enddo
-                    PatAlleleProb(StSnp:EnSnp,1)=GeneProbWork(StSnp:EnSnp,1)+GeneProbWork(StSnp:EnSnp,2)
-                    PatAlleleProb(StSnp:EnSnp,2)=GeneProbWork(StSnp:EnSnp,3)+GeneProbWork(StSnp:EnSnp,4)
-                    MatAlleleProb(StSnp:EnSnp,1)=GeneProbWork(StSnp:EnSnp,1)+GeneProbWork(StSnp:EnSnp,3)
-                    MatAlleleProb(StSnp:EnSnp,2)=GeneProbWork(StSnp:EnSnp,2)+GeneProbWork(StSnp:EnSnp,4)
+                    PatAlleleProb(StSnp:EnSnp,1)=GenosProbs(i,StSnp:EnSnp,1)+GenosProbs(i,StSnp:EnSnp,2)
+                    PatAlleleProb(StSnp:EnSnp,2)=GenosProbs(i,StSnp:EnSnp,3)+GenosProbs(i,StSnp:EnSnp,4)
+                    MatAlleleProb(StSnp:EnSnp,1)=GenosProbs(i,StSnp:EnSnp,1)+GenosProbs(i,StSnp:EnSnp,3)
+                    MatAlleleProb(StSnp:EnSnp,2)=GenosProbs(i,StSnp:EnSnp,2)+GenosProbs(i,StSnp:EnSnp,4)
 
                     ! Probability of heterozygosity
-                    HetProb(StSnp:EnSnp)=GeneProbWork(StSnp:EnSnp,2)+GeneProbWork(StSnp:EnSnp,3)
+                    HetProb(StSnp:EnSnp)=GenosProbs(i,StSnp:EnSnp,2)+GenosProbs(i,StSnp:EnSnp,3)
 
                     do j=StSnp,EnSnp
                         if (PatAlleleProb(j,1)>=GeneProbThresh) ImputePhase(i,j,1)=0
@@ -2324,8 +2324,6 @@ write(0,*) 'DEBUG: Mach Finished'
                         if (HetProb(j)>=GeneProbThresh) ImputeGenos(i,j)=1
                     enddo
                 enddo
-                close(110)
-            enddo
         endif
 
         ImputePhase(0,:,:)=9

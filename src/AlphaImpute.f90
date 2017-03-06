@@ -387,7 +387,7 @@ contains
         integer :: i,j,l
         integer,allocatable,dimension(:):: WorkTmp
         double precision :: ImputationQuality(ped%pedigreeSize-ped%nDummys,6)
-        double precision, allocatable :: GenosProbs(:,:,:)
+        
         type(AlphaImputeInput), pointer :: inputParams
         character(len=300) :: TmpId
         integer :: n0, n1, n2
@@ -1794,7 +1794,7 @@ contains
         end if
 
         open (unit=112,file=FileName,status="unknown")
-        do j=1,inputParams%nSnpRaw
+        do j=1,inputParams%nSnp
             write (112,*) j,SnpSummary(j),SnpIncluded(j)        !'(i,1x,f5.3,1x,i)'
         enddo
         close(112)
@@ -2984,7 +2984,6 @@ program AlphaImpute
     implicit none
 
     integer :: markers
-    double precision, allocatable :: GenosProbs(:,:,:)
     character(len=4096) :: cmd, SpecFile
 
     inputParams => defaultInput

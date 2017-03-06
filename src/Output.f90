@@ -96,19 +96,22 @@ contains
         integer, intent(IN) :: nSnps,nAnims
         type(pedigreeHolder), intent(IN) :: ped
         double precision, intent(IN) :: GenosProbs(:,:,:)
-
+        double precision, allocatable :: GenosProbsTmp(:,:,:)
         ! Local Variable
         integer :: i!,j,k, n0, n1, n2
         ! real, allocatable :: Probs0(:), Probs1(:)
 
+        allocate(GenosProbsTmp(nAnims,nsnps,2))
+        GenosProbsTmp(:,:,1) = GenosProbs(:,:, 1)
+        GenosProbsTmp(:,:,2) =  GenosProbs(:,:,2) +  GenosProbs(:,:,3)
         open (unit=55,file=outFile,status="unknown")
 
         ! allocate(Probs0(nSnps))
         ! allocate(Probs1(nSnps))
 
         do i=1,nAnims
-            write (55,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%Pedigree(i)%originalID,GenosProbs(i,:,1)
-            write (55,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%Pedigree(i)%originalID,GenosProbs(i,:,2)
+            write (55,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%Pedigree(i)%originalID,GenosProbsTmp(i,:,1)
+            write (55,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%Pedigree(i)%originalID,GenosProbsTmp(i,:,2)
             ! enddo
         enddo
     end subroutine WriteProbabilitiesGeneProb
@@ -142,36 +145,31 @@ contains
         ! The subroutine outputs the genotype probabilities of the homozygous genotype of the reference allele,
         ! G00, and the heterozygous genotype, Gh = G10 + G01. The homozygous genotype for the alternative allele can be inferred
         ! from the these two as G11 = 1 - G00 - Gh
-        use Global
+        use Global, only : ped
         use alphaimputeinmod
+        use constantModule
         implicit none
 
-        !double precision, dimension(:,:,:), intent(INOUT) :: GenosProbs(nAnis,markers,2)
         double precision, dimension(:,:,:), intent(INOUT) :: GenosProbs
         type(AlphaImputeInput), pointer :: inputParams
         ! Local variables
-        integer :: i,j,dum,StSnp,EnSnp
-        double precision, allocatable :: GeneProbWork(:,:)
+        integer :: i,j,fileUnit,a, dum
         character(len=300) :: inFile
 
         inputParams => defaultInput
 
-
-            write (inFile,'("GeneProb/GeneProb"i0,"/GeneProbs.txt")')
             inFile = "." // DASH // " Results" // DASH // "GenotypeProbabilities.txt"
-            open (unit=110,file=trim(infile),status="unknown")
-            allocate(GeneProbWork(1-inputParams%nsnp+1,4))
-            GeneProbWork=9
-            do i=1,inputParams%nsnp                                           ! The number of lines of GeneProbs.txt files is = nAnisP x 4
-                do j=1,4                                            ! where 4 stands for the two paternal and the two maternal haplotypes
-                    read (110,*) dum,GeneProbWork(:,j)
-                enddo
+            open (newunit=fileUnit,file=trim(infile),status="unknown")
+            GenosProbs = MISSINGGENOTYPECODE
+            do a=1, ped%pedigreeSize-ped%nDummys
+                do i=1,inputParams%nsnp                                           ! The number of lines of GeneProbs.txt files is = nAnisP x 4
+                    do j=1,4                                            ! where 4 stands for the two paternal and the two maternal haplotypes
+                        read (110,*) dum,GenosProbs(a,:,j)
+                    enddo
 
-                GenosProbs(i,:,1) = GeneProbWork(:,1)
-                GenosProbs(i,:,2) = GeneProbWork(:,2) + GeneProbWork(:,3)
+                enddo
             enddo
-            deallocate(GeneProbWork)
-            close(110)
+            close(fileUnit)
 
     end subroutine readInGeneProbData
 

@@ -64,5 +64,6 @@ module Global
     integer :: NRMmem, shell, shellmax, shellWarning
 
     type(AlphaPhaseResultsContainer) :: apResults
+    double precision, allocatable :: GenosProbs(:,:,:) !< output of geneprob
 end module Global
 
