@@ -1798,6 +1798,7 @@ write(0,*) 'DEBUG: Mach Finished'
 
                         if ((apresults%results(MiddleResultShift)%startIndexes(middleCoreIndexShift)<UptoSnp)&
                                 .AND.(apresults%results(MiddleResultShift)%endIndexes(middleCoreIndexShift)>UptoSnp)) then
+                                
                             UpToCoreB=g
                             exit
                         endif
@@ -1882,15 +1883,15 @@ write(0,*) 'DEBUG: Mach Finished'
                     enddo
 
                     if (e==1) then
-                        startSnp = apresults%results(UpToCoreA)%startIndexes(middleCoreIndex)
-                        endSnp = apresults%results(UpToCoreA)%endIndexes(middleCoreIndex)
+                        startSnp = apresults%results(MiddleResult)%startIndexes(UpToCoreA)
+                        endSnp = apresults%results(MiddleResult)%endIndexes(UpToCoreA)
                         StPt=StartSnp
                         EndPt=UpToSnp
                         FillInSt=StartSnp
                         FillInEnd=EndSnp
                     else
-                        startSnp = apresults%results(UpToCoreA)%endIndexes(middleCoreIndex)
-                        endSnp = apresults%results(UpToCoreA)%startIndexes(middleCoreIndex)
+                        startSnp = apresults%results(MiddleResult)%endIndexes(UpToCoreA)
+                        endSnp = apresults%results(MiddleResult)%startIndexes(UpToCoreA)
                         StPt=UpToSnp
                         EndPt=StartSnp
                         FillInSt=EndSnp
@@ -1933,10 +1934,10 @@ write(0,*) 'DEBUG: Mach Finished'
                     enddo
 
                     if (RL == 1) then
-                        UpToSnp= apresults%results(UpToCoreA)%startIndexes(middleCoreIndex)
+                        UpToSnp= apresults%results(MiddleResult)%startIndexes(UpToCoreA)
 
                     else
-                        UpToSnp= apresults%results(UpToCoreA)%endIndexes(middleCoreIndex)
+                        UpToSnp= apresults%results(MiddleResult)%endIndexes(UpToCoreA)
                     end if
                 endif
 
