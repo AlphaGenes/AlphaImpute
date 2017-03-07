@@ -1796,24 +1796,24 @@ write(0,*) 'DEBUG: Mach Finished'
                 if (mod(h,2)/=0) then                   ! If ODD
                     do g=1,apresults%results(MiddleResultShift)%nCores
 
-                        if ((apresults%results(MiddleResultShift)%startIndexes(middleCoreIndexShift)<UptoSnp)&
-                                .AND.(apresults%results(MiddleResultShift)%endIndexes(middleCoreIndexShift)>UptoSnp)) then
-                                
+                        if ((apresults%results(MiddleResultShift)%startIndexes(g)<UptoSnp)&
+                                .AND.(apresults%results(MiddleResultShift)%endIndexes(g)>UptoSnp)) then
+
                             UpToCoreB=g
                             exit
                         endif
                     enddo
                     if (e==1) then
-                        StartSnp=apresults%results(UpToCoreB)%startIndexes(middleCoreIndexShift)
-                        EndSnp=apresults%results(UpToCoreB)%endIndexes(middleCoreIndexShift)
+                        StartSnp=apresults%results(MiddleResultShift)%startIndexes(UpToCoreB)
+                        EndSnp=apresults%results(MiddleResultShift)%endIndexes(UpToCoreB)
 
                         StPt=StartSnp
                         EndPt=UpToSnp
                         FillInSt=StartSnp
                         FillInEnd=EndSnp
                     else
-                        StartSnp=apresults%results(UpToCoreB)%endIndexes(middleCoreIndexShift)
-                        EndSnp=apresults%results(UpToCoreB)%startIndexes(middleCoreIndexShift)
+                        StartSnp=apresults%results(MiddleResultShift)%endIndexes(UpToCoreB)
+                        EndSnp=apresults%results(MiddleResultShift)%startIndexes(UpToCoreB)
                         StPt=UpToSnp
                         EndPt=StartSnp
                         FillInSt=EndSnp
@@ -1868,15 +1868,15 @@ write(0,*) 'DEBUG: Mach Finished'
                         endif
                     enddo
                     if (RL == 1) then
-                        UpToSnp=apresults%results(UpToCoreB)%startIndexes(middleCoreIndexShift)
+                        UpToSnp=apresults%results(MiddleResultShift)%startIndexes(UpToCoreB)
                     else
-                        UpToSnp=apresults%results(UpToCoreB)%endIndexes(middleCoreIndexShift)
+                        UpToSnp=apresults%results(MiddleResultShift)%endIndexes(UpToCoreB)
                     end if
                 else                                    ! if EVEN
                 ! TODO discuss with roberto on monday
                     do g=1,apresults%results(MiddleResult)%nCores
-                        if ((apresults%results(MiddleResult)%startIndexes(middleCoreIndex)<UptoSnp)&
-                                .AND.(apresults%results(MiddleResult)%endIndexes(middleCoreIndex))>UptoSnp) then
+                        if ((apresults%results(MiddleResult)%startIndexes(g)<UptoSnp)&
+                                .AND.(apresults%results(MiddleResult)%endIndexes(g))>UptoSnp) then
                             UpToCoreA=g
                             exit
                         endif
