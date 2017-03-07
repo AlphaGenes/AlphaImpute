@@ -1001,7 +1001,15 @@ write(0,*) 'DEBUG: Mach Finished'
                                 curSection = curSection + 1
                             end if
                         end do
+                    
+                    
+                  
+
                     end do
+                    deallocate(BitPhaseHD)
+                    deallocate(BitImputePhase)
+                    deallocate(MissPhaseHD)
+                    deallocate(MissImputePhase)
                 enddo
 
                 !$OMP PARALLEL DO &
