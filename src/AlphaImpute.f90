@@ -59,7 +59,7 @@ contains
         nCoreLengths = size(inputParams%CoreAndTailLengths)
         results%nResults = nCoreLengths
         allocate(results%results(nCoreLengths))
-        params = AlphaPhaseParameters()
+        params = newParameters()
 
     
         call omp_set_nested(.true.)
