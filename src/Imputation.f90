@@ -1794,10 +1794,10 @@ write(0,*) 'DEBUG: Mach Finished'
                 ! since it will be exit from both DO statements
                 h=h+1
                 if (mod(h,2)/=0) then                   ! If ODD
-                    do g=1,apresults%results(MiddleCoreShift)%nCores
+                    do g=1,apresults%results(MiddleResultShift)%nCores
 
-                        if ((apresults%results(MiddleCoreShift)%startIndexes(middleCoreIndexShift)<UptoSnp)&
-                                .AND.(apresults%results(MiddleCoreShift)%endIndexes(middleCoreIndexShift)>UptoSnp)) then
+                        if ((apresults%results(MiddleResultShift)%startIndexes(middleCoreIndexShift)<UptoSnp)&
+                                .AND.(apresults%results(MiddleResultShift)%endIndexes(middleCoreIndexShift)>UptoSnp)) then
                             UpToCoreB=g
                             exit
                         endif
