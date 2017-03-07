@@ -1693,14 +1693,14 @@ write(0,*) 'DEBUG: Mach Finished'
 
         implicit none
 
-        integer :: e,h,i,g,j,MiddlePhaseRun,MiddleCoreA,CoreLength,nAnisHD,CountDisagree
+        integer :: e,h,i,g,j,MiddlePhaseRun,MiddleResult,MiddleResultShift,CoreLength,nAnisHD,CountDisagree
         integer :: CompPhaseRun,CompJump,StartSnp,EndSnp,UptoRightSnp,UptoLeftSnp,UpToCoreA,UpToCoreB,C1,C2,C3,C4,Recmb,CompLength,RL
         integer :: UpToSnp,StPt,EndPt,FillInSt,FillInEnd
         integer,allocatable,dimension (:) :: PosHD
         ! integer,allocatable,dimension (:,:) :: CoreIndexA,CoreIndexB,AnimRecomb
         integer,allocatable,dimension (:,:) :: AnimRecomb
         integer,allocatable,dimension (:,:,:,:) :: PhaseHD
-        integer :: middleCoreIndex,MiddleCoreShift,middleCoreIndexShift
+        integer :: middleCoreIndex,middleCoreIndexShift
         character(len=1000) :: FileName,dumC
 
 
@@ -1716,34 +1716,34 @@ write(0,*) 'DEBUG: Mach Finished'
         ! Get core information of number of cores and allocate start and end cores information
 
         ! Select the core in the middle
-        MiddleCoreA=apresults%nResults/4
-        if (MiddleCoreA==0) MiddleCoreA=1
+        MiddleResult=apresults%nResults/4
+        if (MiddleResult==0) MiddleResult=1
 
         CompJump = apresults%nResults/2
         if (CompJump==0) CompJump=1
-        MiddleCoreShift = MiddleCoreA + CompJump
+        MiddleResultShift = MiddleResult + CompJump
 
         ! Get HIGH DENSITY phase information of this phasing step
         ! WARNING: If I only want to phase base animals, why do I need to read the whole file?
 
 
         ! TODOPhase write a toArray function for haplotypes
-        ! phaseHD = apResults%results(MiddleCoreA)%getFullPhase()
+        ! phaseHD = apResults%results(MiddleResult)%getFullPhase()
 
         ! Impute HD phase of the middle core of the middle phasing step
         ! WARNING: Why to impute phase information only for this case?
-        middleCoreIndex = apresults%results(MiddleCoreA)%nCores/2
+        middleCoreIndex = apresults%results(MiddleResult)%nCores/2
         if (middleCoreIndex == 0) then
             middleCoreIndex = 1
         endif
 
-        middleCoreIndexShift = apresults%results(MiddleCoreShift)%nCores/2
+        middleCoreIndexShift = apresults%results(MiddleResultShift)%nCores/2
         if (middleCoreIndexShift == 0) then
             middleCoreIndexShift = 1
         endif
 
-        StartSnp=apresults%results(middleCoreA)%startIndexes(middleCoreIndex)
-        EndSnp=apresults%results(middleCoreA)%endIndexes(middleCoreIndex)
+        StartSnp=apresults%results(MiddleResult)%startIndexes(middleCoreIndex)
+        EndSnp=apresults%results(MiddleResult)%endIndexes(middleCoreIndex)
         CoreLength=(EndSnp-StartSnp)+1
         do i=1,ped%pedigreeSize- ped%nDummys
             ! If I have no parents and if I am somebody
@@ -1767,7 +1767,7 @@ write(0,*) 'DEBUG: Mach Finished'
 
         UpToRightSnp=EndSnp
         UpToLeftSnp=StartSnp
-        UpToCoreA=MiddleCoreA
+        UpToCoreA=middleCoreIndex
 
         ! Go through SNPs from left to right (1) and from right to left (2) from the MiddleCore
         ! The internal phasing are calculated both with and without shift what allows to have
@@ -1788,15 +1788,16 @@ write(0,*) 'DEBUG: Mach Finished'
 
             h=0
             do ! Repeat till all SNPs have been covered
-                if ((apResults%results(middleCoreIndex)%nCores==1)&
-                    .AND.(apResults%results(middleCoreIndexShift)%nCores==1)) exit ! If the number of cores is 1, EXIT
+                if ((apResults%results(MiddleResult)%nCores==1)&
+                    .AND.(apResults%results(MiddleResultShift)%nCores==1)) exit ! If the number of cores is 1, EXIT
                 ! This will force the subroutine to finish
                 ! since it will be exit from both DO statements
                 h=h+1
                 if (mod(h,2)/=0) then                   ! If ODD
                     do g=1,apresults%results(MiddleCoreShift)%nCores
 
-                        if ((apresults%results(g)%startIndexes(middleCoreIndexShift)<UptoSnp).and.(apresults%results(g)%endIndexes(middleCoreIndexShift)>UptoSnp)) then
+                        if ((apresults%results(MiddleCoreShift)%startIndexes(middleCoreIndexShift)<UptoSnp)&
+                                .AND.(apresults%results(MiddleCoreShift)%endIndexes(middleCoreIndexShift)>UptoSnp)) then
                             UpToCoreB=g
                             exit
                         endif
@@ -1828,7 +1829,7 @@ write(0,*) 'DEBUG: Mach Finished'
                             C4=0
                             Recmb=1
                             do j=StPt,EndPt
-                                ! NOTE: ImputePhase array is a HD phase data because the SNPs are within the MiddleCoreA core
+                                ! NOTE: ImputePhase array is a HD phase data because the SNPs are within the MiddleResult core
                                 if (PhaseHD(PosHD(i),j,1,2)==ImputePhase(i,j,1)) C1=C1+1
                                 if (PhaseHD(PosHD(i),j,1,2)==ImputePhase(i,j,2)) C2=C2+1
                                 if (PhaseHD(PosHD(i),j,2,2)==ImputePhase(i,j,1)) C3=C3+1
@@ -1872,8 +1873,9 @@ write(0,*) 'DEBUG: Mach Finished'
                     end if
                 else                                    ! if EVEN
                 ! TODO discuss with roberto on monday
-                    do g=1,apresults%nResults
-                        if ((apresults%results(g)%startIndexes(middleCoreIndex)<UptoSnp).and.(apresults%results(g)%endIndexes(middleCoreIndex))>UptoSnp) then
+                    do g=1,apresults%results(MiddleResult)%nCores
+                        if ((apresults%results(MiddleResult)%startIndexes(middleCoreIndex)<UptoSnp)&
+                                .AND.(apresults%results(MiddleResult)%endIndexes(middleCoreIndex))>UptoSnp) then
                             UpToCoreA=g
                             exit
                         endif
@@ -1987,7 +1989,7 @@ write(0,*) 'DEBUG: Mach Finished'
             ImputeGenos(i,:) = ped%pedigree(ped%genotypeMap(i))%individualGenotype%toIntegerArray()
             do j=1,inputParams%nsnp
                 if (ImputeGenos(i,j)==0) ImputePhase(i,j,:)=0
-                if (ImputeGenos(i,j)==2) ImputePhase(i,j,:)=1 
+                if (ImputeGenos(i,j)==2) ImputePhase(i,j,:)=1
             enddo
         enddo
 
@@ -2298,7 +2300,7 @@ write(0,*) 'DEBUG: Mach Finished'
             deallocate(imputeGenos)
             allocate(imputeGenos(0:ped%pedigreeSize- ped%nDummys,inputParams%nSnp ))
         endif
-        
+
         if (inputParams%BypassGeneProb==0) then
             ! Get information from GeneProb
                 if (.not. allocated(GenosProbs)) then
