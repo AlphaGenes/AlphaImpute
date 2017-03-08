@@ -58,11 +58,14 @@ contains
         inputParams=> defaultInput
         nCoreLengths = size(inputParams%CoreAndTailLengths)
         results%nResults = nCoreLengths
+                ! todo we need to handle shifted and non shifted outputs!
         allocate(results%results(nCoreLengths))
         params = newParameters()
 
     
         call omp_set_nested(.true.)
+
+
 
 
         print *, "Running AlphaPhase"
@@ -75,7 +78,6 @@ contains
             params%jump = inputParams%CoreAndTailLengths(i)
             params%numsurrdisagree = 10
             params%useSurrsN = 10
-            ! TODO check this with roberto
             params%PercGenoHaploDisagree = inputParams%GenotypeErrorPhase
             results%results(i) = phaseAndCreateLibraries(ped, params, quiet=.true.)
         enddo 
@@ -87,7 +89,6 @@ contains
     end subroutine PhasingManagementNew
     !#############################################################################################################################################################################################################################
 
-! TODOGENEPROB currently working on tihs
     subroutine IterateGeneProbsNew(GenosProbs)
 
         use iso_fortran_env
@@ -1804,6 +1805,15 @@ contains
         print*, " ",CountHD," indiviudals passed to AlphaPhase"
         print*, " ",inputParams%nsnp," snp remain after editing"
 
+        ! TODO clean this whole subroutine
+        
+
+        ! we add animals to hd list here
+        do i=1, ped%pedigreeSize - ped%nDummys
+            if (setter(i) == 1) then
+                call ped%setAnimalAsHD(i)
+            endif
+        enddo 
         deallocate(SnpSummary)
         deallocate(TempFreq)
         deallocate(Counter)
@@ -3062,7 +3072,6 @@ program AlphaImpute
 
                     if (inputParams%restartOption== OPT_RESTART_ALL .or. inputParams%restartOption== OPT_RESTART_GENEPROB) Then
 
-                        ! TODOGeneprob run gneeprob here
 
                         ! call ped%addGenotypeInformation(imputeGenos)
                         ! WriteOutResults is a piece of shit and makes life hard

@@ -1735,9 +1735,8 @@ write(0,*) 'DEBUG: Mach Finished'
         ! WARNING: If I only want to phase base animals, why do I need to read the whole file?
 
 
-        ! TODOPhase write a toArray function for haplotypes
-        ! phaseHD = apResults%results(MiddleResult)%getFullPhase()
-
+        phaseHD(:,:,:,1) = apResults%results(MiddleResult)%getFullPhaseIntArray()
+        phaseHD(:,:,:,2) = apResults%results(MiddleResultShift)%getFullPhaseIntArray()
         ! Impute HD phase of the middle core of the middle phasing step
         ! WARNING: Why to impute phase information only for this case?
         middleCoreIndex = apresults%results(MiddleResult)%nCores/2

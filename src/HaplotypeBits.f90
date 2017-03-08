@@ -484,7 +484,6 @@ CONTAINS
 
         c = 0
         do i = 1, this%numSections
-            ! TODO DW check that this subtracting is correct
             c = c + POPCNT(NOT(IOR(miss1(i),miss2(i)))) - this%overhang
         end do
 
