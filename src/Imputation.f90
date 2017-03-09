@@ -105,15 +105,15 @@ write(0,*) 'DEBUG: Mach Finished'
         else
 
             if (inputParams%RestartOption==4) then
-                allocate(ImputeGenos(0:ped%pedigreeSize,inputParams%nsnp))
-                allocate(ImputePhase(0:ped%pedigreeSize,inputParams%nsnp,2))
+                allocate(ImputeGenos(0:ped%pedigreeSize,inputParams%nsnpraw))
+                allocate(ImputePhase(0:ped%pedigreeSize,inputParams%nsnpraw,2))
             else
                 if (inputParams%sexopt==0) then
                     ! Impute initial genotypes from calculated genotype probabilities
                     if (inputParams%BypassGeneProb==0) then
-                        allocate(ImputeGenos(0:ped%pedigreeSize,inputParams%nsnp))
-                        allocate(ImputePhase(0:ped%pedigreeSize,inputParams%nsnp,2))
-                        allocate(GlobalWorkPhase(0:ped%pedigreeSize,inputParams%nsnp,2))
+                        allocate(ImputeGenos(0:ped%pedigreeSize,inputParams%nsnpraw))
+                        allocate(ImputePhase(0:ped%pedigreeSize,inputParams%nsnpraw,2))
+                        allocate(GlobalWorkPhase(0:ped%pedigreeSize,inputParams%nsnpraw,2))
 
                         ! TODO get geneprobs back in
                         ! call ReReadGeneProbs
@@ -933,88 +933,82 @@ write(0,*) 'DEBUG: Mach Finished'
         ! Number of animals that have been HD phased
         nAnisHD=(count(Setter(:)==1))
 
-        allocate(Temp(ped%pedigreeSize,inputParams%nsnp,2,2))
-        allocate(PhaseHD(nAnisHD,inputParams%nsnp,2))
+        allocate(Temp(ped%pedigreeSize,inputParams%nsnpraw,2,2))
+        allocate(PhaseHD(nAnisHD,inputParams%nsnpraw,2))
         allocate(PosHD(ped%pedigreeSize))
         PosHD=0
         Temp=0
         AnimalOn=0
         ! FOR EACH CORE OF EACH ROUND OF THE LRPHLI
-        do h=1,inputParams%nPhaseInternal
-
-        !    TODOPhase read in phase info here if not red
+        do unknownFreeIterator=1,apresults%nResults
+            !    TODOPhase read in phase info here if not red
             ! Get phase information
             ! call ReadPhased(nAnisHD, FileNamePhase, Ped, PhaseHD, PosHD)
 
             startSnp = 1
             EndSnp = 0
 
+            phaseHd = apResults%results(unknownFreeIterator)%getFullPhaseIntArray()
+            do g=1,size(apResults%results(unknownFreeIterator)%cores)
+                ! Initialize Start and End snps of the cores
+                StartSnp=apResults%results(unknownFreeIterator)%startIndexes(g)
+                EndSnp=apResults%results(unknownFreeIterator)%endIndexes(g)
 
-            do unknownFreeIterator=1,apresults%nResults
-                do g=1,size(apResults%results(unknownFreeIterator)%cores)
-                    ! Initialize Start and End snps of the cores
-                    StartSnp=apResults%results(unknownFreeIterator)%startIndexes(g)
-                    EndSnp=apResults%results(unknownFreeIterator)%endIndexes(g)
+                Section = BitSection((EndSnp - StartSnp + 1), 64)
+                numSections = Section%numSections
 
-                    Section = BitSection((EndSnp - StartSnp + 1), 64)
-                    numSections = Section%numSections
+                allocate(BitPhaseHD(nAnisHD,numSections,2))
+                allocate(BitImputePhase(0:ped%pedigreeSize,numSections,2))
+                allocate(MissPhaseHD(nAnisHD,numSections,2))
+                allocate(MissImputePhase(0:ped%pedigreeSize,numSections,2))
 
-                    allocate(BitPhaseHD(nAnisHD,numSections,2))
-                    allocate(BitImputePhase(0:ped%pedigreeSize,numSections,2))
-                    allocate(MissPhaseHD(nAnisHD,numSections,2))
-                    allocate(MissImputePhase(0:ped%pedigreeSize,numSections,2))
+                BitPhaseHD = 0
+                MissPhaseHD = 0
+                BitImputePhase = 0
+                MissImputePhase = 0
 
-                    BitPhaseHD = 0
-                    MissPhaseHD = 0
-                    BitImputePhase = 0
-                    MissImputePhase = 0
+                do e=1,2
+                    curSection = 1
+                    curPos = 1
 
-                    do e=1,2
-                        curSection = 1
-                        curPos = 1
+                    do j = StartSnp, EndSnp
 
-                        do j = StartSnp, EndSnp
-
-                            do i = 1, nAnisHD
-                                select case (PhaseHD(i, j, e))
-                                case (1)
-                                    ! set that phase information exists
-                                    BitPhaseHD(i, curSection, e) = ibset(BitPhaseHD(i, curSection, e), curPos)
-                                case (9)
-                                    ! set that missing iformation does not
-                                    MissPhaseHD(i, curSection, e) = ibset(MissPhaseHD(i, curSection, e), curPos)
-                                end select
-                            end do
-
-                            do i = 1, ped%pedigreeSize- ped%nDummys
-                                select case (ImputePhase(i, j, e))
-                                case (1)
-                                    BitImputePhase(i, curSection, e) = ibset(BitImputePhase(i, curSection, e), curPos)
-                                case (9)
-                                    MissImputePhase(i, curSection, e) = ibset(MissImputePhase(i, curSection, e), curPos)
-                                end select
-                            end do
-
-                            curPos = curPos + 1
-                            if (curPos == 65) then
-                                curPos = 1
-                                curSection = curSection + 1
-                            end if
+                        do i = 1, nAnisHD
+                            select case (PhaseHD(i, j, e))
+                            case (1)
+                                ! set that phase information exists
+                                BitPhaseHD(i, curSection, e) = ibset(BitPhaseHD(i, curSection, e), curPos)
+                            case (9)
+                                ! set that missing iformation does not
+                                MissPhaseHD(i, curSection, e) = ibset(MissPhaseHD(i, curSection, e), curPos)
+                            end select
                         end do
-                    
-                    
-                  
 
+                        do i = 1, ped%pedigreeSize- ped%nDummys
+                            select case (ImputePhase(i, j, e))
+                            case (1)
+                                BitImputePhase(i, curSection, e) = ibset(BitImputePhase(i, curSection, e), curPos)
+                            case (9)
+                                MissImputePhase(i, curSection, e) = ibset(MissImputePhase(i, curSection, e), curPos)
+                            end select
+                        end do
+
+                        curPos = curPos + 1
+                        if (curPos == 65) then
+                            curPos = 1
+                            curSection = curSection + 1
+                        end if
                     end do
-                    deallocate(BitPhaseHD)
-                    deallocate(BitImputePhase)
-                    deallocate(MissPhaseHD)
-                    deallocate(MissImputePhase)
-                enddo
+
+
+
+
+                end do
+
 
                 !$OMP PARALLEL DO &
                 !$OMP DEFAULT(SHARED) &
-                !$OMP PRIVATE(i,j,e,PosHDInd,Gam1,Gam2,GamA,GamB)
+                !$OMP FIRSTPRIVATE(i,j,e,PosHDInd,Gam1,Gam2,GamA,GamB)
                 do i=1,ped%pedigreeSize- ped%nDummys
                     ! Look for possible gametes through the Haplotype
                     ! Library constructed during the phasing step
@@ -1029,7 +1023,7 @@ write(0,*) 'DEBUG: Mach Finished'
                             Gam1=0
                             Gam2=0
                             do e=1,2
-                                GamA=1
+                                GamA=18
                                 GamB=1
 
                                 if (.NOT. Section%compareHaplotypeAllowMissing(BitPhaseHD(PosHDInd,:,1), BitImputePhase(i,:,e), &
@@ -1175,8 +1169,8 @@ write(0,*) 'DEBUG: Mach Finished'
         inputParams => defaultInput
         nAnisHD=(count(Setter(:)==1))
 
-        allocate(Temp(ped%pedigreeSize,inputParams%nsnp,2,2))
-        allocate(PhaseHD(nAnisHD,inputParams%nsnp,2))
+        allocate(Temp(ped%pedigreeSize,inputParams%nsnpraw,2,2))
+        allocate(PhaseHD(nAnisHD,inputParams%nsnpraw,2))
         allocate(PosHD(ped%pedigreeSize))
         PosHD=0
         Temp=0
@@ -1495,157 +1489,158 @@ write(0,*) 'DEBUG: Mach Finished'
                 !     enddo
                 !     close (UHLib)
 
-                    allocate(BitHapLib(nHap,numSections))
-                    allocate(MissHapLib(nHap,numSections))
+                allocate(BitHapLib(nHap,numSections))
+                allocate(MissHapLib(nHap,numSections))
 
-                    BitHapLib = 0
-                    MissHapLib = 0
+                BitHapLib = 0
+                MissHapLib = 0
 
-                    curSection = 1
-                    curPos = 1
-                    do j = 1, CoreLength
-                        do i = 1, nHap
-                            select case (HapLib(i, j))
-                            case (1)
-                                BitHapLib(i, curSection) = ibset(BitHapLib(i, curSection), curPos)
-                            case (9)
-                                MissHapLib(i, curSection) = ibset(MissHapLib(i, curSection), curPos)
-                            end select
-                        end do
-
-                        curPos = curPos + 1
-                        if (curPos == 65) then
-                            curPos = 1
-                            curSection = curSection + 1
-                        end if
+                curSection = 1
+                curPos = 1
+                do j = 1, CoreLength
+                    do i = 1, nHap
+                        select case (HapLib(i, j))
+                        case (1)
+                            BitHapLib(i, curSection) = ibset(BitHapLib(i, curSection), curPos)
+                        case (9)
+                            MissHapLib(i, curSection) = ibset(MissHapLib(i, curSection), curPos)
+                        end select
                     end do
 
-                    !$OMP PARALLEL DO &
-                    !$OMP DEFAULT(SHARED) &
-                    !$OMP PRIVATE(i,e,f,j,k,TempCount,CountAB,Counter,PatMatDone,Work,BanBoth,Ban,HapCand)
-                    do i=1,ped%pedigreeSize- ped%nDummys
-                        ! The number of candidate haplotypes is the total number of haps in the library times
-                        ! 2 (Paternal and maternal candidates)
-                        allocate(HapCand(nHap,2))
+                    curPos = curPos + 1
+                    if (curPos == 65) then
+                        curPos = 1
+                        curSection = curSection + 1
+                    end if
+                end do
 
-                        PatMatDone=0
-                        if (.not. Section%BitCompleteMissing(MissImputePhase(i,:,1))) then
-                            PatMatDone(1) = 1
-                        end if
-                        if (.not. Section%BitCompleteMissing(MissImputePhase(i,:,2))) then
-                            PatMatDone(2) = 1
-                        end if
+                !$OMP PARALLEL DO &
+                !$OMP DEFAULT(SHARED) &
+                !$OMP PRIVATE(i,e,f,j,k,TempCount,CountAB,Counter,PatMatDone,Work,BanBoth,Ban,HapCand)
+                do i=1,ped%pedigreeSize- ped%nDummys
+                    ! The number of candidate haplotypes is the total number of haps in the library times
+                    ! 2 (Paternal and maternal candidates)
+                    allocate(HapCand(nHap,2))
 
-                        HapCand=1
-                        Work=9
-                        BanBoth=0
+                    PatMatDone=0
+                    if (.not. Section%BitCompleteMissing(MissImputePhase(i,:,1))) then
+                        PatMatDone(1) = 1
+                    end if
+                    if (.not. Section%BitCompleteMissing(MissImputePhase(i,:,2))) then
+                        PatMatDone(2) = 1
+                    end if
 
-                        ! For each haplotype
+                    HapCand=1
+                    Work=9
+                    BanBoth=0
+
+                    ! For each haplotype
+                    do e=1,2
+                        ! If GeneProbPhase has been executed, that is, if not considering the Sex Chromosome, then MSTermInfo={0,1}.
+                        ! Else, if Sex Chromosome, then MSTermInfo is 0 always
+                        ! So, if a Conservative imputation of haplotypes is selected, this DO statement will do nothing
+                        if ((inputParams%ConservativeHapLibImputation==1).and.(MSTermInfo(i,e)==0)) cycle
+
+                        ! If haplotype is partially phased
+                        if ((PatMatDone(e)==1).and.&
+                            Section%BitCompletePhased(MissImputePhase(i,:,e)) == .FALSE.) then
+
+                            do f=1,nHap
+                                if (.not. Section%compareHaplotypeAllowMissing(BitHapLib(f,:), BitImputePhase(i,:,e), &
+                                    MissHapLib(f,:), MissImputePhase(i,:,e))) then
+                                    HapCand(f,e)=0
+                                end if
+                            enddo
+
+                            ! CountAB(inputParams%nsnps,0:1) matrix indicating how many haplotypes has been phased as 0
+                            ! or 1 in a particular allele
+                            CountAB=0
+
+                            ! If the number of candidate haplotypes is less than the 25% of the Library,
+                            ! then impute if all alleles have been phased the same way
+                            Counter=count(HapCand(:,e)==1)
+                            if (float(Counter)<(float(nHap)*0.25)) then
+                                ! Ban this haplotype will be phased here and nowhere else
+                                BanBoth(e)=1
+
+                                ! Count the occurrences in phasing of alleles across candidate haplotypes
+                                do f=1,nHap
+                                    if (HapCand(f,e)==1) then
+                                        k=0
+                                        do j=StartSnp,EndSnp
+                                            k=k+1
+                                            ! Count occurrence of phase code HapLib(f,k)={0,1}
+                                            CountAB(j,HapLib(f,k))=CountAB(j,HapLib(f,k))+1
+                                        enddo
+                                    endif
+                                enddo
+
+                                ! If all alleles across the candidate haplotypes have been phased the same way, impute
+                                do j=StartSnp,EndSnp
+                                    if (CountAB(j,0)>0) then
+                                        if (CountAB(j,1)==0) Work(j,e)=0
+                                    else
+                                        if (CountAB(j,1)>0) Work(j,e)=1
+                                    endif
+                                enddo
+                            endif
+                        endif
+                    enddo
+
+                    ! If one of the haplotypes is partially phased
+                    if (sum(PatMatDone(:))>0) then
+                        Ban=0
+                        ! Any haplotype has been previously banned/phased?
+                        if (BanBoth(1)==1) Ban(1)=1
+                        if (BanBoth(2)==1) Ban(2)=1
+
+                        ! If both gametes have been previously banned/phased,
+                        ! check whether the phase given agrees with genotype
+                        if (sum(BanBoth(:))==2) then
+                            TempCount=0
+                            do j=StartSnp,EndSnp
+                                if (ImputeGenos(i,j)/=9) then
+                                    ! If disagreement is greater than a threshold, unban haplotypes
+                                    if (ImputeGenos(i,j)/=(Work(j,1)+Work(j,2))) then
+                                        TempCount=TempCount+1
+                                        if (ImputeFromHDLibraryCountThresh==TempCount) then
+                                            Ban=0
+                                            exit
+                                        endif
+                                    endif
+                                endif
+                            enddo
+                        endif
+
+                        ! Count the number of occurrences a phase is impute in a particular
+                        ! allele across the cores across the internal phasing steps
+                        ! This implies occurrences across all the haplotype libraries of the different
+                        ! internal phasi#ng steps
                         do e=1,2
                             ! If GeneProbPhase has been executed, that is, if not considering the Sex Chromosome, then MSTermInfo={0,1}.
                             ! Else, if Sex Chromosome, then MSTermInfo is 0 always
                             ! So, if a Conservative imputation of haplotypes is selected, this DO statement will do nothing
                             if ((inputParams%ConservativeHapLibImputation==1).and.(MSTermInfo(i,e)==0)) cycle
-
-                            ! If haplotype is partially phased
-                            if ((PatMatDone(e)==1).and.&
-                                Section%BitCompletePhased(MissImputePhase(i,:,e)) == .FALSE.) then
-
-                                do f=1,nHap
-                                    if (.not. Section%compareHaplotypeAllowMissing(BitHapLib(f,:), BitImputePhase(i,:,e), &
-                                        MissHapLib(f,:), MissImputePhase(i,:,e))) then
-                                        HapCand(f,e)=0
-                                    end if
+                            if (Ban(e)==1) then
+                                AnimalOn(i,e)=1
+                                do j=StartSnp,EndSnp
+                                    if (Work(j,e)==0) Temp(i,j,e,1)=Temp(i,j,e,1)+1
+                                    if (Work(j,e)==1) Temp(i,j,e,2)=Temp(i,j,e,2)+1
                                 enddo
-
-                                ! CountAB(inputParams%nsnps,0:1) matrix indicating how many haplotypes has been phased as 0
-                                ! or 1 in a particular allele
-                                CountAB=0
-
-                                ! If the number of candidate haplotypes is less than the 25% of the Library,
-                                ! then impute if all alleles have been phased the same way
-                                Counter=count(HapCand(:,e)==1)
-                                if (float(Counter)<(float(nHap)*0.25)) then
-                                    ! Ban this haplotype will be phased here and nowhere else
-                                    BanBoth(e)=1
-
-                                    ! Count the occurrences in phasing of alleles across candidate haplotypes
-                                    do f=1,nHap
-                                        if (HapCand(f,e)==1) then
-                                            k=0
-                                            do j=StartSnp,EndSnp
-                                                k=k+1
-                                                ! Count occurrence of phase code HapLib(f,k)={0,1}
-                                                CountAB(j,HapLib(f,k))=CountAB(j,HapLib(f,k))+1
-                                            enddo
-                                        endif
-                                    enddo
-
-                                    ! If all alleles across the candidate haplotypes have been phased the same way, impute
-                                    do j=StartSnp,EndSnp
-                                        if (CountAB(j,0)>0) then
-                                            if (CountAB(j,1)==0) Work(j,e)=0
-                                        else
-                                            if (CountAB(j,1)>0) Work(j,e)=1
-                                        endif
-                                    enddo
-                                endif
                             endif
                         enddo
-
-                        ! If one of the haplotypes is partially phased
-                        if (sum(PatMatDone(:))>0) then
-                            Ban=0
-                            ! Any haplotype has been previously banned/phased?
-                            if (BanBoth(1)==1) Ban(1)=1
-                            if (BanBoth(2)==1) Ban(2)=1
-
-                            ! If both gametes have been previously banned/phased,
-                            ! check whether the phase given agrees with genotype
-                            if (sum(BanBoth(:))==2) then
-                                TempCount=0
-                                do j=StartSnp,EndSnp
-                                    if (ImputeGenos(i,j)/=9) then
-                                        ! If disagreement is greater than a threshold, unban haplotypes
-                                        if (ImputeGenos(i,j)/=(Work(j,1)+Work(j,2))) then
-                                            TempCount=TempCount+1
-                                            if (ImputeFromHDLibraryCountThresh==TempCount) then
-                                                Ban=0
-                                                exit
-                                            endif
-                                        endif
-                                    endif
-                                enddo
-                            endif
-
-                            ! Count the number of occurrences a phase is impute in a particular
-                            ! allele across the cores across the internal phasing steps
-                            ! This implies occurrences across all the haplotype libraries of the different
-                            ! internal phasing steps
-                            do e=1,2
-                                ! If GeneProbPhase has been executed, that is, if not considering the Sex Chromosome, then MSTermInfo={0,1}.
-                                ! Else, if Sex Chromosome, then MSTermInfo is 0 always
-                                ! So, if a Conservative imputation of haplotypes is selected, this DO statement will do nothing
-                                if ((inputParams%ConservativeHapLibImputation==1).and.(MSTermInfo(i,e)==0)) cycle
-                                if (Ban(e)==1) then
-                                    AnimalOn(i,e)=1
-                                    do j=StartSnp,EndSnp
-                                        if (Work(j,e)==0) Temp(i,j,e,1)=Temp(i,j,e,1)+1
-                                        if (Work(j,e)==1) Temp(i,j,e,2)=Temp(i,j,e,2)+1
-                                    enddo
-                                endif
-                            enddo
-                        endif
-                        deallocate(HapCand)
-                    enddo
-                    !$OMP END PARALLEL DO
-                    deallocate(HapLib)
-                    deallocate(BitHapLib)
-                    deallocate(MissHapLib)
+                    endif
+                    deallocate(HapCand)
+                enddo
+                !$OMP END PARALLEL DO
+                ! deallocate(HapLib)
+                deallocate(BitHapLib)
+                deallocate(MissHapLib)
 
                 deallocate(BitImputePhase)
                 deallocate(MissImputePhase)
             enddo
+
         enddo
 
 
@@ -1715,7 +1710,7 @@ write(0,*) 'DEBUG: Mach Finished'
         inputParams => defaultInput
         nAnisHD=(count(Setter(:)==1))
 
-        allocate(PhaseHD(nAnisHD,inputParams%nsnp,2,2))     ! HIGH DENSITY PHASING: PhaseHD = (Animals, SNPs, Haplotypes, Nonshifted and Shifted phasing)
+        allocate(PhaseHD(nAnisHD,inputParams%nsnpraw,2,2))     ! HIGH DENSITY PHASING: PhaseHD = (Animals, SNPs, Haplotypes, Nonshifted and Shifted phasing)
         allocate(AnimRecomb(ped%pedigreeSize,2))
         allocate(PosHD(ped%pedigreeSize))
         AnimRecomb=0
@@ -1804,7 +1799,7 @@ write(0,*) 'DEBUG: Mach Finished'
                     do g=1,apresults%results(MiddleResultShift)%nCores
 
                         if ((apresults%results(MiddleResultShift)%startIndexes(g)<UptoSnp)&
-                                .AND.(apresults%results(MiddleResultShift)%endIndexes(g)>UptoSnp)) then
+                            .AND.(apresults%results(MiddleResultShift)%endIndexes(g)>UptoSnp)) then
 
                             UpToCoreB=g
                             exit
@@ -1880,10 +1875,10 @@ write(0,*) 'DEBUG: Mach Finished'
                         UpToSnp=apresults%results(MiddleResultShift)%endIndexes(UpToCoreB)
                     end if
                 else                                    ! if EVEN
-                ! TODO discuss with roberto on monday
+                    ! TODO discuss with roberto on monday
                     do g=1,apresults%results(MiddleResult)%nCores
                         if ((apresults%results(MiddleResult)%startIndexes(g)<UptoSnp)&
-                                .AND.(apresults%results(MiddleResult)%endIndexes(g))>UptoSnp) then
+                            .AND.(apresults%results(MiddleResult)%endIndexes(g))>UptoSnp) then
                             UpToCoreA=g
                             exit
                         endif
@@ -2311,29 +2306,29 @@ write(0,*) 'DEBUG: Mach Finished'
 
         if (inputParams%BypassGeneProb==0) then
             ! Get information from GeneProb
-                if (.not. allocated(GenosProbs)) then
-                    ! read it in from file
-                endif
+            if (.not. allocated(GenosProbs)) then
+                ! read it in from file
+            endif
 
-                StSnp=1
-                EnSnp=inputParams%nSnp
-                do i=1,ped%pedigreeSize- ped%nDummys
-                    PatAlleleProb(StSnp:EnSnp,1)=GenosProbs(i,StSnp:EnSnp,1)+GenosProbs(i,StSnp:EnSnp,2)
-                    PatAlleleProb(StSnp:EnSnp,2)=GenosProbs(i,StSnp:EnSnp,3)+GenosProbs(i,StSnp:EnSnp,4)
-                    MatAlleleProb(StSnp:EnSnp,1)=GenosProbs(i,StSnp:EnSnp,1)+GenosProbs(i,StSnp:EnSnp,3)
-                    MatAlleleProb(StSnp:EnSnp,2)=GenosProbs(i,StSnp:EnSnp,2)+GenosProbs(i,StSnp:EnSnp,4)
+            StSnp=1
+            EnSnp=inputParams%nSnp
+            do i=1,ped%pedigreeSize- ped%nDummys
+                PatAlleleProb(StSnp:EnSnp,1)=GenosProbs(i,StSnp:EnSnp,1)+GenosProbs(i,StSnp:EnSnp,2)
+                PatAlleleProb(StSnp:EnSnp,2)=GenosProbs(i,StSnp:EnSnp,3)+GenosProbs(i,StSnp:EnSnp,4)
+                MatAlleleProb(StSnp:EnSnp,1)=GenosProbs(i,StSnp:EnSnp,1)+GenosProbs(i,StSnp:EnSnp,3)
+                MatAlleleProb(StSnp:EnSnp,2)=GenosProbs(i,StSnp:EnSnp,2)+GenosProbs(i,StSnp:EnSnp,4)
 
-                    ! Probability of heterozygosity
-                    HetProb(StSnp:EnSnp)=GenosProbs(i,StSnp:EnSnp,2)+GenosProbs(i,StSnp:EnSnp,3)
+                ! Probability of heterozygosity
+                HetProb(StSnp:EnSnp)=GenosProbs(i,StSnp:EnSnp,2)+GenosProbs(i,StSnp:EnSnp,3)
 
-                    do j=StSnp,EnSnp
-                        if (PatAlleleProb(j,1)>=GeneProbThresh) ImputePhase(i,j,1)=0
-                        if (PatAlleleProb(j,2)>=GeneProbThresh) ImputePhase(i,j,1)=1
-                        if (MatAlleleProb(j,1)>=GeneProbThresh) ImputePhase(i,j,2)=0
-                        if (MatAlleleProb(j,2)>=GeneProbThresh) ImputePhase(i,j,2)=1
-                        if (HetProb(j)>=GeneProbThresh) ImputeGenos(i,j)=1
-                    enddo
+                do j=StSnp,EnSnp
+                    if (PatAlleleProb(j,1)>=GeneProbThresh) ImputePhase(i,j,1)=0
+                    if (PatAlleleProb(j,2)>=GeneProbThresh) ImputePhase(i,j,1)=1
+                    if (MatAlleleProb(j,1)>=GeneProbThresh) ImputePhase(i,j,2)=0
+                    if (MatAlleleProb(j,2)>=GeneProbThresh) ImputePhase(i,j,2)=1
+                    if (HetProb(j)>=GeneProbThresh) ImputeGenos(i,j)=1
                 enddo
+            enddo
         endif
 
         ImputePhase(0,:,:)=9

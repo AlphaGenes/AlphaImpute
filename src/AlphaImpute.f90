@@ -768,7 +768,8 @@ contains
 #endif
                 ! Impute the most likely genotypes. (Most frequent genotype)
                 do i=1,ped%nGenotyped
-                    do j=1,inputParams%nSnpRaw
+                ! TODO check if this should be nsnp or nsnpraw
+                    do j=1,inputParams%nSnp
                         n2 = GenosCounts(i,j,2)                           ! Homozygous: 2 case
                         n1 = GenosCounts(i,j,1)                           ! Heterozygous
                         n0 = (inputParams%nRoundsHmm-inputParams%HmmBurnInRound) - n1 - n2        ! Homozygous: 0 case

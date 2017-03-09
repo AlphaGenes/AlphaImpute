@@ -463,18 +463,8 @@ subroutine ParseMaCHDataGenos(nGenotyped)
     ! store it in PhaseHmmMaCH and GenosHmmMaCH, and keep track of  which
     ! gamete is phased (GlobalHmmPhasedInd) and the high-denisity
     ! genotyped animal (GlobalHmmHDInd)
+    GlobalHmmID = ped%genotypeMap
 
-    do j = 1, nGenotyped
-        tmpID = ped%dictionary%getValue(GenotypeID(j))
-        if (tmpID /=DICT_NULL) then
-            GlobalHmmID(j) = tmpID
-            if (tmpID > ped%pedigreeSize) then
-                write(error_unit,*) "ERROR: GENOTYPE ID OUT OF RANGE:",tmpID,",",GenotypeID(j)
-            endif
-        else
-                write(error_unit,*) "WARNING: GENOTYPE ID NOT IN PEDIGREE:",GenotypeID(j)
-        end if
-    end do
     !     do i = 1, ped%pedigreeSize
     !         if (trim(Id(i)) == trim(GenotypeID(j))) then
     !             GlobalHmmID(j) = i
