@@ -152,8 +152,6 @@ CONTAINS
     integer, intent(in) :: nCores
     type(CoreIndex)     :: this
 
-    integer :: UInputs
-
     this%nCores = nCores
     allocate(this%StartSnp(this%nCores))
     allocate(this%EndSnp(this%nCores))
@@ -337,7 +335,7 @@ CONTAINS
         integer, dimension (:), intent(out)     :: PosHD
         integer, dimension (:,:,:), intent(out) :: PhaseHD
 
-        integer :: i, j
+        integer :: i
         integer :: UPhased
         integer :: tmp
         character(len=300) :: dumC

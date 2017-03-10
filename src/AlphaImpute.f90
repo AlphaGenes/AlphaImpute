@@ -2523,23 +2523,17 @@ contains
         inputParams => defaultInput
         open (unit=101,file="." // DASH // "Miscellaneous" // DASH // "PedigreeMistakes.txt",status="unknown")
 
-
-        do j=1,nAnisG
-            tmpID = ped%dictionary%getValue(trim(GenotypeId(j)))
-            if (tmpID /= DICT_NULL) then
-                ped%pedigree(tmpID)%genotypePosition = j
-                ped%pedigree(tmpID)%Genotyped = .true.
-            endif
-        enddo
-
         CountChanges=0
         nHomoParent = 0
         nBothHomo = 0
         do e=1,2                    ! Do whatever this does, first on males and then on females
             ParPos=e+1              ! Index in the Genotype and Pedigree matrices for sires and dams
             do i=1,nAnisRawPedigree
-                IndId=ped%pedigree(i)%genotypePosition            ! My Id
-                ParId=ped%pedigree(i)%getSireDamGenotypePositionByIndex(e+1)       ! Paternal Id,
+                IndId=ped%genotypeDictionary%getValue(ped%pedigree(i)%originalID)          ! My Id
+                if (IndID == DICT_NULL) then
+                    IndId = 0
+                endif
+                ParId=ped%getSireDamGenotypeIDByIndex(ped%pedigree(i),e+1)       ! Paternal Id,
                 TurnOn=1
                 ! GenderRaw: Says whether the proband is a male or a female
                 ! If there are sex cromosome information, and
