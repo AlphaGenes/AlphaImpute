@@ -1,4 +1,4 @@
-#ifdef OS_UNIX
+#ifdef __APPLE__
 
 #define STRINGIFY(x) #x
 #define TOSTRING(x) STRINGIFY(x)

@@ -1,4 +1,20 @@
-#ifdef OS_UNIX
+#ifdef _WIN32
+
+#define STRINGIFY(x)#x
+#define TOSTRING(x) STRINGIFY(x)
+
+#DEFINE DASH "\"
+#DEFINE COPY "copy"
+#DEFINE MD "md"
+#DEFINE RMDIR "RMDIR /S /Q"
+#DEFINE RM "del"
+#DEFINE RENAME "MOVE /Y"
+#DEFINE SH "BAT"
+#DEFINE EXE ".exe"
+#DEFINE NULL " >NUL"
+
+
+#else
 
 #define STRINGIFY(x)#x
 #define TOSTRING(x) STRINGIFY(x)
@@ -13,20 +29,7 @@
 #DEFINE EXE ""
 #DEFINE NULL ""
 
-#else
 
-#define STRINGIFY(x)#x
-#define TOSTRING(x) STRINGIFY(x)
-
-#DEFINE DASH "\"
-#DEFINE COPY "copy"
-#DEFINE MD "md"
-#DEFINE RMDIR "RMDIR /S /Q"
-#DEFINE RM "del"
-#DEFINE RENAME "MOVE /Y"
-#DEFINE SH "BAT"
-#DEFINE EXE ".exe"
-#DEFINE NULL " >NUL"
 #endif
 
 !#############################################################################################################################################################################################################################
@@ -107,7 +110,7 @@ contains
         JobsDone(:)=0
         do
             do i=1,nProcs
-#ifdef OS_UNIX
+#ifdef __APPLE__
                 write (filout,'("./GeneProb/GeneProb"i0,"/GpDone.txt")')i
 #else
                 write (filout,'(".\GeneProb\GeneProb"i0,"\GpDone.txt")')i
@@ -303,7 +306,7 @@ contains
 
 
         do i=1,inputParams%nprocessors
-#ifdef OS_UNIX
+#ifdef __APPLE__
             write (filout,'("./IterateGeneProb/GeneProb"i0,"/GeneProbSpec.txt")')i
 #else
             write (filout,'(".\IterateGeneProb\GeneProb"i0,"\GeneProbSpec.txt")')i
@@ -311,7 +314,7 @@ contains
             open (unit=108,file=trim(filout),status='unknown')
             write (108,*) "nAnis        ,",nAnisP
             write (108,*) "nsnp     ,",nSnpIterate
-#ifdef OS_UNIX
+#ifdef __APPLE__
             write (108,*) "InputFilePath    ,",'"../IterateGeneProbInput.txt"'
 #else
             write (108,*) "InputFilePath    ,",'"..\IterateGeneProbInput.txt"'
@@ -325,7 +328,7 @@ contains
             if (GeneProbPresent==1) call system (COPY // " GeneProbForAlphaImpute" // EXE // " IterateGeneProb" // DASH // filout // NULL)
         enddo
 
-#ifdef OS_UNIX
+#ifdef __APPLE__
         open (unit=109,file="TempIterateGeneProb.sh",status="unknown")
 #else
         open (unit=109,file="TempIterateGeneProb.BAT",status="unknown")
@@ -335,13 +338,13 @@ contains
             !if (PicVersion==.FALSE.) then
 #if CLUSTER==0
             do i=1,inputParams%nprocessors
-#ifdef OS_UNIX
+#ifdef __APPLE__
                 write (filout,'("cd IterateGeneProb/GeneProb"i0)')i
 #else
                 write (filout,'("cd IterateGeneProb\GeneProb"i0)')i
 #endif
                 write (109,*) trim(filout)
-#ifdef OS_UNIX
+#ifdef __APPLE__
                 if (GeneProbPresent==0) write (109,*) "nohup sh -c ""GeneProbForAlphaImpute > out 2>&1"" >/dev/null &"
                 if (GeneProbPresent==1) write (109,*) "nohup sh -c ""./GeneProbForAlphaImpute > out 2>&1"" >/dev/null &"
 #else
@@ -349,7 +352,7 @@ contains
                 if (GeneProbPresent==1) write (109,*) "start /b .\GeneProbForAlphaImpute.exe > out 2>&1"
 #endif
                 write (109,*) "cd ../.."
-                !#ifdef OS_UNIX
+                !#ifdef __APPLE__
                 !#else
                 !         write (109,*) "exit"
                 !#endif
@@ -357,7 +360,7 @@ contains
             enddo
             close(109)
 
-#ifdef OS_UNIX
+#ifdef __APPLE__
             call system("chmod +x TempIterateGeneProb.sh")
             call system("./TempIterateGeneProb.sh")
 #else
@@ -369,7 +372,7 @@ contains
             JobsDone(:)=0
             !JDone(:)=0
 
-#ifdef OS_UNIX
+#ifdef __APPLE__
             call system("rm -f ./IterateGeneProb/GeneProb*/GpDone.txt")
 #else
             do i=1,inputParams%nprocessors
@@ -382,7 +385,7 @@ contains
             !if (inputParams%restartOption/=OPT_RESTART_IMPUTATION) then
             do
                 do i=1,inputParams%nprocessors
-#ifdef OS_UNIX
+#ifdef __APPLE__
                     write (filout,'("./IterateGeneProb/GeneProb"i0,"/GpDone.txt")')i
 #else
                     write (filout,'(".\IterateGeneProb\GeneProb"i0,"\GpDone.txt")')i
@@ -1616,7 +1619,7 @@ contains
 
         counter=0
         do h=1,inputParams%nprocessors
-#ifdef OS_UNIX
+#ifdef __APPLE__
             write (filout,'("./IterateGeneProb/GeneProb"i0,"/GeneProbs.txt")')h         !here
             open (unit=110,file=trim(filout),status="unknown")
             write (filout,'("./IterateGeneProb/GeneProb"i0,"/MinorAlleleFrequency.txt")')h          !here
@@ -1963,7 +1966,7 @@ contains
         endif
 
         ! Check whether AlphaPhase is present
-#ifdef OS_UNIX
+#ifdef __APPLE__
         write (FileCheck,'("AlphaPhase")')
 #else
         write (FileCheck,'("AlphaPhase.exe")')
@@ -1979,7 +1982,7 @@ contains
         endif
 
         ! Check whether GeneProbForAlphaImpute is present
-#ifdef OS_UNIX
+#ifdef __APPLE__
         write (FileCheck,'("GeneProbForAlphaImpute")')
 #else
         write (FileCheck,'("GeneProbForAlphaImpute.exe")')
@@ -1996,7 +1999,7 @@ contains
 
         ! Create AlphaPhaseSpec file
         do i=1,inputParams%nPhaseInternal           ! Phasing is done in parallel
-#ifdef OS_UNIX
+#ifdef __APPLE__
             if((inputParams%ManagePhaseOn1Off0==0).and.(inputParams%NoPhasing==1)) then
                 write (filout,'(a,"/Phase"i0,"/AlphaPhaseSpec.txt")')trim(inputParams%PhasePath), i
             else
@@ -2007,7 +2010,7 @@ contains
 #endif
             open (unit=106,file=trim(filout),status='unknown')
             if (inputParams%PedFreePhasing==0) then
-#ifdef OS_UNIX
+#ifdef __APPLE__
                 if (inputParams%SexOpt==0) write (106,*) 'PedigreeFile              ,"../../InputFiles/AlphaPhaseInputPedigree.txt"'
 #else
                 if (inputParams%SexOpt==0) write (106,*) 'PedigreeFile              ,"..\..\InputFiles\AlphaPhaseInputPedigree.txt"'
@@ -2016,7 +2019,7 @@ contains
                 if (inputParams%SexOpt==0) write (106,*) 'PedigreeFile                      ,"NoPedigree"'
             endif
             if (inputParams%SexOpt==1) write (106,*) 'PedigreeFile                      ,"NoPedigree"'
-#ifdef OS_UNIX
+#ifdef __APPLE__
             write (106,'(a100)') &
                 'GenotypeFile                   ,"../../InputFiles/AlphaPhaseInputGenotypes.txt",GenotypeFormat'
 #else
@@ -2079,7 +2082,7 @@ contains
 
         ! Create GeneProbSpec file
         do i=1,inputParams%nprocessors
-#ifdef OS_UNIX
+#ifdef __APPLE__
             write (filout,'("./GeneProb/GeneProb"i0,"/GeneProbSpec.txt")')i
 #else
             write (filout,'(".\GeneProb\GeneProb"i0,"\GeneProbSpec.txt")')i
@@ -2088,7 +2091,7 @@ contains
             open (unit=108,file=trim(filout),status='unknown')
             write (108,*) "nAnis        ,",nAnisP
             write (108,*) "nsnp     ,",inputParams%nsnp
-#ifdef OS_UNIX
+#ifdef __APPLE__
             write (108,*) "InputFilePath    ,",'"../../InputFiles/RecodedGeneProbInput.txt"'
 #else
             write (108,*) "InputFilePath    ,",'"..\..\InputFiles\RecodedGeneProbInput.txt"'
@@ -3694,7 +3697,7 @@ program AlphaImpute
 
             if (inputParams%restartOption== OPT_RESTART_ALL .or. inputParams%restartOption== OPT_RESTART_GENEPROB) Then
 
-#ifdef OS_UNIX
+#ifdef __APPLE__
 #if CLUSTER==2
                 write(6,*) ""
                 write(6,*) "Restart option 1 stops program before Geneprobs jobs have been submitted"
@@ -3756,7 +3759,7 @@ program AlphaImpute
 #endif
 
         if (inputParams%restartOption<OPT_RESTART_IMPUTATION) Then
-#ifdef OS_UNIX
+#ifdef __APPLE__
 #if CLUSTER==2
             write(6,*) ""
             write(6,*) "Restart option 1 stops program before Phasing has been managed"
