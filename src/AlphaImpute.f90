@@ -2517,7 +2517,7 @@ contains
         integer :: e,i,j,CountBothGeno,CountDisagree,CountChanges,IndId,ParId,ParPos
         integer :: TurnOn
         type(AlphaImputeInput), pointer :: inputParams
-        integer :: tmpID
+        integer :: tmpID, dumId
         integer :: nHomoParent, nBothHomo
 
         inputParams => defaultInput
@@ -2569,11 +2569,14 @@ contains
                             float(CountDisagree)/CountBothGeno, float(CountDisagree)/nHomoParent, float(CountDisagree)/nBothHomo
                         CountChanges=CountChanges+1
                         if (parPos == 2) then
-                            ped%pedigree(i)%sirePointer => null()
-                            ped%pedigree(i)%sireID = '0'
+                            call ped%pedigree(i)%sirePointer%removeOffspring(ped%pedigree(i))
+                            call ped%createDummyAnimalAtEndOfPedigree(dumId, i)
+                            ! ped%pedigree(i)%sireID = '0'
                         else if (parPos == 3) then
-                            ped%pedigree(i)%damPointer => null()
-                            ped%pedigree(i)%damId = '0'
+                            call ped%pedigree(i)%damPointer%removeOffspring(ped%pedigree(i))
+                            call ped%createDummyAnimalAtEndOfPedigree(dumId, i)
+                            ! ped%pedigree(i)%damPointer => null()
+                            ! ped%pedigree(i)%damId = '0'
                         endif
                     else
                         ! Remove genotype of proband and parent
