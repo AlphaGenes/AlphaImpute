@@ -1837,7 +1837,6 @@ contains
         allocate(Count0(inputParams%nsnp))
         allocate(Count1(inputParams%nsnp))
         allocate(Count2(inputParams%nsnp))
-
         do i=1,ped%pedigreeSize-ped%nDummys ! These are parents
             ! This three variables will count the different number of genotypes of the offsprings
             Count0=0
@@ -2037,6 +2036,8 @@ contains
 
 
         call ped%outputSortedPedigreeInAlphaImputeFormat("." // DASH // "Miscellaneous" // DASH // "InternalDataRecoding.txt")
+
+
         call ped%sortPedigreeAndOverwrite()
         if (inputParams%SexOpt==1) then
             do j=1,nAnisInGenderFile

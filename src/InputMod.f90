@@ -83,6 +83,7 @@ contains
 
         type(AlphaImputeInput), pointer :: inputParams
         inputParams=> defaultInput
+        
 
  
         ! Read the pedigree information
@@ -113,6 +114,7 @@ contains
             ! init pedigree from genotype file
             ped = initPedigreeGenotypeFiles(inputParams%GenotypeFile, nsnp=inputParams%nsnp)
         endif
+
     end subroutine ReadInData
 
     !#############################################################################################################################################################################################################################
