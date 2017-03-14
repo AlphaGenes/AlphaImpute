@@ -3088,8 +3088,9 @@ program AlphaImpute
                         
                         
                         ! call ped%addGenotypeInformation(Genos)
-                        
+                        print *, "Calling gene prob"
                         call runGeneProbAlphaImpute(1, inputParams%nsnp, ped, GenosProbs, MAF)
+                        print *, "writing probabilities"
                         call WriteProbabilities("./Results/GenotypeProbabilities.txt", GenosProbs, ped,ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
                     endif
 
