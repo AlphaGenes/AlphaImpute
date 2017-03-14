@@ -446,7 +446,7 @@ subroutine ParseMaCHDataGenos(nGenotyped)
     type(AlphaImputeInput), pointer :: inputParams
     integer, intent(in) :: nGenotyped
 
-    integer :: i,j,k, NoGenosUnit, nIndvG,tmpID
+    integer :: i,j,k, NoGenosUnit, nIndvG
 
     inputParams => defaultInput
 #ifdef DEBUG

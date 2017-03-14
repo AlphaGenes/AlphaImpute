@@ -914,7 +914,7 @@ write(0,*) 'DEBUG: Mach Finished'
         use AlphaPhaseResultsDefinition
         implicit none
 
-        integer :: e,g,h,i,j,GamA,GamB,nAnisHD,PosHDInd
+        integer :: e,g,i,j,GamA,GamB,nAnisHD,PosHDInd
         integer :: StartSnp,EndSnp,Gam1,Gam2,AnimalOn(ped%pedigreeSize,2)
         integer,allocatable,dimension (:) :: PosHD
         integer,allocatable,dimension (:,:,:) :: PhaseHD
@@ -1159,7 +1159,6 @@ write(0,*) 'DEBUG: Mach Finished'
         integer(kind=1),allocatable,dimension (:,:,:,:) :: Temp
         integer(kind=8), allocatable, dimension(:,:,:) :: BitPhaseHD, BitImputePhase, MissPhaseHD, MissImputePhase
 
-        character(len=1000) :: FileName,FileNamePhase
         type(BitSection) :: Section
         integer :: numSections, curSection, curPos
 
@@ -1417,8 +1416,6 @@ write(0,*) 'DEBUG: Mach Finished'
 
         integer(kind=8), allocatable, dimension(:,:,:) :: BitImputePhase, MissImputePhase
         integer(kind=8), allocatable, dimension(:,:) :: BitHapLib, MissHapLib
-
-        integer :: UHLib,it
 
 
         type(BitSection) :: Section
@@ -1696,15 +1693,14 @@ write(0,*) 'DEBUG: Mach Finished'
 
         implicit none
 
-        integer :: e,h,i,g,j,MiddlePhaseRun,MiddleResult,MiddleResultShift,CoreLength,nAnisHD,CountDisagree
-        integer :: CompPhaseRun,CompJump,StartSnp,EndSnp,UptoRightSnp,UptoLeftSnp,UpToCoreA,UpToCoreB,C1,C2,C3,C4,Recmb,CompLength,RL
+        integer :: e,h,i,g,j,MiddleResult,MiddleResultShift,CoreLength,nAnisHD,CountDisagree
+        integer :: CompJump,StartSnp,EndSnp,UptoRightSnp,UptoLeftSnp,UpToCoreA,UpToCoreB,C1,C2,C3,C4,Recmb,CompLength,RL
         integer :: UpToSnp,StPt,EndPt,FillInSt,FillInEnd
         integer,allocatable,dimension (:) :: PosHD
         ! integer,allocatable,dimension (:,:) :: CoreIndexA,CoreIndexB,AnimRecomb
         integer,allocatable,dimension (:,:) :: AnimRecomb
         integer,allocatable,dimension (:,:,:,:) :: PhaseHD
         integer :: middleCoreIndex,middleCoreIndexShift
-        character(len=1000) :: FileName,dumC
 
 
         inputParams => defaultInput
@@ -1965,7 +1961,7 @@ write(0,*) 'DEBUG: Mach Finished'
         use global, only :ped
         implicit none
 
-        integer :: i,j,dum
+        integer :: i,j
         integer :: tmpGenoIndexed
         ! ImputeGenos=9
         ImputePhase=9
@@ -2292,10 +2288,9 @@ write(0,*) 'DEBUG: Mach Finished'
 
         implicit none
 
-        integer :: h,i,j,k,m,dum,StSnp,EnSnp
-        real :: PatAlleleProb(inputParams%nsnp,2),MatAlleleProb(inputParams%nsnp,2),HetProb(inputParams%nsnp),GeneProbWork(inputParams%nsnp,4)
+        integer :: i,j,k,m,StSnp,EnSnp
+        real :: PatAlleleProb(inputParams%nsnp,2),MatAlleleProb(inputParams%nsnp,2),HetProb(inputParams%nsnp)
         integer :: Informativeness(inputParams%nsnp,6),TmpInfor(inputParams%nsnp,6),GrandPar
-        character(len=300) :: filout
 
         inputParams => defaultInput
 

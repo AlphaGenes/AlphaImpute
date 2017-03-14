@@ -1501,8 +1501,6 @@ contains
         integer,dimension(:), allocatable :: TempCore,TempCplusT
         integer :: Tmp
         character(len=7) :: cm
-        character(len=300) :: filout,FileCheck
-        logical :: FileExists
         type(AlphaImputeInput), pointer :: inputParams
 
 
