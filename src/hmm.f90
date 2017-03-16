@@ -564,7 +564,7 @@ subroutine MaCHForInd(CurrentInd, HMM)
     integer(kind=1), intent(in) :: HMM
 
     ! Local variables
-    integer :: genotype, i, states
+    integer :: genotypeInt, i, states
     integer :: StartSnp, StopSnp
 
     inputParams => defaultInput
@@ -640,10 +640,10 @@ subroutine MaCHForInd(CurrentInd, HMM)
 #endif
     if (GlobalRoundHmm>inputParams%hmmburninround) then
         do i=1,nSnpHmm
-            genotype = FullH(CurrentInd,i,1)+FullH(CurrentInd,i,2)
-            if (genotype==2) then
+            genotypeInt = FullH(CurrentInd,i,1)+FullH(CurrentInd,i,2)
+            if (genotypeInt==2) then
                 GenosCounts(CurrentInd,i,2)=GenosCounts(CurrentInd,i,2)+1
-            elseif (genotype==1) then
+            elseif (genotypeInt==1) then
                 GenosCounts(CurrentInd,i,1)=GenosCounts(CurrentInd,i,1)+1
             endif
             ! GenosCounts(CurrentInd,i,1)=(GlobalRoundHmm-inputParams%hmmburninround) - GenosCounts(CurrentInd,i,2) - GenosCounts(CurrentInd,i,3)
@@ -1044,7 +1044,7 @@ subroutine ImputeAlleles(CurrentInd,CurrentMarker,State1,State2)
     integer,intent(in) :: CurrentInd,CurrentMarker,State1,State2
 
     ! Local variables
-    integer :: Imputed1,Imputed2,Genotype,Differences, Thread
+    integer :: Imputed1,Imputed2,genotypeInt,Differences, Thread
 
     Thread = omp_get_thread_num()
     ! These will be the observed imputed alleles defined by the state:
@@ -1053,22 +1053,22 @@ subroutine ImputeAlleles(CurrentInd,CurrentMarker,State1,State2)
     Imputed2=SubH(State2,CurrentMarker)
 
     ! This is the individual observed genotype
-    Genotype=GenosHmmMaCH(CurrentInd,CurrentMarker)
+    genotypeInt=GenosHmmMaCH(CurrentInd,CurrentMarker)
 
-    if ((Genotype/=0).and.(Genotype/=2)) then
+    if ((genotypeInt/=0).and.(genotypeInt/=2)) then
         FullH(CurrentInd,CurrentMarker,1)=Imputed1
         FullH(CurrentInd,CurrentMarker,2)=Imputed2
     endif
 
     ! If genotype is missing, skip
-    if (Genotype==3) return
+    if (genotypeInt==3) return
 
     ! Difference between the observed genotype and the gentoype implied by
     ! the state S=(State1, State2)
-    Differences=abs(Genotype - (Imputed1+Imputed2))
+    Differences=abs(genotypeInt - (Imputed1+Imputed2))
 
     ! If allele is heterozygous, there is uncertainty
-    if ((Genotype==1).and.(Differences==0)) then
+    if ((genotypeInt==1).and.(Differences==0)) then
         !$OMP ATOMIC
         ErrorUncertainty(CurrentMarker)=ErrorUncertainty(CurrentMarker)+1
 
@@ -1084,7 +1084,7 @@ subroutine ImputeAlleles(CurrentInd,CurrentMarker,State1,State2)
     endif
 
     ! If gentoype is homozygous or missing, the skip
-    if (Genotype/=1) return
+    if (genotypeInt/=1) return
 
     ! If the observed allele is homozygous but the genotype is heterozygous
     if (Imputed1==Imputed2) then
@@ -1359,7 +1359,7 @@ subroutine ConditionOnData(CurrentInd,Marker)
     integer, intent(in) :: CurrentInd, Marker
     type(AlphaImputeInput), pointer :: inputParams
     ! Local variables
-    integer :: i, j, Index, genotype, RefAll, AltAll
+    integer :: i, j, Index, genotypeInt, RefAll, AltAll
     double precision :: Factors(0:1), cond_probs(0:2)
 
     inputParams => defaultInput
@@ -1372,8 +1372,8 @@ subroutine ConditionOnData(CurrentInd,Marker)
         RefAll = ReferAllele(CurrentInd,Marker)
         AltAll = AlterAllele(CurrentInd,Marker)
     else
-        genotype = GenosHmmMaCH(CurrentInd,Marker)
-        if (genotype==MISSING) then
+        genotypeInt = GenosHmmMaCH(CurrentInd,Marker)
+        if (genotypeInt==MISSING) then
             return
         endif
     endif
@@ -1395,10 +1395,10 @@ subroutine ConditionOnData(CurrentInd,Marker)
         if (inputParams%HMMOption /= RUN_HMM_NGS) then
             ! Probability to observe genotype SubH(i) being the true
             ! genotype GenosHmmMaCH in locus Marker
-            Factors(0) = Penetrance(Marker,SubH(i,Marker),genotype)
+            Factors(0) = Penetrance(Marker,SubH(i,Marker),genotypeInt)
             ! Probability to observe genotype SubH(i)+1 being the true
             ! genotype GenosHmmMaCH in locus Marker
-            Factors(1) = Penetrance(Marker,SubH(i,Marker)+1,genotype)
+            Factors(1) = Penetrance(Marker,SubH(i,Marker)+1,genotypeInt)
         else
             ! Probability to observe genotype SubH(i) being the true
             ! genotype GenosHmmMaCH in locus Marker

@@ -270,12 +270,24 @@ contains
         close(inputParams%pedigreeFileUnit)
         close(inputParams%genotypeFileUnit)
 
-        ! Read the gender file if imputing the sex chromosome
-        if (inputParams%SexOpt==1) then
-            ped = initPedigree(inputParams%pedigreefile, nAnisRawPedigree,inputParams%genderFile)
+         if (trim(inputParams%pedigreefile) /= "NoPedigree") then
+            if (inputParams%SexOpt==1) then
+                ped = PedigreeHolder(inputParams%pedigreefile,genderfile=inputParams%genderFile)
+            else 
+                ped = PedigreeHolder(inputParams%pedigreefile)
+
+            endif
+
+            call ped%addGenotypeInformationFromFile(inputParams%GenotypeFile,inputParams%nsnp)
+
+
         else
-            ped = initPedigree(inputParams%pedigreefile, nAnisRawPedigree)
+
+            ! init pedigree from genotype file
+            ped = initPedigreeGenotypeFiles(inputParams%GenotypeFile, nsnp=inputParams%nsnp)
         endif
+
+        
         deallocate(temp)
     end subroutine ReadInData
 

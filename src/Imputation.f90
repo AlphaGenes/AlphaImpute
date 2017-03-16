@@ -1,7 +1,35 @@
-#ifdef OS_UNIX
-#DEFINE DASH "/"
-#else
+#ifdef _WIN32
+
+#define STRINGIFY(x)#x
+#define TOSTRING(x) STRINGIFY(x)
+
 #DEFINE DASH "\"
+#DEFINE COPY "copy"
+#DEFINE MD "md"
+#DEFINE RMDIR "RMDIR /S /Q"
+#DEFINE RM "del"
+#DEFINE RENAME "MOVE /Y"
+#DEFINE SH "BAT"
+#DEFINE EXE ".exe"
+#DEFINE NULL " >NUL"
+
+
+#else
+
+#define STRINGIFY(x)#x
+#define TOSTRING(x) STRINGIFY(x)
+
+#DEFINE DASH "/"
+#DEFINE COPY "cp"
+#DEFINE MD "mkdir"
+#DEFINE RMDIR "rm -r"
+#DEFINE RM "rm"
+#DEFINE RENAME "mv"
+#DEFINE SH "sh"
+#DEFINE EXE ""
+#DEFINE NULL ""
+
+
 #endif
 
 MODULE Imputation
@@ -1728,7 +1756,7 @@ write(0,*) 'DEBUG: Mach Finished'
 
         ! Get HIGH DENSITY phase information of this phasing step
         ! WARNING: If I only want to phase base animals, why do I need to read the whole file?
-#ifdef OS_UNIX
+#ifdef __APPLE__
         if (inputParams%ManagePhaseOn1Off0==0) then
             write (FileName,'(a,"/Phase",i0,"/PhasingResults/FinalPhase.txt")') trim(inputParams%phasePath),MiddlePhaseRun
         else
@@ -1759,7 +1787,7 @@ write(0,*) 'DEBUG: Mach Finished'
         endblock
         close(2001)
 
-#ifdef OS_UNIX
+#ifdef __APPLE__
         if (inputParams%ManagePhaseOn1Off0==0) then
             write (FileName,'(a,"/Phase",i0,"/PhasingResults/FinalPhase.txt")') trim(inputParams%phasePath),CompPhaseRun
         else
@@ -2321,7 +2349,7 @@ write(0,*) 'DEBUG: Mach Finished'
         if (inputParams%BypassGeneProb==0) then
             ! Get information from GeneProb
             do h=1,inputParams%nProcessors
-#ifdef OS_UNIX
+#ifdef __APPLE__
                 write (filout,'("./GeneProb/GeneProb"i0,"/GeneProbs.txt")')h            !here
 #else
                 write (filout,'(".\GeneProb\GeneProb"i0,"\GeneProbs.txt")')h            !here

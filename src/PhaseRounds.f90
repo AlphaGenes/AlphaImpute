@@ -152,8 +152,6 @@ CONTAINS
     integer, intent(in) :: nCores
     type(CoreIndex)     :: this
 
-    integer :: UInputs
-
     this%nCores = nCores
     allocate(this%StartSnp(this%nCores))
     allocate(this%EndSnp(this%nCores))
@@ -182,7 +180,7 @@ CONTAINS
     character(len=*), intent(in)  :: PhasePath
     character(len=1000)             :: FileName
 
-#ifdef OS_UNIX
+#ifdef __APPLE__
         write (FileName,'(a,"Phase",i0,"/PhasingResults/CoreIndex.txt")') trim(PhasePath),phaseInternal
 #else
         write (FileName,'(a,"Phase",i0,"\PhasingResults\CoreIndex.txt")') trim(PhasePath),phaseInternal
@@ -208,7 +206,7 @@ CONTAINS
         integer, intent(in) :: phaseInternal
         character(len=1000) :: FileName
 
-#ifdef OS_UNIX
+#ifdef __APPLE__
         write (FileName,'("./Phasing/Phase",i0,"/PhasingResults/CoreIndex.txt")')phaseInternal
 #else
         write (FileName,'(".\Phasing\Phase",i0,"\PhasingResults\CoreIndex.txt")')phaseInternal
@@ -237,7 +235,7 @@ CONTAINS
     character(len=*), intent(in)  :: PhasePath
     character(len=1000)             :: FileName
 
-#ifdef OS_UNIX
+#ifdef __APPLE__
         write (FileName,'(a,"Phase",i0,"/PhasingResults/FinalPhase.txt")') trim(PhasePath),phaseInternal
 #else
         write (FileName,'(a,"Phase",i0,"\PhasingResults\FinalPhase.txt")') trim(PhasePath),phaseInternal
@@ -263,7 +261,7 @@ CONTAINS
   FUNCTION getFileNameFinalPhase_NoPath(phaseInternal) result(FileName)
     integer, intent(in)            :: phaseInternal
     character(len=1000)            :: FileName
-#ifdef OS_UNIX
+#ifdef __APPLE__
         write (FileName,'("./Phasing/Phase",i0,"/PhasingResults/FinalPhase.txt")') phaseInternal
 #else
         write (FileName,'(".\Phasing\Phase",i0,"\PhasingResults\FinalPhase.txt")')phaseInternal
@@ -293,7 +291,7 @@ CONTAINS
     character(len=*), intent(in)  :: PhasePath
     character(len=1000)             :: FileName
 
-#ifdef OS_UNIX
+#ifdef __APPLE__
         write (FileName,'(a,"Phase",i0,"/PhasingResults/HaplotypeLibrary/HapLib",i0,".bin")') trim(PhasePath), phaseInternal, core
 #else
         write (FileName,'(a,"Phase",i0,"\PhasingResults\HaplotypeLibrary\HapLib",i0,".bin")') trim(PhasePath), phaseInternal, core
@@ -320,7 +318,7 @@ CONTAINS
     integer, intent(in)            :: phaseInternal, core
     character(len=1000)            :: FileName
 
-#ifdef OS_UNIX
+#ifdef __APPLE__
         write (FileName,'("./Phasing/Phase",i0,"/PhasingResults/HaplotypeLibrary/HapLib",i0,".bin")') phaseInternal, core
 #else
         write (FileName,'(".\Phasing\Phase",i0,"\PhasingResults\HaplotypeLibrary\HapLib",i0,".bin")') phaseInternal, core
@@ -337,7 +335,7 @@ CONTAINS
         integer, dimension (:), intent(out)     :: PosHD
         integer, dimension (:,:,:), intent(out) :: PhaseHD
 
-        integer :: i, j
+        integer :: i
         integer :: UPhased
         integer :: tmp
         character(len=300) :: dumC
