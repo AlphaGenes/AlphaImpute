@@ -194,7 +194,8 @@ subroutine MaCHController(HMM)
         write(0,*) 'DEBUG: Begin paralellisation [MaCHController]'
 #endif
 
-        !$OMP PARALLEL DO DEFAULT(shared)
+        !$OMP PARALLEL DO DEFAULT(shared) &
+        !$OMP SCHEDULE(DYNAMIC)
         do i=1,nIndHmmMaCH
             call MaCHForInd(i, HMM)
         enddo
@@ -654,12 +655,14 @@ subroutine MaCHForInd(CurrentInd, HMM)
 !        write(0,*) 'DEBUG: Calculate genotype dosages [MaCHForInd]'
 ! #endif
         ! if (GlobalRoundHmm>inputParams%hmmburninround) then
+        !$omp workshare
         ProbImputeGenosHmm(CurrentInd,:)=ProbImputeGenosHmm(CurrentInd,:)&
             +FullH(CurrentInd,:,1)+FullH(CurrentInd,:,2)
         ProbImputePhaseHmm(CurrentInd,:,1)=ProbImputePhaseHmm(CurrentInd,:,1)&
             +FullH(CurrentInd,:,1)
         ProbImputePhaseHmm(CurrentInd,:,2)=ProbImputePhaseHmm(CurrentInd,:,2)&
             +FullH(CurrentInd,:,2)
+        !$omp end workshare
     endif
 
 #if DEBUG.EQ.1
