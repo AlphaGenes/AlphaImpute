@@ -1,6 +1,22 @@
-#ifdef __APPLE__
+#ifdef _WIN32
 
-#define STRINGIFY(x) #x
+#define STRINGIFY(x)#x
+#define TOSTRING(x) STRINGIFY(x)
+
+#DEFINE DASH "\"
+#DEFINE COPY "copy"
+#DEFINE MD "md"
+#DEFINE RMDIR "RMDIR /S /Q"
+#DEFINE RM "del"
+#DEFINE RENAME "MOVE /Y"
+#DEFINE SH "BAT"
+#DEFINE EXE ".exe"
+#DEFINE NULL " >NUL"
+
+
+#else
+
+#define STRINGIFY(x)#x
 #define TOSTRING(x) STRINGIFY(x)
 
 #DEFINE DASH "/"
@@ -13,20 +29,7 @@
 #DEFINE EXE ""
 #DEFINE NULL ""
 
-#else
 
-#define STRINGIFY(x) #x
-#define TOSTRING(x) STRINGIFY(x)
-
-#DEFINE DASH "\"
-#DEFINE COPY "copy"
-#DEFINE MD "md"
-#DEFINE RMDIR "RMDIR /S /Q"
-#DEFINE RM "del"
-#DEFINE RENAME "MOVE /Y"
-#DEFINE SH "BAT"
-#DEFINE EXE ".exe"
-#DEFINE NULL " >NUL"
 #endif
 
 module informationModule

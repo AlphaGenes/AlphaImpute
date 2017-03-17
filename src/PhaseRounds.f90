@@ -182,10 +182,10 @@ CONTAINS
     character(len=*), intent(in)  :: PhasePath
     character(len=1000)             :: FileName
 
-#ifdef __APPLE__
-        write (FileName,'(a,"Phase",i0,"/PhasingResults/CoreIndex.txt")') trim(PhasePath),phaseInternal
-#else
+#ifdef _WIN32
         write (FileName,'(a,"Phase",i0,"\PhasingResults\CoreIndex.txt")') trim(PhasePath),phaseInternal
+#else      
+        write (FileName,'(a,"Phase",i0,"/PhasingResults/CoreIndex.txt")') trim(PhasePath),phaseInternal
 #endif
     END FUNCTION getFileNameCoreIndex_Path
 
@@ -208,10 +208,11 @@ CONTAINS
         integer, intent(in) :: phaseInternal
         character(len=1000) :: FileName
 
-#ifdef __APPLE__
-        write (FileName,'("./Phasing/Phase",i0,"/PhasingResults/CoreIndex.txt")')phaseInternal
-#else
+#ifdef _WIN32
         write (FileName,'(".\Phasing\Phase",i0,"\PhasingResults\CoreIndex.txt")')phaseInternal
+        
+#else
+        write (FileName,'("./Phasing/Phase",i0,"/PhasingResults/CoreIndex.txt")')phaseInternal
 #endif
 
   END FUNCTION getFileNameCoreIndex_NoPath
@@ -237,10 +238,10 @@ CONTAINS
     character(len=*), intent(in)  :: PhasePath
     character(len=1000)             :: FileName
 
-#ifdef __APPLE__
-        write (FileName,'(a,"Phase",i0,"/PhasingResults/FinalPhase.txt")') trim(PhasePath),phaseInternal
-#else
+#ifdef _WIN32
         write (FileName,'(a,"Phase",i0,"\PhasingResults\FinalPhase.txt")') trim(PhasePath),phaseInternal
+#else       
+        write (FileName,'(a,"Phase",i0,"/PhasingResults/FinalPhase.txt")') trim(PhasePath),phaseInternal
 #endif
 
   END FUNCTION getFileNameFinalPhase_Path
@@ -263,10 +264,10 @@ CONTAINS
   FUNCTION getFileNameFinalPhase_NoPath(phaseInternal) result(FileName)
     integer, intent(in)            :: phaseInternal
     character(len=1000)            :: FileName
-#ifdef __APPLE__
-        write (FileName,'("./Phasing/Phase",i0,"/PhasingResults/FinalPhase.txt")') phaseInternal
-#else
+#ifdef _WIN32
         write (FileName,'(".\Phasing\Phase",i0,"\PhasingResults\FinalPhase.txt")')phaseInternal
+#else 
+        write (FileName,'("./Phasing/Phase",i0,"/PhasingResults/FinalPhase.txt")') phaseInternal
 #endif
 
     END FUNCTION getFileNameFinalPhase_NoPath
@@ -293,10 +294,10 @@ CONTAINS
     character(len=*), intent(in)  :: PhasePath
     character(len=1000)             :: FileName
 
-#ifdef __APPLE__
-        write (FileName,'(a,"Phase",i0,"/PhasingResults/HaplotypeLibrary/HapLib",i0,".bin")') trim(PhasePath), phaseInternal, core
-#else
+#ifdef _WIN32
         write (FileName,'(a,"Phase",i0,"\PhasingResults\HaplotypeLibrary\HapLib",i0,".bin")') trim(PhasePath), phaseInternal, core
+#else   
+        write (FileName,'(a,"Phase",i0,"/PhasingResults/HaplotypeLibrary/HapLib",i0,".bin")') trim(PhasePath), phaseInternal, core
 #endif
 
   END FUNCTION getFileNameHapLib_Path
@@ -320,10 +321,10 @@ CONTAINS
     integer, intent(in)            :: phaseInternal, core
     character(len=1000)            :: FileName
 
-#ifdef __APPLE__
-        write (FileName,'("./Phasing/Phase",i0,"/PhasingResults/HaplotypeLibrary/HapLib",i0,".bin")') phaseInternal, core
-#else
+#ifdef _WIN32
         write (FileName,'(".\Phasing\Phase",i0,"\PhasingResults\HaplotypeLibrary\HapLib",i0,".bin")') phaseInternal, core
+#else
+        write (FileName,'("./Phasing/Phase",i0,"/PhasingResults/HaplotypeLibrary/HapLib",i0,".bin")') phaseInternal, core
 #endif
     END FUNCTION getFileNameHapLib_NoPath
 

@@ -213,10 +213,10 @@ contains
         allocate(GeneProbWork(inputParams%nsnp,4))
         GlobalWorkPhase=9
         do h=1,inputParams%nProcessors
-#ifdef __APPLE__
-            write (filout,'("GeneProb/GeneProb"i0,"/GeneProbs.txt")')h          !here
-#else
+#ifdef _WIN32
             write (filout,'("GeneProb\GeneProb"i0,"\GeneProbs.txt")')h          !here
+#else         
+            write (filout,'("GeneProb/GeneProb"i0,"/GeneProbs.txt")')h          !here
 #endif
             open (unit=110,file=trim(filout),status="unknown")
             StSnp=GpIndex(h,1)          ! Where SNPs start
