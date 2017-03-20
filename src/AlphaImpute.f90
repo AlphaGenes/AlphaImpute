@@ -3105,15 +3105,15 @@ program AlphaImpute
                     write(6,*) " ","Genotype probabilities calculated"
                     !        endif
                 case (2)
-                    markers = inputParams%nsnp
-                    if (inputParams%outopt==1) then
-                        markers = inputParams%nSnpRaw
-                    end if
-                    allocate(GenosProbs(ped%nDummys+ ped%pedigreeSize-ped%nDummys, markers, 2))
-                    call readInGeneProbData(GenosProbs)
-                    ! TODO may not need
-                    call WriteProbabilities("./Results/GenotypeProbabilities.txt", GenosProbs, ped,ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
-                    deallocate(GenosProbs)
+                    ! markers = inputParams%nsnp
+                    ! if (inputParams%outopt==1) then
+                    !     markers = inputParams%nSnpRaw
+                    ! end if
+                    ! allocate(GenosProbs(ped%nDummys+ ped%pedigreeSize-ped%nDummys, markers, 2))
+                    ! call readProbabilitiesGeneProb("./Results/GenotypeProbabilities.txt",GenosProbs,ped,ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
+                    ! ! TODO may not need
+                    ! call WriteProbabilities("./Results/GenotypeProbabilities.txt", GenosProbs, ped,ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
+                    ! deallocate(GenosProbs)
                     write(6,*) "Restart option 1 stops program after genotype probabilities have been outputted"
                     stop
                 case default

@@ -117,14 +117,14 @@ contains
     end subroutine WriteProbabilitiesGeneProb
 
 
-    subroutine readProbabilitiesGeneProb(file, GenosProbs, ped,nAnims, nSnps)
-        use PedigreeModule
+    subroutine readProbabilitiesGeneProb(file, GenosProbs,nAnims, nSnps)
+        use constantModule
         character(len=*), intent(IN) :: file
         integer, intent(IN) :: nSnps,nAnims
-        type(pedigreeHolder), intent(INOUT) :: ped
         double precision, intent(out) :: GenosProbs(:,:,:)
         integer :: fileUnit        
         integer :: i
+        character(len=IDLENGTH) :: dum
 
         open (newunit=fileUnit,file=file,status="unknown")
 
@@ -132,46 +132,13 @@ contains
         ! allocate(Probs1(nSnps))
 
         do i=1,nAnims
-            read(fileUnit,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%Pedigree(i)%originalID,GenosProbs(i,:,1)
-            read(fileUnit,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%Pedigree(i)%originalID,GenosProbs(i,:,2)
+            read(fileUnit,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') dum,GenosProbs(i,:,1)
+            read(fileUnit,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') dum,GenosProbs(i,:,2)
             ! enddo
         enddo
     end subroutine readProbabilitiesGeneProb
 
 
-    subroutine readInGeneProbData(GenosProbs)
-        ! Read genotype probabilities from files and phase allele based in these probabilities.
-        ! This files should have been already created during previous calls to AlphaImpute (RestartOption<3)
-        ! The subroutine outputs the genotype probabilities of the homozygous genotype of the reference allele,
-        ! G00, and the heterozygous genotype, Gh = G10 + G01. The homozygous genotype for the alternative allele can be inferred
-        ! from the these two as G11 = 1 - G00 - Gh
-        use Global, only : ped
-        use alphaimputeinmod
-        use constantModule
-        implicit none
-
-        double precision, dimension(:,:,:), intent(INOUT) :: GenosProbs
-        type(AlphaImputeInput), pointer :: inputParams
-        ! Local variables
-        integer :: i,j,fileUnit,a, dum
-        character(len=300) :: inFile
-
-        inputParams => defaultInput
-
-            inFile = "." // DASH // " Results" // DASH // "GenotypeProbabilities.txt"
-            open (newunit=fileUnit,file=trim(infile),status="unknown")
-            GenosProbs = MISSINGGENOTYPECODE
-            do a=1, ped%pedigreeSize-ped%nDummys
-                do i=1,inputParams%nsnp                                           ! The number of lines of GeneProbs.txt files is = nAnisP x 4
-                    do j=1,4                                            ! where 4 stands for the two paternal and the two maternal haplotypes
-                        read (110,*) dum,GenosProbs(a,:,j)
-                    enddo
-
-                enddo
-            enddo
-            close(fileUnit)
-
-    end subroutine readInGeneProbData
 
     subroutine ReadInPrePhasedData
         ! Impute phase information from pre-phased file. Count the number of pre-phased individuals

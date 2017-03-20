@@ -48,7 +48,7 @@ CONTAINS
     SUBROUTINE ImputationManagement
         use omp_lib
         use informationModule
-        use Output, only : ReadInPrePhasedData
+        use Output, only : ReadInPrePhasedData, ReReadGeneProbs
         use AlphaPhaseResultsDefinition
 
         integer :: loop
@@ -115,8 +115,7 @@ write(0,*) 'DEBUG: Mach Finished'
                         allocate(ImputePhase(0:ped%pedigreeSize,inputParams%nsnpraw,2))
                         allocate(GlobalWorkPhase(0:ped%pedigreeSize,inputParams%nsnpraw,2))
 
-                        ! TODO get geneprobs back in
-                        ! call ReReadGeneProbs
+                        call ReReadGeneProbs("./Results/GenotypeProbabilities.txt", inputParams%nsnp)
                     else
                         ! Phase in the homozygous case for the SEX CHROMOSOME
                         ! WARNING: NOTHING IS DONE!!
