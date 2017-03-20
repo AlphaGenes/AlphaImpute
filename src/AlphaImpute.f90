@@ -3097,6 +3097,7 @@ program AlphaImpute
                     ! deallocate(GenosProbs)
 
                     if (inputParams%restartOption==OPT_RESTART_GENEPROB) then
+                        call ped%writeOutGenotypes("./Results/individualGenotypes.txt")
                         write(6,*) "Restart option 1 stops program after Geneprobs jobs have finished"
                         stop
                     endif
