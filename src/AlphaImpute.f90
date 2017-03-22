@@ -1709,8 +1709,6 @@ contains
             print*, " ",CountHD," valid indiviudals in the user specified AlphaPhase file"
         endif
 
-        open (unit=102,file="." // DASH // "Miscellaneous" // DASH // "EditingSnpSummary.txt",status="unknown")
-
         if (inputParams%managephaseon1off0==1) then
             TempFreq(:)=0.0
             Counter(:)=0
@@ -1782,21 +1780,21 @@ contains
             endif
         endif
 
-        do j=1,inputParams%nSnpRaw
-            write (102,*) j,SnpSummary(j),SnpIncluded(j)        !'(i,1x,f5.3,1x,i)'
-        enddo
-        close(102)
+        open (unit=102,file="." // DASH // "Miscellaneous" // DASH // "EditingSnpSummary.txt",status="unknown")
 
         if ((inputParams%ManagePhaseOn1Off0==0).and.(inputParams%NoPhasing==1)) then
             FileName = trim(inputParams%PhasePath) // DASH // "EditingSnpSummary.txt"
         else
             FileName = "." // DASH // "Phasing" // DASH // "EditingSnpSummary.txt"
         end if
-
         open (unit=112,file=FileName,status="unknown")
-        do j=1,inputParams%nSnp
+
+
+        do j=1,inputParams%nSnpRaw
+            write (102,*) j,SnpSummary(j),SnpIncluded(j)        !'(i,1x,f5.3,1x,i)'
             write (112,*) j,SnpSummary(j),SnpIncluded(j)        !'(i,1x,f5.3,1x,i)'
         enddo
+        close(102)
         close(112)
 
         print*, " "
