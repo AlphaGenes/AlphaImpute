@@ -35,7 +35,7 @@
 !#############################################################################################################################################################################################################################
 
 module AlphaImputeModule
-    implicit none    
+    implicit none
 contains
 
 
@@ -62,7 +62,7 @@ contains
         allocate(results%results(nCoreLengths))
         params = newParameters()
 
-    
+
         call omp_set_nested(.true.)
 
 
@@ -80,8 +80,8 @@ contains
             params%useSurrsN = 10
             params%PercGenoHaploDisagree = inputParams%GenotypeErrorPhase
             results%results(i) = phaseAndCreateLibraries(ped, params, quiet=.true.)
-        enddo 
-        
+        enddo
+
         !$omp end parallel do
         print *, "Finished Running AlphaPhase"
 
@@ -388,7 +388,7 @@ contains
         integer :: i,j,l
         integer,allocatable,dimension(:):: WorkTmp
         double precision :: ImputationQuality(ped%pedigreeSize-ped%nDummys,6)
-        
+
         type(AlphaImputeInput), pointer :: inputParams
         character(len=300) :: TmpId
         integer :: n0, n1, n2
@@ -1257,7 +1257,7 @@ contains
         if (inputParams%restartOption==4) then
             open (unit=fileUnit,file="Tmp2345678.txt",status="old")
             do i=1,ped%pedigreeSize-ped%nDummys
-                read (fileUnit,*) ImputePhase(i,:,1)  
+                read (fileUnit,*) ImputePhase(i,:,1)
                 read (fileUnit,*) ImputePhase(i,:,2)
                 read (fileUnit,*) ImputeGenos(i,:)
             enddo
@@ -1397,7 +1397,7 @@ contains
             GlobalWorkPhase=9
             do i=1,ped%pedigreeSize-ped%nDummys
                 do j=1,inputParams%nsnp                                                     ! Phase in the homozygous case
-                    
+
                     if (ped%pedigree(i)%individualGenotype%getGenotype(j)==0) then
                         GlobalWorkPhase(i,j,:)=0
                     else if (ped%pedigree(i)%individualGenotype%getGenotype(j)==2) then
@@ -1423,13 +1423,13 @@ contains
                             GlobalWorkPhase(i,j,:)=0
                         else if (ped%pedigree(parId)%individualGenotype%getGenotype(j)==2) then
                             GlobalWorkPhase(i,j,:)=1
-                        endif 
+                        endif
                     enddo
                 endif
             enddo
 
             GlobalWorkPhase(0,:,:)=9
-            
+
             ImputeGenos(:,:)=ped%getGenotypesAsArray()
             ImputePhase(:,:,:)=GlobalWorkPhase(:,:,:)
 
@@ -1459,7 +1459,7 @@ contains
                             GlobalWorkPhase(i,j,1)=0
                         else if (ped%pedigree(ParId)%individualGenotype%getGenotype(j)==2) then
                             GlobalWorkPhase(i,j,1)=1
-                        endif 
+                        endif
                     enddo
                 endif
                 if (associated(ped%pedigree(i)%damPointer)) then
@@ -1470,7 +1470,7 @@ contains
                             GlobalWorkPhase(i,j,2)=0
                         else if (ped%pedigree(ParId)%individualGenotype%getGenotype(j)==2) then
                             GlobalWorkPhase(i,j,2)=1
-                        endif 
+                        endif
                     enddo
                 endif
 
@@ -1805,14 +1805,14 @@ contains
         print*, " ",inputParams%nsnp," snp remain after editing"
 
         ! TODO clean this whole subroutine
-        
+
 
         ! we add animals to hd list here
         do i=1, ped%pedigreeSize - ped%nDummys
             if (setter(i) == 1) then
                 call ped%setAnimalAsHD(i)
             endif
-        enddo 
+        enddo
         deallocate(SnpSummary)
         deallocate(TempFreq)
         deallocate(Counter)
@@ -1984,7 +1984,7 @@ contains
 
                         ! Look for mendelenian errors
                         do j=1,inputParams%nsnp
-                            
+
                             ! TODO can probably do the following better with new genotype class
                             if ((ped%pedigree(IndId)%individualGenotype%getGenotype(j)/=9).and.(ped%pedigree(parId)%individualGenotype%getGenotype(j)/=9)) then
                                 CountBothGeno=CountBothGeno+1
@@ -2877,23 +2877,19 @@ contains
         integer(kind=1), dimension (:,:,:), intent(inout) :: ImpPhase
 
         integer :: i, j, k
+        integer :: allele, genotype
 
         do j = 1, m
             do i = 1, n
                 do k = 1, 2
-                    if (ImpPhase(i, j, k) < 0) then
+                    allele = ImpPhase(i, j, k)
+                    if (allele/=0 .and. allele/=1 .and. allele/=9) then
                         ImpPhase(i, j, k) = 9
-                        ! ImpGenos(i, j) = 9
-                    end if
-                    if (ImpPhase(i, j, k) > 1) then
-                        ImpPhase(i, j, k) = 9
-                        ! ImpGenos(i, j) = 9
                     end if
                 enddo
-                if (ImpGenos(i, j) < 0) then
-                    ImpGenos(i, j) = 9
-                end if
-                if (ImpGenos(i, j) > 2) then
+                genotype = ImpGenos(i, j)
+                if (genotype/=0 .and. genotype/=1 .and. &
+                    genotype/=2 .and. genotype/=9) then
                     ImpGenos(i, j) = 9
                 end if
             enddo
@@ -3037,9 +3033,9 @@ program AlphaImpute
         !call cpu_time(start)
         call SnpCallRate
         call CheckParentage
-        
+
         if (inputParams%MultiHD/=0) call ClassifyAnimByChips
-        
+
         call FillInSnp
 
         call FillInBasedOnOffspring
@@ -3077,7 +3073,7 @@ program AlphaImpute
 
         if (inputParams%SexOpt==0) then
             select case (inputParams%bypassgeneprob)
-            
+
                 case (0)
 
                     if (inputParams%restartOption== OPT_RESTART_ALL .or. inputParams%restartOption== OPT_RESTART_GENEPROB) Then
@@ -3085,8 +3081,8 @@ program AlphaImpute
 
                         ! call ped%addGenotypeInformation(imputeGenos)
                         ! WriteOutResults is a piece of shit and makes life hard
-                        
-                        
+
+
                         ! call ped%addGenotypeInformation(Genos)
                         print *, "Calling gene prob"
                         call runGeneProbAlphaImpute(1, inputParams%nsnp, ped, GenosProbs, MAF)
