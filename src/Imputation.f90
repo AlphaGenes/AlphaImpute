@@ -2760,16 +2760,18 @@ write(0,*) 'DEBUG: Mach Finished'
                     enddo
 
                     ! Remove phase and genotype for those alleles with no explanation due to heterozygosity and recombination
-                    do j=1,inputParams%nsnp
-                        if (TempVec(j)==3) then
-                            if (ImputePhase(PedId,j,1)/=ImputePhase(PedId,j,2)) then
-                                if ((ImputePhase(PedId,j,1)/=9).and.(ImputePhase(PedId,j,2)/=9)) then
-                                    ImputePhase(i,j,e)=9
-                                    ImputeGenos(i,j)=9
+                    if (ped%pedigree(i)%isHD() == .FALSE.) then
+                        do j=1,inputParams%nsnp
+                            if (TempVec(j)==3) then
+                                if (ImputePhase(PedId,j,1)/=ImputePhase(PedId,j,2)) then
+                                    if ((ImputePhase(PedId,j,1)/=9).and.(ImputePhase(PedId,j,2)/=9)) then
+                                        ImputePhase(i,j,e)=9
+                                        ImputeGenos(i,j)=9
+                                    endif
                                 endif
                             endif
-                        endif
-                    enddo
+                        enddo
+                    endif
                     GlobalWorkPhase(i,:,:)=ImputePhase(i,:,:)
 
                     !$$$$$$$$$$$$$$$$$$$
@@ -3061,16 +3063,18 @@ write(0,*) 'DEBUG: Mach Finished'
                     enddo
 
                     ! Remove phase and genotype for those alleles with no explanation due to heterozygosity and recombination
-                    do j=1,inputParams%nsnp
-                        if (TempVec(j)==3) then
-                            if (ImputePhase(PedId,j,1)/=ImputePhase(PedId,j,2)) then
-                                if ((ImputePhase(PedId,j,1)/=9).and.(ImputePhase(PedId,j,2)/=9)) then
-                                    ImputePhase(i,j,e)=9
-                                    ImputeGenos(i,j)=9
+                    if (ped%pedigree(i)%isHD() == .FALSE.) then
+                        do j=1,inputParams%nsnp
+                            if (TempVec(j)==3) then
+                                if (ImputePhase(PedId,j,1)/=ImputePhase(PedId,j,2)) then
+                                    if ((ImputePhase(PedId,j,1)/=9).and.(ImputePhase(PedId,j,2)/=9)) then
+                                        ImputePhase(i,j,e)=9
+                                        ImputeGenos(i,j)=9
+                                    endif
                                 endif
                             endif
-                        endif
-                    enddo
+                        enddo
+                    end if
                     GlobalWorkPhase(i,:,:)=ImputePhase(i,:,:)
 
                     !$$$$$$$$$$$$$$$$$$$
