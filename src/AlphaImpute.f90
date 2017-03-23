@@ -705,6 +705,16 @@ contains
                 deallocate(ImputeGenos)
                 allocate(ImputeGenos(0:ped%pedigreeSize-ped%nDummys,inputParams%nSnpRaw))
                 allocate(ImputePhase(0:ped%pedigreeSize-ped%nDummys,inputParams%nSnpRaw,2))
+
+                if (allocated(ProbImputeGenos)) then
+                    deallocate(ProbImputeGenos)
+                end if
+                allocate(ProbImputeGenos(0:ped%pedigreeSize-ped%nDummys,inputParams%nSnpRaw))
+                if (allocated(ProbImputePhase)) then
+                    deallocate(ProbImputePhase)
+                end if
+                allocate(ProbImputePhase(0:ped%pedigreeSize-ped%nDummys,inputParams%nSnpRaw,2))
+
                 ImputeGenos=TmpGenos
                 ImputePhase=TmpPhase
                 if (inputParams%SexOpt==0) then
@@ -828,7 +838,7 @@ contains
                 call WriteProbabilities("./Results/GenotypeProbabilities.txt", GlobalHmmID, ped%nGenotyped, inputParams%nsnp)
             else
                 if (inputParams%bypassgeneprob==0) then
-                    allocate(GenosProbs(ped%pedigreeSize-ped%nDummys,nSnpIterate,2))
+                    ! allocate(GenosProbs(ped%pedigreeSize-ped%nDummys,nSnpIterate,2))
                     ! TODOGENEPROB geneprob should not have been bypassed here so check that it indeed is not
                     call WriteProbabilities("./Results/GenotypeProbabilities.txt", GenosProbs, ped,ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
                 endif
