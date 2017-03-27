@@ -835,7 +835,7 @@ contains
 
             if (inputParams%hmmoption/=RUN_HMM_NO) then
                 ! call WriteProbabilities("./Results/GenotypeProbabilities.txt", GlobalHmmID, ID, ped%nGenotyped, inputParams%nsnp)
-                call WriteProbabilities("./Results/GenotypeProbabilities.txt", GlobalHmmID, ped%nGenotyped, inputParams%nsnp)
+                call WriteProbabilities("./GeneProb/GenotypeProbabilities.txt", GlobalHmmID, ped%nGenotyped, inputParams%nsnp)
             else
                 if (inputParams%bypassgeneprob==0) then
                     ! allocate(GenosProbs(ped%pedigreeSize-ped%nDummys,nSnpIterate,2))
@@ -3095,13 +3095,14 @@ program AlphaImpute
                         print *, "Calling gene prob"
                         call runGeneProbAlphaImpute(1, inputParams%nsnp, ped, GenosProbs, MAF)
                         print *, "writing probabilities"
+                        print *,GenosProbs
                         call WriteProbabilities("./Results/GenotypeProbabilities.txt", GenosProbs, ped,ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
                     endif
 
                     ! deallocate(GenosProbs)
 
                     if (inputParams%restartOption==OPT_RESTART_GENEPROB) then
-                        call ped%writeOutGenotypes("./Results/individualGenotypes.txt")
+                        call ped%writeOutGenotypes("./GeneProb/individualGenotypes.txt")
                         write(6,*) "Restart option 1 stops program after Geneprobs jobs have finished"
                         stop
                     endif
@@ -3138,9 +3139,19 @@ program AlphaImpute
         endif
 
         if (inputParams%restartOption==OPT_RESTART_PHASING) then
-        ! TODO need to write out phasing results
-            write(6,*) "Restart option 2 stops program after Phasing has been managed"
-            stop
+            block
+                use OutputParametersDefinition
+                use InputOutput
+                integer :: i
+                type(OutputParameters) :: oParams
+                do i=1, apResults%nResults
+                    write(oParams%outputDirectory,'("./Phasing/Phase"i0)') i
+                    call writeAlphaPhaseResults(APResults%results(i), ped, oParams)
+
+                enddo
+                write(6,*) "Restart option 2 stops program after Phasing has been managed"
+                stop
+            end block
         endif
     endif
 
@@ -3148,6 +3159,29 @@ program AlphaImpute
 endif
 
 if (inputParams%hmmoption/=RUN_HMM_NGS) then
+        
+        if (inputParams%restartOption> OPT_RESTART_PHASING) Then
+            ! Read back in geneprob data
+            allocate(GenosProbs(ped%pedigreeSize-ped%nDummys,nSnpIterate,2))
+            call readProbabilitiesGeneProb("./GeneProb/GenotypeProbabilities.txt",GenosProbs,ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
+            block 
+
+                use OutputParametersDefinition
+                use InputOutput
+                use AlphaPhaseResultsDefinition
+                integer :: i
+                type(OutputParameters) :: oParams
+                type(alphaphaseResults) :: tmpRes
+                
+                ApResults%nResults = size(inputParams%CoreLengths)
+                allocate(ApResults%results(ApResults%nResults))
+                do i=1, ApResults%nResults
+                    write(oParams%outputDirectory,'("./Phasing/Phase"i0)') i
+                    call readAlphaPhaseResults(ApResults%results(i), oParams)
+                enddo
+            end block
+        endif
+
     ! If we only want to phase data, then skip all the imputation steps
     if (inputParams%PhaseTheDataOnly==0) Then
         call ImputationManagement

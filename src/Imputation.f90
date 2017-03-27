@@ -2306,6 +2306,7 @@ write(0,*) 'DEBUG: Mach Finished'
 
             StSnp=1
             EnSnp=inputParams%nSnp
+            
             do i=1,ped%pedigreeSize- ped%nDummys
                 PatAlleleProb(StSnp:EnSnp,1)=GenosProbs(i,StSnp:EnSnp,1)+GenosProbs(i,StSnp:EnSnp,2)
                 PatAlleleProb(StSnp:EnSnp,2)=GenosProbs(i,StSnp:EnSnp,3)+GenosProbs(i,StSnp:EnSnp,4)
