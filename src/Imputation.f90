@@ -2307,7 +2307,7 @@ write(0,*) 'DEBUG: Mach Finished'
 
             StSnp=1
             EnSnp=inputParams%nSnp
-            
+
             do i=1,ped%pedigreeSize- ped%nDummys
                 PatAlleleProb(StSnp:EnSnp,1)=GenosProbs(i,StSnp:EnSnp,1)+GenosProbs(i,StSnp:EnSnp,2)
                 PatAlleleProb(StSnp:EnSnp,2)=GenosProbs(i,StSnp:EnSnp,3)+GenosProbs(i,StSnp:EnSnp,4)
@@ -2762,18 +2762,19 @@ write(0,*) 'DEBUG: Mach Finished'
                     enddo
 
                     ! Remove phase and genotype for those alleles with no explanation due to heterozygosity and recombination
-                    if (ped%pedigree(i)%isHD() == .FALSE.) then
-                        do j=1,inputParams%nsnp
-                            if (TempVec(j)==3) then
-                                if (ImputePhase(PedId,j,1)/=ImputePhase(PedId,j,2)) then
-                                    if ((ImputePhase(PedId,j,1)/=9).and.(ImputePhase(PedId,j,2)/=9)) then
-                                        ImputePhase(i,j,e)=9
-                                        ImputeGenos(i,j)=9
-                                    endif
-                                endif
-                            endif
-                        enddo
-                    endif
+                    do j=1,nSnp
+                        if ( TempVec(j)==3 .AND. &
+                             (ImputePhase(PedId,j,1)/=ImputePhase(PedId,j,2)) .AND. &
+                             (ImputePhase(PedId,j,1)/=9) .and. (ImputePhase(PedId,j,2)/=9) ) then
+
+                                ImputePhase(i,j,e)=9
+                                if (Setter(i)/=1) then ! Skip HD individuals
+                                    ImputeGenos(i,j)=9
+                                end if
+
+                        endif
+                    enddo
+
                     GlobalWorkPhase(i,:,:)=ImputePhase(i,:,:)
 
                     !$$$$$$$$$$$$$$$$$$$
@@ -3065,18 +3066,19 @@ write(0,*) 'DEBUG: Mach Finished'
                     enddo
 
                     ! Remove phase and genotype for those alleles with no explanation due to heterozygosity and recombination
-                    if (ped%pedigree(i)%isHD() == .FALSE.) then
-                        do j=1,inputParams%nsnp
-                            if (TempVec(j)==3) then
-                                if (ImputePhase(PedId,j,1)/=ImputePhase(PedId,j,2)) then
-                                    if ((ImputePhase(PedId,j,1)/=9).and.(ImputePhase(PedId,j,2)/=9)) then
-                                        ImputePhase(i,j,e)=9
-                                        ImputeGenos(i,j)=9
-                                    endif
-                                endif
-                            endif
-                        enddo
-                    end if
+                    do j=1,nSnp
+                        if ( TempVec(j)==3 .AND. &
+                             (ImputePhase(PedId,j,1)/=ImputePhase(PedId,j,2)) .AND. &
+                             (ImputePhase(PedId,j,1)/=9) .and. (ImputePhase(PedId,j,2)/=9) ) then
+
+                                ImputePhase(i,j,e)=9
+                                if (Setter(i)/=1) then ! Skip HD individuals
+                                    ImputeGenos(i,j)=9
+                                end if
+
+                        endif
+                    enddo
+
                     GlobalWorkPhase(i,:,:)=ImputePhase(i,:,:)
 
                     !$$$$$$$$$$$$$$$$$$$
