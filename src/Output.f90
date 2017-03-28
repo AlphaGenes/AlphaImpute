@@ -117,6 +117,30 @@ contains
     end subroutine WriteProbabilitiesGeneProb
 
 
+    subroutine WriteProbabilitiesFull(outFile, GenosProbs, ped,nAnims, nSnps)
+        use PedigreeModule
+        character(len=*), intent(IN) :: outFile
+        integer, intent(IN) :: nSnps,nAnims
+        type(pedigreeHolder), intent(IN) :: ped
+        double precision, intent(IN) :: GenosProbs(:,:,:)
+        double precision, allocatable :: GenosProbsTmp(:,:,:)
+        ! Local Variable
+        integer :: i!,j,k, n0, n1, n2
+        ! real, allocatable :: Probs0(:), Probs1(:)
+        open(unit=55,file=outFile,status="unknown")
+
+        ! allocate(Probs0(nSnps))
+        ! allocate(Probs1(nSnps))
+
+        do i=1,nAnims
+            write (55,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%Pedigree(i)%originalID,GenosProbs(i,:,1)
+            write (55,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%Pedigree(i)%originalID,GenosProbs(i,:,2)
+            write (55,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%Pedigree(i)%originalID,GenosProbs(i,:,3)
+            write (55,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%Pedigree(i)%originalID,GenosProbs(i,:,4)
+            ! enddo
+        enddo
+    end subroutine WriteProbabilitiesFull
+
     subroutine readProbabilitiesGeneProb(file, GenosProbs,nAnims, nSnps)
         use constantModule
         character(len=*), intent(IN) :: file
@@ -137,6 +161,30 @@ contains
             ! enddo
         enddo
     end subroutine readProbabilitiesGeneProb
+
+    subroutine readProbabilitiesFull(file, GenosProbs,nAnims, nSnps)
+        use constantModule
+        character(len=*), intent(IN) :: file
+        integer, intent(IN) :: nSnps,nAnims
+        double precision, intent(out) :: GenosProbs(:,:,:)
+        integer :: fileUnit        
+        integer :: i
+        character(len=IDLENGTH) :: dum
+
+        open (newunit=fileUnit,file=file,status="unknown")
+
+        ! allocate(Probs0(nSnps))
+        ! allocate(Probs1(nSnps))
+
+        do i=1,nAnims
+            read(fileUnit,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') dum,GenosProbs(i,:,1)
+            read(fileUnit,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') dum,GenosProbs(i,:,2)
+            read(fileUnit,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') dum,GenosProbs(i,:,3)
+            read(fileUnit,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') dum,GenosProbs(i,:,4)
+            ! enddo
+        enddo
+    end subroutine readProbabilitiesFull
+
 
 
 

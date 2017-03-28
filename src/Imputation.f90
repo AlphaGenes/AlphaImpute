@@ -2284,6 +2284,7 @@ write(0,*) 'DEBUG: Mach Finished'
         use Global
         ! TODOphase this all needs redone
         use alphaimputeinmod
+        use Output, only: readProbabilitiesFull
 
         implicit none
 
@@ -2301,7 +2302,7 @@ write(0,*) 'DEBUG: Mach Finished'
         if (inputParams%BypassGeneProb==0) then
             ! Get information from GeneProb
             if (.not. allocated(GenosProbs)) then
-                ! read it in from file
+                call readProbabilitiesFull("./GeneProb/GenotypeProbabilities.txt",GenosProbs,ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
             endif
 
             StSnp=1

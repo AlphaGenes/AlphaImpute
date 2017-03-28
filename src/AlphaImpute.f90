@@ -2830,7 +2830,6 @@ contains
         ! Assign individuals to clusters
         NewCluster=0
         dist=0
-        print *, size(ClusterMemberIndv)
         ClusterMemberIndv=0
 
         ! open (unit=2222,file='nSnpsAnimalCluster.txt',status='unknown')
@@ -3095,7 +3094,6 @@ program AlphaImpute
                         print *, "Calling gene prob"
                         call runGeneProbAlphaImpute(1, inputParams%nsnp, ped, GenosProbs, MAF)
                         print *, "writing probabilities"
-                        print *,GenosProbs
                         call WriteProbabilities("./Results/GenotypeProbabilities.txt", GenosProbs, ped,ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
                     endif
 
@@ -3103,6 +3101,7 @@ program AlphaImpute
 
                     if (inputParams%restartOption==OPT_RESTART_GENEPROB) then
                         call ped%writeOutGenotypes("./GeneProb/individualGenotypes.txt")
+                        call WriteProbabilitiesFull("./Geneprob/GenotypeProbabilities.txt", GenosProbs, ped,ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
                         write(6,*) "Restart option 1 stops program after Geneprobs jobs have finished"
                         stop
                     endif
@@ -3144,6 +3143,7 @@ program AlphaImpute
                 use InputOutput
                 integer :: i
                 type(OutputParameters) :: oParams
+                oParams = OutputParameters()
                 do i=1, apResults%nResults
                     write(oParams%outputDirectory,'("./Phasing/Phase"i0)') i
                     call writeAlphaPhaseResults(APResults%results(i), ped, oParams)
@@ -3163,7 +3163,7 @@ if (inputParams%hmmoption/=RUN_HMM_NGS) then
         if (inputParams%restartOption> OPT_RESTART_PHASING) Then
             ! Read back in geneprob data
             allocate(GenosProbs(ped%pedigreeSize-ped%nDummys,nSnpIterate,2))
-            call readProbabilitiesGeneProb("./GeneProb/GenotypeProbabilities.txt",GenosProbs,ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
+            call readProbabilitiesFull("./GeneProb/GenotypeProbabilities.txt",GenosProbs,ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
             block 
 
                 use OutputParametersDefinition
