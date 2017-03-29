@@ -69,8 +69,8 @@ contains
 
 
         print *, "Running AlphaPhase"
-       !$OMP parallel DO schedule(dynamic) &
-       !$OMP FIRSTPRIVATE(params)
+       !!$OMP parallel DO schedule(dynamic) &
+       !!$OMP FIRSTPRIVATE(params)
         do i= 1, nCoreLengths
 
             params%CoreAndTailLength = inputParams%CoreAndTailLengths(i)
@@ -82,7 +82,7 @@ contains
             results%results(i) = phaseAndCreateLibraries(ped, params, quiet=.true.)
         enddo
 
-        !$omp end parallel do
+        !!$omp end parallel do
         print *, "Finished Running AlphaPhase"
 
 
@@ -1028,7 +1028,7 @@ contains
                 SireDamRL=e+1
                 CountLeftSwitch=0
                 CountRightSwitch=0
-                pedID=ped%pedigree(i)%getSireDamNewIDByIndex(SireDamRL)
+                pedID=ped%pedigree(i)%getSireDamNewIDByIndex(e)
                 if ((inputParams%SexOpt==1).and.(ped%pedigree(PedId)%gender==inputParams%hetGameticStatus)) cycle
                 if ((PedId>0).and.((float(count(ImputePhase(PedId,:,:)==9))/(2*nSnpFinal))<0.30)) then          !(RecIdHDIndex(PedId)==1)
                     WorkRight=9
@@ -3121,7 +3121,7 @@ program AlphaImpute
                     write(6,*) "Restart option 1 stops program after genotype probabilities have been outputted"
                     stop
                 case default
-                    print *, "ERROR: BYPAS GENEPROB SET INCORRECTLY"
+                    print *, "ERROR: BYPASS GENEPROB SET INCORRECTLY"
                     stop 1
             end select
         endif
@@ -3159,10 +3159,10 @@ program AlphaImpute
 endif
 
 if (inputParams%hmmoption/=RUN_HMM_NGS) then
-        
         if (inputParams%restartOption> OPT_RESTART_PHASING) Then
+            print *,"Reading in Phasing information"
             ! Read back in geneprob data
-            allocate(GenosProbs(ped%pedigreeSize-ped%nDummys,nSnpIterate,2))
+            allocate(GenosProbs(ped%pedigreeSize-ped%nDummys,nSnpIterate,4))
             call readProbabilitiesFull("./GeneProb/GenotypeProbabilities.txt",GenosProbs,ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
             block 
 
@@ -3177,10 +3177,13 @@ if (inputParams%hmmoption/=RUN_HMM_NGS) then
                 allocate(ApResults%results(ApResults%nResults))
                 do i=1, ApResults%nResults
                     write(oParams%outputDirectory,'("./Phasing/Phase"i0)') i
-                    call readAlphaPhaseResults(ApResults%results(i), oParams)
+                    print *,"before read"
+                    call readAlphaPhaseResults(ApResults%results(i), oParams, ped)
+                    print *,"after read"
                 enddo
             end block
         endif
+        print *, "Phasing Completed"
 
     ! If we only want to phase data, then skip all the imputation steps
     if (inputParams%PhaseTheDataOnly==0) Then

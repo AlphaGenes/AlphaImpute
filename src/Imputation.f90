@@ -2762,7 +2762,7 @@ write(0,*) 'DEBUG: Mach Finished'
                     enddo
 
                     ! Remove phase and genotype for those alleles with no explanation due to heterozygosity and recombination
-                    do j=1,nSnp
+                    do j=1,inputParams%nSnp
                         if ( TempVec(j)==3 .AND. &
                              (ImputePhase(PedId,j,1)/=ImputePhase(PedId,j,2)) .AND. &
                              (ImputePhase(PedId,j,1)/=9) .and. (ImputePhase(PedId,j,2)/=9) ) then
@@ -3066,7 +3066,7 @@ write(0,*) 'DEBUG: Mach Finished'
                     enddo
 
                     ! Remove phase and genotype for those alleles with no explanation due to heterozygosity and recombination
-                    do j=1,nSnp
+                    do j=1,inputParams%nSnp
                         if ( TempVec(j)==3 .AND. &
                              (ImputePhase(PedId,j,1)/=ImputePhase(PedId,j,2)) .AND. &
                              (ImputePhase(PedId,j,1)/=9) .and. (ImputePhase(PedId,j,2)/=9) ) then

@@ -12,7 +12,7 @@ subroutine MaCHController(HMM)
     integer(kind=1), intent(in) :: HMM
     integer :: i, nprocs, nthreads
     real(4) :: r
-    real(8) :: tT
+    real(8) :: tT,t1,t2
     double precision :: Theta
     integer, allocatable :: seed(:)
     integer :: grainsize, count, secs, seed0
@@ -113,7 +113,7 @@ subroutine MaCHController(HMM)
 
     ! Set up number of process to be used
     nprocs = OMP_get_num_procs()
-    call OMP_set_num_threads(inputParams%useprocs)
+    ! call OMP_set_num_threads(inputParams%useprocs)
     nthreads = OMP_get_num_threads()
 
     allocate(seed(inputParams%useprocs))
@@ -1421,7 +1421,7 @@ subroutine CalcPenetrance
     ! allocate(Penetrance(nSnpHmm,0:2,0:2))
 
     nprocs = OMP_get_num_procs()
-    call OMP_set_num_threads(nprocs)
+    ! call OMP_set_num_threads(nprocs)
 
     !$OMP PARALLEL DO DEFAULT(SHARED)
     do j=1,nSnpHmm
