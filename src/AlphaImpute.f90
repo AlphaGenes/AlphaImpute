@@ -1028,8 +1028,9 @@ contains
                 SireDamRL=e+1
                 CountLeftSwitch=0
                 CountRightSwitch=0
-                pedID=ped%pedigree(i)%getSireDamNewIDByIndex(e+1)
-                ! means parent is a dummy
+                
+                pedID=ped%pedigree(i)%getSireDamNewIDByIndexNoDummy(e+1)
+                ! means parent is a dummy or no parent
                 if (pedId == 0) then
                     cycle
                 endif
