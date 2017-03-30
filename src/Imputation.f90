@@ -1724,7 +1724,6 @@ write(0,*) 'DEBUG: Mach Finished'
         ! Get HIGH DENSITY phase information of this phasing step
         ! WARNING: If I only want to phase base animals, why do I need to read the whole file?
 
-
         phaseHD(:,:,:,1) = apResults%results(MiddleResult)%getFullPhaseIntArray()
         phaseHD(:,:,:,2) = apResults%results(MiddleResultShift)%getFullPhaseIntArray()
         ! Impute HD phase of the middle core of the middle phasing step
@@ -2301,15 +2300,13 @@ write(0,*) 'DEBUG: Mach Finished'
 
         if (inputParams%BypassGeneProb==0) then
             ! Get information from GeneProb
-            if (.not. allocated(GenosProbs)) then
-                call readProbabilitiesFull("./GeneProb/GenotypeProbabilities.txt",GenosProbs,ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
-            endif
+            call readProbabilitiesFull("./GeneProb/GenotypeProbabilities.txt",GenosProbs,ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
 
             StSnp=1
             EnSnp=inputParams%nSnp
 
             do i=1,ped%pedigreeSize- ped%nDummys
-                PatAlleleProb(StSnp:EnSnp,1)=GenosProbs(i,StSnp:EnSnp,1)+GenosProbs(i,StSnp:EnSnp,2)
+                
                 PatAlleleProb(StSnp:EnSnp,2)=GenosProbs(i,StSnp:EnSnp,3)+GenosProbs(i,StSnp:EnSnp,4)
                 MatAlleleProb(StSnp:EnSnp,1)=GenosProbs(i,StSnp:EnSnp,1)+GenosProbs(i,StSnp:EnSnp,3)
                 MatAlleleProb(StSnp:EnSnp,2)=GenosProbs(i,StSnp:EnSnp,2)+GenosProbs(i,StSnp:EnSnp,4)

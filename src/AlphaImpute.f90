@@ -69,8 +69,8 @@ contains
 
 
         print *, "Running AlphaPhase"
-       !!$OMP parallel DO schedule(dynamic) &
-       !!$OMP FIRSTPRIVATE(params)
+       !$OMP parallel DO schedule(dynamic) &
+       !$OMP FIRSTPRIVATE(params)
         do i= 1, nCoreLengths
 
             params%CoreAndTailLength = inputParams%CoreAndTailLengths(i)
@@ -82,7 +82,7 @@ contains
             results%results(i) = phaseAndCreateLibraries(ped, params, quiet=.true.)
         enddo
 
-        !!$omp end parallel do
+        !$omp end parallel do
         print *, "Finished Running AlphaPhase"
 
 
@@ -1028,7 +1028,11 @@ contains
                 SireDamRL=e+1
                 CountLeftSwitch=0
                 CountRightSwitch=0
-                pedID=ped%pedigree(i)%getSireDamNewIDByIndex(e)
+                pedID=ped%pedigree(i)%getSireDamNewIDByIndex(e+1)
+                ! means parent is a dummy
+                if (pedId == 0) then
+                    cycle
+                endif
                 if ((inputParams%SexOpt==1).and.(ped%pedigree(PedId)%gender==inputParams%hetGameticStatus)) cycle
                 if ((PedId>0).and.((float(count(ImputePhase(PedId,:,:)==9))/(2*nSnpFinal))<0.30)) then          !(RecIdHDIndex(PedId)==1)
                     WorkRight=9
@@ -3172,14 +3176,12 @@ if (inputParams%hmmoption/=RUN_HMM_NGS) then
                 integer :: i
                 type(OutputParameters) :: oParams
                 type(alphaphaseResults) :: tmpRes
-                
+                oParams = OutputParameters()
                 ApResults%nResults = size(inputParams%CoreLengths)
                 allocate(ApResults%results(ApResults%nResults))
                 do i=1, ApResults%nResults
                     write(oParams%outputDirectory,'("./Phasing/Phase"i0)') i
-                    print *,"before read"
                     call readAlphaPhaseResults(ApResults%results(i), oParams, ped)
-                    print *,"after read"
                 enddo
             end block
         endif

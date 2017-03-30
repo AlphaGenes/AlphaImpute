@@ -31,7 +31,7 @@
 
 module Output
     ! use global
-
+    use iso_fortran_env
     implicit none
 
 
@@ -166,7 +166,7 @@ contains
         use constantModule
         character(len=*), intent(IN) :: file
         integer, intent(IN) :: nSnps,nAnims
-        double precision, intent(out) :: GenosProbs(:,:,:)
+        real(kind=real64),allocatable, intent(out) :: GenosProbs(:,:,:)
         integer :: fileUnit        
         integer :: i
         character(len=IDLENGTH) :: dum
@@ -175,6 +175,10 @@ contains
 
         ! allocate(Probs0(nSnps))
         ! allocate(Probs1(nSnps))
+        if (allocated(GenosProbs)) then
+            deallocate(Genosprobs)
+        endif
+        allocate(GenosProbs(nAnims,nSnps, 4))
 
         do i=1,nAnims
             read(fileUnit,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') dum,GenosProbs(i,:,1)
