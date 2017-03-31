@@ -506,7 +506,7 @@ contains
             end select
         end if
     end do READFILE
-
+    deallocate(tag)
     open (newUnit=this%pedigreeFileUnit,file=trim(this%PedigreeFile),status="old")
     open (newUnit=this%genotypeFileUnit,file=trim(this%GenotypeFile),status="old")
     if (this%SexOpt==1) open (newUnit=this%genderFileUnit,file=trim(this%GenderFile),status="old")
@@ -541,7 +541,7 @@ contains
     endif
 
     this%nSnpRaw = this%nsnp
-
+    
     !$  CALL OMP_SET_NUM_THREADS(this%nProcessors)
 end subroutine ReadInParameterFile
 

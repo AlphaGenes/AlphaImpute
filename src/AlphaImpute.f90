@@ -3011,7 +3011,6 @@ program AlphaImpute
     use AlphaPhaseResultsDefinition
     implicit none
 
-    integer :: markers
     character(len=4096) :: cmd, SpecFile
 
     inputParams => defaultInput
@@ -3099,7 +3098,7 @@ program AlphaImpute
                         print *, "Calling geneprob"
                         call runGeneProbAlphaImpute(1, inputParams%nsnp, ped, GenosProbs, MAF)
                         print *, "writing probabilities"
-                        call WriteProbabilitiesFull("./Geneprob/GenotypeProbabilities.txt", GenosProbs, ped,ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
+                        call WriteProbabilitiesFull("./Geneprob/GenotypeProbabilities.txt", GenosProbs, ped,ped%pedigreeSize-ped%nDummys)
                         call WriteProbabilities("./Results/GenotypeProbabilities.txt", GenosProbs, ped,ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
                     endif
 
@@ -3107,7 +3106,7 @@ program AlphaImpute
 
                     if (inputParams%restartOption==OPT_RESTART_GENEPROB) then
                         call ped%writeOutGenotypes("./GeneProb/individualGenotypes.txt")
-                        call WriteProbabilitiesFull("./Geneprob/GenotypeProbabilities.txt", GenosProbs, ped,ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
+                        call WriteProbabilitiesFull("./Geneprob/GenotypeProbabilities.txt", GenosProbs, ped,ped%pedigreeSize-ped%nDummys)
                         write(6,*) "Restart option 1 stops program after Geneprobs jobs have finished"
                         stop
                     endif
@@ -3177,7 +3176,6 @@ if (inputParams%hmmoption/=RUN_HMM_NGS) then
                 use AlphaPhaseResultsDefinition
                 integer :: i
                 type(OutputParameters) :: oParams
-                type(alphaphaseResults) :: tmpRes
                 oParams = OutputParameters()
                 ApResults%nResults = size(inputParams%CoreLengths)
                 allocate(ApResults%results(ApResults%nResults))
@@ -3213,7 +3211,7 @@ if (inputParams%hmmoption/=RUN_HMM_NGS) then
         endif
     endif
 endif
-
+call ped%destroyPedigree()
 call PrintTimerTitles
 ! if (inputParams%restartOption > OPT_RESTART_IMPUTATION) then
 !     call system(RM // " Tmp2345678.txt")

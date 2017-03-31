@@ -117,20 +117,16 @@ contains
     end subroutine WriteProbabilitiesGeneProb
 
 
-    subroutine WriteProbabilitiesFull(outFile, GenosProbs, ped,nAnims, nSnps)
+    subroutine WriteProbabilitiesFull(outFile, GenosProbs, ped,nAnims)
         use PedigreeModule
         character(len=*), intent(IN) :: outFile
-        integer, intent(IN) :: nSnps,nAnims
+        integer, intent(IN) :: nAnims
         type(pedigreeHolder), intent(IN) :: ped
         double precision, intent(IN) :: GenosProbs(:,:,:)
-        double precision, allocatable :: GenosProbsTmp(:,:,:)
         ! Local Variable
         integer :: i!,j,k, n0, n1, n2
         ! real, allocatable :: Probs0(:), Probs1(:)
         open(unit=55,file=outFile,status="unknown")
-
-        ! allocate(Probs0(nSnps))
-        ! allocate(Probs1(nSnps))
 
         do i=1,nAnims
             write (55,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%Pedigree(i)%originalID,GenosProbs(i,:,1)
@@ -141,10 +137,10 @@ contains
         enddo
     end subroutine WriteProbabilitiesFull
 
-    subroutine readProbabilitiesGeneProb(file, GenosProbs,nAnims, nSnps)
+    subroutine readProbabilitiesGeneProb(file, GenosProbs,nAnims)
         use constantModule
         character(len=*), intent(IN) :: file
-        integer, intent(IN) :: nSnps,nAnims
+        integer, intent(IN) :: nAnims
         double precision, intent(out) :: GenosProbs(:,:,:)
         integer :: fileUnit        
         integer :: i
@@ -152,13 +148,9 @@ contains
 
         open (newunit=fileUnit,file=file,status="unknown")
 
-        ! allocate(Probs0(nSnps))
-        ! allocate(Probs1(nSnps))
-
         do i=1,nAnims
             read(fileUnit,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') dum,GenosProbs(i,:,1)
             read(fileUnit,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') dum,GenosProbs(i,:,2)
-            ! enddo
         enddo
     end subroutine readProbabilitiesGeneProb
 
@@ -258,7 +250,7 @@ contains
         implicit none
 
         integer, intent(in) :: nsnp
-        integer :: h,i,j,dum,fileUnit
+        integer :: i,j,dum,fileUnit
         real, allocatable, dimension(:,:) :: PatAlleleProb,MatAlleleProb,GeneProbWork
         character(len=*), intent(in) :: path
         type(AlphaImputeInput), pointer :: inputParams
