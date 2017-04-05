@@ -61,8 +61,15 @@ contains
                 ! todo we need to handle shifted and non shifted outputs!
         allocate(results%results(nCoreLengths))
         params = newParameters()
+        params%iterateType = inputParams%iterateMethod
+        params%iterateNumber = inputParams%PhaseSubsetSize
+        params%numIter = inputParams%PhaseNIterations
+        params%minOverlap = inputparams%minoverlaphaplotype
 
 
+        if (inputparams%minoverlaphaplotype /= 0) then
+            params%percMinPresent = 0
+        endif 
         call omp_set_nested(.true.)
 
 
@@ -74,7 +81,6 @@ contains
         do i= 1, nCoreLengths
 
             params%CoreAndTailLength = inputParams%CoreAndTailLengths(i)
-            params%itterateNumber = inputParams%PhaseNIterations
             params%jump = inputParams%CoreAndTailLengths(i)
             params%numsurrdisagree = 10
             params%useSurrsN = 10

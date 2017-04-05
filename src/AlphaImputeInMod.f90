@@ -56,7 +56,8 @@ module AlphaImputeInMod
         logical :: largeDatasets
         integer(kind=int32) :: PhaseSubsetSize, PhaseNIterations
         integer(kind=int32) :: nProcessors,nProcessGeneProb,nProcessAlphaPhase
-
+        character(len=10) :: iterateMethod
+        integer :: minoverlaphaplotype
         ! box 6
         integer(kind=int32) :: InternalIterations
         integer(kind=1) :: ConservativeHapLibImputation
@@ -107,18 +108,20 @@ contains
         use AlphaHouseMod, only: parseToFirstWhitespace,splitLineIntoTwoParts,toLower
         use PARAMETERS
 
+        class(AlphaImputeInput), intent(inout),target :: this
         integer :: unit,IOStatus,MultipleHDpanels,i
         character(len=*), intent(in) :: SpecFile
-    class(AlphaImputeInput), optional, intent(inout),target :: this
 
         character(len=300) :: first, line
         character(len=:), allocatable::tag
         character(len=300),dimension(:),allocatable :: second
 
         this%MultiHD = 0
+        this%minoverlaphaplotype = 0
 
         open(newunit=unit, file=SpecFile, action="read", status="old")
         IOStatus = 0
+        
         READFILE: do while (IOStatus==0)
             read(unit,"(A)", IOStat=IOStatus)  line
             if (len_trim(line)==0) then
@@ -377,6 +380,26 @@ contains
                     this%largedatasets=.false.
 
                 endif
+
+            case("iteratemethod")
+                 if (ToLower(trim(second(1)))== "off") then
+                    this%iterateMethod  = "Off"
+                 else if (ToLower(trim(second(1)))== "randomorder") then
+                    this%iterateMethod  = "RandomOrder"
+                 else if (ToLower(trim(second(1)))== "inputorder") then
+                    this%iterateMethod  = "InputOrder"
+                else
+                    this%iterateMethod= "Off"
+
+                endif
+
+            
+            case("minoverlaphaplotype")
+                read(second(1),*) this%minoverlaphaplotype
+                if (this%minoverlaphaplotype < 0) then
+                    write(error_unit,*) "ERROR: Min minoverlap haplotype size is set incorrectly!"
+                endif
+
 
                 ! box 6
             case("internaliterations")
