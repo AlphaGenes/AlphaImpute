@@ -3148,7 +3148,7 @@ program AlphaImpute
                 use InputOutput
                 integer :: i
                 type(OutputParameters) :: oParams
-                oParams = OutputParameters()
+                oParams = newOutputParameters()
                 do i=1, apResults%nResults
                     write(oParams%outputDirectory,'("./Phasing/Phase"i0)') i
                     call writeAlphaPhaseResults(APResults%results(i), ped, oParams)
@@ -3176,7 +3176,7 @@ if (inputParams%hmmoption/=RUN_HMM_NGS) then
                 use AlphaPhaseResultsDefinition
                 integer :: i
                 type(OutputParameters) :: oParams
-                oParams = OutputParameters()
+                oParams = newOutputParameters()
                 ApResults%nResults = size(inputParams%CoreLengths)
                 allocate(ApResults%results(ApResults%nResults))
                 do i=1, ApResults%nResults
