@@ -376,23 +376,25 @@ contains
                     this%largedatasets=.true.
                     read(second(2),*) this%PhaseSubsetSize
                     read(second(3),*) this%PhaseNIterations
+                    if (size(second) < 4 ) then
+                        this%iterateMethod  = "RandomOrder"
+                    else 
+                        if (ToLower(trim(second(4)))== "off") then
+                            this%iterateMethod  = "Off"
+                        else if (ToLower(trim(second(4)))== "randomorder") then
+                            this%iterateMethod  = "RandomOrder"
+                        else if (ToLower(trim(second(4)))== "inputorder") then
+                            this%iterateMethod  = "InputOrder"
+                        else
+                            this%iterateMethod= "Off"
+
+                        endif
+                    endif
+
                 else
                     this%largedatasets=.false.
 
                 endif
-
-            case("iteratemethod")
-                 if (ToLower(trim(second(1)))== "off") then
-                    this%iterateMethod  = "Off"
-                 else if (ToLower(trim(second(1)))== "randomorder") then
-                    this%iterateMethod  = "RandomOrder"
-                 else if (ToLower(trim(second(1)))== "inputorder") then
-                    this%iterateMethod  = "InputOrder"
-                else
-                    this%iterateMethod= "Off"
-
-                endif
-
             
             case("minoverlaphaplotype")
                 read(second(1),*) this%minoverlaphaplotype
