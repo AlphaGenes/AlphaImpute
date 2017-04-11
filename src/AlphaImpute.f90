@@ -110,10 +110,10 @@ contains
         JobsDone(:)=0
         do
             do i=1,nProcs
-#ifdef _WIN32
-                write (filout,'(".\GeneProb\GeneProb"i0,"\GpDone.txt")')i             
-#else
+#ifndef _WIN32
                 write (filout,'("./GeneProb/GeneProb"i0,"/GpDone.txt")')i
+#else
+                write (filout,'(".\GeneProb\GeneProb"i0,"\GpDone.txt")')i
 #endif
                 inquire(file=trim(filout),exist=FileExists)
                 if (FileExists .eqv. .true.) then
@@ -306,19 +306,18 @@ contains
 
 
         do i=1,inputParams%nprocessors
-#ifdef _WIN32
-            write (filout,'(".\IterateGeneProb\GeneProb"i0,"\GeneProbSpec.txt")')i
-#else
+#ifndef _WIN32
             write (filout,'("./IterateGeneProb/GeneProb"i0,"/GeneProbSpec.txt")')i
-            
+#else
+            write (filout,'(".\IterateGeneProb\GeneProb"i0,"\GeneProbSpec.txt")')i
 #endif
             open (unit=108,file=trim(filout),status='unknown')
             write (108,*) "nAnis        ,",nAnisP
             write (108,*) "nsnp     ,",nSnpIterate
-#ifdef _WIN32
-            write (108,*) "InputFilePath    ,",'"..\IterateGeneProbInput.txt"'
-#else          
+#ifndef _WIN32
             write (108,*) "InputFilePath    ,",'"../IterateGeneProbInput.txt"'
+#else
+            write (108,*) "InputFilePath    ,",'"..\IterateGeneProbInput.txt"'
 #endif
             write (108,*) "OutputFilePath   ,",'"GeneProbs.txt"'
             write (108,*) "StartSnp     ,",GpIndex(i,1)
@@ -329,28 +328,28 @@ contains
             if (GeneProbPresent==1) call system (COPY // " GeneProbForAlphaImpute" // EXE // " IterateGeneProb" // DASH // filout // NULL)
         enddo
 
-#ifdef _WIN32
-        open (unit=109,file="TempIterateGeneProb.BAT",status="unknown")
-#else       
+#ifndef _WIN32
         open (unit=109,file="TempIterateGeneProb.sh",status="unknown")
+#else
+        open (unit=109,file="TempIterateGeneProb.BAT",status="unknown")
 #endif
 
         if (inputParams%restartOption/=4) then
             !if (PicVersion==.FALSE.) then
 #if CLUSTER==0
             do i=1,inputParams%nprocessors
-#ifdef _WIN32
-                write (filout,'("cd IterateGeneProb\GeneProb"i0)')i
+#ifndef _WIN32
+                write (filout,'("cd IterateGeneProb/GeneProb"i0)')i
 #else
-                write (filout,'("cd IterateGeneProb/GeneProb"i0)')i         
+                write (filout,'("cd IterateGeneProb\GeneProb"i0)')i
 #endif
                 write (109,*) trim(filout)
-#ifdef _WIN32
-                if (GeneProbPresent==0) write (109,*) "start /b GeneProbForAlphaImpute.exe > out 2>&1"
-                if (GeneProbPresent==1) write (109,*) "start /b .\GeneProbForAlphaImpute.exe > out 2>&1"
-#else             
+#ifndef _WIN32
                 if (GeneProbPresent==0) write (109,*) "nohup sh -c ""GeneProbForAlphaImpute > out 2>&1"" >/dev/null &"
                 if (GeneProbPresent==1) write (109,*) "nohup sh -c ""./GeneProbForAlphaImpute > out 2>&1"" >/dev/null &"
+#else
+                if (GeneProbPresent==0) write (109,*) "start /b GeneProbForAlphaImpute.exe > out 2>&1"
+                if (GeneProbPresent==1) write (109,*) "start /b .\GeneProbForAlphaImpute.exe > out 2>&1"
 #endif
                 write (109,*) "cd ../.."
                 !#ifndef _WIN32
@@ -361,12 +360,11 @@ contains
             enddo
             close(109)
 
-#ifdef _WIN32
-            call system("start ""Iterate GeneProbs"" .\TempIterateGeneProb.BAT >NUL")
-#else
-           
+#ifndef _WIN32
             call system("chmod +x TempIterateGeneProb.sh")
             call system("./TempIterateGeneProb.sh")
+#else
+            call system("start ""Iterate GeneProbs"" .\TempIterateGeneProb.BAT >NUL")
 #endif
 
             print*, " "
@@ -374,24 +372,23 @@ contains
             JobsDone(:)=0
             !JDone(:)=0
 
-#ifdef _WIN32
+#ifndef _WIN32
+            call system("rm -f ./IterateGeneProb/GeneProb*/GpDone.txt")
+#else
             do i=1,inputParams%nprocessors
                 write (filout,'("IterateGeneProb\GeneProb"i0"\GpDone.txt")')i
                 inquire(file=trim(filout),exist=FileExists)
                 if (FileExists .eqv. .TRUE.) call system("del /f /q " // filout // NULL)
             enddo
-            
-#else
-           call system("rm -f ./IterateGeneProb/GeneProb*/GpDone.txt")
 #endif
 
             !if (inputParams%restartOption/=OPT_RESTART_IMPUTATION) then
             do
                 do i=1,inputParams%nprocessors
-#ifdef _WIN32
-                    write (filout,'(".\IterateGeneProb\GeneProb"i0,"\GpDone.txt")')i
-#else                    
+#ifndef _WIN32
                     write (filout,'("./IterateGeneProb/GeneProb"i0,"/GpDone.txt")')i
+#else
+                    write (filout,'(".\IterateGeneProb\GeneProb"i0,"\GpDone.txt")')i
 #endif
                     inquire(file=trim(filout),exist=FileExists)
                     if (FileExists .eqv. .true.) then
@@ -1622,23 +1619,20 @@ contains
 
         counter=0
         do h=1,inputParams%nprocessors
-#ifdef _WIN32
-            write (filout,'(".\IterateGeneProb\GeneProb"i0,"\GeneProbs.txt")')h         !here
-            open (unit=110,file=trim(filout),status="unknown")
-            write (filout,'(".\IterateGeneProb\GeneProb"i0,"\MinorAlleleFrequency.txt")')h          !here
-            open (unit=111,file=trim(filout),status="unknown")
-            write (filout,'(".\IterateGeneProb\GeneProb"i0,"\GPI.txt")')h
-            open (unit=222,file=filout,status="unknown")
-#else 
+#ifndef _WIN32
             write (filout,'("./IterateGeneProb/GeneProb"i0,"/GeneProbs.txt")')h         !here
             open (unit=110,file=trim(filout),status="unknown")
             write (filout,'("./IterateGeneProb/GeneProb"i0,"/MinorAlleleFrequency.txt")')h          !here
             open (unit=111,file=trim(filout),status="unknown")
-            write (filout,'("./IterateGeneProb/GeneProb"i0,"/GPI.txt")')h
-            open (unit=222,file=filout,status="unknown")
+#else
+            write (filout,'(".\IterateGeneProb\GeneProb"i0,"\GeneProbs.txt")')h         !here
+            open (unit=110,file=trim(filout),status="unknown")
+            write (filout,'(".\IterateGeneProb\GeneProb"i0,"\MinorAlleleFrequency.txt")')h          !here
+            open (unit=111,file=trim(filout),status="unknown")
 #endif
 
-            
+            write (filout,'("./IterateGeneProb/GeneProb"i0,"/GPI.txt")')h
+            open (unit=222,file=filout,status="unknown")
 
             StSnp=GpIndex(h,1)
             EnSnp=GpIndex(h,2)
@@ -2523,20 +2517,11 @@ contains
         integer :: e,i,j,CountBothGeno,CountDisagree,CountChanges,IndId,ParId,ParPos
         integer :: TurnOn
         type(AlphaImputeInput), pointer :: inputParams
-        integer :: tmpID
+        integer :: tmpID, dumId
         integer :: nHomoParent, nBothHomo
 
         inputParams => defaultInput
         open (unit=101,file="." // DASH // "Miscellaneous" // DASH // "PedigreeMistakes.txt",status="unknown")
-
-
-        do j=1,nAnisG
-            tmpID = ped%dictionary%getValue(trim(GenotypeId(j)))
-            if (tmpID /= DICT_NULL) then
-                ped%pedigree(tmpID)%genotypePosition = j
-                ped%pedigree(tmpID)%Genotyped = .true.
-            endif
-        enddo
 
         CountChanges=0
         nHomoParent = 0
@@ -2544,8 +2529,11 @@ contains
         do e=1,2                    ! Do whatever this does, first on males and then on females
             ParPos=e+1              ! Index in the Genotype and Pedigree matrices for sires and dams
             do i=1,nAnisRawPedigree
-                IndId=ped%pedigree(i)%genotypePosition            ! My Id
-                ParId=ped%pedigree(i)%getSireDamGenotypePositionByIndex(e+1)       ! Paternal Id,
+                IndId=ped%genotypeDictionary%getValue(ped%pedigree(i)%originalID)          ! My Id
+                if (IndID == DICT_NULL) then
+                    IndId = 0
+                endif
+                ParId=ped%getSireDamGenotypeIDByIndex(ped%pedigree(i),e+1)       ! Paternal Id,
                 TurnOn=1
                 ! GenderRaw: Says whether the proband is a male or a female
                 ! If there are sex cromosome information, and
@@ -2581,11 +2569,14 @@ contains
                             float(CountDisagree)/CountBothGeno, float(CountDisagree)/nHomoParent, float(CountDisagree)/nBothHomo
                         CountChanges=CountChanges+1
                         if (parPos == 2) then
-                            ped%pedigree(i)%sirePointer => null()
-                            ped%pedigree(i)%sireID = '0'
+                            call ped%pedigree(i)%sirePointer%removeOffspring(ped%pedigree(i))
+                            call ped%createDummyAnimalAtEndOfPedigree(dumId, i)
+                            ! ped%pedigree(i)%sireID = '0'
                         else if (parPos == 3) then
-                            ped%pedigree(i)%damPointer => null()
-                            ped%pedigree(i)%damId = '0'
+                            call ped%pedigree(i)%damPointer%removeOffspring(ped%pedigree(i))
+                            call ped%createDummyAnimalAtEndOfPedigree(dumId, i)
+                            ! ped%pedigree(i)%damPointer => null()
+                            ! ped%pedigree(i)%damId = '0'
                         endif
                     else
                         ! Remove genotype of proband and parent
