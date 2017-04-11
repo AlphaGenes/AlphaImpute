@@ -57,7 +57,7 @@ subroutine PhasingManagementWindows
         stop
     endif
 
-#ifdef __APPLE__
+#ifndef _WIN32
 #else
     do i=1,inputParams%nProcessors
         write (filout,'("Phasing\Phase"i0,"\PhasingResults\Timer.txt")')i

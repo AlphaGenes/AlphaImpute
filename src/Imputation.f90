@@ -1756,7 +1756,7 @@ write(0,*) 'DEBUG: Mach Finished'
 
         ! Get HIGH DENSITY phase information of this phasing step
         ! WARNING: If I only want to phase base animals, why do I need to read the whole file?
-#ifdef __APPLE__
+#ifndef _WIN32
         if (inputParams%ManagePhaseOn1Off0==0) then
             write (FileName,'(a,"/Phase",i0,"/PhasingResults/FinalPhase.txt")') trim(inputParams%phasePath),MiddlePhaseRun
         else
@@ -1787,7 +1787,7 @@ write(0,*) 'DEBUG: Mach Finished'
         endblock
         close(2001)
 
-#ifdef __APPLE__
+#ifndef _WIN32
         if (inputParams%ManagePhaseOn1Off0==0) then
             write (FileName,'(a,"/Phase",i0,"/PhasingResults/FinalPhase.txt")') trim(inputParams%phasePath),CompPhaseRun
         else
@@ -2349,7 +2349,7 @@ write(0,*) 'DEBUG: Mach Finished'
         if (inputParams%BypassGeneProb==0) then
             ! Get information from GeneProb
             do h=1,inputParams%nProcessors
-#ifdef __APPLE__
+#ifndef _WIN32
                 write (filout,'("./GeneProb/GeneProb"i0,"/GeneProbs.txt")')h            !here
 #else
                 write (filout,'(".\GeneProb\GeneProb"i0,"\GeneProbs.txt")')h            !here
