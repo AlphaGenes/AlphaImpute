@@ -1771,6 +1771,7 @@ contains
         integer,dimension(:), allocatable :: TempCore,TempCplusT
         integer :: Tmp
         character(len=7) :: cm
+        character(len=300) ::filout
         type(AlphaImputeInput), pointer :: inputParams
 
 
@@ -1781,10 +1782,6 @@ contains
 
         allocate(GpIndex(inputParams%nprocessors,2))
 
-        ! WARNING: This code is not necessary
-        write(cm,'(I7)') inputParams%nSnpRaw !for formatting
-        cm = adjustl(cm)
-        ! end WARNING
 
         do i=1,inputParams%nPhaseExternal
             TempCore(i)=inputParams%CoreLengths(i)
@@ -1845,7 +1842,7 @@ contains
 #endif
 
             open (unit=108,file=trim(filout),status='unknown')
-            write (108,*) "nAnis        ,",nAnisP
+            write (108,*) "nAnis        ,",ped%pedigreeSize-ped%nDummys
             write (108,*) "nsnp     ,",inputParams%nsnp
 #ifndef _WIN32
             write (108,*) "InputFilePath    ,",'"../../InputFiles/RecodedGeneProbInput.txt"'
@@ -1855,6 +1852,7 @@ contains
             write (108,*) "OutputFilePath   ,",'"GeneProbs.txt"'
             write (108,*) "StartSnp     ,",GpIndex(i,1)
             write (108,*) "EndSnp       ,",GpIndex(i,2)
+            write (108,*) "cores       ,",1
             call flush(108)
             close(108)
 
@@ -3338,8 +3336,10 @@ program AlphaImpute
         call FillInBasedOnOffspring
         call InternalEdit
 
-        call MakeFiles
 
+        if (inputparams%cluster) then
+            call MakeFiles
+        endif
     else
 
         call MakeDirectories(RUN_HMM_NGS)
