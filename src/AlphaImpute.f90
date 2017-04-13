@@ -85,7 +85,7 @@ contains
             params%numsurrdisagree = 10
             params%useSurrsN = 10
             params%PercGenoHaploDisagree = inputParams%GenotypeErrorPhase
-            results%results(i) = phaseAndCreateLibraries(ped, params, quiet=.true.)
+        results%results(i) = phaseAndCreateLibraries(ped, params, quiet=.true.)
         enddo
 
         !$omp end parallel do
@@ -965,7 +965,11 @@ contains
                 ImputePhase=TmpPhase
                 if (inputParams%SexOpt==0) then
                     if (inputParams%bypassgeneprob==0) then
-                        call IterateGeneProbsNew(GenosProbs)
+                         if (inputParams%cluster) then
+                            call IterateGeneProbs
+                        else
+                            call IterateGeneProbsNew(GenosProbs)
+                        endif
                     else
                         call IterateInsteadOfGeneProbs
                     endif
@@ -3348,7 +3352,7 @@ program AlphaImpute
                         ! call ped%addGenotypeInformation(Genos)
                         if (inputParams%cluster) then
                             write(6,*) ""
-                            write(6,*) "Restart option 1 stops program before Geneprobs jobs have been submitted"
+                            write(6,*) "Restart option 0 or 1 stops program before Geneprobs jobs have been submitted with cluster option set"
                             stop
                         endif
                         print *, "Calling geneprob"
@@ -3427,6 +3431,8 @@ if (inputParams%hmmoption/=RUN_HMM_NGS) then
             allocate(GenosProbs(ped%pedigreeSize-ped%nDummys,nSnpIterate,4))
             if (inputParams%cluster) then
                 call readProbabilitiesFullCluster(GenosProbs,ped%pedigreeSize-ped%nDummys, inputParams%nsnp,inputparams,GpIndex)
+                print *,"DEBUG"
+                print *,GenosProbs
             else
                 call readProbabilitiesFull("./GeneProb/GenotypeProbabilities.txt",GenosProbs,ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
             endif
