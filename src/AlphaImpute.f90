@@ -3346,6 +3346,11 @@ program AlphaImpute
 
 
                         ! call ped%addGenotypeInformation(Genos)
+                        if (inputParams%cluster) then
+                            write(6,*) ""
+                            write(6,*) "Restart option 1 stops program before Geneprobs jobs have been submitted"
+                            stop
+                        endif
                         print *, "Calling geneprob"
                         call runGeneProbAlphaImpute(1, inputParams%nsnp, ped, GenosProbs, MAF)
                         print *, "writing probabilities"
