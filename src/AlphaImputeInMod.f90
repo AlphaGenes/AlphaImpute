@@ -120,6 +120,8 @@ contains
         this%MultiHD = 0
         this%minoverlaphaplotype = 0
         this%cluster = .false.
+        this%iterateMethod = "Off"
+        this%PhaseNIterations = 1
         open(newunit=unit, file=SpecFile, action="read", status="old")
         IOStatus = 0
         

@@ -1836,7 +1836,38 @@ contains
             enddo
         endif
         GpIndex(inputParams%nprocessors,2)=inputParams%nsnp
+      ! Create GeneProbSpec file
+        do i=1,inputParams%nprocessors
+#ifndef _WIN32
+            write (filout,'("./GeneProb/GeneProb"i0,"/GeneProbSpec.txt")')i
+#else
+            write (filout,'(".\GeneProb\GeneProb"i0,"\GeneProbSpec.txt")')i
+#endif
 
+            open (unit=108,file=trim(filout),status='unknown')
+            write (108,*) "nAnis        ,",nAnisP
+            write (108,*) "nsnp     ,",inputParams%nsnp
+#ifndef _WIN32
+            write (108,*) "InputFilePath    ,",'"../../InputFiles/RecodedGeneProbInput.txt"'
+#else
+            write (108,*) "InputFilePath    ,",'"..\..\InputFiles\RecodedGeneProbInput.txt"'
+#endif
+            write (108,*) "OutputFilePath   ,",'"GeneProbs.txt"'
+            write (108,*) "StartSnp     ,",GpIndex(i,1)
+            write (108,*) "EndSnp       ,",GpIndex(i,2)
+            call flush(108)
+            close(108)
+
+            write (filout,'("GeneProb"i0)')i
+            ! if (GeneProbPresent==1) call system ("cp GeneProbForAlphaImpute GeneProb/" // filout)
+            if (GeneProbPresent==1) call system (COPY // " GeneProbForAlphaImpute" // EXE // " GeneProb" // DASH // filout // NULL)
+        enddo
+
+        if (inputParams%PreProcess==.true.) then
+            print*, "  "
+            print*, "  ","The program has preprocessed the data and now it stops"
+            stop
+        endif
 
         deallocate(TempCore)
         deallocate(TempCplusT)
