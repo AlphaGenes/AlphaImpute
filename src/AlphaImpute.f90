@@ -3406,6 +3406,7 @@ program AlphaImpute
                 type(OutputParameters) :: oParams
                 oParams = newOutputParameters()
                 do i=1, apResults%nResults
+                    print *,"DEBUG: RESULT:",i
                     write(oParams%outputDirectory,'("./Phasing/Phase"i0)') i
                     call writeAlphaPhaseResults(APResults%results(i), ped, oParams)
 
