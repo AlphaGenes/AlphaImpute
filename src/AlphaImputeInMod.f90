@@ -82,6 +82,7 @@ module AlphaImputeInMod
 
         ! other
         integer(kind=int32) :: nSnpRaw,nAgreeImputeHDLib,nAgreeParentPhaseElim,nAgreeGrandParentPhaseElim,nAgreePhaseElim,nAgreeInternalHapLibElim
+        logical :: cluster
     contains
         procedure :: ReadInParameterFile
     end type AlphaImputeInput
@@ -118,7 +119,7 @@ contains
 
         this%MultiHD = 0
         this%minoverlaphaplotype = 0
-
+        this%cluster = .false.
         open(newunit=unit, file=SpecFile, action="read", status="old")
         IOStatus = 0
         
@@ -524,7 +525,12 @@ contains
                 endif
             case("restartoption")
                 read(second(1),*) this%restartOption
-
+            case("cluster")
+               if(ToLower(trim(second(1))) == "no") then
+                    this%cluster = .false.
+                else if (ToLower(trim(second(1))) == "yes") then
+                    this%cluster = .true.
+                endif
             case default
                 write(*,"(A,A)") trim(tag), " is not valid for the AlphaImpute Spec File."
                 cycle

@@ -26,7 +26,7 @@ module InputMod
     use iso_fortran_env
 
     private
-    public:: CountInData, ReadInData, ReadSeq, ReadGenos
+    public:: ReadInData, ReadSeq
 
 
 contains

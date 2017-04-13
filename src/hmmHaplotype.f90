@@ -514,7 +514,7 @@ MODULE hmmHaplotyper
         integer, intent(IN) :: hap
 
         ! Local variables
-        integer :: i, j, Index
+        integer :: i
         integer :: RefAll, AltAll, allele
         double precision :: factors(0:1), ErrorRate
         double precision :: prior_11, prior_12, prior_22, summ

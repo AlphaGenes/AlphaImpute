@@ -48,7 +48,7 @@ CONTAINS
     SUBROUTINE ImputationManagement
         use omp_lib
         use informationModule
-        use Output, only : ReadInPrePhasedData, ReReadGeneProbs
+        use Output, only : ReadInPrePhasedData, ReReadGeneProbs,readgeneprobscluster
         use AlphaPhaseResultsDefinition
 
         integer :: loop
@@ -115,7 +115,11 @@ write(0,*) 'DEBUG: Mach Finished'
                         allocate(ImputePhase(0:ped%pedigreeSize,inputParams%nsnpraw,2))
                         allocate(GlobalWorkPhase(0:ped%pedigreeSize,inputParams%nsnpraw,2))
 
-                        call ReReadGeneProbs("./Results/GenotypeProbabilities.txt", inputParams%nsnp)
+                        if (inputParams%cluster) then
+                            call readGeneProbsCluster(GlobalWorkPhase,ped,GpIndex, inputParams,GeneProbThresh)
+                        else   
+                            call ReReadGeneProbs(globalworkphase, ped,"./Results/GenotypeProbabilities.txt", inputParams%nsnp,GeneProbThresh)
+                        endif
                     else
                         ! Phase in the homozygous case for the SEX CHROMOSOME
                         ! WARNING: NOTHING IS DONE!!
@@ -2283,7 +2287,7 @@ write(0,*) 'DEBUG: Mach Finished'
         use Global
         ! TODOphase this all needs redone
         use alphaimputeinmod
-        use Output, only: readProbabilitiesFull
+        use Output, only: readProbabilitiesFull, readProbabilitiesFullCluster
 
         implicit none
 
@@ -2300,8 +2304,11 @@ write(0,*) 'DEBUG: Mach Finished'
 
         if (inputParams%BypassGeneProb==0) then
             ! Get information from GeneProb
-            call readProbabilitiesFull("./GeneProb/GenotypeProbabilities.txt",GenosProbs,ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
-
+            if (inputParams%cluster) then
+                call readProbabilitiesFullCluster(GenosProbs,ped%pedigreeSize-ped%nDummys, inputParams%nsnp, inputParams, GpIndex)
+            else
+                call readProbabilitiesFull("./GeneProb/GenotypeProbabilities.txt",GenosProbs,ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
+            endif
             StSnp=1
             EnSnp=inputParams%nSnp
 

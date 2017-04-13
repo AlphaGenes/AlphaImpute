@@ -154,6 +154,36 @@ contains
         enddo
     end subroutine readProbabilitiesGeneProb
 
+
+        subroutine readProbabilitiesGeneProbCluster(GenosProbs,nAnims, inputParams, GpIndex)
+        use constantModule
+        use AlphaImputeInMod
+        type(AlphaImputeInput), intent(in) :: inputParams
+        integer, intent(IN) :: nAnims
+        integer, intent(in) :: GpIndex(:,:)
+        double precision, intent(out) :: GenosProbs(:,:,:)
+        integer :: fileUnit        
+        integer :: i,StSnp,EnSnp,h
+        character(len=300) ::filout
+        character(len=IDLENGTH) :: dum
+
+        do h=1,inputParams%nProcessors
+#ifndef _WIN32
+            write (filout,'("./GeneProb/GeneProb"i0,"/GeneProbs.txt")')h            
+#else
+            write (filout,'(".\GeneProb\GeneProb"i0,"\GeneProbs.txt")')h            
+#endif
+            open (newUnit=fileUnit,file=trim(filout),status="unknown")
+            StSnp=GpIndex(h,1)
+            EnSnp=GpIndex(h,2)
+
+            do i=1,nAnims
+                read(fileUnit,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') dum,GenosProbs(i,StSnp:EnSnp,1)
+                read(fileUnit,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') dum,GenosProbs(i,StSnp:EnSnp,2)
+            enddo
+        enddo
+    end subroutine readProbabilitiesGeneProbCluster
+
     subroutine readProbabilitiesFull(file, GenosProbs,nAnims, nSnps)
         use constantModule
         character(len=*), intent(IN) :: file
@@ -180,6 +210,46 @@ contains
             ! enddo
         enddo
     end subroutine readProbabilitiesFull
+
+        subroutine readProbabilitiesFullCluster(GenosProbs,nAnims, nSnps, inputParams, GpIndex)
+        use constantModule
+        use AlphaImputeInMod
+        type(AlphaImputeInput), intent(in) :: inputParams
+        integer, intent(IN) :: nSnps,nAnims
+        integer, intent(in) :: GpIndex(:,:)
+        real(kind=real64),allocatable, intent(out) :: GenosProbs(:,:,:)
+        integer :: fileUnit        
+        integer :: i,h,StSnp, EnSnp
+        character(len=IDLENGTH) :: dum
+        character(len=300) :: filout
+        do h=1,inputParams%nProcessors
+#ifndef _WIN32
+            write (filout,'("./GeneProb/GeneProb"i0,"/GeneProbs.txt")')h            
+#else
+            write (filout,'(".\GeneProb\GeneProb"i0,"\GeneProbs.txt")')h            
+#endif
+            open (newUnit=fileUnit,file=trim(filout),status="unknown")
+            StSnp=GpIndex(h,1)
+            EnSnp=GpIndex(h,2)
+
+
+
+            ! allocate(Probs0(nSnps))
+            ! allocate(Probs1(nSnps))
+            if (allocated(GenosProbs)) then
+                deallocate(Genosprobs)
+            endif
+            allocate(GenosProbs(nAnims,nSnps, 4))
+
+            do i=1,nAnims
+                read(fileUnit,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') dum,GenosProbs(i,StSnp:EnSnp,1)
+                read(fileUnit,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') dum,GenosProbs(i,StSnp:EnSnp,2)
+                read(fileUnit,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') dum,GenosProbs(i,StSnp:EnSnp,3)
+                read(fileUnit,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') dum,GenosProbs(i,StSnp:EnSnp,4)
+                ! enddo
+            enddo
+        enddo
+    end subroutine readProbabilitiesFullCluster
 
 
 
@@ -240,15 +310,74 @@ contains
 
     !######################################################################################################################################################################################
 
+    subroutine readGeneProbsCluster(GlobalWorkPhase,ped,GpIndex, inputParams,GeneProbThresh)
+        use PedigreeModule
+        use iso_fortran_env
+        use AlphaImputeInMod
+        use constantModule
+        type(PedigreeHolder) :: ped
+        integer(kind=1), intent(out) :: GlobalWorkPhase(:,:,:)
+        integer, intent(in) :: GpIndex(:,:)
+        real, intent(in) :: GeneProbThresh
+        type(AlphaImputeInput), pointer,intent(in) :: inputParams
+        character(len=300) :: filout
+        real(real64), allocatable, dimension(:,:) :: PatAlleleProb,MatAlleleProb,GeneProbWork
+        integer :: unit,h,StSnp,EnSnp,i,j
+        character(len=IDLENGTH) :: dum
+        
 
-    subroutine ReReadGeneProbs(path, nsnp) !TODO this needs rewritten
+        allocate(GeneProbWork(inputParams%nsnp,4))
+        allocate(PatAlleleProb(inputParams%nsnp,2))
+        allocate(MatAlleleProb(inputParams%nsnp,2))
+        do h=1,inputParams%nProcessors
+#ifndef _WIN32
+            write (filout,'("./GeneProb/GeneProb"i0,"/GeneProbs.txt")')h            
+#else
+            write (filout,'(".\GeneProb\GeneProb"i0,"\GeneProbs.txt")')h            
+#endif
+            open (newUnit=unit,file=trim(filout),status="unknown")
+            StSnp=GpIndex(h,1)
+            EnSnp=GpIndex(h,2)
+            do i=1,ped%pedigreeSize
+        
+                do j=1,4
+                    read (unit,*) dum,GeneProbWork(StSnp:EnSnp,j)
+                enddo
+                PatAlleleProb(StSnp:EnSnp,1)=GeneProbWork(StSnp:EnSnp,1)+GeneProbWork(StSnp:EnSnp,2)    ! PatAlleleProb(:,1) == Probability Paternal allele is 0 = Prob00 + Prob01
+                PatAlleleProb(StSnp:EnSnp,2)=GeneProbWork(StSnp:EnSnp,3)+GeneProbWork(StSnp:EnSnp,4)    ! PatAlleleProb(:,2) == Probability Paternal allele is 1 = Prob10 + Prob11
+                MatAlleleProb(StSnp:EnSnp,1)=GeneProbWork(StSnp:EnSnp,1)+GeneProbWork(StSnp:EnSnp,3)    ! PatAlleleProb(:,3) == Probability Maternal allele is 0 = Prob00 + Prob10
+                MatAlleleProb(StSnp:EnSnp,2)=GeneProbWork(StSnp:EnSnp,2)+GeneProbWork(StSnp:EnSnp,4)    ! PatAlleleProb(:,4) == Probability Maternal allele is 1 = Prob01 + Prob11
+
+                do j=StSnp,EnSnp
+                    if (PatAlleleProb(j,1)>=GeneProbThresh) GlobalWorkPhase(i,j,1)=0
+                    if (PatAlleleProb(j,2)>=GeneProbThresh) GlobalWorkPhase(i,j,1)=1
+                    if (MatAlleleProb(j,1)>=GeneProbThresh) GlobalWorkPhase(i,j,2)=0
+                    if (MatAlleleProb(j,2)>=GeneProbThresh) GlobalWorkPhase(i,j,2)=1
+                enddo
+            enddo
+            close(unit)
+        enddo
+
+        deallocate(PatAlleleProb)
+        deallocate(MatAlleleProb)
+
+        
+
+
+
+    end subroutine readGeneProbsCluster
+
+    subroutine ReReadGeneProbs(GlobalWorkPhase,ped,path, nsnp, GeneProbThresh) !TODO this needs rewritten
         ! Read genotype probabilities from files and phase allele based in these probabilities.
         ! This files should have been already created during previous calls to AlphaImpute (inputParams%restartOption<3)
         ! Phasing information is store in the variable GlobalWorkPhase
-        use Global, only : GLOBALWORKPHASE, GPINDEX, GENEPROBTHRESH,ped
         use AlphaImputeInMod
+        use PedigreeModule
         implicit none
 
+        type(PedigreeHolder),intent(in) :: ped
+        real, intent(in) :: GeneProbThresh
+        integer(kind=1), intent(out) :: GlobalWorkPhase(:,:,:)
         integer, intent(in) :: nsnp
         integer :: i,j,dum,fileUnit
         real, allocatable, dimension(:,:) :: PatAlleleProb,MatAlleleProb,GeneProbWork
@@ -289,8 +418,6 @@ contains
         enddo
         close(110)
         
-        GlobalWorkPhase(0,:,:)=9
-
         deallocate(PatAlleleProb)
         deallocate(MatAlleleProb)
         deallocate(GeneProbWork)
