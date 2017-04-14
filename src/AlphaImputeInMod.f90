@@ -476,10 +476,10 @@ contains
 
             !  box 8
             case("preprocessdataonly")
-                if (second(1)=="No") then
+                if (ToLower(second(1))=="no") then
                     this%PreProcess=.FALSE.
                 else
-                    if (second(1)=="Yes") then
+                    if (ToLower(second(1))=="yes") then
                         this%PreProcess=.TRUE.
                     else
                         write(error_unit,*) "Stop - Preprocess of data option incorrectly specified"
