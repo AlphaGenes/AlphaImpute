@@ -1930,7 +1930,7 @@ contains
 #else
             write (108,*) "InputFilePath    ,",'..\..\InputFiles\RecodedGeneProbInput.txt'
 #endif
-            write (108,*) "OutputFilePath   ,",'"GeneProbs.txt"'
+            write (108,*) "OutputFilePath   ,",'GeneProbs.txt'
             write (108,*) "StartSnp     ,",GpIndex(i,1)
             write (108,*) "EndSnp       ,",GpIndex(i,2)
             write (108,*) "cores       ,",1
