@@ -1823,6 +1823,84 @@ contains
                 call InsteadOfGeneProb
             endif
         endif
+
+
+
+        ! Create AlphaPhaseSpec file
+        do i=1,inputParams%nPhaseInternal           ! Phasing is done in parallel
+#ifndef _WIN32
+            if((inputParams%ManagePhaseOn1Off0==0).and.(inputParams%NoPhasing==1)) then
+                write (filout,'(a,"/Phase"i0,"/AlphaPhaseSpec.txt")')trim(inputParams%PhasePath), i
+            else
+                write (filout,'("./Phasing/Phase"i0,"/AlphaPhaseSpec.txt")') i
+            end if
+#else
+            write (filout,'(".\Phasing\Phase"i0,"\AlphaPhaseSpec.txt")')i
+#endif
+            open (unit=106,file=trim(filout),status='unknown')
+            if (inputParams%PedFreePhasing==0) then
+#ifndef _WIN32
+                if (inputParams%SexOpt==0) write (106,*) 'PedigreeFile              ,"../../InputFiles/AlphaPhaseInputPedigree.txt"'
+#else
+                if (inputParams%SexOpt==0) write (106,*) 'PedigreeFile              ,"..\..\InputFiles\AlphaPhaseInputPedigree.txt"'
+#endif
+            else
+                if (inputParams%SexOpt==0) write (106,*) 'PedigreeFile                      ,"NoPedigree"'
+            endif
+            if (inputParams%SexOpt==1) write (106,*) 'PedigreeFile                      ,"NoPedigree"'
+#ifndef _WIN32
+            write (106,'(a100)') &
+                'GenotypeFile                   ,"../../InputFiles/AlphaPhaseInputGenotypes.txt",GenotypeFormat'
+#else
+            write (106,'(a100)') &
+                'GenotypeFile                   ,"..\..\InputFiles\AlphaPhaseInputGenotypes.txt",GenotypeFormat'
+#endif
+
+            write (106,*) 'NumberOfSnp                      ,',inputParams%nsnp
+            write (106,*) 'GeneralCoreAndTailLength         ,',TempCplusT(i)
+            if(i<=inputParams%nPhaseInternal/2) then
+                write (106,*) 'GeneralCoreLength            ,',TempCore(i),',Offset'
+            else
+                write (106,*) 'GeneralCoreLength            ,',TempCore(i),',NotOffset'
+            endif
+            write (106,*) 'UseThisNumberOfSurrogates        ,',10
+            write (106,*) 'PercentageSurrDisagree           ,',10.00
+            write (106,*) 'PercentageGenoHaploDisagree      ,',inputParams%GenotypeErrorPhase
+            write (106,*) 'GenotypeMissingErrorPercentage   ,',0.00
+            write (106,*) 'NrmThresh                        ,',0.00
+            write (106,*) 'FullOutput                       ,0'
+            write (106,*) 'Graphics                         ,0'
+            write (106,*) 'Simulation                       ,0'
+            write (106,*) 'TruePhaseFile                    ,None'
+            write (106,*) 'CoreAtTime                       ,0'
+            if (inputParams%largeDatasets) then
+                write (106,*) 'IterateMethod                    ,RandomOrder'
+            else
+                write (106,*) 'IterateMethod                    ,Off'
+            end if
+            write (106,*) 'IterateSubsetSize                ,',inputParams%PhaseSubsetSize
+            write (106,*) 'IterateIterations                ,',inputParams%PhaseNIterations
+            write (106,*) 'Cores                            ,1,Combine'
+            write (106,*) 'MinHapFreq                       ,1'
+            write (106,*) 'Library                          ,None'
+
+            call flush(106)
+            close(106)
+            write (filout,'("Phase"i0)')i
+            ! if (AlphaPhasePresent==1) call system ("cp AlphaPhase Phasing/" // filout)
+            if (AlphaPhasePresent==1) then
+                if ((inputParams%ManagePhaseOn1Off0==0).and.(inputParams%NoPhasing==1)) then
+                    call system (COPY // " AlphaPhase" // EXE // " " // trim(inputParams%PhasePath) // DASH // filout // NULL)
+                else
+                    call system (COPY // " AlphaPhase" // EXE // " Phasing" // DASH // filout // NULL)
+                endif
+            endif
+
+        enddo
+
+
+        !end createalphaphasespec
+
         Tmp=int(float(inputParams%nsnp)/inputParams%nprocessors)
         GpIndex(1,1)=1
         GpIndex(1,2)=Tmp
@@ -1857,8 +1935,7 @@ contains
             close(108)
 
             write (filout,'("GeneProb"i0)')i
-            ! if (GeneProbPresent==1) call system ("cp GeneProbForAlphaImpute GeneProb/" // filout)
-            if (GeneProbPresent==1) call system (COPY // " GeneProbForAlphaImpute" // EXE // " GeneProb" // DASH // filout // NULL)
+            if (GeneProbPresent==1) call system (COPY // " geneProb" // EXE // " GeneProb" // DASH // filout // NULL)
         enddo
 
         if (inputParams%PreProcess==.true.) then
@@ -3339,6 +3416,11 @@ program AlphaImpute
 
         if (inputparams%cluster) then
             call MakeFiles
+        else if (inputParams%PreProcess==.true.) then
+            print*, "  "
+            print*, "  ","ERROR: PREPROCESSING OPTION IS NO LONGER AVAILABLE WITH CLUSTER MODE DISABLED"
+            stop
+        endif
         endif
     else
 
