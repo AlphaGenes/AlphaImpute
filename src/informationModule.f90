@@ -1,4 +1,4 @@
-#ifdef OS_UNIX
+#ifndef _WIN32
 
 #define STRINGIFY(x) #x
 #define TOSTRING(x) STRINGIFY(x)

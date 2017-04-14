@@ -202,15 +202,18 @@ contains
 
 
         do i=1,inputParams%nprocessors
-            write (filout,'("."a,"IterateGeneProb"a,"GeneProb"i0,"a,GeneProbSpec.txt")') DASH, DASH,i,DASH
-
+#ifndef _WIN32
+            write (filout,'("./IterateGeneProb/GeneProb"i0,"/GeneProbSpec.txt")')i
+#else
+            write (filout,'(".\IterateGeneProb\GeneProb"i0,"\GeneProbSpec.txt")')i
+#endif
             open (unit=108,file=trim(filout),status='unknown')
             write (108,*) "nAnis        ,",ped%pedigreeSize
             write (108,*) "nsnp     ,",nSnpIterate
-#ifdef _WIN32
-            write (108,*) "InputFilePath    ,",'"..\IterateGeneProbInput.txt"'
-#else          
+#ifndef _WIN32
             write (108,*) "InputFilePath    ,",'"../IterateGeneProbInput.txt"'
+#else
+            write (108,*) "InputFilePath    ,",'"..\IterateGeneProbInput.txt"'
 #endif
             write (108,*) "OutputFilePath   ,",'"GeneProbs.txt"'
             write (108,*) "StartSnp     ,",GpIndex(i,1)
@@ -2328,9 +2331,6 @@ contains
 
         inputParams => defaultInput
         open (unit=101,file="." // DASH // "Miscellaneous" // DASH // "PedigreeMistakes.txt",status="unknown")
-
-
-
 
         CountChanges=0
         nHomoParent = 0
