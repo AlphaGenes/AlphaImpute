@@ -10,7 +10,7 @@ subroutine MaCHController(HMM)
 
     implicit none
     integer(kind=1), intent(in) :: HMM
-    integer :: i, nprocs, nthreads
+    integer :: i, nprocs, nthreads,t1,t2
     real(4) :: r
     real(8) :: tT
     double precision :: Theta
