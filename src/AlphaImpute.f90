@@ -1803,7 +1803,7 @@ contains
 
 
         do i=1,ped%pedigreeSize-ped%nDummys
-            write (104,'(i16,1x,i16,1x,i16,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%getIntegerVectorOfRecodedIdsNoDummy(), ped%pedigree(i)%individualGenotype%toIntegerArray()
+            write (104,'(i16,1x,i16,1x,i16,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%getIntegerVectorOfRecodedIdsNoDummy(), ped%pedigree(i)%individualGenotype%toIntegerArray(inputParams%nSnp)
             if (Setter(i)==1) write (105,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%originalID,ped%pedigree(i)%individualGenotype%toIntegerArray()
         enddo
         call flush(104)
