@@ -1926,9 +1926,9 @@ contains
             write (108,*) "nAnis        ,",ped%pedigreeSize-ped%nDummys
             write (108,*) "nsnp     ,",inputParams%nsnp
 #ifndef _WIN32
-            write (108,*) "InputFilePath    ,",'"../../InputFiles/RecodedGeneProbInput.txt"'
+            write (108,*) "InputFilePath    ,",'../../InputFiles/RecodedGeneProbInput.txt'
 #else
-            write (108,*) "InputFilePath    ,",'"..\..\InputFiles\RecodedGeneProbInput.txt"'
+            write (108,*) "InputFilePath    ,",'..\..\InputFiles\RecodedGeneProbInput.txt'
 #endif
             write (108,*) "OutputFilePath   ,",'"GeneProbs.txt"'
             write (108,*) "StartSnp     ,",GpIndex(i,1)
