@@ -100,9 +100,9 @@ contains
 
         if (trim(inputParams%pedigreefile) /= "NoPedigree") then
             if (inputParams%SexOpt==1) then
-                ped = PedigreeHolder(inputParams%pedigreefile,genderfile=inputParams%genderFile)
+                ped = initPedigree(inputParams%pedigreefile,genderfile=inputParams%genderFile)
             else 
-                ped = PedigreeHolder(inputParams%pedigreefile)
+                ped = initPedigree(inputParams%pedigreefile)
 
             endif
 
