@@ -3421,7 +3421,6 @@ program AlphaImpute
             print*, "  ","ERROR: PREPROCESSING OPTION IS NO LONGER AVAILABLE WITH CLUSTER MODE DISABLED"
             stop
         endif
-        endif
     else
 
         call MakeDirectories(RUN_HMM_NGS)
