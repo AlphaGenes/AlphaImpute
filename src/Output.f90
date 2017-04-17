@@ -240,14 +240,15 @@ contains
                 deallocate(Genosprobs)
             endif
             allocate(GenosProbs(nAnims,nSnps, 4))
-
+            
             do i=1,nAnims
-                read(fileUnit,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') dum,GenosProbs(i,StSnp:EnSnp,1)
+              read(fileUnit,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') dum,GenosProbs(i,StSnp:EnSnp,1)
                 read(fileUnit,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') dum,GenosProbs(i,StSnp:EnSnp,2)
                 read(fileUnit,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') dum,GenosProbs(i,StSnp:EnSnp,3)
                 read(fileUnit,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') dum,GenosProbs(i,StSnp:EnSnp,4)
                 ! enddo
             enddo
+            close(fileUnit)
         enddo
     end subroutine readProbabilitiesFullCluster
 
@@ -338,7 +339,7 @@ contains
             open (newUnit=unit,file=trim(filout),status="unknown")
             StSnp=GpIndex(h,1)
             EnSnp=GpIndex(h,2)
-            do i=1,ped%pedigreeSize
+            do i=1,ped%pedigreeSize-ped%nDummys
         
                 do j=1,4
                     read (unit,*) dum,GeneProbWork(StSnp:EnSnp,j)
