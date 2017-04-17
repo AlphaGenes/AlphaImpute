@@ -3522,7 +3522,6 @@ program AlphaImpute
                 type(OutputParameters) :: oParams
                 oParams = newOutputParameters()
                 do i=1, apResults%nResults
-                    print *,"DEBUG: RESULT:",i
                     write(oParams%outputDirectory,'("./Phasing/Phase"i0)') i
                     call writeAlphaPhaseResults(APResults%results(i), ped, oParams)
 
@@ -3543,8 +3542,6 @@ if (inputParams%hmmoption/=RUN_HMM_NGS) then
             allocate(GenosProbs(ped%pedigreeSize-ped%nDummys,nSnpIterate,4))
             if (inputParams%cluster) then
                 call readProbabilitiesFullCluster(GenosProbs,ped%pedigreeSize-ped%nDummys, inputParams%nsnp,inputparams,GpIndex)
-                print *,"DEBUG"
-                print *,GenosProbs
             else
                 call readProbabilitiesFull("./GeneProb/GenotypeProbabilities.txt",GenosProbs,ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
             endif
