@@ -65,7 +65,7 @@ contains
         params%iterateNumber = inputParams%PhaseSubsetSize
         params%numIter = inputParams%PhaseNIterations
         params%minOverlap = inputparams%minoverlaphaplotype
-
+        params%percGenoHaploDisagree = inputparams%GenotypeErrorPhase*0.01
 
         if (inputparams%minoverlaphaplotype /= 0) then
             params%percMinPresent = 0

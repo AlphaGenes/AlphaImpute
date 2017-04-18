@@ -1970,23 +1970,7 @@ write(0,*) 'DEBUG: Mach Finished'
         ! ImputeGenos=9
         ImputePhase=9
         inputParams => defaultInput
-        ! Get information from RecodedGeneProbInput.txt which has been created in Makefiles subroutine
-        ! WARNING: Why don't read information from Geno(:,:) that has been used to feed RecodedGeneProbInput.txt instead??
-        !          Read from file is always slower!
-
-
-
-        ! TODOPHASE make this function read in new files
-        imputeGenos = ped%getGenotypesAsArray()
-        do i=1,ped%pedigreeSize- ped%nDummys
-            ! read (43,*) dum,dum,dum,ImputeGenos(i,:)
-            do j=1,inputParams%nsnp
-                if (ImputeGenos(i,j)==0) ImputePhase(i,j,:)=0
-                if (ImputeGenos(i,j)==2) ImputePhase(i,j,:)=1
-            enddo
-        enddo
-
-
+            
         do i=1, ped%nGenotyped
             tmpGenoIndexed = ped%genotypeMap(i)
             ImputeGenos(i,:) = ped%pedigree(ped%genotypeMap(i))%individualGenotype%toIntegerArray()
