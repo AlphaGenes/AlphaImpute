@@ -117,8 +117,6 @@ write(0,*) 'DEBUG: Mach Finished'
 
                         if (inputParams%cluster) then
                             call readGeneProbsCluster(GlobalWorkPhase,ped,GpIndex, inputParams,GeneProbThresh)
-                            print *, "DEBUG"
-                            print *, globalworkphase
                         else   
                             call ReReadGeneProbs(globalworkphase, ped,"./Results/GenotypeProbabilities.txt", inputParams%nsnp,GeneProbThresh)
                         endif
@@ -2292,8 +2290,6 @@ write(0,*) 'DEBUG: Mach Finished'
             ! Get information from GeneProb
             if (inputParams%cluster) then
                 call readProbabilitiesFullCluster(GenosProbs,ped%pedigreeSize-ped%nDummys, inputParams%nsnp, inputParams, GpIndex)
-                print *,"DEBUG"
-                print *,GenosProbs
             else
                 call readProbabilitiesFull("./GeneProb/GenotypeProbabilities.txt",GenosProbs,ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
             endif

@@ -3576,6 +3576,7 @@ if (inputParams%hmmoption/=RUN_HMM_NGS) then
         ! WARNING: Skip the modelling the recombination because it interferes with HMM propabilites
         ! TODO:
         if (inputParams%hmmoption==RUN_HMM_NO) call ModelRecomb
+                print *,GenosProbs
 
 #ifdef DEBUG
         write(0,*) 'DEBUG: Final Checker'
