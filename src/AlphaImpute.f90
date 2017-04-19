@@ -3854,9 +3854,6 @@ call PrintTimerTitles
 !call cpu_time(finish)
 !print '("Time call PrintTimerTitles= ",f6.3," seconds.")',finish-start
 
-! if (inputParams%restartOption > OPT_RESTART_IMPUTATION) then
-!     call system(RM // " Tmp2345678.txt")
-! end if
 call RemoveFiles()
 
 end program AlphaImpute
