@@ -893,7 +893,6 @@ write(0,*) 'DEBUG: Mach Finished'
     !#############################################################################################################################################################################################################################
 
 
-    ! TODO fix this
     SUBROUTINE PhaseElimination
         ! Candidate haplotype library imputation of alleles.
         ! For each core of each round of the LRPHLI algorithm, all haplotypes that have been found and
@@ -1179,9 +1178,6 @@ write(0,*) 'DEBUG: Mach Finished'
         AnimalOn=0
 
 
-        ! TODOPHASE if phase stuff hasn't been read in, read it in here
-
-
         do h=1,apResults%nResults
 
 
@@ -1412,7 +1408,7 @@ write(0,*) 'DEBUG: Mach Finished'
         implicit none
 
 
-        integer :: i,j,k,h,e,f,g,CoreLength,nHap,CountAB(inputParams%nsnp,0:1),Work(inputParams%nsnp,2),TempCount
+        integer :: i,j,k,h,e,f,g,CoreLength,nHap,CountAB(inputParams%nsnpraw,0:1),Work(inputParams%nsnpraw,2),TempCount
         integer :: StartSnp,EndSnp,PatMatDone(2),Counter,BanBoth(2),Ban(2),AnimalOn(ped%pedigreeSize,2)
         integer,allocatable,dimension (:,:,:,:) :: Temp
         integer(kind=1),allocatable,dimension (:,:) :: HapLib,HapCand
@@ -1423,6 +1419,7 @@ write(0,*) 'DEBUG: Mach Finished'
 
         type(BitSection) :: Section
         integer :: numSections, curSection, curPos
+        integer :: z
 
         inputParams => defaultInput
         ! Temp(ped%pedigreeSize, inputParams%nsnps, PatHap, Phase)
@@ -1435,13 +1432,12 @@ write(0,*) 'DEBUG: Mach Finished'
             ! Get HIGH DENSITY phase information of this phasing step and information
             ! of core indexes
 
-            ! TODOPHASE read in here if aphase info not read in,
             ! Get core information of number of cores and allocate start and end cores information
             do g=1,size(apResults%results(h)%cores)
                 ! Initialize Start and End snps of the cores
                 StartSnp=apResults%results(h)%startIndexes(g)
                 EndSnp=apResults%results(h)%endIndexes(g)
-
+                
                 CoreLength=(EndSnp-StartSnp)+1
                 Section = BitSection(CoreLength, 64)
                 numSections = Section%numSections
@@ -1473,8 +1469,12 @@ write(0,*) 'DEBUG: Mach Finished'
                     end do
                 end do
 
-
-
+                nHap = apResults%results(h)%libraries(g)%size
+                coreLength = apResults%results(h)%libraries(g)%nsnps
+                allocate(HapLib(nHap, CoreLength))
+                do z=1, apResults%results(h)%libraries(g)%size
+                    hapLib(z,:) = apResults%results(h)%libraries(g)%newStore(z)%toIntegerArray()
+                enddo
                 ! ! TODO phase read in haplib (unformatted!!!)
                 ! open (newunit=UHLib,file=trim(FileName),status="old",form="unformatted")
 
@@ -1633,7 +1633,7 @@ write(0,*) 'DEBUG: Mach Finished'
                     deallocate(HapCand)
                 enddo
                 !$OMP END PARALLEL DO
-                ! deallocate(HapLib)
+                deallocate(HapLib)
                 deallocate(BitHapLib)
                 deallocate(MissHapLib)
 
