@@ -1220,17 +1220,18 @@ contains
 
         ! Divide haplotypes into chunks of the same length.
         ! Each chunk will be treated separately in different processors
-        Tmp=int(float(inputParams%nsnp)/inputParams%nProcessors)
-        GpIndex(1,1)=1
-        GpIndex(1,2)=Tmp
-        if (inputParams%nProcessors>1) then
-            do i=2,inputParams%nProcessors
-                GpIndex(i,1)=GpIndex(i-1,1)+Tmp
-                GpIndex(i,2)=GpIndex(i-1,2)+Tmp
-            enddo
+        if (inputParams%cluster) then
+            Tmp=int(float(inputParams%nsnp)/inputParams%nProcessors)
+            GpIndex(1,1)=1
+            GpIndex(1,2)=Tmp
+            if (inputParams%nProcessors>1) then
+                do i=2,inputParams%nProcessors
+                    GpIndex(i,1)=GpIndex(i-1,1)+Tmp
+                    GpIndex(i,2)=GpIndex(i-1,2)+Tmp
+                enddo
+            endif
+            GpIndex(inputParams%nProcessors,2)=inputParams%nsnp
         endif
-        GpIndex(inputParams%nProcessors,2)=inputParams%nsnp
-
         allocate(GlobalWorkPhase(0:ped%pedigreeSize-ped%nDummys,inputParams%nsnp,2))
         allocate(WorkPhase(0:ped%pedigreeSize-ped%nDummys,nSnpFinal,2))
         allocate(TempVec(nSnpFinal))
