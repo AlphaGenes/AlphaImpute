@@ -1555,7 +1555,8 @@ contains
                 write (44,'(a20,20000i20)') ped%pedigree(i)%originalID,nRec
                 write (42,'(a20,20000i20)') ped%pedigree(i)%originalID,nRec,StR(1:nRec)
                 write (42,'(a20,20000i20)') ped%pedigree(i)%originalID,nRec,EnR(1:nRec)
-                !
+                !@todo: Comment system call to remove these files in subroutine 'RemoveFiles'
+                !       if decided to populate file 43 and 46
                 !           write (43,'(a20,20000i20)') ped%pedigree(i)%originalID,nRec,StRNarrow(1:nRec)
                 !           write (43,'(a20,20000i20)') ped%pedigree(i)%originalID,nRec,EnRNarrow(1:nRec)
                 do j=1,nRec
@@ -1886,9 +1887,30 @@ contains
     end subroutine InsteadOfGeneProb
 
     !######################################################################################################################################################################################
+    subroutine RemoveFiles
+        use Global
+        use AlphaImputeInMod
+        implicit none
 
+        type(AlphaImputeInput), pointer :: inputParams
 
+        inputParams => defaultInput
 
+        if (inputParams%restartOption > OPT_RESTART_IMPUTATION) then
+            call system(RM // " Tmp2345678.txt")
+        end if
+
+        if (inputParams%HMMOption == RUN_HMM_NO) then
+            call system(RM // " Results/ImputePhaseHMM.txt")
+            call system(RM // " Results/ImputeGenotypesHMM.txt")
+        end if
+
+        !@todo: Comment this two lines if this files are populated in
+        !       subroutine ModelRecomb
+        call system(RM // " RecombinationInformationNarrow.txt")
+        call system(RM // " RecombinationInformationNarrowR.txt")
+
+    end subroutine RemoveFiles
 
     !#############################################################################################################################################################################################################################
 
@@ -3832,9 +3854,10 @@ call PrintTimerTitles
 !call cpu_time(finish)
 !print '("Time call PrintTimerTitles= ",f6.3," seconds.")',finish-start
 
-if (inputParams%restartOption > OPT_RESTART_IMPUTATION) then
-    call system(RM // " Tmp2345678.txt")
-end if
+! if (inputParams%restartOption > OPT_RESTART_IMPUTATION) then
+!     call system(RM // " Tmp2345678.txt")
+! end if
+call RemoveFiles()
 
 end program AlphaImpute
 
