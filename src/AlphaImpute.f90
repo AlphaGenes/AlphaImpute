@@ -2854,7 +2854,6 @@ contains
             RecTestId(:)=-99
             do i=1,nAnisTest
                 do j=1,ped%pedigreeSize-ped%nDummys
-                    ! print *, i,j, TrueGenosId(i), ped%pedigree(j)%originalID
                     if (trim(TrueGenosId(i))==trim((ped%pedigree(j)%originalID))) then
                         RecTestId(i)=j
                         TestAnimInformativeness(i,:)=GlobalTmpCountInf(j,1:6)
@@ -3165,7 +3164,6 @@ contains
             moved=.FALSE.
 
             do i=1,SurrCounter
-                ! print *, ClusterMember(i)
                 dist=inputParams%nsnp
                 do j=1,nClusters
                     if(abs(res(i)-Centroid(j))<dist) then
@@ -3576,7 +3574,6 @@ if (inputParams%hmmoption/=RUN_HMM_NGS) then
         ! WARNING: Skip the modelling the recombination because it interferes with HMM propabilites
         ! TODO:
         if (inputParams%hmmoption==RUN_HMM_NO) call ModelRecomb
-                print *,GenosProbs
 
 #ifdef DEBUG
         write(0,*) 'DEBUG: Final Checker'
