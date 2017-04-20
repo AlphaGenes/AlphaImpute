@@ -120,6 +120,9 @@ contains
     !#############################################################################################################################################################################################################################
     subroutine ReadSeq(ReadsFileUnit)
 
+
+! referAllele and AlterAllele are the variables that are being changed
+! they are accessed in HMM 
         use Global
         use alphaimputeinmod
         implicit none
@@ -159,14 +162,10 @@ contains
 #endif
 
         if (inputParams%VCFFormat) then
-            print *, "VCF currently not supported"
-            ! TODO reimplement this
-            ! call readVCF(ReadsFileUnit, GenotypeId, ReferAllele, AlterAllele, inputParams%nsnp, inputParams%nsnp, 1, inputParams%nsnp, nAnisG)
+            call readVCF(ReadsFileUnit, GenotypeId, ReferAllele, AlterAllele, inputParams%nsnp, inputParams%nsnp, 1, inputParams%nsnp, ped%nGenotyped)
+            write(*, *) "WARNING - VCF SUPPORT IS VERY LIMITED - LIKELY WILL NOT WORK!"
         else
             do i=1,ped%nGenotyped
-                ! read (ReadsFileUnit,*) GenotypeId(i), ReferAllele(i,:)
-                ! read (ReadsFileUnit,*) GenotypeId(i), AlterAllele(i,:)
-                ! TODO not sure what this is doing
                 read (ReadsFileUnit,*) tmpID, ReferAllele(i,:)
                 read (ReadsFileUnit,*) tmpID, AlterAllele(i,:)
             end do
@@ -194,6 +193,7 @@ contains
         close(ReadsFileUnit)
 
     end subroutine ReadSeq
+
 
     !#############################################################################################################################################################################################################################
     subroutine readVCF(ReadsFileUnit, Ids, RefAll, AltAll, nSnpIn, SnpUsed, StartSnp, EndSnp, nIndivIn)
