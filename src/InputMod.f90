@@ -278,13 +278,16 @@ contains
 
             endif
 
-            call ped%addGenotypeInformationFromFile(inputParams%GenotypeFile,inputParams%nsnp)
+            if (inputParams%hmmoption /= RUN_HMM_NGS) then
+                call ped%addGenotypeInformationFromFile(inputParams%GenotypeFile,inputParams%nsnp)
+            endif
 
 
         else
-
-            ! init pedigree from genotype file
-            ped = initPedigreeGenotypeFiles(inputParams%GenotypeFile, nsnp=inputParams%nsnp)
+            if (inputParams%hmmoption /= RUN_HMM_NGS) then
+                ! init pedigree from genotype file
+                ped = initPedigreeGenotypeFiles(inputParams%GenotypeFile, nsnp=inputParams%nsnp)
+            endif
         endif
 
         
