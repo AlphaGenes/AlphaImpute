@@ -84,21 +84,12 @@ contains
         type(AlphaImputeInput), pointer :: inputParams
         inputParams=> defaultInput
         
-
- 
         ! Read the pedigree information
 
-        ! TODO this needs reimplemented 
-        if (inputParams%hmmoption /= RUN_HMM_NGS) then
-            ! if (inputParams%PlinkFormat) then
-            !     call ReadPlink(inputParams%genotypeFileUnit)
-            ! end if
-        endif
-        close(inputParams%pedigreeFileUnit)
-
-        ! Read the gender file if imputing the sex chromosome
-
         if (trim(inputParams%pedigreefile) /= "NoPedigree") then
+            ! TODO plink needs reimplemented 
+                        !     call ReadPlink(inputParams%genotypeFileUnit)
+            ! end if
             if (inputParams%SexOpt==1) then
                 ped = initPedigree(inputParams%pedigreefile,genderfile=inputParams%genderFile)
             else 
@@ -106,13 +97,15 @@ contains
 
             endif
 
-            call ped%addGenotypeInformationFromFile(inputParams%GenotypeFile,inputParams%nsnp)
-
-
+            if (inputParams%hmmoption /= RUN_HMM_NGS) then
+                call ped%addGenotypeInformationFromFile(inputParams%GenotypeFile,inputParams%nsnp)
+            endif
         else
 
-            ! init pedigree from genotype file
-            ped = initPedigreeGenotypeFiles(inputParams%GenotypeFile, nsnp=inputParams%nsnp)
+           if (inputParams%hmmoption /= RUN_HMM_NGS) then
+                ! init pedigree from genotype file
+                ped = initPedigreeGenotypeFiles(inputParams%GenotypeFile, nsnp=inputParams%nsnp)
+            endif
         endif
 
     end subroutine ReadInData
