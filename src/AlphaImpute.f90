@@ -79,13 +79,12 @@ contains
        !$OMP parallel DO schedule(dynamic) &
        !$OMP FIRSTPRIVATE(params)
         do i= 1, nCoreLengths
-
             params%CoreAndTailLength = inputParams%CoreAndTailLengths(i)
             params%jump = inputParams%CoreAndTailLengths(i)
             params%numsurrdisagree = 10
             params%useSurrsN = 10
             params%PercGenoHaploDisagree = inputParams%GenotypeErrorPhase
-        results%results(i) = phaseAndCreateLibraries(ped, params, quiet=.true.)
+            results%results(i) = phaseAndCreateLibraries(ped, params, quiet=.true.)
         enddo
 
         !$omp end parallel do
@@ -150,6 +149,8 @@ contains
         ImputePhase(0,:,:)=9
         ImputeGenos(0,:)=9
 
+        write(*,*) "Restart option 3 stops program after Iterate Geneprob jobs have been finished"
+
     end subroutine IterateGeneProbsNew
 
 
@@ -178,14 +179,13 @@ contains
         allocate(MatAlleleProb(nSnpIterate,2))
         allocate(HetProb(nSnpIterate))
         allocate(GeneProbWork(nSnpIterate,4))
-        if (allocated(ProbImputeGenos)) then
-            deallocate(ProbImputeGenos)
+        if (.not. allocated(ProbImputeGenos)) then
+            allocate(ProbImputeGenos(0:ped%pedigreeSize,nSnpIterate))
         endif
-        allocate(ProbImputeGenos(0:ped%pedigreeSize,nSnpIterate))
-        if (allocated(ProbImputePhase)) then
-            deallocate(ProbImputePhase)
+        if (.not. allocated(ProbImputePhase)) then
+            allocate(ProbImputePhase(0:ped%pedigreeSize,nSnpIterate,2))
         endif
-        allocate(ProbImputePhase(0:ped%pedigreeSize,nSnpIterate,2))
+        
         deallocate(GpIndex)
 
         allocate(GpIndex(inputParams%nprocessors,2))
@@ -276,13 +276,7 @@ contains
                     write (109,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ImputeGenos(i,:)
                 enddo
                 close (109)
-#if CLUSTER==1
-                write(6,*) "Restart option 3 stops program before Iterate Geneprob jobs have been finished"
-#elif CLUSTER==0
-                write(6,*) "Restart option 3 stops program after Iterate Geneprob jobs have been finished"
-#else
-                write(6,*) "Restart option 3 stops program before Iterate Geneprob jobs have been submitted"
-#endif
+                write(*,*) "Restart option 3 stops program before Iterate Geneprob jobs have been finished"
                 stop
             endif
         endif
@@ -2560,12 +2554,6 @@ contains
         ! call CountLines(FileName,nAnisTest)
         nAnisTest = CountLines(FileName)
 
-        ! if (WindowsLinux==1) then
-        !      call system("rmdir /s /q TestAlphaImpute")
-        ! else
-        !     call rmdir("TestAlphaImpute")
-        ! endif
-        ! call system("mkdir TestAlphaImpute")
 
         call system(RMDIR // " TestAlphaImpute")
         call system(MD // " TestAlphaImpute")
@@ -3467,9 +3455,14 @@ program AlphaImpute
 
                         ! call ped%addGenotypeInformation(Genos)
                         if (inputParams%cluster) then
+#if CLUSTER==1
+                           call GeneProbManagement
+#else
+
                             write(6,*) ""
                             write(6,*) "Restart option 0 or 1 stops program before Geneprobs jobs have been submitted with cluster option set"
                             stop
+#endif                           
                         endif
                         print *, "Calling geneprob"
                         call runGeneProbAlphaImpute(1, inputParams%nsnp, ped, GenosProbs, MAF)
@@ -3490,15 +3483,7 @@ program AlphaImpute
                     write(6,*) " ","Genotype probabilities calculated"
                     !        endif
                 case (2)
-                    ! markers = inputParams%nsnp
-                    ! if (inputParams%outopt==1) then
-                    !     markers = inputParams%nSnpRaw
-                    ! end if
-                    ! allocate(GenosProbs(ped%nDummys+ ped%pedigreeSize-ped%nDummys, markers, 2))
-                    ! call readProbabilitiesGeneProb("./Results/GenotypeProbabilities.txt",GenosProbs,ped,ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
-                    ! ! TODO may not need
-                    ! call WriteProbabilities("./Results/GenotypeProbabilities.txt", GenosProbs, ped,ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
-                    ! deallocate(GenosProbs)
+
                     write(6,*) "Restart option 1 stops program after genotype probabilities have been outputted"
                     stop
                 case default
@@ -3510,8 +3495,6 @@ program AlphaImpute
 
 
     if (inputParams%managephaseon1off0==1) then
-
-
 
         if (inputParams%restartOption<OPT_RESTART_IMPUTATION) Then
             call PhasingManagementNew(APResults)
@@ -3576,7 +3559,6 @@ if (inputParams%hmmoption/=RUN_HMM_NGS) then
 #ifdef DEBUG
         write(0,*) 'DEBUG: Model Recombination'
 #endif
-
         ! WARNING: Skip the modelling the recombination because it interferes with HMM propabilites
         ! TODO:
         if (inputParams%hmmoption==RUN_HMM_NO) call ModelRecomb
