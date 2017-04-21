@@ -178,7 +178,13 @@ contains
         allocate(MatAlleleProb(nSnpIterate,2))
         allocate(HetProb(nSnpIterate))
         allocate(GeneProbWork(nSnpIterate,4))
+        if (allocated(ProbImputeGenos)) then
+            deallocate(ProbImputeGenos)
+        endif
         allocate(ProbImputeGenos(0:ped%pedigreeSize,nSnpIterate))
+        if (allocated(ProbImputePhase)) then
+            deallocate(ProbImputePhase)
+        endif
         allocate(ProbImputePhase(0:ped%pedigreeSize,nSnpIterate,2))
         deallocate(GpIndex)
 
