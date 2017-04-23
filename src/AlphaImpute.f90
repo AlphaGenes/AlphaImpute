@@ -412,8 +412,8 @@ contains
             if (inputParams%outopt==0) nSnpIterate=inputParams%nsnp
             if (inputParams%outopt==1) nSnpIterate=inputParams%nSnpRaw
 
-            allocate(ProbImputeGenos(0:ped%pedigreeSize-ped%nDummys,nSnpIterate))
-            allocate(ProbImputePhase(0:ped%pedigreeSize-ped%nDummys,nSnpIterate,2))
+            allocate(ProbImputeGenos(0:ped%pedigreeSize,nSnpIterate))
+            allocate(ProbImputePhase(0:ped%pedigreeSize,nSnpIterate,2))
             allocate(TempAlleleFreq(nSnpIterate))
 
             TempAlleleFreq=0.0
@@ -958,11 +958,11 @@ contains
                 if (allocated(ProbImputeGenos)) then
                     deallocate(ProbImputeGenos)
                 end if
-                allocate(ProbImputeGenos(0:ped%pedigreeSize-ped%nDummys,inputParams%nSnpRaw))
+                allocate(ProbImputeGenos(0:ped%pedigreeSize,inputParams%nSnpRaw))
                 if (allocated(ProbImputePhase)) then
                     deallocate(ProbImputePhase)
                 end if
-                allocate(ProbImputePhase(0:ped%pedigreeSize-ped%nDummys,inputParams%nSnpRaw,2))
+                allocate(ProbImputePhase(0:ped%pedigreeSize,inputParams%nSnpRaw,2))
 
                 ImputeGenos=TmpGenos
                 ImputePhase=TmpPhase
@@ -1001,11 +1001,11 @@ contains
                 if (allocated(ProbImputeGenos)) then
                     deallocate(ProbImputeGenos)
                 end if
-                allocate(ProbImputeGenos(0:ped%pedigreeSize-ped%nDummys,inputParams%nSnpRaw))
+                allocate(ProbImputeGenos(0:ped%pedigreeSize,inputParams%nSnpRaw))
                 if (allocated(ProbImputePhase)) then
                     deallocate(ProbImputePhase)
                 end if
-                allocate(ProbImputePhase(0:ped%pedigreeSize-ped%nDummys,inputParams%nSnpRaw,2))
+                allocate(ProbImputePhase(0:ped%pedigreeSize,inputParams%nSnpRaw,2))
                 if (allocated(Maf)) then
                     deallocate(Maf)
                 end if
