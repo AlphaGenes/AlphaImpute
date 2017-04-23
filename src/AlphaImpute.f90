@@ -1527,6 +1527,16 @@ contains
         endif
         allocate(Maf(nSnpIterate))
 
+        if (allocated(ImputeGenos)) then
+            deallocate(ImputeGenos)
+        endif
+        if (allocated(ImputePhase)) then
+            deallocate(ImputePhase)
+        endif
+
+        ! TODO tidy this
+        allocate(ImputeGenos(0:ped%nGenotyped,inputParams%nSnp))
+        allocate(ImputePhase(0:ped%nGenotyped,inputParams%nSnp,2))
 
         if (inputParams%restartOption==4) then
             open (unit=fileUnit,file="Tmp2345678.txt",status="old")
