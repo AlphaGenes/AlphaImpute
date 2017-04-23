@@ -1541,9 +1541,9 @@ contains
         if (inputParams%restartOption==4) then
             open (unit=fileUnit,file="Tmp2345678.txt",status="old")
             do i=1,ped%pedigreeSize-ped%nDummys
-                read (fileUnit,*) ImputePhase(i,:,1)
-                read (fileUnit,*) ImputePhase(i,:,2)
-                read (fileUnit,*) ImputeGenos(i,:)
+                read (fileUnit,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ImputePhase(i,:,1)
+                read (fileUnit,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ImputePhase(i,:,2)
+                read (fileUnit,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ImputeGenos(i,:)
             enddo
             close (fileUnit)
         endif
