@@ -733,10 +733,10 @@ contains
                 if (allocated(maf)) then
                     deallocate(maf)
                 end if
-                allocate(ImputeGenos(0:ped%nGenotyped,inputParams%nSnp))
-                allocate(ImputePhase(0:ped%nGenotyped,inputParams%nSnp,2))
-                allocate(ProbImputeGenos(0:ped%nGenotyped,inputParams%nSnp))
-                allocate(ProbImputePhase(0:ped%nGenotyped,inputParams%nSnp,2))
+                allocate(ImputeGenos(0:ped%pedigreeSize,inputParams%nSnpRaw))
+                allocate(ImputePhase(0:ped%pedigreeSize,inputParams%nSnpraw,2))
+                allocate(ProbImputeGenos(0:ped%pedigreeSize-ped%nDummys,inputParams%nSnpraw))
+                allocate(ProbImputePhase(0:ped%pedigreeSize-ped%nDummys,inputParams%nSnpraw,2))
                 allocate(Maf(inputParams%nSnp))
 
                 ImputeGenos = 9
@@ -952,7 +952,7 @@ contains
             if (inputParams%hmmoption==RUN_HMM_NO) then
                 deallocate(ImputePhase)
                 deallocate(ImputeGenos)
-                allocate(ImputeGenos(0:ped%pedigreeSize-ped%nDummys,inputParams%nSnpRaw))
+                allocate(imputeGenos(0:ped%pedigreeSize-ped%nDummys,inputParams%nSnpRaw))
                 allocate(ImputePhase(0:ped%pedigreeSize-ped%nDummys,inputParams%nSnpRaw,2))
 
                 if (allocated(ProbImputeGenos)) then
@@ -993,11 +993,11 @@ contains
                 if (allocated(ImputeGenos)) then
                     deallocate(ImputeGenos)
                 end if
-                allocate(ImputeGenos(0:ped%nGenotyped,inputParams%nSnpRaw))
+                allocate(ImputeGenos(0:ped%pedigreeSize-ped%nDummys,inputParams%nSnpRaw))
                 if (allocated(ImputePhase)) then
                     deallocate(ImputePhase)
                 end if
-                allocate(ImputePhase(0:ped%nGenotyped,inputParams%nSnpRaw,2))
+                allocate(ImputePhase(0:ped%pedigreeSize-ped%nDummys,inputParams%nSnpRaw,2))
                 if (allocated(ProbImputeGenos)) then
                     deallocate(ProbImputeGenos)
                 end if
@@ -1535,8 +1535,8 @@ contains
         endif
 
         ! TODO tidy this
-        allocate(ImputeGenos(0:ped%pedigreeSize,inputParams%nSnp))
-        allocate(ImputePhase(0:ped%pedigreeSize,inputParams%nSnp,2))
+        allocate(ImputeGenos(0:ped%pedigreeSize,inputParams%nSnpraw))
+        allocate(ImputePhase(0:ped%pedigreeSize,inputParams%nSnpRaw,2))
 
         if (inputParams%restartOption==4) then
             open (newunit=fileUnit,file="Tmp2345678.txt",status="old")
@@ -1674,9 +1674,9 @@ contains
 
         inputParams => defaultInput
         if (inputParams%SexOpt==1) then                                                     ! Sex chromosome
-            allocate(GlobalWorkPhase(0:ped%pedigreeSize-ped%nDummys,inputParams%nsnp,2))
-            allocate(ImputeGenos(0:ped%pedigreeSize-ped%nDummys,inputParams%nsnp))
-            allocate(ImputePhase(0:ped%pedigreeSize-ped%nDummys,inputParams%nsnp,2))
+            allocate(GlobalWorkPhase(0:ped%pedigreeSize-ped%nDummys,inputParams%nsnpRaw,2))
+            allocate(ImputeGenos(0:ped%pedigreeSize-ped%nDummys,inputParams%nsnpRaw))
+            allocate(ImputePhase(0:ped%pedigreeSize-ped%nDummys,inputParams%nsnpRaw,2))
 
             GlobalWorkPhase=9
             do i=1,ped%pedigreeSize-ped%nDummys
@@ -1722,8 +1722,8 @@ contains
 
         else                                                                    ! Other chromosome
             allocate(GlobalWorkPhase(0:ped%pedigreeSize-ped%nDummys,inputParams%nsnp,2))
-            allocate(ImputeGenos(0:ped%pedigreeSize-ped%nDummys,inputParams%nsnp))
-            allocate(ImputePhase(0:ped%pedigreeSize-ped%nDummys,inputParams%nsnp,2))
+            allocate(ImputeGenos(0:ped%pedigreeSize-ped%nDummys,inputParams%nsnpRaw))
+            allocate(ImputePhase(0:ped%pedigreeSize-ped%nDummys,inputParams%nsnpRaw,2))
 
             GlobalWorkPhase=9
             do i=1,ped%pedigreeSize-ped%nDummys
@@ -3317,9 +3317,9 @@ contains
         use iso_fortran_env
         implicit none
 
-        real(kind=real64) :: etime          ! Declare the type of etime()
-        real(kind=real64) :: elapsed(2)     ! For receiving user and system time
-        real(kind=real64) :: total,Minutes,Hours,Seconds
+        real :: etime          ! Declare the type of etime()
+        real :: elapsed(2)     ! For receiving user and system time
+        real :: total,Minutes,Hours,Seconds
 
         print *, ""
         print *, ""
@@ -3339,7 +3339,7 @@ contains
         open (unit=32,file="." // DASH // "Miscellaneous" // DASH // "Timer.txt",status="unknown")
 
         write(32,'(A27,A7,I3,A9,I3,A9,F6.2)') "Time Elapsed","Hours", INT(Hours),"Minutes",INT(Minutes),"Seconds",Seconds
-
+        close(32)
     end subroutine PrintTimerTitles
 
 end module AlphaImputeModule
@@ -3429,8 +3429,8 @@ program AlphaImpute
         call ReadInData
         call SnpCallRate
         allocate(Reads(ped%nGenotyped,inputParams%nsnp))
-        allocate(ImputeGenos(0:ped%nGenotyped,inputParams%nsnp))
-        allocate(ImputePhase(0:ped%nGenotyped,inputParams%nsnp,2))
+        allocate(ImputeGenos(0:ped%pedigreeSize,inputParams%nsnpRaw))
+        allocate(ImputePhase(0:ped%pedigreeSize,inputParams%nsnpRaw,2))
         allocate(SnpIncluded(inputParams%nsnp))
         call CheckParentage
         call ReadSeq(inputParams%GenotypeFileUnit)

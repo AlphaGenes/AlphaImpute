@@ -72,7 +72,7 @@ write(0,*) 'DEBUG: Allocate memory for genotypes and haplotypes'
             if (allocated(ImputeGenos)) Then
                 deallocate(ImputeGenos)
             endif
-            allocate(ImputeGenos(0:ped%pedigreeSize,inputParams%nsnp))
+            allocate(ImputeGenos(0:ped%pedigreeSize,inputParams%nsnpRaw))
             if (allocated(ImputePhase)) Then
                 deallocate(ImputePhase)
             endif
@@ -2283,7 +2283,7 @@ write(0,*) 'DEBUG: Mach Finished'
 
         if (allocated(imputeGenos)) then
             deallocate(imputeGenos)
-            allocate(imputeGenos(0:ped%pedigreeSize- ped%nDummys,inputParams%nSnp ))
+            allocate(imputeGenos(0:ped%pedigreeSize,inputParams%nSnpRaw ))
         endif
 
         if (inputParams%BypassGeneProb==0) then
