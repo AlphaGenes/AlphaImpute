@@ -1539,7 +1539,7 @@ contains
         allocate(ImputePhase(0:ped%pedigreeSize,inputParams%nSnp,2))
 
         if (inputParams%restartOption==4) then
-            open (unit=fileUnit,file="Tmp2345678.txt",status="old")
+            open (newunit=fileUnit,file="Tmp2345678.txt",status="old")
             do i=1,ped%pedigreeSize-ped%nDummys
                 read (fileUnit,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ImputePhase(i,:,1)
                 read (fileUnit,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ImputePhase(i,:,2)
