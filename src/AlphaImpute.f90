@@ -149,7 +149,6 @@ contains
         ImputePhase(0,:,:)=9
         ImputeGenos(0,:)=9
 
-        write(*,*) "Restart option 3 stops program after Iterate Geneprob jobs have been finished"
 
     end subroutine IterateGeneProbsNew
 
@@ -3565,6 +3564,11 @@ if (inputParams%hmmoption/=RUN_HMM_NGS) then
         call ImputationManagement
 
         call WriteOutResults
+
+        if (inputparams%restartOption == OPT_RESTART_IMPUTATION) then
+            write(*,*) "Restart option 3 stops program after Iterate Geneprob jobs have been finished"
+            stop
+        endif
 
 #ifdef DEBUG
         write(0,*) 'DEBUG: Model Recombination'
