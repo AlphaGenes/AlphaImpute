@@ -1,0 +1,3 @@
+[submodule "alphahouse"]
+	path = alphahouse
+	url = https://david_wilson@bitbucket.org/hickeyjohnteam/alphahouse.git
