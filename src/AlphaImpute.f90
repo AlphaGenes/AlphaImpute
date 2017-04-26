@@ -2441,7 +2441,7 @@ contains
         endif
 
         allocate(TempGenos(0:ped%pedigreeSize,inputParams%nsnp))
-        tempGenos(0,:) = 9
+        tempGenos = 9
         tempGenos(1:ped%nGenotyped,:) = ped%getGenotypesAsArray()
 
     end subroutine CheckParentage
