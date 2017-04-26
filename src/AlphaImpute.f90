@@ -269,7 +269,7 @@ contains
 
             if (inputParams%restartOption==OPT_RESTART_IMPUTATION) then
                 open (unit=109,file="Tmp2345678.txt",status="unknown")
-                do i=1,ped%pedigreeSize-ped%nDummys
+                do i=1,ped%nGenotyped
                     write (109,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ImputePhase(i,:,1)
                     write (109,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ImputePhase(i,:,2)
                     write (109,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ImputeGenos(i,:)
@@ -807,9 +807,9 @@ contains
                     if (ped%pedigree(i)%isDummy) then
                         exit
                     endif
-                    write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(i)%originalID,ProbImputePhase(i,:,1)
-                    write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(i)%originalID,ProbImputePhase(i,:,2)
-                    write (41,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(i)%originalID,ProbImputeGenos(i,:)
+                    write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(ped%inputmap(i))%originalID,ProbImputePhase(ped%inputmap(i),:,1)
+                    write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(ped%inputmap(i))%originalID,ProbImputePhase(ped%inputmap(i),:,2)
+                    write (41,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(ped%inputmap(i))%originalID,ProbImputeGenos(ped%inputmap(i),:)
                 enddo
             endif
 
@@ -860,8 +860,8 @@ contains
                     exit
                 endif
                 if (ImputationQuality(i,5)>=inputParams%WellPhasedThresh) then
-                    write (52,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%originalID,ImputePhase(i,:,1)
-                    write (52,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%originalID,ImputePhase(i,:,2)
+                    write (52,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,ImputePhase(ped%inputmap(i),:,1)
+                    write (52,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,ImputePhase(ped%inputmap(i),:,2)
                 endif
             enddo
 
@@ -933,15 +933,15 @@ contains
                 if (ped%pedigree(i)%isDummy) then
                     exit
                 endif
-                write (33,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%originalID,TmpPhase(i,:,1)
-                write (33,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%originalID,TmpPhase(i,:,2)
-                write (34,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%originalID,TmpGenos(i,:)
+                write (33,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,TmpPhase(ped%inputmap(i),:,1)
+                write (33,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,TmpPhase(ped%inputmap(i),:,2)
+                write (34,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,TmpGenos(ped%inputmap(i),:)
             enddo
             if (inputParams%SexOpt==0 .and. inputParams%hmmoption/=RUN_HMM_NGS) then
                 open (unit=39, file="IterateGeneProb" // DASH // "IterateGeneProbInput.txt")
 
                 do i=1,ped%pedigreeSize-ped%nDummys
-                    write (39,'(i16,1x,i16,1x,i16,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%getIntegerVectorOfRecodedIdsNoDummy(),TmpGenos(i,:)
+                    write (39,'(i16,1x,i16,1x,i16,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%getIntegerVectorOfRecodedIdsNoDummy(),TmpGenos(ped%inputmap(i),:)
                 enddo
                 call flush(39)
                 close(39)
@@ -1064,7 +1064,7 @@ contains
                     do i=1, ped%nGenotyped
                         ! TODO: Remove this variable when this issue is really fixed
                         ! hmmID = GlobalHmmID(i)
-                        hmmID =i
+                        hmmID =ped%genotypeMap(i)
                         write (53,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(hmmID)%originalID,ImputePhase(i,:,1)
                         write (53,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(hmmID)%originalID,ImputePhase(i,:,2)
                         write (54,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(hmmID)%originalID,ImputeGenos(i,:)
@@ -1079,9 +1079,9 @@ contains
                     if (ped%pedigree(i)%isDummy) then
                         exit
                     endif
-                    write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(i)%originalID,ProbImputePhase(i,:,1)
-                    write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(i)%originalID,ProbImputePhase(i,:,2)
-                    write (41,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(i)%originalID,ProbImputeGenos(i,:)
+                    write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(ped%inputmap(i))%originalID,ProbImputePhase(ped%inputmap(i),:,1)
+                    write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(ped%inputmap(i))%originalID,ProbImputePhase(ped%inputmap(i),:,2)
+                    write (41,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(ped%inputmap(i))%originalID,ProbImputeGenos(ped%inputmap(i),:)
                 enddo
             endif
 
@@ -1155,8 +1155,8 @@ contains
                     exit
                 endif
                 if (ImputationQuality(i,5)>=inputParams%WellPhasedThresh) then
-                    write (52,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%originalID,TmpPhase(i,:,1)
-                    write (52,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%originalID,TmpPhase(i,:,2)
+                    write (52,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,TmpPhase(ped%inputmap(i),:,1)
+                    write (52,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,TmpPhase(ped%inputmap(i),:,2)
                 endif
             enddo
         endif
@@ -1293,7 +1293,7 @@ contains
                     cycle
                 endif
                 if ((inputParams%SexOpt==1).and.(ped%pedigree(PedId)%gender==inputParams%hetGameticStatus)) cycle
-                if ((PedId>0).and.((float(count(ImputePhase(PedId,:,:)==9))/(2*nSnpFinal))<0.30)) then          !(RecIdHDIndex(PedId)==1)
+                if (((float(count(ImputePhase(PedId,:,:)==9))/(2*nSnpFinal))<0.30)) then          !(RecIdHDIndex(PedId)==1)
                     WorkRight=9
                     RSide=9
                     do j=1,nSnpFinal
@@ -1491,19 +1491,22 @@ contains
         open (unit=34,file="Results" // DASH // "ImputeGenotypes.txt",status="unknown")
         open (unit=40,file="Results" // DASH // "ImputePhaseProbabilities.txt",status="unknown")
         open (unit=41,file="Results" // DASH // "ImputeGenotypeProbabilities.txt",status="unknown")
-
-        do i=1, ped%pedigreeSize-ped%nDummys
-            if (ped%pedigree(i)%isDummy) then
-                exit
-            endif
-            write (33,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%originalID,ImputePhase(i,:,1)
-            write (33,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%originalID,ImputePhase(i,:,2)
-            write (34,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%originalID,ImputeGenos(i,:)
-            write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(i)%originalID,ProbImputePhase(i,:,1)
-            write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(i)%originalID,ProbImputePhase(i,:,2)
-            write (41,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(i)%originalID,ProbImputeGenos(i,:)
-        enddo
-
+        block 
+            integer :: tmpID
+            do i=1, ped%pedigreeSize - ped%nDummys
+                if (ped%pedigree(i)%isDummy) then
+                    exit
+                endif
+                !outputs in order read in
+                tmpId = ped%inputMap(i)
+                write (33,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(tmpId)%originalID,ImputePhase(tmpId,:,1)
+                write (33,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(tmpId)%originalID,ImputePhase(tmpId,:,2)
+                write (34,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(tmpId)%originalID,ImputeGenos(tmpId,:)
+                write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(tmpId)%originalID,ProbImputePhase(tmpId,:,1)
+                write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(tmpId)%originalID,ProbImputePhase(tmpId,:,2)
+                write (41,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(tmpId)%originalID,ProbImputeGenos(tmpId,:)
+            enddo
+        end block
         print*, " "
         print*, " ","Imputation by detection of recombination events completed"
 
