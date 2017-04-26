@@ -10,7 +10,7 @@ OPTION(USE_HDF5 "Use hdf"
 
 set(CLUSTER 0 CACHE STRING "cluster size")
 # Add our local modlues to the module path
-SET(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/../alphacmakefiles/cmake/modules")
+SET(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/alphacmakefiles/cmake/modules")
 set(CMAKE_MACOSX_RPATH 0)
 
 INCLUDE(${CMAKE_MODULE_PATH}/setVersion.cmake)
@@ -73,9 +73,9 @@ endif(${USE_HDF5})
 # RELEASE, and TESTING.  You should  review this file and make sure the flags
 # are to your liking.
 INCLUDE(${CMAKE_MODULE_PATH}/SetFortranFlags.cmake)
-SET(SRCAH ../alphahouse/src/)
-SET(SRCGP ../geneprob/src/)
-SET(SRCAP ../alphaphase/src/)
+SET(SRCAH ./alphahouse/src/)
+SET(SRCGP ./geneprob/src/)
+SET(SRCAP ./alphaphase/src/)
 # Have the .mod files placed in the OBJ folder
 SET(CMAKE_Fortran_MODULE_DIRECTORY ${OBJ})
 

@@ -11,6 +11,7 @@ SET(ALPHAIMPUTE_src
             ${SRCALPHAIMPUTE}InputMod.f90
             ${SRCALPHAIMPUTE}utils.f90
             ${SRCALPHAIMPUTE}AlphaImpute.f90
+            ${SRCALPHAIMPUTE}main.f90
 
 )
 set (HMM_src
