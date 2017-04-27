@@ -2047,20 +2047,16 @@ contains
         if (inputParams%UserDefinedHD==0) then
             Setter(0)=0
             Setter(1:ped%pedigreeSize-ped%nDummys)=1
-            RecIdHDIndex(0)=0
-            RecIdHDIndex(1:ped%pedigreeSize-ped%nDummys)=1
             do i=1,ped%pedigreeSize-ped%nDummys
                 CountMiss=count(TempGenos(i,:)==9)
                 if (inputParams%MultiHD/=0) then
                     ! Disregard animals at LD or those HD animals with a number of markers missing
                     if (animChip(i)==0) then
                         Setter(i)=0
-                        RecIdHDIndex(i)=0
                     endif
                 else
                     if ((float(CountMiss)/inputParams%nsnp)>(1.0-inputParams%PercGenoForHD)) then
                         Setter(i)=0
-                        RecIdHDIndex(i)=0
                     endif
                 endif
             enddo
@@ -2068,8 +2064,6 @@ contains
         else                                ! User has specified HD individuals
             Setter(0)=0
             Setter(1:ped%pedigreeSize-ped%nDummys)=0
-            RecIdHDIndex(0)=0
-            RecIdHDIndex(1:ped%pedigreeSize-ped%nDummys)=0
 
             CountHD=0
             do
@@ -2090,7 +2084,6 @@ contains
                     tmpID = ped%dictionary%getValue(dumC)
                     if (tmpID /= DICT_NULL) then
                         Setter(tmpID)=1
-                        RecIdHDIndex(tmpID)=1
                         exit
                     endif
                 enddo
@@ -2147,23 +2140,22 @@ contains
                 endif
             endif
             if (inputParams%UserDefinedHD==0) then
-                Setter(1:ped%pedigreeSize-ped%nDummys)=1
-                RecIdHDIndex(1:ped%pedigreeSize-ped%nDummys)=1
+                Setter = 0
+                ! Setter(1:ped%pedigreeSize-ped%nDummys)=0
                 do i=1,ped%nGenotyped
+                    setter(ped%genotypeMap(i)) =1
                     CountMiss=ped%pedigree(ped%genotypeMap(i))%individualGenotype%numMissing()
                     if ((float(CountMiss)/inputParams%nsnp)>(1.0-inputParams%SecondPercGenoForHD)) then
-                        Setter(i)=0
-                        RecIdHDIndex(i)=0
+                        Setter(ped%genotypeMap(i))=0
                     endif
                 enddo
                 CountHD=count(Setter(:)==1)
             else
                 do i=1,ped%nGenotyped
-                    if (Setter(i)==1) then
+                    if (Setter(ped%genotypeMap(i))==1) then
                         CountMiss=ped%pedigree(ped%genotypeMap(i))%individualGenotype%numMissing()
                         if ((float(CountMiss)/inputParams%nsnp)>(1.0-inputParams%SecondPercGenoForHD)) then
-                            Setter(i)=0
-                            RecIdHDIndex(i)=0
+                            Setter(ped%genotypeMap(i))=0
                         endif
                     endif
                 enddo
@@ -2424,9 +2416,6 @@ contains
 
         ! Sort sires and dams, and look for mistakes (bisexuality,...).
 
-        allocate(RecIdHDIndex(0:ped%pedigreeSize-ped%nDummys))
-
-        RecIdHDIndex=0
 
 
         call ped%outputSortedPedigreeInAlphaImputeFormat("." // DASH // "Miscellaneous" // DASH // "InternalDataRecoding.txt")

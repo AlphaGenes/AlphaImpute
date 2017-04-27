@@ -44,7 +44,7 @@ module Global
     integer :: nSnpChips
 
     integer,allocatable,dimension (:,:) :: Reads,ReferAllele,AlterAllele
-    integer(kind=1),allocatable,dimension (:) :: SnpIncluded,RecIdHDIndex,GenderRaw
+    integer(kind=1),allocatable,dimension (:) :: SnpIncluded,GenderRaw
     integer(kind=1),allocatable,dimension (:,:) :: TempGenos,TmpGenos,MSTermInfo
     integer(kind=1),allocatable,dimension (:,:) :: ImputeGenos,SireDam
     integer(kind=1),allocatable,dimension (:,:,:) :: ImputePhase,TmpPhase,GlobalWorkPhase
