@@ -56,7 +56,7 @@ module AlphaImputeInMod
         logical :: largeDatasets
         integer(kind=int32) :: PhaseSubsetSize, PhaseNIterations
         integer(kind=int32) :: nProcessors,nProcessGeneProb,nProcessAlphaPhase
-        character(len=10) :: iterateMethod
+        character(len=20) :: iterateMethod
         integer :: minoverlaphaplotype
         ! box 6
         integer(kind=int32) :: InternalIterations
