@@ -163,6 +163,7 @@ program AlphaImpute
         endif
 
         if (inputParams%restartOption==OPT_RESTART_PHASING) then
+            print *,"DEBUG in alphaphase writeout"
             block
                 use OutputParametersDefinition
                 use InputOutput
@@ -170,6 +171,7 @@ program AlphaImpute
                 type(OutputParameters) :: oParams
                 oParams = newOutputParameters()
                 do i=1, apResults%nResults
+                    print *,"DEBUG: writing alphaphase result:", i
                     write(oParams%outputDirectory,'("./Phasing/Phase"i0)') i
                     call writeAlphaPhaseResults(APResults%results(i), ped, oParams)
 
@@ -230,6 +232,7 @@ if (inputParams%hmmoption/=RUN_HMM_NGS) then
         if (inputParams%hmmoption==RUN_HMM_NO) call ModelRecomb
 
 #ifdef DEBUG
+
         write(0,*) 'DEBUG: Final Checker'
 #endif
 
