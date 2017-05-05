@@ -19,7 +19,7 @@ program AlphaImpute
     use GlobalVariablesHmmMaCH
     use Output
     use AlphaImputeInMod
-    use Imputationvf 
+    use Imputation
     use InputMod
     use GeneProbModule
     use AlphaPhaseResultsDefinition
