@@ -48,6 +48,7 @@ contains
         use AlphaPhaseFunctions
         use AlphaPhaseResultsDefinition
         use Global, only : ped
+        use inputoutput, only : MakeDirectories
         implicit none
 
         type(AlphaImputeInput), pointer :: inputParams
@@ -72,7 +73,11 @@ contains
         endif 
         call omp_set_nested(.true.)
 
+        block 
 
+            type(OutputParameters) :: p
+        call MakeDirectories(p)
+        end block
 
 
         print *, "Running AlphaPhase"
@@ -2437,88 +2442,6 @@ contains
         tempGenos(1:ped%nGenotyped,:) = ped%getGenotypesAsArray()
 
     end subroutine CheckParentage
-    !#############################################################################################################################################################################################################################
-
-    subroutine MakeDirectories(HMM)
-        use global
-        use GlobalVariablesHmmMaCH
-        use alphaimputeinmod
-
-        implicit none
-
-        integer, intent(in) :: HMM
-        integer :: i
-        character(len=300) :: FolderName
-        type(AlphaImputeInput), pointer :: inputParams
-
-        inputParams => defaultInput
-
-        if (HMM == RUN_HMM_NGS) then
-            ! call rmdir("Results")
-            ! call rmdir("Miscellaneous")
-            call system(RMDIR // " Results")
-            call system(RMDIR // " Miscellaneous")
-            ! call system("mkdir Results")
-            ! call system("mkdir Miscellaneous")
-            call system(MD // " Results")
-            call system(MD // " Miscellaneous")
-
-        else
-            print*, ""
-            call system(RMDIR // " Miscellaneous")
-            call system(RMDIR // " Phasing")
-            call system(RMDIR // " Results")
-            call system(RMDIR // " InputFiles")
-            call system(RMDIR // " GeneProb")
-            call system(RMDIR // " IterateGeneProb")
-
-            call system(MD // " Phasing")
-            call system(MD // " Miscellaneous")
-            call system(MD // " Results")
-            call system(MD // " InputFiles")
-            call system(MD // " GeneProb")
-            call system(MD // " IterateGeneProb")
-
-            do i=1,inputParams%nprocessors
-                write (FolderName,'("GeneProb"i0)')i
-                ! call system ("mkdir GeneProb/" // FolderName)       !here
-                call system(MD // " GeneProb" // DASH // FolderName)
-            enddo
-            do i=1,inputParams%nPhaseInternal
-                write (FolderName,'("Phase"i0)')i
-                ! call system ("mkdir Phasing/" // FolderName)
-                call system(MD // " Phasing" // DASH // FolderName)
-            enddo
-            do i=1,inputParams%nprocessors
-                write (FolderName,'("GeneProb"i0)')i            !here
-                ! call system ("mkdir IterateGeneProb/" // FolderName)    !here
-                call system(MD // " IterateGeneProb" // DASH // FolderName)
-            enddo
-        endif
-
-
-    end subroutine MakeDirectories
-
-    !#############################################################################################################################################################################################################################
-
-    subroutine rmdir(tmpdir)
-
-        character(len=*) :: tmpdir
-
-        open(unit=1000,file=".rmdirsh",status="unknown")
-        write(1000,*) "if [ -d "// trim(tmpdir) //" ]"
-        write(1000,*) "then rm -r " // trim(tmpdir)
-        write(1000,*) "fi"
-        close(1000)
-
-        call system("chmod a+x .rmdirsh")
-        call system("./.rmdirsh")
-        call system("rm .rmdirsh")
-
-    end subroutine rmdir
-
-    !#############################################################################################################################################################################################################################
-
 
 
     !#############################################################################################################################################################################################################################
