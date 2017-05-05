@@ -128,7 +128,7 @@ program AlphaImpute
                         print *, "Calling geneprob"
                         call runGeneProbAlphaImpute(1, inputParams%nsnp, ped, GenosProbs, MAF)
                         print *, "writing probabilities"
-                        call WriteProbabilitiesFull("./Geneprob/GenotypeProbabilities.txt", GenosProbs, ped,ped%pedigreeSize-ped%nDummys)
+                        call WriteProbabilitiesFull("./GeneProb/GenotypeProbabilities.txt", GenosProbs, ped,ped%pedigreeSize-ped%nDummys)
                         call WriteProbabilities("./Results/GenotypeProbabilities.txt", GenosProbs, ped,ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
                     endif
 
@@ -136,7 +136,7 @@ program AlphaImpute
 
                     if (inputParams%restartOption==OPT_RESTART_GENEPROB) then
                         call ped%writeOutGenotypes("./GeneProb/individualGenotypes.txt")
-                        call WriteProbabilitiesFull("./Geneprob/GenotypeProbabilities.txt", GenosProbs, ped,ped%pedigreeSize-ped%nDummys)
+                        call WriteProbabilitiesFull("./GeneProb/GenotypeProbabilities.txt", GenosProbs, ped,ped%pedigreeSize-ped%nDummys)
                         write(6,*) "Restart option 1 stops program after Geneprobs jobs have finished"
                         stop
                     endif
