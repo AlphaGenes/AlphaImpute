@@ -73,14 +73,7 @@ contains
         endif 
         call omp_set_nested(.true.)
 
-        block 
-
-            type(OutputParameters) :: p
-        call MakeDirectories(p)
-        end block
-
-
-        print *, "Running AlphaPhase"
+      print *, "Running AlphaPhase"
        !$OMP parallel DO schedule(dynamic) &
        !$OMP FIRSTPRIVATE(params)
         do i= 1, nCoreLengths
