@@ -825,9 +825,7 @@ contains
                 ProbImputePhase(1:nAnisP,:,:) = 9.0
 
                 ! Feed Impute and Phase probabilites
-                l=0
                 do j=1,inputParams%nsnp
-                        l=l+1
                         do i=1,nAnisG
                             ! if (GlobalHmmID(i) > nAnisP ) then
                             !     GlobalHmmID(i) = 0
@@ -1088,14 +1086,12 @@ contains
                     deallocate(Maf)
                 end if
                 allocate(Maf(inputParams%nSnpRaw))
-                ProbImputeGenos(1:nAnisP,:)= 9.0
-                ProbImputePhase(1:nAnisP,:,:)= 9.0
+                ProbImputeGenos(1:ped%pedigreeSize-ped%nDummys,:)= 9.0
+                ProbImputePhase(1:ped%pedigreeSize-ped%nDummys,:,:)= 9.0
                 ImputeGenos = 9
                 ImputePhase = 9
 
-                l=0
                 do j=1,inputParams%nsnp
-                        l=l+1
                         do i=1,nAnisG
                             ! if (GlobalHmmID(i) > nAnisP ) then
                             !     GlobalHmmID(i) = 0
