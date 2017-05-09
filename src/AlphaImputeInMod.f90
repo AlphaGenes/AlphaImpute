@@ -373,6 +373,9 @@ contains
 
             case("numberofprocessorsavailable")
                 read(second(1),*) this%nProcessors
+                if (this%nProcessors > OMP_get_num_procs()) then
+                    write(error_unit,*) "WARNING - more processors than are available are specified under numberofprocessorsavailable"
+                endif
 
             case("largedatasets")
                 if (ToLower(trim(second(1)))== "yes") then
@@ -449,6 +452,9 @@ contains
                 read(second(1), *)this%nRoundsHMM
             case("parallelprocessors")
                 read(second(1), *) this%useProcs
+                if (this%useProcs > OMP_get_num_procs()) then
+                    write(error_unit,*) "WARNING - more processors than are available are specified under parallelprocessors"
+                endif
             case("seed")
                 read(second(1), *)this%idum
 
