@@ -55,7 +55,6 @@ module AlphaImputeInMod
         real(kind=real32) :: GenotypeErrorPhase
         logical :: largeDatasets
         integer(kind=int32) :: PhaseSubsetSize, PhaseNIterations
-        integer(kind=int32) :: nProcessors,nProcessGeneProb,nProcessAlphaPhase
         character(len=20) :: iterateMethod
         integer :: minoverlaphaplotype
         ! box 6
@@ -66,7 +65,7 @@ module AlphaImputeInMod
         ! box 7
         ! idum is seed
         integer(kind=int32) :: idum
-        integer(kind=int32) :: nHapInSubH,useProcs,nRoundsHmm,HmmBurnInRound
+        integer(kind=int32) :: nHapInSubH,nRoundsHmm,HmmBurnInRound
         real(kind=real32) :: phasedThreshold,imputedThreshold
         logical :: HapList=.FALSE.
         integer(kind=1) :: HMMOption
@@ -82,6 +81,7 @@ module AlphaImputeInMod
 
         ! other
         integer(kind=int32) :: nSnpRaw,nAgreeImputeHDLib,nAgreeParentPhaseElim,nAgreeGrandParentPhaseElim,nAgreePhaseElim,nAgreeInternalHapLibElim
+        integer(kind=int32) :: useProcs
         logical :: cluster
     contains
         procedure :: ReadInParameterFile
@@ -372,8 +372,9 @@ contains
                 endif
 
             case("numberofprocessorsavailable")
-                read(second(1),*) this%nProcessors
-                if (this%nProcessors > OMP_get_num_procs()) then
+                read(second(1),*) this%useProcs
+                write(error_unit,*) "WARNING: numberofprocessorsavailable is legacy and will be removed in future versions. Please use option ParallelProcessors instead"
+                if (this%useProcs > OMP_get_num_procs()) then
                     write(error_unit,*) "WARNING - more processors than are available are specified under numberofprocessorsavailable"
                 endif
 
@@ -450,11 +451,7 @@ contains
                 read(second(1), *) this%HmmBurnInRound
             case("rounds")
                 read(second(1), *)this%nRoundsHMM
-            case("parallelprocessors")
-                read(second(1), *) this%useProcs
-                if (this%useProcs > OMP_get_num_procs()) then
-                    write(error_unit,*) "WARNING - more processors than are available are specified under parallelprocessors"
-                endif
+            
             case("seed")
                 read(second(1), *)this%idum
 
@@ -539,6 +536,12 @@ contains
                 else if (ToLower(trim(second(1))) == "yes") then
                     this%cluster = .true.
                 endif
+            case("parallelprocessors")
+                read(second(1), *) this%useProcs
+                if (this%useProcs > OMP_get_num_procs()) then
+                    write(error_unit,*) "WARNING - more processors than are available are specified under parallelprocessors"
+                    write(error_unit,*) this%useProcs, " set vs ",OMP_get_num_procs()," available"
+                endif
             case default
                 write(*,"(A,A)") trim(tag), " is not valid for the AlphaImpute Spec File."
                 cycle
@@ -549,8 +552,6 @@ contains
     open (newUnit=this%pedigreeFileUnit,file=trim(this%PedigreeFile),status="old")
     open (newUnit=this%genotypeFileUnit,file=trim(this%GenotypeFile),status="old")
     if (this%SexOpt==1) open (newUnit=this%genderFileUnit,file=trim(this%GenderFile),status="old")
-
-    this%nProcessAlphaPhase=this%nProcessors-this%nProcessGeneProb ! Never used!
 
     ! Set parameters for parallelisation
     if (this%nPhaseInternal==2) then
@@ -581,7 +582,7 @@ contains
 
     this%nSnpRaw = this%nsnp
     
-    !$  CALL OMP_SET_NUM_THREADS(this%nProcessors)
+    !$  CALL OMP_SET_NUM_THREADS(this%useProcs)
 end subroutine ReadInParameterFile
 
 end module AlphaImputeInMod

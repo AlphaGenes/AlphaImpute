@@ -167,7 +167,7 @@ contains
         character(len=300) ::filout
         character(len=IDLENGTH) :: dum
 
-        do h=1,inputParams%nProcessors
+        do h=1,inputParams%useProcs
 #ifndef _WIN32
             write (filout,'("./GeneProb/GeneProb"i0,"/GeneProbs.txt")')h            
 #else
@@ -222,7 +222,7 @@ contains
         integer :: i,h,StSnp, EnSnp
         character(len=IDLENGTH) :: dum
         character(len=300) :: filout
-        do h=1,inputParams%nProcessors
+        do h=1,inputParams%useProcs
 #ifndef _WIN32
             write (filout,'("./GeneProb/GeneProb"i0,"/GeneProbs.txt")')h            
 #else
@@ -330,7 +330,7 @@ contains
         allocate(GeneProbWork(inputParams%nsnp,4))
         allocate(PatAlleleProb(inputParams%nsnp,2))
         allocate(MatAlleleProb(inputParams%nsnp,2))
-        do h=1,inputParams%nProcessors
+        do h=1,inputParams%useProcs
 #ifndef _WIN32
             write (filout,'("./GeneProb/GeneProb"i0,"/GeneProbs.txt")')h            
 #else

@@ -113,7 +113,7 @@ contains
 
         ! This will be MPI jobs in future, as right now parallelization is run using openMP inside Geneprob itself
         ! TODO add tihs in
-        ! do i=1,inputParams%nprocessors
+        ! do i=1,inputParams%useProcs
             ! startsnp = GpIndex(i,1)
             ! endsnp = GpIndex(i,2)
 
@@ -170,7 +170,7 @@ contains
         if (inputParams%outopt==0) nSnpIterate=inputParams%nsnp
         if (inputParams%outopt==1) nSnpIterate=inputParams%nSnpRaw
 
-        allocate(jobsDone(inputParams%nProcessors))
+        allocate(jobsDone(inputParams%useProcs))
 
         allocate(PatAlleleProb(nSnpIterate,2))
         allocate(MatAlleleProb(nSnpIterate,2))
@@ -185,26 +185,26 @@ contains
         
         deallocate(GpIndex)
 
-        allocate(GpIndex(inputParams%nprocessors,2))
+        allocate(GpIndex(inputParams%useProcs,2))
 
         ProbImputeGenos(0,:)=0.0
         ProbImputePhase(0,:,:)=0.0
         ProbImputeGenos(1:ped%pedigreeSize,:)=-9.0
         ProbImputePhase(1:ped%pedigreeSize,:,:)=-9.0
 
-        Tmp=int(float(nSnpIterate)/inputParams%nprocessors)
+        Tmp=int(float(nSnpIterate)/inputParams%useProcs)
         GpIndex(1,1)=1
         GpIndex(1,2)=Tmp
-        if (inputParams%nprocessors>1) then
-            do i=2,inputParams%nprocessors
+        if (inputParams%useProcs>1) then
+            do i=2,inputParams%useProcs
                 GpIndex(i,1)=GpIndex(i-1,1)+Tmp
                 GpIndex(i,2)=GpIndex(i-1,2)+Tmp
             enddo
         endif
-        GpIndex(inputParams%nprocessors,2)=nSnpIterate
+        GpIndex(inputParams%useProcs,2)=nSnpIterate
 
 
-        do i=1,inputParams%nprocessors
+        do i=1,inputParams%useProcs
 #ifndef _WIN32
             write (filout,'("./IterateGeneProb/GeneProb"i0,"/GeneProbSpec.txt")')i
 #else
@@ -232,7 +232,7 @@ contains
 
 #if CLUSTER==1
             write (filout,'("cd IterateGeneProb/")')
-            write(f,'(i0)') inputParams%nprocessors
+            write(f,'(i0)') inputParams%useProcs
             write (109,*) trim(filout)
             write(109,*) "cp ../../../SharedFiles/AlphaImpute_scripts/runSubmitGeneProb.sh ."
             write(109,*) "cp ../../../SharedFiles/AlphaImpute_scripts/submitGeneProb.sh ."
@@ -248,7 +248,7 @@ contains
 
             if (inputParams%restartOption/=OPT_RESTART_IMPUTATION) then
                 do
-                    do i=1,inputParams%nprocessors
+                    do i=1,inputParams%useProcs
                         write (filout,'("./IterateGeneProb/GeneProb"i0,"/GpDone.txt")')i
                         inquire(file=trim(filout),exist=FileExists)
                         if ((FileExists .eqv. .true.).and.(JobsDone(i)==0)) then
@@ -257,7 +257,7 @@ contains
                         endif
                     enddo
                     call sleep(SleepParameter)
-                    if (sum(JobsDone(:))==inputParams%nprocessors) exit
+                    if (sum(JobsDone(:))==inputParams%useProcs) exit
                 enddo
             endif
 #else
@@ -327,7 +327,7 @@ contains
 #if CLUSTER==1
         ! PIC company algorithm to calculate probabilities of genotype
         write (filout,'("cd GeneProb/")')
-        write(f,'(i0)') nProcessors
+        write(f,'(i0)') useProcs
         write (109,*) trim(filout)
         write(109,*) "cp ../../../SharedFiles/AlphaImpute_scripts/runSubmitGeneProb.sh ."
         write(109,*) "cp ../../../SharedFiles/AlphaImpute_scripts/submitGeneProb.sh ."
@@ -337,11 +337,11 @@ contains
         call system("./TempGeneProb.sh")
         call system("rm TempGeneProb.sh")
         ! Check that every process has finished before going on
-        if (inputParams%restartOption/=OPT_RESTART_GENEPROB) call CheckGeneProbFinished(nProcessors)
+        if (inputParams%restartOption/=OPT_RESTART_GENEPROB) call CheckGeneProbFinished(useProcs)
 
 #else
         ! Create bash script for run GeneProb subprocesses
-        do i=1,inputParams%nProcessors
+        do i=1,inputParams%useProcs
             write (filout,'("cd GeneProb/GeneProb"i0)')i
             write (109,*) trim(filout)
             ! Call the external program geneprob
@@ -355,7 +355,7 @@ contains
         call system("./TempGeneProb.sh")
 
         ! Check that every process has finished before going on
-        call CheckGeneProbFinished(inputParams%nProcessors)
+        call CheckGeneProbFinished(inputParams%useProcs)
 #endif
 
     end subroutine GeneProbManagement
@@ -1218,16 +1218,16 @@ contains
         ! Divide haplotypes into chunks of the same length.
         ! Each chunk will be treated separately in different processors
         if (inputParams%cluster) then
-            Tmp=int(float(inputParams%nsnp)/inputParams%nProcessors)
+            Tmp=int(float(inputParams%nsnp)/inputParams%useProcs)
             GpIndex(1,1)=1
             GpIndex(1,2)=Tmp
-            if (inputParams%nProcessors>1) then
-                do i=2,inputParams%nProcessors
+            if (inputParams%useProcs>1) then
+                do i=2,inputParams%useProcs
                     GpIndex(i,1)=GpIndex(i-1,1)+Tmp
                     GpIndex(i,2)=GpIndex(i-1,2)+Tmp
                 enddo
             endif
-            GpIndex(inputParams%nProcessors,2)=inputParams%nsnp
+            GpIndex(inputParams%useProcs,2)=inputParams%nsnp
         endif
         allocate(GlobalWorkPhase(0:ped%pedigreeSize-ped%nDummys,inputParams%nsnp,2))
         allocate(WorkPhase(0:ped%pedigreeSize-ped%nDummys,nSnpFinal,2))
@@ -1793,7 +1793,7 @@ contains
         allocate(TempCore(inputParams%nPhaseInternal))
         allocate(TempCplusT(inputParams%nPhaseInternal))
 
-        allocate(GpIndex(inputParams%nprocessors,2))
+        allocate(GpIndex(inputParams%useProcs,2))
 
 
         do i=1,inputParams%nPhaseExternal
@@ -1914,18 +1914,18 @@ contains
 
         !end createalphaphasespec
 
-        Tmp=int(float(inputParams%nsnp)/inputParams%nprocessors)
+        Tmp=int(float(inputParams%nsnp)/inputParams%useProcs)
         GpIndex(1,1)=1
         GpIndex(1,2)=Tmp
-        if (inputParams%nprocessors>1) then
-            do i=2,inputParams%nprocessors
+        if (inputParams%useProcs>1) then
+            do i=2,inputParams%useProcs
                 GpIndex(i,1)=GpIndex(i-1,1)+Tmp
                 GpIndex(i,2)=GpIndex(i-1,2)+Tmp
             enddo
         endif
-        GpIndex(inputParams%nprocessors,2)=inputParams%nsnp
+        GpIndex(inputParams%useProcs,2)=inputParams%nsnp
       ! Create GeneProbSpec file
-        do i=1,inputParams%nprocessors
+        do i=1,inputParams%useProcs
 #ifndef _WIN32
             write (filout,'("./GeneProb/GeneProb"i0,"/GeneProbSpec.txt")')i
 #else
