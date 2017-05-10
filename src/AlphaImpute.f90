@@ -214,9 +214,9 @@ contains
             write (108,*) "nAnis        ,",ped%pedigreeSize
             write (108,*) "nsnp     ,",nSnpIterate
 #ifndef _WIN32
-            write (108,*) "InputFilePath    ,",'"../IterateGeneProbInput.txt"'
+            write (108,*) "InputFilePath    ,",'../IterateGeneProbInput.txt'
 #else
-            write (108,*) "InputFilePath    ,",'"..\IterateGeneProbInput.txt"'
+            write (108,*) "InputFilePath    ,",'..\IterateGeneProbInput.txt'
 #endif
             write (108,*) "OutputFilePath   ,",'"GeneProbs.txt"'
             write (108,*) "StartSnp     ,",GpIndex(i,1)
