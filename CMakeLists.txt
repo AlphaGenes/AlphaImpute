@@ -26,7 +26,7 @@ SET(GENEPROBEXE GeneProbForAlphaImpute)
 SET(AHLIB alphahouse)
 SET(GPLIB geneprob)
 SET(APLIB alphaphase)
-
+SET(AMLPLIB alphamlp)
 # Define some directories
 SET(SRC ${CMAKE_SOURCE_DIR}/src)
 SET(OBJ ${CMAKE_SOURCE_DIR}/objs)
@@ -76,6 +76,7 @@ INCLUDE(${CMAKE_MODULE_PATH}/SetFortranFlags.cmake)
 SET(SRCAH ./alphahouse/src/)
 SET(SRCGP ./geneprob/src/)
 SET(SRCAP ./alphaphase/src/)
+SET(SRCAMLP ./alphamlp/src/)
 # Have the .mod files placed in the OBJ folder
 SET(CMAKE_Fortran_MODULE_DIRECTORY ${OBJ})
 
@@ -83,6 +84,7 @@ SET(CMAKE_Fortran_MODULE_DIRECTORY ${OBJ})
 ADD_SUBDIRECTORY(${SRCAH} ${OBJ}/AH)
 ADD_SUBDIRECTORY(${SRCGP} ${OBJ}/GP)
 ADD_SUBDIRECTORY(${SRCAP} ${OBJ}/AP)
+ADD_SUBDIRECTORY(${SRCAMLP} ${OBJ}/AMLP)
 
 # TODO add tests to correct location
 ADD_SUBDIRECTORY(${SRCALPHAIMPUTE} ${BIN})

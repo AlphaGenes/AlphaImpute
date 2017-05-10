@@ -211,7 +211,7 @@ contains
             write (filout,'(".\IterateGeneProb\GeneProb"i0,"\GeneProbSpec.txt")')i
 #endif
             open (unit=108,file=trim(filout),status='unknown')
-            write (108,*) "nAnis        ,",ped%pedigreeSize
+            write (108,*) "nAnis        ,",ped%pedigreeSize-ped%nDummys
             write (108,*) "nsnp     ,",nSnpIterate
 #ifndef _WIN32
             write (108,*) "InputFilePath    ,",'../IterateGeneProbInput.txt'

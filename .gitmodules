@@ -10,3 +10,6 @@
 [submodule "alphaphase"]
 	path = alphaphase
 	url = git@bitbucket.org:hickeyjohnteam/alphaphase.git
+[submodule "alphamlp"]
+	path = alphamlp
+	url = https://bitbucket.org/hickeyjohnteam/alphamlp.git
