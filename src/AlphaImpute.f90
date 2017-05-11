@@ -1540,7 +1540,7 @@ contains
 
         if (inputParams%restartOption==4) then
             open (newunit=fileUnit,file="Tmp2345678.txt",status="old")
-            do i=1,ped%pedigreeSize-ped%nDummys
+            do i=1,ped%nGenotyped
                 read (fileUnit,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ImputePhase(i,:,1)
                 read (fileUnit,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ImputePhase(i,:,2)
                 read (fileUnit,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ImputeGenos(i,:)
