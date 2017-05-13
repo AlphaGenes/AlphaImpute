@@ -70,7 +70,7 @@ contains
 
         if (inputparams%minoverlaphaplotype /= 0) then
             params%percMinPresent = 0
-        endif 
+        endif
         call omp_set_nested(.true.)
 
       print *, "Running AlphaPhase"
@@ -182,7 +182,7 @@ contains
         if (.not. allocated(ProbImputePhase)) then
             allocate(ProbImputePhase(0:ped%pedigreeSize,nSnpIterate,2))
         endif
-        
+
         deallocate(GpIndex)
 
         allocate(GpIndex(inputParams%useProcs,2))
@@ -376,7 +376,7 @@ contains
         do
             do i=1,nProcs
 #ifdef _WIN32
-                write (filout,'(".\GeneProb\GeneProb"i0,"\GpDone.txt")')i             
+                write (filout,'(".\GeneProb\GeneProb"i0,"\GpDone.txt")')i
 #else
                 write (filout,'("./GeneProb/GeneProb"i0,"/GpDone.txt")')i
 #endif
@@ -1284,7 +1284,7 @@ contains
                 SireDamRL=e+1
                 CountLeftSwitch=0
                 CountRightSwitch=0
-                
+
                 pedID=ped%pedigree(i)%getSireDamNewIDByIndexNoDummy(e+1)
                 ! means parent is a dummy or no parent
                 if (pedId == 0) then
@@ -1489,7 +1489,7 @@ contains
         open (unit=34,file="Results" // DASH // "ImputeGenotypes.txt",status="unknown")
         open (unit=40,file="Results" // DASH // "ImputePhaseProbabilities.txt",status="unknown")
         open (unit=41,file="Results" // DASH // "ImputeGenotypeProbabilities.txt",status="unknown")
-        block 
+        block
             integer :: tmpID
             do i=1, ped%pedigreeSize - ped%nDummys
                 if (ped%pedigree(i)%isDummy) then
@@ -1551,7 +1551,7 @@ contains
         ! StSnp=GpIndex(h,1)
         ! EnSnp=GpIndex(h,2)
         ! TODO once geneprob is MPI'd use this
-        open(newunit=fileUnit,file="." // DASH // "Miscellaneous" // "MinorAlleleFrequency.txt", status="unknown")
+        open(newunit=fileUnit,file="." // DASH // "Miscellaneous" // DASH // "MinorAlleleFrequency.txt", status="unknown")
         do j=1,nSnpIterate
             read (fileUnit,*) Maf(j)
         enddo
@@ -3250,7 +3250,3 @@ contains
     end subroutine PrintTimerTitles
 
 end module AlphaImputeModule
-
-
-
-
