@@ -124,8 +124,12 @@ contains
 
         ! enddo
 
+        if (inputParams%cluster) then
+            call IterateGeneProbPhaseCluster
+        else 
+            call IterateGeneProbPhase
+        endif
 
-        call IterateGeneProbPhase
         call IterateParentHomoFill
         call PhaseComplement
         call IterateMakeGenotype
@@ -278,7 +282,13 @@ contains
             endif
         endif
 
-        call IterateGeneProbPhase
+
+        if (inputParams%Cluster) then
+            call IterateGeneProbPhaseCluster
+        else
+            call IterateGeneProbPhase
+        endif
+
         call IterateParentHomoFill
         call PhaseComplement
         call IterateMakeGenotype
@@ -1517,7 +1527,7 @@ contains
         use alphaimputeinmod
         implicit none
 
-        integer :: i,j, fileUnit
+        integer :: i, fileUnit
         type(AlphaImputeInput), pointer :: inputParams
 
         inputParams => defaultInput
@@ -1548,15 +1558,12 @@ contains
             close (fileUnit)
         endif
 
-        ! StSnp=GpIndex(h,1)
-        ! EnSnp=GpIndex(h,2)
-        ! TODO once geneprob is MPI'd use this
-        open(newunit=fileUnit,file="." // DASH // "Miscellaneous" // DASH // "MinorAlleleFrequency.txt", status="unknown")
-        do j=1,nSnpIterate
-            read (fileUnit,*) Maf(j)
-        enddo
+        ! open(newunit=fileUnit,file="." // DASH // "Miscellaneous" // DASH // "MinorAlleleFrequency.txt", status="unknown")
+        ! do j=1,nSnpIterate
+        !     read (fileUnit,*) Maf(j)
+        ! enddo
 
-        close(fileUnit)
+        ! close(fileUnit)
 
 
         call IterateMakeGenotype
@@ -1565,6 +1572,114 @@ contains
         ImputeGenos(0,:)=9
 
     end subroutine IterateGeneProbPhase
+
+    !#############################################################################################################################################################################################################################
+
+    subroutine IterateGeneProbPhaseCluster
+        use Global
+        use alphaimputeinmod
+        implicit none
+
+        integer :: h,i,j,dum,StSnp,EnSnp,counter
+        real :: PatAlleleProb(nSnpIterate,2),MatAlleleProb(nSnpIterate,2),HetProb(nSnpIterate),GeneProbWork(nSnpIterate,4)
+        character(len=300) :: filout
+        type(AlphaImputeInput), pointer :: inputParams
+
+        inputParams => defaultInput
+
+        allocate(Maf(nSnpIterate))
+
+
+        if (inputParams%restartOption==4) then
+            open (unit=209,file="Tmp2345678.txt",status="old")
+            do i=1,ped%nGenotyped
+                read (209,*) ImputePhase(i,:,1)
+                read (209,*) ImputePhase(i,:,2)
+                read (209,*) ImputeGenos(i,:)
+            enddo
+            close (209)
+        endif
+
+        counter=0
+        
+        do h=1,inputParams%useProcs
+#ifdef _WIN32
+                    write (filout,'(".\IterateGeneProb\GeneProb"i0,"\GeneProbs.txt")')h         !here
+                    open (unit=110,file=trim(filout),status="unknown")
+                    write (filout,'(".\IterateGeneProb\GeneProb"i0,"\MinorAlleleFrequency.txt")')h          !here
+                    open (unit=111,file=trim(filout),status="unknown")
+                    write (filout,'(".\IterateGeneProb\GeneProb"i0,"\GPI.txt")')h
+                    open (unit=222,file=filout,status="unknown")
+#else 
+                    write (filout,'("./IterateGeneProb/GeneProb"i0,"/GeneProbs.txt")')h         !here
+                    open (unit=110,file=trim(filout),status="unknown")
+                    write (filout,'("./IterateGeneProb/GeneProb"i0,"/MinorAlleleFrequency.txt")')h          !here
+                    open (unit=111,file=trim(filout),status="unknown")
+#endif
+
+                
+
+                StSnp=GpIndex(h,1)
+                EnSnp=GpIndex(h,2)
+                do i=1,ped%pedigreeSize- ped%nDummys
+                    do j=1,4
+                        read (110,*) dum,GeneProbWork(StSnp:EnSnp,j)
+                    enddo
+                    PatAlleleProb(StSnp:EnSnp,1)=GeneProbWork(StSnp:EnSnp,1)&
+                        +GeneProbWork(StSnp:EnSnp,2)
+                    PatAlleleProb(StSnp:EnSnp,2)=GeneProbWork(StSnp:EnSnp,3)&
+                        +GeneProbWork(StSnp:EnSnp,4)
+                    MatAlleleProb(StSnp:EnSnp,1)=GeneProbWork(StSnp:EnSnp,1)&
+                        +GeneProbWork(StSnp:EnSnp,3)
+                    MatAlleleProb(StSnp:EnSnp,2)=GeneProbWork(StSnp:EnSnp,2)&
+                        +GeneProbWork(StSnp:EnSnp,4)
+
+                    HetProb(StSnp:EnSnp)=GeneProbWork(StSnp:EnSnp,2)+GeneProbWork(StSnp:EnSnp,3)
+
+                    do j=StSnp,EnSnp
+                        if ((PatAlleleProb(j,1)>=GeneProbThresh).and.(ImputePhase(i,j,1)==9)) ImputePhase(i,j,1)=0
+                        if ((PatAlleleProb(j,2)>=GeneProbThresh).and.(ImputePhase(i,j,1)==9)) ImputePhase(i,j,1)=1
+                        if ((MatAlleleProb(j,1)>=GeneProbThresh).and.(ImputePhase(i,j,2)==9)) ImputePhase(i,j,2)=0
+                        if ((MatAlleleProb(j,2)>=GeneProbThresh).and.(ImputePhase(i,j,2)==9)) ImputePhase(i,j,2)=1
+                        if (ImputePhase(i,j,1)==9) then
+                            ProbImputePhase(i,j,1)=GeneProbWork(j,3)+GeneProbWork(j,4)
+                        else
+                            ProbImputePhase(i,j,1)=float(ImputePhase(i,j,1))
+                        endif
+                        if (ImputePhase(i,j,2)==9) then
+                            ProbImputePhase(i,j,2)=GeneProbWork(j,2)+GeneProbWork(j,4)
+                        else
+                            ProbImputePhase(i,j,2)=float(ImputePhase(i,j,2))
+                        endif
+                        if (HetProb(j)>=GeneProbThresh) ProbImputeGenos(i,j)=1
+                    enddo
+                    ProbImputeGenos(i,StSnp:EnSnp)=ProbImputePhase(i,StSnp:EnSnp,1)+ProbImputePhase(i,StSnp:EnSnp,2)
+                enddo
+
+                do j=StSnp,EnSnp
+                    read (111,*) Maf(j)
+                enddo
+
+                close(110)
+                close(111)
+                close(222)
+            enddo
+
+            open(unit=111,file="." // DASH // "Miscellaneous" // "MinorAlleleFrequency.txt", status="unknown")
+
+
+            do j=1,nSnpIterate
+                write (111,*) j,Maf(j)
+            enddo
+            close(111)
+
+
+            call IterateMakeGenotype
+
+            ImputePhase(0,:,:)=9
+            ImputeGenos(0,:)=9
+
+        end subroutine IterateGeneProbPhaseCluster
     !#############################################################################################################################################################################################################################
 
     subroutine IterateMakeGenotype

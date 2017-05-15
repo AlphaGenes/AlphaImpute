@@ -108,6 +108,7 @@ contains
     subroutine ReadInParameterFile(this,SpecFile)
         use AlphaHouseMod, only: parseToFirstWhitespace,splitLineIntoTwoParts,toLower
         use PARAMETERS
+        use omp_lib
 
         class(AlphaImputeInput), intent(inout),target :: this
         integer :: unit,IOStatus,MultipleHDpanels,i
