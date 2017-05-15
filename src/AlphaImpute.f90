@@ -124,11 +124,7 @@ contains
 
         ! enddo
 
-        if (inputParams%cluster) then
-            call IterateGeneProbPhaseCluster
-        else 
-            call IterateGeneProbPhase
-        endif
+        call IterateGeneProbPhase
 
         call IterateParentHomoFill
         call PhaseComplement
@@ -283,11 +279,8 @@ contains
         endif
 
 
-        if (inputParams%Cluster) then
-            call IterateGeneProbPhaseCluster
-        else
-            call IterateGeneProbPhase
-        endif
+        call IterateGeneProbPhaseCluster
+
 
         call IterateParentHomoFill
         call PhaseComplement
@@ -1558,12 +1551,12 @@ contains
             close (fileUnit)
         endif
 
-        ! open(newunit=fileUnit,file="." // DASH // "Miscellaneous" // DASH // "MinorAlleleFrequency.txt", status="unknown")
-        ! do j=1,nSnpIterate
-        !     read (fileUnit,*) Maf(j)
-        ! enddo
+        open(newunit=fileUnit,file="." // DASH // "Miscellaneous" // DASH // "MinorAlleleFrequency.txt", status="unknown")
+        do j=1,nSnpIterate
+            write (fileUnit,*) Maf(j)
+        enddo
 
-        ! close(fileUnit)
+        close(fileUnit)
 
 
         call IterateMakeGenotype
