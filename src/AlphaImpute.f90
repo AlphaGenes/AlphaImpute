@@ -1520,7 +1520,7 @@ contains
         use alphaimputeinmod
         implicit none
 
-        integer :: i, fileUnit
+        integer :: i, fileUnit,j
         type(AlphaImputeInput), pointer :: inputParams
 
         inputParams => defaultInput
@@ -1573,7 +1573,7 @@ contains
         use alphaimputeinmod
         implicit none
 
-        integer :: h,i,j,dum,StSnp,EnSnp,counter
+        integer :: h,i,j,dum,StSnp,EnSnp,counter,fileUnit,geneprobfile,mafFile
         real :: PatAlleleProb(nSnpIterate,2),MatAlleleProb(nSnpIterate,2),HetProb(nSnpIterate),GeneProbWork(nSnpIterate,4)
         character(len=300) :: filout
         type(AlphaImputeInput), pointer :: inputParams
@@ -1584,13 +1584,13 @@ contains
 
 
         if (inputParams%restartOption==4) then
-            open (unit=209,file="Tmp2345678.txt",status="old")
+            open (unit=fileUnit,file="Tmp2345678.txt",status="old")
             do i=1,ped%nGenotyped
-                read (209,*) ImputePhase(i,:,1)
-                read (209,*) ImputePhase(i,:,2)
-                read (209,*) ImputeGenos(i,:)
+                read (fileUnit,*) ImputePhase(i,:,1)
+                read (fileUnit,*) ImputePhase(i,:,2)
+                read (fileUnit,*) ImputeGenos(i,:)
             enddo
-            close (209)
+            close (fileUnit)
         endif
 
         counter=0
@@ -1598,16 +1598,14 @@ contains
         do h=1,inputParams%useProcs
 #ifdef _WIN32
                     write (filout,'(".\IterateGeneProb\GeneProb"i0,"\GeneProbs.txt")')h         !here
-                    open (unit=110,file=trim(filout),status="unknown")
+                    open (newunit=geneprobfile,file=trim(filout),status="unknown")
                     write (filout,'(".\IterateGeneProb\GeneProb"i0,"\MinorAlleleFrequency.txt")')h          !here
-                    open (unit=111,file=trim(filout),status="unknown")
-                    write (filout,'(".\IterateGeneProb\GeneProb"i0,"\GPI.txt")')h
-                    open (unit=222,file=filout,status="unknown")
+                    open (newunit=mafFile,file=trim(filout),status="unknown")
 #else 
                     write (filout,'("./IterateGeneProb/GeneProb"i0,"/GeneProbs.txt")')h         !here
-                    open (unit=110,file=trim(filout),status="unknown")
+                    open (newunit=geneprobfile,file=trim(filout),status="unknown")
                     write (filout,'("./IterateGeneProb/GeneProb"i0,"/MinorAlleleFrequency.txt")')h          !here
-                    open (unit=111,file=trim(filout),status="unknown")
+                    open (newunit=mafFile,file=trim(filout),status="unknown")
 #endif
 
                 
@@ -1616,7 +1614,7 @@ contains
                 EnSnp=GpIndex(h,2)
                 do i=1,ped%pedigreeSize- ped%nDummys
                     do j=1,4
-                        read (110,*) dum,GeneProbWork(StSnp:EnSnp,j)
+                        read (geneprobfile,*) dum,GeneProbWork(StSnp:EnSnp,j)
                     enddo
                     PatAlleleProb(StSnp:EnSnp,1)=GeneProbWork(StSnp:EnSnp,1)&
                         +GeneProbWork(StSnp:EnSnp,2)
@@ -1650,23 +1648,19 @@ contains
                 enddo
 
                 do j=StSnp,EnSnp
-                    read (111,*) Maf(j)
+                    read (mafFile,*) Maf(j)
                 enddo
 
-                close(110)
-                close(111)
-                close(222)
+                close(geneprobfile)
+                close(mafFile)
             enddo
 
-            open(unit=111,file="." // DASH // "Miscellaneous" // "MinorAlleleFrequency.txt", status="unknown")
-
+            open(newunit=mafFile,file="." // DASH // "Miscellaneous" // "MinorAlleleFrequency.txt", status="unknown")
 
             do j=1,nSnpIterate
-                write (111,*) j,Maf(j)
+                write (mafFile,*) j,Maf(j)
             enddo
-            close(111)
-
-
+            close(mafFile)
             call IterateMakeGenotype
 
             ImputePhase(0,:,:)=9
