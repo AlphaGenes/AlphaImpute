@@ -1971,10 +1971,10 @@ write(0,*) 'DEBUG: Mach Finished'
             
         do i=1, ped%nGenotyped
             tmpGenoIndexed = ped%genotypeMap(i)
-            ImputeGenos(i,:) = ped%pedigree(ped%genotypeMap(i))%individualGenotype%toIntegerArray()
+            ImputeGenos(ped%genotypeMap(i),:) = ped%pedigree(ped%genotypeMap(i))%individualGenotype%toIntegerArray()
             do j=1,inputParams%nsnp
-                if (ImputeGenos(i,j)==0) ImputePhase(i,j,:)=0
-                if (ImputeGenos(i,j)==2) ImputePhase(i,j,:)=1
+                if (ImputeGenos(ped%genotypeMap(i),j)==0) ImputePhase(ped%genotypeMap(i),j,:)=0
+                if (ImputeGenos(ped%genotypeMap(i),j)==2) ImputePhase(ped%genotypeMap(i),j,:)=1
             enddo
         enddo
 
