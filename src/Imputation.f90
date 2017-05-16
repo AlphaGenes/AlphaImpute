@@ -1423,7 +1423,7 @@ write(0,*) 'DEBUG: Mach Finished'
 
         inputParams => defaultInput
         ! Temp(ped%pedigreeSize, inputParams%nsnps, PatHap, Phase)
-        allocate(Temp(0:ped%pedigreeSize,inputParams%nsnp,2,2))
+        allocate(Temp(0:ped%pedigreeSize,inputParams%nsnpraw,2,2))
         Temp=0
 
         AnimalOn=0
