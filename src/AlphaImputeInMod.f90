@@ -340,6 +340,11 @@ contains
                 endif
                 do i=1,size(second)
                     read(second(i), *) this%CoreAndTailLengths(i)
+                    if (this%CoreAndTailLengths(i) > this%nsnp) then
+
+                        write(error_unit, *) "Error: core and Tail lengths is given a number than largest number of snps specified in nsnps"
+                        stop 40523
+                    endif
                 enddo
 
             case("corelengths")

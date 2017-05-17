@@ -218,7 +218,7 @@ contains
 #else
             write (108,*) "InputFilePath    ,",'..\IterateGeneProbInput.txt'
 #endif
-            write (108,*) "OutputFilePath   ,",'"GeneProbs.txt"'
+            write (108,*) "OutputFilePath   ,",'GeneProbs.txt'
             write (108,*) "StartSnp     ,",GpIndex(i,1)
             write (108,*) "EndSnp       ,",GpIndex(i,2)
             write (108,*) "cores       ,",1
@@ -677,7 +677,7 @@ contains
 
                 open (unit=39, file="IterateGeneProb" // DASH // "IterateGeneProbInput.txt")
                 do i=1,ped%pedigreeSize-ped%nDummys
-                    write (39,'(i16,1x,i16,1x,i16,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%getIntegerVectorOfRecodedIdsNoDummy(),ImputeGenos(i,:)
+                    write (39,*) ped%pedigree(i)%getIntegerVectorOfRecodedIdsNoDummy(),ImputeGenos(i,:)
                 enddo
                 call flush(39)
                 ! close (39)

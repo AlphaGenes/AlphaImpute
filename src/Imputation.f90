@@ -110,10 +110,11 @@ write(0,*) 'DEBUG: Mach Finished'
             else
                 if (inputParams%sexopt==0) then
                     ! Impute initial genotypes from calculated genotype probabilities
-                    if (inputParams%BypassGeneProb==0) then
                         allocate(ImputeGenos(0:ped%pedigreeSize,inputParams%nsnpraw))
                         allocate(ImputePhase(0:ped%pedigreeSize,inputParams%nsnpraw,2))
                         allocate(GlobalWorkPhase(0:ped%pedigreeSize,inputParams%nsnpraw,2))
+                    if (inputParams%BypassGeneProb==0) then
+
 
                         if (inputParams%cluster) then
                             call readGeneProbsCluster(GlobalWorkPhase,ped,GpIndex, inputParams,GeneProbThresh)
@@ -633,7 +634,7 @@ write(0,*) 'DEBUG: Mach Finished'
                                 case (1)
                                     BitImputePhase(i, curSection, e) = ibset(BitImputePhase(i, curSection, e), curPos)
                                 case (9)
-                                    MissImputePhase(i, curSection, e) = ibset(MissImputePhase(i, curSection, e), curPos)
+                                MissImputePhase(i, curSection, e) = ibset(MissImputePhase(i, curSection, e), curPos)
                                 end select
                             end do
                         end do
@@ -1968,11 +1969,14 @@ write(0,*) 'DEBUG: Mach Finished'
         ! ImputeGenos=9
         ImputePhase=9
         inputParams => defaultInput
-            
+        
+        print *, "size," , size(imputeGenos)
+        print *, "nsnp", inputParams%nsnp
         do i=1, ped%nGenotyped
             tmpGenoIndexed = ped%genotypeMap(i)
             ImputeGenos(ped%genotypeMap(i),:) = ped%pedigree(ped%genotypeMap(i))%individualGenotype%toIntegerArray()
             do j=1,inputParams%nsnp
+            
                 if (ImputeGenos(ped%genotypeMap(i),j)==0) ImputePhase(ped%genotypeMap(i),j,:)=0
                 if (ImputeGenos(ped%genotypeMap(i),j)==2) ImputePhase(ped%genotypeMap(i),j,:)=1
             enddo
