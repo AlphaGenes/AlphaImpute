@@ -377,6 +377,7 @@ contains
                 write(error_unit,*) "WARNING: numberofprocessorsavailable is legacy and will be removed in future versions. Please use option ParallelProcessors instead"
                 if (this%useProcs > OMP_get_num_procs()) then
                     write(error_unit,*) "WARNING - more processors than are available are specified under numberofprocessorsavailable"
+                    write(error_unit,*) this%useProcs, " specified, ", OMP_get_num_procs(), " available."
                 endif
 
             case("largedatasets")
@@ -505,7 +506,7 @@ contains
 
             case("userdefinedalphaphaseanimalsfile")
                 this%UserDefinedHD=0
-                if (second(1)/="None") then
+                if (tolower(trim(second(1)))/="none") then
                     this%UserDefinedHD=1
                     open (newunit=this%AnimalFileUnit,file=trim(second(1)),status="old")
                 endif
@@ -519,11 +520,11 @@ contains
                     open (newunit=this%prePhasedFileUnit,file=trim(second(1)),status="old")
                 endif
             case("bypassgeneprob")
-                if (trim(second(1))=="No") then
+                if (trim(tolower(second(1)))=="no") then
                     this%BypassGeneProb=0
-                else if (trim(second(1))=="Yes") then
+                else if (trim(tolower(second(1)))=="yes") then
                     this%BypassGeneProb=1
-                else if (trim(second(1))=="Probabilities") then
+                else if (trim(tolower(second(1)))=="probabilities") then
                     this%bypassgeneprob=2
                 else
                     write(error_unit,*) "bypassgeneprob not correctly specified"

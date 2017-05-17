@@ -108,12 +108,8 @@ program AlphaImpute
                 case (0)
 
                     if (inputParams%restartOption== OPT_RESTART_ALL .or. inputParams%restartOption== OPT_RESTART_GENEPROB) Then
-
-
                         ! call ped%addGenotypeInformation(imputeGenos)
                         ! WriteOutResults is a piece of shit and makes life hard
-
-
                         ! call ped%addGenotypeInformation(Genos)
                         if (inputParams%cluster) then
 #if CLUSTER==1
@@ -142,7 +138,17 @@ program AlphaImpute
                     endif
                     write(6,*) " "
                     write(6,*) " ","Genotype probabilities calculated"
-                    !        endif
+                    
+
+                case (1)
+                    write(6,*) " "
+                    write(6,*) " ","Genotype probabilities bypassed."
+                    if (inputParams%restartOption==OPT_RESTART_GENEPROB) then
+                        write(6,*) "Restart option 1 stops program after Geneprobs jobs have finished"
+                        write(6,*) "Warning - BYPASSGENEPROB has been given yes. Thus these options are incompatible."
+                        stop
+                    endif
+                    ! TODO check this 
                 case (2)
 
                     write(6,*) "Restart option 1 stops program after genotype probabilities have been outputted"
@@ -163,7 +169,6 @@ program AlphaImpute
         endif
 
         if (inputParams%restartOption==OPT_RESTART_PHASING) then
-            print *,"DEBUG in alphaphase writeout"
             block
                 use OutputParametersDefinition
                 use InputOutput
@@ -171,7 +176,6 @@ program AlphaImpute
                 type(OutputParameters) :: oParams
                 oParams = newOutputParametersImpute()
                 do i=1, apResults%nResults
-                    print *,"DEBUG: writing alphaphase result:", i
                     write(oParams%outputDirectory,'("./Phasing/Phase"i0)') i
                     call writeAlphaPhaseResults(APResults%results(i), ped, oParams)
 
