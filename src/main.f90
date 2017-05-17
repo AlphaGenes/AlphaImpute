@@ -194,10 +194,13 @@ if (inputParams%hmmoption/=RUN_HMM_NGS) then
             print *,"Reading in Phasing information"
             ! Read back in geneprob data
             allocate(GenosProbs(ped%pedigreeSize-ped%nDummys,nSnpIterate,4))
-            if (inputParams%cluster) then
-                call readProbabilitiesFullCluster(GenosProbs,ped%pedigreeSize-ped%nDummys, inputParams%nsnp,inputparams,GpIndex)
-            else
-                call readProbabilitiesFull("./GeneProb/GenotypeProbabilities.txt",GenosProbs,ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
+
+            if (inputParams%BypassGeneProb == 0) then
+                if (inputParams%cluster) then
+                    call readProbabilitiesFullCluster(GenosProbs,ped%pedigreeSize-ped%nDummys, inputParams%nsnp,inputparams,GpIndex)
+                else
+                    call readProbabilitiesFull("./GeneProb/GenotypeProbabilities.txt",GenosProbs,ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
+                endif
             endif
             block 
 
