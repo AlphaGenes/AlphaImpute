@@ -1969,9 +1969,7 @@ write(0,*) 'DEBUG: Mach Finished'
         ! ImputeGenos=9
         ImputePhase=9
         inputParams => defaultInput
-        
-        print *, "size," , size(imputeGenos)
-        print *, "nsnp", inputParams%nsnp
+
         do i=1, ped%nGenotyped
             tmpGenoIndexed = ped%genotypeMap(i)
             ImputeGenos(ped%genotypeMap(i),:) = ped%pedigree(ped%genotypeMap(i))%individualGenotype%toIntegerArray()

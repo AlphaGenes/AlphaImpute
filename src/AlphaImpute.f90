@@ -412,9 +412,10 @@ contains
             if (inputParams%outopt==0) nSnpIterate=inputParams%nsnp
             if (inputParams%outopt==1) nSnpIterate=inputParams%nSnpRaw
 
-            allocate(ProbImputeGenos(0:ped%pedigreeSize,nSnpIterate))
-            allocate(ProbImputePhase(0:ped%pedigreeSize,nSnpIterate,2))
-            allocate(TempAlleleFreq(nSnpIterate))
+
+            if (.not. allocated(ProbImputeGenos)) allocate(ProbImputeGenos(0:ped%pedigreeSize,nSnpIterate))
+            if (.not. allocated(ProbImputePhase)) allocate(ProbImputePhase(0:ped%pedigreeSize,nSnpIterate,2))
+            if (.not. allocated(TempAlleleFreq)) allocate(TempAlleleFreq(nSnpIterate))
 
             TempAlleleFreq=0.0
             do j=1,nSnpIterate
@@ -527,9 +528,9 @@ contains
             if (inputParams%outopt==0) nSnpIterate=inputParams%nsnp
             if (inputParams%outopt==1) nSnpIterate=inputParams%nSnpRaw
 
-            allocate(ProbImputeGenos(0:ped%pedigreeSize-ped%nDummys,nSnpIterate))
-            allocate(ProbImputePhase(0:ped%pedigreeSize-ped%nDummys,nSnpIterate,2))
-            allocate(TempAlleleFreq(nSnpIterate))
+             if (.not. allocated(ProbImputeGenos)) allocate(ProbImputeGenos(0:ped%pedigreeSize,nSnpIterate))
+            if (.not. allocated(ProbImputePhase)) allocate(ProbImputePhase(0:ped%pedigreeSize,nSnpIterate,2))
+            if (.not. allocated(TempAlleleFreq)) allocate(TempAlleleFreq(nSnpIterate))
 
             TempAlleleFreq=0.0
             do j=1,nSnpIterate
