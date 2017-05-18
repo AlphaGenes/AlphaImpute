@@ -395,7 +395,7 @@ contains
         allocate(GeneProbWork(inputParams%nsnp,4))
         GlobalWorkPhase=9
 
-            ! TODOgeneprob info read here 
+            ! TODOgeneprob info read here ls
         open (newunit=fileUnit,file=path,status="unknown")
         do i=1,ped%pedigreeSize-ped%nDummys                                           ! The number of lines of GeneProbs.txt files is = nAnisP x 4
             do j=1,2                                            ! where 4 stands for the two paternal and the two maternal haplotypes

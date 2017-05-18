@@ -130,6 +130,7 @@ write(0,*) 'DEBUG: Mach Finished'
                     ! Get Genotype information
                     call InitialiseArrays       ! This is similar to InsteadOfReReadGeneProb subroutine but allocating ImputePhase
                     call GeneProbPhase          ! Recover and store information about which and how many alleles/SNPs have been genotyped/phased
+
                 else
                     allocate(MSTermInfo(ped%pedigreeSize,2))
                     MSTermInfo=0
@@ -147,6 +148,9 @@ write(0,*) 'DEBUG: Mach Finished'
 
                     ! General imputation procedures
                     call GeneralFillIn
+
+                                        
+                
 
                     if (inputParams%HMMOption==RUN_HMM_PREPHASE) Then
                         call MaCHController(inputParams%HMMOption)
@@ -239,6 +243,8 @@ write(0,*) 'DEBUG: Mach Finished'
                 deallocate(GlobalWorkPhase)
             endif
         endif
+
+
     END SUBROUTINE ImputationManagement
 
     subroutine InternalParentPhaseElim
@@ -1965,18 +1971,15 @@ write(0,*) 'DEBUG: Mach Finished'
         implicit none
 
         integer :: i,j
-        integer :: tmpGenoIndexed
         ! ImputeGenos=9
         ImputePhase=9
         inputParams => defaultInput
 
-        do i=1, ped%nGenotyped
-            tmpGenoIndexed = ped%genotypeMap(i)
-            ImputeGenos(ped%genotypeMap(i),:) = ped%pedigree(ped%genotypeMap(i))%individualGenotype%toIntegerArray()
+        imputeGenos(:,:) = ped%getGenotypesAsArray()
+        do i=1, ped%pedigreeSize
             do j=1,inputParams%nsnp
-            
-                if (ImputeGenos(ped%genotypeMap(i),j)==0) ImputePhase(ped%genotypeMap(i),j,:)=0
-                if (ImputeGenos(ped%genotypeMap(i),j)==2) ImputePhase(ped%genotypeMap(i),j,:)=1
+                if (ImputeGenos(i,j)==0) ImputePhase(i,j,:)=0
+                if (ImputeGenos(i,j)==2) ImputePhase(i,j,:)=1
             enddo
         enddo
 
@@ -2283,10 +2286,6 @@ write(0,*) 'DEBUG: Mach Finished'
 
         inputParams => defaultInput
 
-        if (allocated(imputeGenos)) then
-            deallocate(imputeGenos)
-            allocate(imputeGenos(0:ped%pedigreeSize,inputParams%nSnpRaw ))
-        endif
 
         if (inputParams%BypassGeneProb==0) then
             ! Get information from GeneProb

@@ -193,7 +193,6 @@ if (inputParams%hmmoption/=RUN_HMM_NGS) then
         if (inputParams%restartOption> OPT_RESTART_PHASING) Then
             print *,"Reading in Phasing information"
             ! Read back in geneprob data
-            allocate(GenosProbs(ped%pedigreeSize-ped%nDummys,nSnpIterate,4))
 
             if (inputParams%BypassGeneProb == 0) then
                 if (inputParams%cluster) then
@@ -251,9 +250,7 @@ if (inputParams%hmmoption/=RUN_HMM_NGS) then
 endif
 call ped%destroyPedigree()
 call PrintTimerTitles
-! if (inputParams%restartOption > OPT_RESTART_IMPUTATION) then
-!     call system(RM // " Tmp2345678.txt")
-! end if
+
 
 end program AlphaImpute
 

@@ -463,11 +463,11 @@ contains
             do j=1,inputParams%nsnp
                 do k=1,2
                     if (FullH(i,j,k)<0.001.and.FullH(i,j,k)>=0.0) Then
-                        ImputePhase(i,j,k)=0
+                        ImputePhase(ped%genotypeMap(i),j,k)=0
                     elseif (FullH(i,j,k)>0.999.and.FullH(i,j,k)<=1.0) then
-                        ImputePhase(i,j,k)=1
+                        ImputePhase(ped%genotypeMap(i),j,k)=1
                     else
-                        ImputePhase(i,j,k)=9
+                        ImputePhase(ped%genotypeMap(i),j,k)=9
                     endif
                 enddo
             enddo
