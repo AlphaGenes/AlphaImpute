@@ -368,7 +368,7 @@ contains
 
     end subroutine readGeneProbsCluster
 
-    subroutine ReReadGeneProbs(GlobalWorkPhase,ped,path, nsnp, GeneProbThresh) !TODO this needs rewritten
+    subroutine ReReadGeneProbs(GlobalWorkPhase,ped,path, nsnp, GeneProbThresh) 
         ! Read genotype probabilities from files and phase allele based in these probabilities.
         ! This files should have been already created during previous calls to AlphaImpute (inputParams%restartOption<3)
         ! Phasing information is store in the variable GlobalWorkPhase
@@ -380,7 +380,8 @@ contains
         real, intent(in) :: GeneProbThresh
         integer(kind=1), intent(out) :: GlobalWorkPhase(:,:,:)
         integer, intent(in) :: nsnp
-        integer :: i,j,dum,fileUnit
+        integer :: i,j,fileUnit
+        character(len=IDLENGTH) :: dum
         real, allocatable, dimension(:,:) :: PatAlleleProb,MatAlleleProb,GeneProbWork
         character(len=*), intent(in) :: path
         type(AlphaImputeInput), pointer :: inputParams

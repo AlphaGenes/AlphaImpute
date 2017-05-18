@@ -1927,7 +1927,7 @@ contains
         CountRawGenos=ped%getNumGenotypesMissing()
 
         do i=1,nObsDataRaw
-            write (103,'(4a20)') Ped%pedigree(i)%originalID,Ped%pedigree(i)%sireID,Ped%pedigree(i)%damID
+            write (103,*) Ped%pedigree(i)%originalID,Ped%pedigree(i)%sireID,Ped%pedigree(i)%damID
         enddo
         call flush(103)
         close(103)
