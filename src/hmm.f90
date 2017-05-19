@@ -409,7 +409,7 @@ subroutine ParseMaCHDataNGS(nGenotyped)
 
     do i=1,nGenotyped
         ! Add animal's diploid to the Diploids Library
-        GlobalHmmID(i)=i
+        GlobalHmmID(i)=ped%GenotypeMAp(i)
         ! Find individuals sequenced with high coverage
         if ((float(count(reads(i,:)/=READ_MISSING))/inputParams%nSnp)>0.90) then
             ! WARNING: If this variable only stores 1 and 0, then its

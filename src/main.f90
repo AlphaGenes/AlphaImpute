@@ -243,7 +243,8 @@ if (inputParams%hmmoption/=RUN_HMM_NGS) then
 #endif
 
         if (inputParams%TrueGenos1None0==1) then
-            call FinalChecker
+            ! call FinalChecker
+            ! TODO remimplement final checker
 
         endif
     endif

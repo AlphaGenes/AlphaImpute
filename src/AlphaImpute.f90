@@ -787,8 +787,8 @@ contains
                             ImputeGenos(ped%genotypeMap(i),j)   = 0
                             ImputePhase(ped%genotypeMap(i),j,:) = 0
                         elseif (n1>n2) then
-                            ImputeGenos(GlobalHmmID(i),j) = 1
-                            if (ProbImputePhaseHmm(i,j,1) > ProbImputePhaseHmm(ped%genotypeMap(i),j,2) ) then
+                            ImputeGenos(ped%genotypeMap(i),j) = 1
+                            if (ProbImputePhaseHmm(ped%genotypeMap(i),j,1) > ProbImputePhaseHmm(ped%genotypeMap(i),j,2) ) then
                                 ImputePhase(ped%genotypeMap(i),j,1) = 1
                                 ImputePhase(ped%genotypeMap(i),j,2) = 0
                             else
@@ -966,7 +966,8 @@ end block
             integer :: funit,i
             open (newunit=funit,file="." // DASH // "ImputeGenotypes4.txt",status="unknown")
             do i=1, ped%pedigreeSize - ped%nDummys
-            write(funit, '(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%Pedigree(ped%inputmap(i))%originalId, TmpGenos(ped%inputmap(i),:)
+                write (funit,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputePhase(ped%inputmap(i),:,1)
+                write (funit,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputePhase(ped%inputmap(i),:,2) 
             enddo
             close(funit)
             end block
@@ -1095,7 +1096,6 @@ end block
                     integer :: hmmID
                     do i=1, ped%nGenotyped
                         ! TODO: Remove this variable when this issue is really fixed
-                        ! hmmID = GlobalHmmID(i)
                         hmmID =ped%genotypeMap(i)
                         write (53,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(hmmID)%originalID,ImputePhase(hmmID,:,1)
                         write (53,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(hmmID)%originalID,ImputePhase(hmmID,:,2)
@@ -1263,7 +1263,7 @@ end block
             endif
             GpIndex(inputParams%useProcs,2)=inputParams%nsnp
         endif
-        allocate(GlobalWorkPhase(0:ped%pedigreeSize-ped%nDummys,inputParams%nsnp,2))
+        allocate(GlobalWorkPhase(0:ped%pedigreeSize-ped%nDummys,nSnpFinal,2))
         allocate(WorkPhase(0:ped%pedigreeSize-ped%nDummys,nSnpFinal,2))
         allocate(TempVec(nSnpFinal))
         allocate(LengthVec(nSnpFinal))
@@ -1493,6 +1493,7 @@ end block
                                     if ((ImputePhase(PedId,j,1)/=9).and.(ImputePhase(PedId,j,2)/=9)) then
                                         ImputePhase(i,j,e)=9
                                         ImputeGenos(i,j)=9
+                                        print *,"RECOMBEVENT"
                                         ProbImputePhase(i,j,e)&
                                             =((1.0-(LengthVec(j)*Counter))*ImputePhase(PedId,j,GamA))&
                                             +(LengthVec(j)*Counter*ImputePhase(PedId,j,GamB))
@@ -2892,21 +2893,19 @@ end block
             allocate(CorrelationPerAnimal(nAnisTest))
             allocate(TmpVarPerGrp(nAnisTest))
 
-            do i=1,nAnisTest
-                read (35,*) TrueGenosId(i),TrueGenos(i,:)
-            enddo
 
             RecTestId(:)=-99
             do i=1,nAnisTest
-                do j=1,ped%pedigreeSize-ped%nDummys
-                    if (trim(TrueGenosId(i))==trim((ped%pedigree(j)%originalID))) then
-                        RecTestId(i)=j
-                        TestAnimInformativeness(i,:)=GlobalTmpCountInf(j,1:6)
-                        exit
-                    endif
-                enddo
+                read (35,*) TrueGenosId(i),TrueGenos(i,:)
+                tmpIDInt = ped%dictionary%getValue(TrueGenosId(i))
+
+                if (tmpIDInt /= DICT_NULL) then
+                    RecTestId(i)=tmpIDInt
+                    testAnimInformativeness(i,:)=GlobalTmpCountInf(tmpIDInt,1:6)
+                endif
             enddo
-            if (count(RecTestId(:)==-99)>0) print*, "Error - There seems to be unidentifiablecount ",count(RecTestId(:)==-99)," individuals in the test file"
+
+            if (any(RecTestId(:)==-99)) print*, "Error - There seems to be unidentifiablecount ",count(RecTestId(:)==-99)," individuals in the test file"
 
             do i=1,ped%nGenotyped
                 read (36,*) dumC,WorkTmp(:)

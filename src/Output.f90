@@ -271,20 +271,20 @@ contains
         nAnisPrePhased=0
         allocate(WorkPhase(inputParams%nSnpRaw,2))
         do
-            read (47,*,iostat=k) dumC
+            read (inputParams%prePhasedFileUnit,*,iostat=k) dumC
             nAnisPrePhased=nAnisPrePhased+1
             if (k/=0) then
                 nAnisPrePhased=nAnisPrePhased-1
                 exit
             endif
         enddo
-        rewind(47)
+        rewind(inputParams%prePhasedFileUnit)
         nAnisPrePhased=nAnisPrePhased/2         ! Two haplotypes per animal have been read
 
         CountPrePhased=0
         do k=1,nAnisPrePhased
-            read (47,*) dumC,WorkPhase(:,1)     ! Paternal haplotype
-            read (47,*) dumC,WorkPhase(:,2)     ! Maternal haplotype
+            read (inputParams%prePhasedFileUnit,*) dumC,WorkPhase(:,1)     ! Paternal haplotype
+            read (inputParams%prePhasedFileUnit,*) dumC,WorkPhase(:,2)     ! Maternal haplotype
 
             tmpID = ped%dictionary%getValue(trim(dumC))
             if (tmpID /= DICT_NULL) then   ! Check if any animal in the file agrees with the animals in the pedigree
@@ -418,7 +418,7 @@ contains
                 if (MatAlleleProb(j,2)>=GeneProbThresh) GlobalWorkPhase(i,j,2)=1
             enddo
         enddo
-        close(110)
+        close(fileUnit)
         
         deallocate(PatAlleleProb)
         deallocate(MatAlleleProb)

@@ -93,12 +93,12 @@ CONTAINS
         allocate(gamete(nSnpHmm))
         gametesPhased=0
         do ind=1,ped%nGenotyped
-            gamete=ImputePhase(ind,:,1)
+            gamete=ImputePhase(ped%genotypeMap(ind),:,1)
             if (float(count(gamete(:)==1 .OR. gamete(:)==0))/nSnpHmm >= inputParams%imputedThreshold/100.0) then
                 gametesPhased=gametesPhased+1
             endif
 
-            gamete=ImputePhase(ind,:,2)
+            gamete=ImputePhase(ped%genotypeMap(ind),:,2)
             if (float(count(gamete(:)==1 .OR. gamete(:)==0))/nSnpHmm >= inputParams%imputedThreshold/100.0) then
                 gametesPhased=gametesPhased+1
             endif
