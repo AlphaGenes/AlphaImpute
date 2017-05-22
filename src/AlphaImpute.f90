@@ -921,7 +921,6 @@ contains
                 endif
             enddo
 
-! TODODW
             block
                 integer :: tmpIDInt
                 if (inputParams%inteditstat == 1) then
@@ -960,6 +959,7 @@ contains
                 write (34,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputeGenos(ped%inputmap(i),:)
             enddo
 
+
             if (inputParams%SexOpt==0 .and. inputParams%hmmoption/=RUN_HMM_NGS) then
                 open (unit=39, file="IterateGeneProb" // DASH // "IterateGeneProbInput.txt")
 
@@ -987,6 +987,8 @@ contains
                 allocate(ProbImputePhase(0:ped%pedigreeSize,inputParams%nSnpRaw,2))
 
                 ImputeGenos=TmpGenos
+
+
                 ImputePhase=TmpPhase
                 if (inputParams%SexOpt==0) then
                     if (inputParams%bypassgeneprob==0) then
@@ -999,9 +1001,11 @@ contains
                         call IterateInsteadOfGeneProbs
                     endif
                 endif
-                if (inputParams%SexOpt==1) call IterateInsteadOfGeneProbs
+                if (inputParams%SexOpt==1) then
+                    print *,"WRONG"
+                    call IterateInsteadOfGeneProbs
+                endif
             endif
-            !REMOVE THIS
 
             call CheckImputationInconsistencies(ImputeGenos, ImputePhase, ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
 
@@ -1228,6 +1232,8 @@ contains
         open (unit=44, file="Results" // DASH // "NumberRecombinations.txt")
         open (unit=45, file="Results" // DASH // "RecombinationInformationR.txt")
         open (unit=46, file="Results" // DASH // "RecombinationInformationNarrowR.txt")
+
+            
 
         ! Check whether to consider all the raw snps or only the snps left after the edition procedure
         ! If EditedSnpOut in Spec file
@@ -1545,23 +1551,25 @@ contains
 
         inputParams => defaultInput
 
-        if (allocated(Maf)) then
-            deallocate(maf)
-        endif
-        allocate(Maf(nSnpIterate))
-
-        if (allocated(ImputeGenos)) then
-            deallocate(ImputeGenos)
-        endif
-        if (allocated(ImputePhase)) then
-            deallocate(ImputePhase)
-        endif
-
-        ! TODO tidy this
-        allocate(ImputeGenos(0:ped%pedigreeSize,inputParams%nSnpraw))
-        allocate(ImputePhase(0:ped%pedigreeSize,inputParams%nSnpRaw,2))
+      
 
         if (inputParams%restartOption==4) then
+
+            if (allocated(Maf)) then
+                deallocate(maf)
+            endif
+            allocate(Maf(nSnpIterate))
+
+            if (allocated(ImputeGenos)) then
+                deallocate(ImputeGenos)
+            endif
+            if (allocated(ImputePhase)) then
+                deallocate(ImputePhase)
+            endif
+
+            ! TODO tidy this
+            allocate(ImputeGenos(0:ped%pedigreeSize,inputParams%nSnpraw))
+            allocate(ImputePhase(0:ped%pedigreeSize,inputParams%nSnpRaw,2))
             open (newunit=fileUnit,file="Tmp2345678.txt",status="old")
             do i=1,ped%nGenotyped
                 read (fileUnit,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ImputePhase(ped%genotypeMap(i),:,1)
@@ -1579,6 +1587,7 @@ contains
         close(fileUnit)
 
 
+        ! TODO this is called twice...from iterate geneprobnew
         call IterateMakeGenotype
 
         ImputePhase(0,:,:)=9
