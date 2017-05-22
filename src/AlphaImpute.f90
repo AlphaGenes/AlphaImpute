@@ -42,7 +42,7 @@ contains
 
 
     subroutine PhasingManagementNew(results)
-        use AlphaImputeInMod
+        use AlphaImputeSpecFileModule
         use omp_lib
         use AlphaPhaseParametersDefinition
         use AlphaPhaseFunctions
@@ -96,7 +96,7 @@ contains
 
         use iso_fortran_env
         use global, only : Maf,ImputePhase,ImputeGenos, ped,ProbImputePhase, ProbImputeGenos,OPT_RESTART_IMPUTATION
-        use AlphaImputeInMod
+        use AlphaImputeSpecFileModule
         use GeneProbModule , only : runGeneProbAlphaImpute
         use imputation, only : PhaseComplement
 
@@ -328,7 +328,7 @@ contains
 
     subroutine GeneProbManagement
         use Global
-        use alphaimputeinmod
+        use AlphaImputeSpecFileModule
         implicit none
 
         integer :: i
@@ -415,7 +415,7 @@ contains
     subroutine IterateInsteadOfGeneProbs
         use Global
         use Imputation
-        use alphaimputeinmod
+        use AlphaImputeSpecFileModule
         implicit none
 
         integer :: e,i,j,k,Counter,ParId
@@ -637,11 +637,10 @@ contains
     subroutine WriteOutResults
         use Global
 
-        use output
+        use AlphaImputeInputOutputModule
         use GlobalVariablesHmmMaCH
-        use AlphaImputeInMod
+        use AlphaImputeSpecFileModule
 
-        use output
         implicit none
 
         character(len=7) :: cm !use for formatting output - allows for up to 1 million SNPs
@@ -889,17 +888,16 @@ contains
 
             call CheckImputationInconsistencies(ImputeGenos, ImputePhase, ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
 
-block 
-integer :: funit,i
-open (newunit=funit,file="." // DASH // "ImputeGenotypes3ma.txt",status="unknown")
-do i=1, ped%pedigreeSize - ped%nDummys
-write(funit, '(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%Pedigree(ped%inputmap(i))%originalId, imputeGenos(ped%inputmap(i),:)
-enddo
-close(funit)
-end block
+! block 
+! integer :: funit,i
+! open (newunit=funit,file="." // DASH // "ImputeGenotypes3ma.txt",status="unknown")
+! do i=1, ped%pedigreeSize - ped%nDummys
+! write(funit, '(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%Pedigree(ped%inputmap(i))%originalId, imputeGenos(ped%inputmap(i),:)
+! enddo
+! close(funit)
+! end block
             
-            ! TODODW
-! TODO this might be erronous
+
             if (inputParams%outopt == 1) then
                 allocate(TmpGenos(0:ped%pedigreeSize-ped%nDummys,inputParams%nSnpRaw))
                 allocate(TmpPhase(0:ped%pedigreeSize-ped%nDummys,inputParams%nSnpRaw,2))
@@ -962,15 +960,6 @@ end block
                 write (34,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputeGenos(ped%inputmap(i),:)
             enddo
 
-            block 
-            integer :: funit,i
-            open (newunit=funit,file="." // DASH // "ImputeGenotypes4.txt",status="unknown")
-            do i=1, ped%pedigreeSize - ped%nDummys
-                write (funit,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputePhase(ped%inputmap(i),:,1)
-                write (funit,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputePhase(ped%inputmap(i),:,2) 
-            enddo
-            close(funit)
-            end block
             if (inputParams%SexOpt==0 .and. inputParams%hmmoption/=RUN_HMM_NGS) then
                 open (unit=39, file="IterateGeneProb" // DASH // "IterateGeneProbInput.txt")
 
@@ -1212,8 +1201,8 @@ end block
     subroutine ModelRecomb
         use Global
         use informationModule, only : InsteadOfReReadGeneProb
-        use alphaimputeinmod
-        use output
+        use AlphaImputeSpecFileModule
+        use AlphaImputeInputOutputModule
         implicit none
 
         integer :: e,i,j,k,l,SuperJ,StartDisFound,EndDisFound,HetEnd,HetStart,RSide,LSide,PatMat,SireDamRL,nSnpFinal,Counter
@@ -1493,7 +1482,6 @@ end block
                                     if ((ImputePhase(PedId,j,1)/=9).and.(ImputePhase(PedId,j,2)/=9)) then
                                         ImputePhase(i,j,e)=9
                                         ImputeGenos(i,j)=9
-                                        print *,"RECOMBEVENT"
                                         ProbImputePhase(i,j,e)&
                                             =((1.0-(LengthVec(j)*Counter))*ImputePhase(PedId,j,GamA))&
                                             +(LengthVec(j)*Counter*ImputePhase(PedId,j,GamB))
@@ -1549,7 +1537,7 @@ end block
 
     subroutine IterateGeneProbPhase
         use Global
-        use alphaimputeinmod
+        use AlphaImputeSpecFileModule
         implicit none
 
         integer :: i, fileUnit,j
@@ -1602,7 +1590,7 @@ end block
 
     subroutine IterateGeneProbPhaseCluster
         use Global
-        use alphaimputeinmod
+        use AlphaImputeSpecFileModule
         implicit none
 
         integer :: h,i,j,dum,StSnp,EnSnp,counter,fileUnit,geneprobfile,mafFile
@@ -1746,7 +1734,7 @@ end block
 
     subroutine IterateParentHomoFill
         use Global
-        use alphaimputeinmod
+        use AlphaImputeSpecFileModule
         implicit none
 
         integer :: e,i,j,PedLoc, id
@@ -1800,7 +1788,7 @@ end block
     subroutine InsteadOfGeneProb
         ! Phase haplotypes whenever there is enough information from the parents (homozygous case)
         use Global
-        use AlphaImputeInMod
+        use AlphaImputeSpecFileModule
         implicit none
 
         integer :: e,i,j,ParId
@@ -1912,7 +1900,7 @@ end block
     subroutine MakeFiles
         use Global
 
-        use alphaimputeinmod
+        use AlphaImputeSpecFileModule
         implicit none
 
         integer :: i
@@ -2106,7 +2094,7 @@ end block
 
         use Global
 
-        use alphaimputeinmod
+        use AlphaImputeSpecFileModule
         use ISO_Fortran_Env
         implicit none
 
@@ -2147,7 +2135,7 @@ end block
     !#############################################################################################################################################################################################################################
     subroutine InternalEdit
         use Global
-        use alphaimputeinmod
+        use AlphaImputeSpecFileModule
         implicit none
 
         integer :: i,j,k,CountMiss,CountHD,nSnpR,dum
@@ -2337,7 +2325,7 @@ end block
     subroutine FillInBasedOnOffspring
         ! Genotype SNPs based on the genetic information of my offsprings
         use Global
-        use alphaimputeinmod
+        use AlphaImputeSpecFileModule
         implicit none
 
         integer :: i,j,k
@@ -2384,7 +2372,7 @@ end block
     subroutine FillInSnp
         ! Genotype SNPs based on the pedigree information
         use Global
-        use AlphaImputeInMod
+        use AlphaImputeSpecFileModule
         implicit none
 
         integer :: i,j,k,TurnOn
@@ -2455,7 +2443,7 @@ end block
         ! Set the vector baseline that specify whether an animal
         ! has no parents or its parents have been pruned
 
-        use alphaimputeinmod
+        use AlphaImputeSpecFileModule
         use Global
 
         implicit none
@@ -2575,12 +2563,13 @@ end block
     !#############################################################################################################################################################################################################################
 
     subroutine FinalChecker
+    ! TODO rewrite
         use Global
 
         use Utils
         use alphahouseMod, only : countLines
         use alphastatmod, only : pearsn, moment
-        use alphaimputeinmod
+        use AlphaImputeSpecFileModule
         implicit none
 
         integer :: h,i,j,k,l,nAnisTest,CountCatTest(6),tmpIDInt
@@ -3097,7 +3086,7 @@ end block
     subroutine Cleaner
         use Global
 
-        use alphaimputeinmod
+        use AlphaImputeSpecFileModule
         implicit none
 
         type(AlphaImputeInput), pointer :: inputParams
@@ -3120,7 +3109,7 @@ end block
     subroutine READINJUNK
 
         use Global
-        use alphaimputeinmod
+        use AlphaImputeSpecFileModule
 
         type(AlphaImputeInput), pointer :: inputParams
         integer :: i,dum,j
@@ -3148,7 +3137,7 @@ end block
     SUBROUTINE SnpCallRate()
         use Global
 
-        use alphaimputeinmod
+        use AlphaImputeSpecFileModule
         use ISO_Fortran_Env
 
         implicit none

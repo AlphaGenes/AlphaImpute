@@ -1,14 +1,13 @@
 SET(ALPHAIMPUTE_src
-            ${SRCALPHAIMPUTE}AlphaImputeInMod.f90
+            ${SRCALPHAIMPUTE}AlphaImputeSpecFileModule.f90
             ${SRCALPHAIMPUTE}global.f90
             ${SRCALPHAIMPUTE}HaplotypeBits.f90
             ${SRCALPHAIMPUTE}hmm.f90
-            ${SRCALPHAIMPUTE}Output.f90
+            ${SRCALPHAIMPUTE}AlphaImputeInputOutput.f90
             ${SRCALPHAIMPUTE}hmmvariables.f90
             ${SRCALPHAIMPUTE}hmmHaplotype.f90      
             ${SRCALPHAIMPUTE}informationModule.f90    
             ${SRCALPHAIMPUTE}Imputation.f90
-            ${SRCALPHAIMPUTE}InputMod.f90
             ${SRCALPHAIMPUTE}utils.f90
             ${SRCALPHAIMPUTE}AlphaImpute.f90
             ${SRCALPHAIMPUTE}main.f90
@@ -18,11 +17,11 @@ set (HMM_src
     global.f90
     par_zig_mod.f90
     random.f90   
-    AlphaImputeInMod.f90
+    AlphaImputeSpecFileModule.f90
     hmm.f90
     utils.f90
     hmmvariables.f90
-     InputMod.f90
+     AlphaImputeInputOutput.f90
             hmmHaplotype.f90  )
 
 

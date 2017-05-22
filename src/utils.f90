@@ -82,7 +82,7 @@ CONTAINS
 
         USE Global
         USE GlobalVariablesHmmMaCH
-        use alphaimputeinmod
+        use AlphaImputeSpecFileModule
 
         INTEGER :: gametesPhased, ind
         INTEGER(KIND=1), ALLOCATABLE :: gamete(:)

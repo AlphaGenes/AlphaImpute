@@ -3,7 +3,7 @@ subroutine MaCHController(HMM)
     use Global
     use GlobalVariablesHmmMaCH
     use Par_Zig_mod
-    use AlphaImputeInMod
+    use AlphaImputeSpecFileModule
     use omp_lib
     use random
 
@@ -229,7 +229,7 @@ end subroutine MaCHController
 subroutine ParseMaCHData(HMM, PhasedData, nGenotyped, nInbred)
     use Global
     use GlobalVariablesHmmMaCH
-    use AlphaImputeInMod
+    use AlphaImputeSpecFileModule
 
     implicit none
 
@@ -381,7 +381,7 @@ end subroutine getHapList
 subroutine ParseMaCHDataNGS(nGenotyped)
     use Global
     use GlobalVariablesHmmMaCH
-    use AlphaImputeInMod
+    use AlphaImputeSpecFileModule
     implicit none
     integer, intent(in) :: nGenotyped
     integer :: i, j, nHaps, HapsLeft
@@ -439,7 +439,7 @@ subroutine ParseMaCHDataGenos(nGenotyped)
     use Global
     use GlobalVariablesHmmMaCH
     use Utils
-    use AlphaImputeInMod
+    use AlphaImputeSpecFileModule
     use iso_fortran_env
 
     implicit none
@@ -545,7 +545,7 @@ subroutine MaCHForInd(CurrentInd, HMM)
     use random
     use Par_Zig_mod
     use omp_lib
-    use AlphaImputeInMod
+    use AlphaImputeSpecFileModule
 
     implicit none
 
@@ -669,7 +669,7 @@ subroutine SampleChromosomes(CurrentInd,StartSnp,StopSnp)
     use GlobalVariablesHmmMaCH
     use omp_lib
     use Par_Zig_mod
-    use AlphaImputeInMod
+    use AlphaImputeSpecFileModule
     implicit none
 
     integer,intent(in) :: CurrentInd,StartSnp,StopSnp
@@ -932,7 +932,7 @@ subroutine SamplePath(CurrentInd,FromMarker,ToMarker,FromState,ToState,TopBot)
     use GlobalVariablesHmmMaCH
     use omp_lib
     use Par_Zig_mod
-    use AlphaImputeInMod
+    use AlphaImputeSpecFileModule
     implicit none
 
     integer,intent(in) :: CurrentInd,TopBot,FromMarker,ToMarker,FromState,ToState
@@ -1218,7 +1218,7 @@ subroutine Transpose(CurrentMarker,PrecedingMarker,Theta)
     ! from any other state at PrecedingMarker using the transition probabilities.
     ! It basically calculates the first term of the forward variable.
     use GlobalVariablesHmmMaCH
-    use AlphaImputeInMod
+    use AlphaImputeSpecFileModule
     implicit none
 
     integer,intent(in) :: CurrentMarker,PrecedingMarker
@@ -1343,7 +1343,7 @@ subroutine ConditionOnData(CurrentInd,Marker)
     ! It basically calculate the second term of the forward variables
     use Global
     use GlobalVariablesHmmMaCH
-    use AlphaImputeInMod
+    use AlphaImputeSpecFileModule
     implicit none
 
     integer, intent(in) :: CurrentInd, Marker
@@ -1449,7 +1449,7 @@ subroutine SetUpPrior
     !   PIj = P(t1=Sj) = ForwardProb(j,1)
 
     use GlobalVariablesHmmMaCH
-    use AlphaImputeInMod
+    use AlphaImputeSpecFileModule
     use omp_lib
 
     implicit none
@@ -1536,7 +1536,7 @@ subroutine SetUpEquationsGenotypesHaploid(nGenotyped)
     use Global
     use GlobalVariablesHmmMaCH
     use random
-    use AlphaImputeInMod
+    use AlphaImputeSpecFileModule
     implicit none
     integer, intent(in) :: nGenotyped
 
@@ -1627,7 +1627,7 @@ subroutine SetUpEquationsGenotypesDiploid(nGenotyped)
     use Global
     use GlobalVariablesHmmMaCH
     use random
-    use AlphaImputeInMod
+    use AlphaImputeSpecFileModule
     implicit none
     integer, intent(in) :: nGenotyped
 
@@ -1684,7 +1684,7 @@ subroutine SetUpEquationsReads(nGenotyped)
     use Global
     use GlobalVariablesHmmMaCH
     use random
-    use AlphaImputeInMod
+    use AlphaImputeSpecFileModule
     implicit none
 
     integer, intent(in) :: nGenotyped
@@ -2026,7 +2026,7 @@ subroutine ExtractTemplateHaps(CurrentInd,Shuffle1,Shuffle2)
     ! Set the Template of Haplotypes used in the HMM model.
     ! It takes the haplotypes from HD animals
     ! It differentiates between paternal (even) and maternal (odd) haps
-    use AlphaImputeInMod
+    use AlphaImputeSpecFileModule
     use GlobalVariablesHmmMaCH
 
     integer, intent(in) :: Shuffle1(nIndHmmMaCH), Shuffle2(nIndHmmMaCH),CurrentInd
@@ -2079,7 +2079,7 @@ subroutine ExtractTemplateByHaps(CurrentInd,Shuffle1,Shuffle2)
     ! It differentiates between paternal (even) and maternal (odd) haps
 
     use GlobalVariablesHmmMaCH
-    use AlphaImputeInMod
+    use AlphaImputeSpecFileModule
 
     integer, intent(in) :: Shuffle1(nIndHmmMaCH), Shuffle2(nIndHmmMaCH),CurrentInd
 
@@ -2129,7 +2129,7 @@ subroutine ExtractTemplateHapsByAnimals(CurrentInd,Shuffle)
     ! Extract the Template of Haplotypes used in the HMM model.
     ! It consideres the two haps of a given individual.
 
-    use AlphaImputeInMod
+    use AlphaImputeSpecFileModule
     use GlobalVariablesHmmMaCH
 
     integer, intent(in) :: Shuffle(nIndHmmMaCH),CurrentInd

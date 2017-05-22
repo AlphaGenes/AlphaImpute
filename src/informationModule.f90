@@ -37,7 +37,7 @@ contains
         use Global
 
         use Utils
-        use alphaimputeinmod
+        use AlphaImputeSpecFileModule
         use alphahouseMod, only :countLines
         implicit none
 
@@ -418,7 +418,7 @@ contains
 
     subroutine CurrentYield
         use Global
-        use alphaimputeinmod
+        use AlphaImputeSpecFileModule
         implicit none
 
         integer :: CountPatAl,CountMatAl,CountGeno
@@ -450,7 +450,7 @@ contains
         use Global
         use GlobalVariablesHmmMaCH
 
-        use AlphaImputeInMod
+        use AlphaImputeSpecFileModule
 
         implicit none
 
@@ -481,7 +481,7 @@ contains
         ! Phase alleles in the SEX CHROMOSOME whenever it is possible (homozygous case).
         ! Phasing information is store in the variable GlobalWorkPhase
         use Global
-        use AlphaImputeInMod
+        use AlphaImputeSpecFileModule
         implicit none
 
         type(AlphaImputeInput), pointer :: inputParams

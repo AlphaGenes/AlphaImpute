@@ -2,9 +2,9 @@
 ! The Roslin Institute, The University of Edinburgh - AlphaGenes Group
 !-----------------------------------------------------------------------------------------------------------------------
 !
-! MODULE: AlphaImputeInMod
+! MODULE: AlphaImputeSpecFileModule
 !
-!> @file        AlphaImputeInMod.f90
+!> @file        AlphaImputeSpecFileModule.f90
 !
 ! DESCRIPTION:
 !> @brief       Module holding input parameters
@@ -26,7 +26,7 @@
 
 
 
-module AlphaImputeInMod
+module AlphaImputeSpecFileModule
     use iso_fortran_env
 
     type AlphaImputeInput
@@ -592,4 +592,4 @@ contains
     !$  CALL OMP_SET_NUM_THREADS(this%useProcs)
 end subroutine ReadInParameterFile
 
-end module AlphaImputeInMod
+end module AlphaImputeSpecFileModule

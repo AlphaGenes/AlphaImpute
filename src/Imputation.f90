@@ -37,8 +37,8 @@ MODULE Imputation
     use Global
 
     use GlobalVariablesHmmMaCH
-    use AlphaImputeInMod
-    use InputMod
+    use AlphaImputeSpecFileModule
+    use AlphaImputeInputOutputModule
     use ConstantModule
     implicit none
 
@@ -48,7 +48,7 @@ CONTAINS
     SUBROUTINE ImputationManagement
         use omp_lib
         use informationModule
-        use Output, only : ReadInPrePhasedData, ReReadGeneProbs,readgeneprobscluster
+        use AlphaImputeInputOutputModule, only : ReadInPrePhasedData, ReReadGeneProbs,readgeneprobscluster
         use AlphaPhaseResultsDefinition
 
         integer :: loop
@@ -539,7 +539,7 @@ write(0,*) 'DEBUG: Mach Finished'
 
         use Global
         use HaplotypeBits
-        use alphaimputeinmod
+        use AlphaImputeSpecFileModule
         implicit none
 
         integer :: f,e,h,g,i,j,l,nCore,nHap,nGlobalLoop,CoreLength,CoreStart,CoreEnd,InLib,Count0,Count1
@@ -919,7 +919,7 @@ write(0,*) 'DEBUG: Mach Finished'
 
         use Utils
         use HaplotypeBits
-        use alphaimputeinmod
+        use AlphaImputeSpecFileModule
         use AlphaPhaseResultsDefinition
         implicit none
 
@@ -1158,7 +1158,7 @@ write(0,*) 'DEBUG: Mach Finished'
 
         use HaplotypeBits
         use Utils
-        use alphaimputeinmod
+        use AlphaImputeSpecFileModule
         implicit none
 
         integer :: e,g,h,i,j,PedId,GamA,GamB,nAnisHD,PosHDInd
@@ -1410,7 +1410,7 @@ write(0,*) 'DEBUG: Mach Finished'
         use Global
         use Utils
         use HaplotypeBits
-        use alphaimputeinmod
+        use AlphaImputeSpecFileModule
         use AlphaPhaseResultsDefinition
         implicit none
 
@@ -1698,7 +1698,7 @@ write(0,*) 'DEBUG: Mach Finished'
         use Global
         use ISO_Fortran_Env
         use Utils
-        use alphaimputeinmod
+        use AlphaImputeSpecFileModule
         use AlphaPhaseResultsDefinition
 
         implicit none
@@ -1966,7 +1966,7 @@ write(0,*) 'DEBUG: Mach Finished'
 
     subroutine InitialiseArrays
         ! Impute phase information for homozygous cases
-        use alphaimputeinmod
+        use AlphaImputeSpecFileModule
         use global, only :ped
         implicit none
 
@@ -2013,7 +2013,7 @@ write(0,*) 'DEBUG: Mach Finished'
     SUBROUTINE EnsureHetGametic
         ! Impute phase to Y chromosome from X chromosome for heterogametic individuals
         use Global
-        use alphaimputeinmod
+        use AlphaImputeSpecFileModule
         implicit none
 
         integer :: i,j
@@ -2041,7 +2041,7 @@ write(0,*) 'DEBUG: Mach Finished'
         ! Any individual that has a missing genotype information but has both alleles
         ! known, has its genotype filled in as the sum of the two alleles
         use Global
-        use alphaimputeinmod
+        use AlphaImputeSpecFileModule
 
         implicit none
 
@@ -2097,7 +2097,7 @@ write(0,*) 'DEBUG: Mach Finished'
         ! Fill in the allele of an offspring of a parent that has both its
         ! alleles filled in and has a resulting genotype that is homozygous
         use Global
-        use alphaimputeinmod
+        use AlphaImputeSpecFileModule
         implicit none
 
         integer :: e,i,j,ParId
@@ -2143,7 +2143,7 @@ write(0,*) 'DEBUG: Mach Finished'
         ! in the missing allele in the parent if, at least, one of its offspring
         ! is known to carry an allele that does not match the known allele in the parent
         use Global
-        use alphaimputeinmod
+        use AlphaImputeSpecFileModule
         use individualModule
         implicit none
 
@@ -2275,8 +2275,8 @@ write(0,*) 'DEBUG: Mach Finished'
 
         use Global
         ! TODOphase this all needs redone
-        use alphaimputeinmod
-        use Output, only: readProbabilitiesFull, readProbabilitiesFullCluster
+        use AlphaImputeSpecFileModule
+        use AlphaImputeInputOutputModule, only: readProbabilitiesFull, readProbabilitiesFullCluster
 
         implicit none
 
@@ -2431,7 +2431,7 @@ write(0,*) 'DEBUG: Mach Finished'
         ! Major sub-step 8 is iterated a number of times with increasingly relaxed
         ! restrictions. After each iteration, the minor sub-steps are also carried out.
         use Global
-        use alphaimputeinmod
+        use AlphaImputeSpecFileModule
         implicit none
 
         inputParams => defaultInput
@@ -2548,7 +2548,7 @@ write(0,*) 'DEBUG: Mach Finished'
         !   * The number of unphased alleles has to be lower than a threshold ((2*inputParams%nsnp)*0.07))
 
         use Global
-        use alphaimputeinmod
+        use AlphaImputeSpecFileModule
         implicit none
 
         integer :: e,i,j,HetEnd,HetStart,RSide,LSide,PatMat,SireDamRL
@@ -2865,7 +2865,7 @@ write(0,*) 'DEBUG: Mach Finished'
         ! This subroutine corresponds to Major sub-step 8 from Hickey et al., 2012 (Appendix A)
 
         use Global
-        use alphaimputeinmod
+        use AlphaImputeSpecFileModule
 
         implicit none
 

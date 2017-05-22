@@ -148,7 +148,7 @@ MODULE hmmHaplotyper
     subroutine SampleHaplotypeSource(CurrentInd,hap)
         use Global
         use GlobalVariablesHmmMaCH
-        use AlphaImputeInMod
+        use AlphaImputeSpecFileModule
         use Par_Zig_mod
         use omp_lib
 
@@ -257,7 +257,7 @@ MODULE hmmHaplotyper
     subroutine SampleSegmentHaplotypeSource(CurrentInd,hap,StartSnp,StopSnp)
         use Global
         use GlobalVariablesHmmMaCH
-        use AlphaImputeInMod
+        use AlphaImputeSpecFileModule
         use Par_Zig_mod
         use omp_lib
 
@@ -465,7 +465,7 @@ MODULE hmmHaplotyper
         ! Calculates the probability of get a particular state at CurrentMarker
         ! from any other state at PrecedingMarker using the transition probabilities.
         use GlobalVariablesHmmMaCH
-        use AlphaImputeInMod
+        use AlphaImputeSpecFileModule
         integer, intent(IN) :: PrecedingMarker, CurrentMarker
         type(AlphaImputeInput), pointer :: inputParams
         double precision, intent(IN) :: Theta
@@ -507,7 +507,7 @@ MODULE hmmHaplotyper
         use GlobalVariablesHmmMaCH
         use Par_Zig_mod
         use omp_lib
-        use AlphaImputeInMod
+        use AlphaImputeSpecFileModule
 
         implicit none
         integer, intent(IN) :: CurrentInd, Marker
@@ -574,7 +574,7 @@ MODULE hmmHaplotyper
         ! Set up de initial state distribution, that is, the probability that
         ! the sequence starts with the state Sj:
         !   PIj = P(t1=Sj) = ForwardProb(j,1)
-        use AlphaImputeInMod
+        use AlphaImputeSpecFileModule
         use GlobalVariablesHmmMaCH
         use omp_lib
 

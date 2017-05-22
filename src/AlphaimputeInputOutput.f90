@@ -1,4 +1,4 @@
-#ifdef OS_UNIX
+#ifndef _WIN32
 
 #define STRINGIFY(x)#x
 #define TOSTRING(x) STRINGIFY(x)
@@ -29,7 +29,7 @@
 #DEFINE NULL " >NUL"
 #endif
 
-module Output
+module AlphaImputeInputOutputModule
     ! use global
     use iso_fortran_env
     implicit none
@@ -47,7 +47,7 @@ contains
     subroutine WriteProbabilitiesHMM(outFile, Indexes, nAnims, nSnps)
         use global
         use GlobalVariablesHmmMaCH
-        use alphaimputeinmod
+        use AlphaImputeSpecFileModule
         character(len=*), intent(IN) :: outFile
         integer, intent(IN) :: nAnims, nSnps
         integer, intent(IN) :: Indexes(:)
@@ -157,7 +157,7 @@ contains
 
         subroutine readProbabilitiesGeneProbCluster(GenosProbs,nAnims, inputParams, GpIndex)
         use constantModule
-        use AlphaImputeInMod
+        use AlphaImputeSpecFileModule
         type(AlphaImputeInput), intent(in) :: inputParams
         integer, intent(IN) :: nAnims
         integer, intent(in) :: GpIndex(:,:)
@@ -213,7 +213,7 @@ contains
 
         subroutine readProbabilitiesFullCluster(GenosProbs,nAnims, nSnps, inputParams, GpIndex)
         use constantModule
-        use AlphaImputeInMod
+        use AlphaImputeSpecFileModule
         type(AlphaImputeInput), intent(in) :: inputParams
         integer, intent(IN) :: nSnps,nAnims
         integer, intent(in) :: GpIndex(:,:)
@@ -259,7 +259,7 @@ contains
         ! Impute phase information from pre-phased file. Count the number of pre-phased individuals
         use Global
 
-        use AlphaImputeInMod
+        use AlphaImputeSpecFileModule
 
         integer :: h,j,k,nAnisPrePhased,CountPrePhased,tmpID
         integer, allocatable,dimension(:,:) :: WorkPhase
@@ -314,7 +314,7 @@ contains
     subroutine readGeneProbsCluster(GlobalWorkPhase,ped,GpIndex, inputParams,GeneProbThresh)
         use PedigreeModule
         use iso_fortran_env
-        use AlphaImputeInMod
+        use AlphaImputeSpecFileModule
         use constantModule
         type(PedigreeHolder) :: ped
         integer(kind=1), intent(out) :: GlobalWorkPhase(:,:,:)
@@ -372,7 +372,7 @@ contains
         ! Read genotype probabilities from files and phase allele based in these probabilities.
         ! This files should have been already created during previous calls to AlphaImpute (inputParams%restartOption<3)
         ! Phasing information is store in the variable GlobalWorkPhase
-        use AlphaImputeInMod
+        use AlphaImputeSpecFileModule
         use PedigreeModule
         implicit none
 
@@ -426,4 +426,201 @@ contains
     end subroutine ReReadGeneProbs
 
 
-end module Output
+
+
+        !#############################################################################################################################################################################################################################
+
+    subroutine MakeDirectories(HMM)
+        use global
+        use GlobalVariablesHmmMaCH
+        use AlphaImputeSpecFileModule
+
+        implicit none
+
+        integer, intent(in) :: HMM
+        integer :: i
+        character(len=300) :: FolderName
+        type(AlphaImputeInput), pointer :: inputParams
+
+        inputParams => defaultInput
+
+        if (HMM == RUN_HMM_NGS) then
+            ! call rmdir("Results")
+            ! call rmdir("Miscellaneous")
+            call system(RMDIR // " Results")
+            call system(RMDIR // " Miscellaneous")
+            ! call system("mkdir Results")
+            ! call system("mkdir Miscellaneous")
+            call system(MD // " Results")
+            call system(MD // " Miscellaneous")
+
+        else
+            print*, ""
+            call system(RMDIR // " Miscellaneous")
+            call system(RMDIR // " Phasing")
+            call system(RMDIR // " Results")
+            call system(RMDIR // " InputFiles")
+            call system(RMDIR // " GeneProb")
+            call system(RMDIR // " IterateGeneProb")
+
+            call system(MD // " Phasing")
+            call system(MD // " Miscellaneous")
+            call system(MD // " Results")
+            call system(MD // " InputFiles")
+            call system(MD // " GeneProb")
+            call system(MD // " IterateGeneProb")
+
+            do i=1,inputParams%useProcs
+                write (FolderName,'("GeneProb"i0)')i
+                ! call system ("mkdir GeneProb/" // FolderName)       !here
+                call system(MD // " GeneProb" // DASH // FolderName)
+            enddo
+            do i=1,inputParams%nPhaseInternal
+                write (FolderName,'("Phase"i0)')i
+                ! call system ("mkdir Phasing/" // FolderName)
+                call system(MD // " Phasing" // DASH // FolderName)
+            enddo
+            do i=1,inputParams%useProcs
+                write (FolderName,'("GeneProb"i0)')i            !here
+                ! call system ("mkdir IterateGeneProb/" // FolderName)    !here
+                call system(MD // " IterateGeneProb" // DASH // FolderName)
+            enddo
+        endif
+
+
+    end subroutine MakeDirectories
+
+
+
+    !---------------------------------------------------------------------------
+    ! DESCRIPTION:
+    !> @brief      Read files
+    !
+    !> @details    This subroutine reads the pedigree data and the gender file
+    !>             in case of Sex Chromosome, as well as genotype information
+    !
+    !> @author     Roberto Antolin, roberto.antolin@roslin.ed.ac.uk
+    !
+    !> @date       Nov 10, 2016
+    !
+    ! PARAMETERS:
+    !> @param[in]
+    !---------------------------------------------------------------------------
+    subroutine ReadInData
+
+        use Global
+        use AlphaImputeSpecFileModule
+        implicit none
+
+        type(AlphaImputeInput), pointer :: inputParams
+        inputParams=> defaultInput
+        
+        ! Read the pedigree information
+
+        if (trim(inputParams%pedigreefile) /= "NoPedigree") then
+            ! TODO plink needs reimplemented 
+                        !     call ReadPlink(inputParams%genotypeFileUnit)
+            ! end if
+            if (inputParams%SexOpt==1) then
+                ped = initPedigree(inputParams%pedigreefile,genderfile=inputParams%genderFile)
+            else 
+                ped = initPedigree(inputParams%pedigreefile)
+
+            endif
+
+            if (inputParams%hmmoption /= RUN_HMM_NGS) then
+                call ped%addGenotypeInformationFromFile(inputParams%GenotypeFile,inputParams%nsnp)
+            endif
+        else
+
+           if (inputParams%hmmoption /= RUN_HMM_NGS) then
+                ! init pedigree from genotype file
+                ped = initPedigreeGenotypeFiles(inputParams%GenotypeFile, nsnp=inputParams%nsnp)
+            endif
+        endif
+
+    end subroutine ReadInData
+
+
+    !#############################################################################################################################################################################################################################
+    subroutine readVCF(ReadsFileUnit, Ids, RefAll, AltAll, nSnpIn, SnpUsed, StartSnp, EndSnp, nIndivIn)
+        ! subroutine readRogerData(filename, Ids, position, quality, SequenceData, nSnpIn, SnpUsed, StartSnp, EndSnp, nIndivIn)
+
+        use Global
+        use AlphaImputeSpecFileModule
+        use omp_lib
+        implicit none
+        !filename has the name of the file to be read
+        integer, intent(inout) :: ReadsFileUnit
+        character(len=100), allocatable, dimension(:), intent(out):: Ids
+        !info holds the quality and the poisition (
+
+        character(len=100), dimension(:), allocatable::dumE, dumC
+        ! real(real64), allocatable, dimension(:), intent(out):: quality
+        ! integer(int32), dimension(:), allocatable, intent(out):: position
+        integer(int32), dimension(:,:), allocatable, intent(out) :: RefAll, AltAll
+        ! integer(int32), dimension(:,:,:), allocatable, intent(out) :: SequenceData
+
+        real(real64), allocatable, dimension(:) :: quality
+        integer(int32), dimension(:), allocatable :: position
+        integer(int32), optional :: SnpUsed,nSnpIn,StartSnp,EndSnp,nIndivIn
+        integer(int32) :: nSnp,pos, nIndiv
+        integer(int32) :: i,j, k
+
+
+        if (present(nSnpIn)) then
+            nSnp = nSnpIn
+        else
+            write(*,*) "nSnp required at the moment."
+            stop
+        end if
+
+        if (present(nIndivIn)) then
+            nIndiv = nIndivIn
+        else
+            !Work out nIndiv
+            write(*,*) "nIndiv required at the moment."
+            stop
+        end if
+
+        ! allocate(SequenceData(nIndiv, SnpUsed, 2))
+        allocate(RefAll(nIndiv, SnpUsed))
+        allocate(AltAll(nIndiv, SnpUsed))
+        allocate(position(SnpUsed))
+        allocate(quality(SnpUsed))
+        allocate(Ids(nIndiv))
+        allocate(dumE(5+2*nIndiv))
+        allocate(dumC(5+nIndiv))
+
+        read(ReadsFileUnit, *) dumC
+        ! write(*,"(5A)") "STUFF", trim(dumC(1)), trim(dumC(2)), trim(dumC(3)), "ENDSTUFF"
+        do i =1, nIndiv
+            write(Ids(i), *) dumC(i+5)
+        end do
+
+        pos=1
+        do j = 1, nSnp
+            read(ReadsFileUnit, *) dumE
+            if ((j >= StartSnp).and.(j <= EndSnp)) then
+                read(dumE(2), *) position(pos)
+                read(dumE(5), *) quality(pos)
+
+                !$OMP PARALLEL DO DEFAULT(PRIVATE) SHARED (nIndiv,j,pos,dumE,RefAll,AltAll,position)
+                do i = 1, nIndiv
+                    k = i*2+4
+                    !write(*,'(4i5,1x,1a5)'),i,j,position(j),k,dumE(k)
+                    ! read(dumE(k), *) SequenceData(i,pos, 1)
+                    ! read(dumE(k+1), *) SequenceData(i, pos, 2)
+                    read(dumE(k), *) RefAll(i, pos)
+                    read(dumE(k+1), *) AltAll(i, pos)
+                    !write(*,'(5i20,2i10)'),i,j,pos,position(pos),k,SequenceData(i, pos,:)
+                end do
+                !$OMP END PARALLEL DO
+                pos=pos+1
+            endif
+        end do
+    end subroutine readVCF
+
+
+
+end module AlphaImputeInputOutputModule

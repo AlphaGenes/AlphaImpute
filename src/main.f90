@@ -17,10 +17,9 @@ program AlphaImpute
     use AlphaImputeModule
     use informationModule
     use GlobalVariablesHmmMaCH
-    use Output
-    use AlphaImputeInMod
+    use AlphaImputeInputOutputModule
+    use AlphaImputeSpecFileModule
     use Imputation
-    use InputMod
     use GeneProbModule
     use AlphaPhaseResultsDefinition
     implicit none
@@ -84,7 +83,8 @@ program AlphaImpute
         allocate(ImputePhase(0:ped%pedigreeSize,inputParams%nsnpRaw,2))
         allocate(SnpIncluded(inputParams%nsnp))
         call CheckParentage
-        call ReadSeq(inputParams%GenotypeFileUnit)
+        call ped%addSequenceFromFile(inputparams%GenotypeFile, inputParams%nsnpRaw)
+        ! call ReadSeq(inputParams%GenotypeFileUnit)
     endif
 
     if (inputParams%hmmoption == RUN_HMM_NGS) then
