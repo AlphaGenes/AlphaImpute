@@ -2345,7 +2345,7 @@ contains
 
         integer :: i,j,k
         integer, allocatable, dimension(:) :: count0,count1,count2
-        type(AlphaImputeInput), pointer :: inputParsams
+        type(AlphaImputeInput), pointer :: inputParams
         type(individual) ,pointer :: tmpOff
         inputParams => defaultInput
 
