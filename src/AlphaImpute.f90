@@ -2187,6 +2187,10 @@ contains
                 else
                     if ((float(CountMiss)/inputParams%nsnp)>(1.0-inputParams%PercGenoForHD)) then
                         Setter(i)=0
+                        if (.not. ped%pedigree(i)%genotyped) then
+                            ! If animal is not genotyped, but enough info has been imputed, set it as genotyped
+                            call ped%setAnimalAsGenotyped(i, tempGenos(i,:))
+                        endif
                     endif
                 endif
             enddo
@@ -2197,19 +2201,19 @@ contains
 
             CountHD=0
             do
-                read (46,*,iostat=k) dumC
+                read (inputParams%AnimalFileUnit,*,iostat=k) dumC
                 CountHD=CountHD+1
                 if (k/=0) then
                     CountHD=CountHD-1
                     exit
                 endif
             enddo
-            rewind(46)
+            rewind(inputParams%AnimalFileUnit)
 
             block
                 integer :: tmpID
                 do k=1,CountHD
-                    read (46,*) dumC
+                    read (inputParams%AnimalFileUnit,*) dumC
 
                     tmpID = ped%dictionary%getValue(dumC)
                     if (tmpID /= DICT_NULL) then
@@ -2269,8 +2273,9 @@ contains
                     inputParams%nsnp=nSnpR
                 endif
             endif
+           
             if (inputParams%UserDefinedHD==0) then
-                Setter = 0
+                 Setter = 0
                 ! Setter(1:ped%pedigreeSize-ped%nDummys)=0
                 do i=1,ped%nGenotyped
                     setter(ped%genotypeMap(i)) =1
@@ -2319,9 +2324,10 @@ contains
 
 
         ! we add animals to hd list here
-        do i=1, ped%pedigreeSize - ped%nDummys
-            if (setter(i) == 1) then
-                call ped%setAnimalAsHD(i)
+        do i=1, ped%nGenotyped
+        ! TODO change to ngenotyped
+            if (setter(ped%GenotypeMap(i)) == 1) then
+                call ped%setAnimalAsHD(ped%GenotypeMap(i))
             endif
         enddo
         deallocate(SnpSummary)
@@ -2339,7 +2345,7 @@ contains
 
         integer :: i,j,k
         integer, allocatable, dimension(:) :: count0,count1,count2
-        type(AlphaImputeInput), pointer :: inputParams
+        type(AlphaImputeInput), pointer :: inputParsams
         type(individual) ,pointer :: tmpOff
         inputParams => defaultInput
 
@@ -2564,7 +2570,7 @@ contains
 
         allocate(TempGenos(0:ped%pedigreeSize,inputParams%nsnp))
         tempGenos = 9
-        tempGenos(1:ped%nGenotyped,:) = ped%getGenotypesAsArray()
+        tempGenos = ped%getGenotypesAsArray()
 
     end subroutine CheckParentage
 
