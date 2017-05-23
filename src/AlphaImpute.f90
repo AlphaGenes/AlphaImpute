@@ -2428,12 +2428,10 @@ contains
 
         ! WARNING: This can be refactored
         do i=1,ped%pedigreeSize-ped%nDummys
-          print *, "here:",i  
           do j=1,inputParams%nsnp
                 if (ped%pedigree(i)%individualGenotype%isMissing(j) .and. .not. ped%pedigree(i)%hasDummyParent() .and. .not. ped%pedigree(i)%Founder) then
                     tmpFather =>ped%pedigree(i)%getSireDamObjectByIndex(2)
                     tmpMother =>ped%pedigree(i)%getSireDamObjectByIndex(3)
-                    print *,"ID:," , tmpFather%originalID
                     if ((tmpFather%individualGenotype%getGenotype(j)==0).and.(tmpMother%individualGenotype%getGenotype(j)==0)) then
                         call ped%pedigree(i)%individualGenotype%setGenotype(j,0)
                     else if ((tmpFather%individualGenotype%getGenotype(j)==2).and.(tmpMother%individualGenotype%getGenotype(j)==2)) then
