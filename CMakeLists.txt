@@ -21,7 +21,6 @@ add_definitions(-DCLUSTER=${CLUSTER})
 # Define the executable name
 SET(ALPHAIMPUTEEXE AlphaImpute)
 MESSAGE("Prog name ${ALPHAIMPUTEEXE}")
-SET(GENEPROBEXE GeneProbForAlphaImpute)
 # Define the library name
 SET(AHLIB alphahouse)
 SET(GPLIB geneprob)
