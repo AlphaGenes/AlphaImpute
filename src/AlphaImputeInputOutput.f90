@@ -522,9 +522,9 @@ contains
                         !     call ReadPlink(inputParams%genotypeFileUnit)
             ! end if
             if (inputParams%SexOpt==1) then
-                ped = initPedigree(inputParams%pedigreefile,genderfile=inputParams%genderFile)
+                ped = initPedigree(inputParams%pedigreefile,genderfile=inputParams%genderFile, nsnps=inputParams%nsnp)
             else 
-                ped = initPedigree(inputParams%pedigreefile)
+                ped = initPedigree(inputParams%pedigreefile, nsnps=inputParams%nsnp)
 
             endif
 

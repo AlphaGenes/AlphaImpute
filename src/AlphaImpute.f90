@@ -2120,7 +2120,7 @@ contains
         printed=.FALSE.
 
         do i=1,ped%pedigreeSize-ped%nDummys
-            CountMiss=count(TempGenos(i,:)==9)
+            CountMiss=ped%pedigree(i)%individualGenotype%numMissing()
             do j=1,inputParams%MultiHD
                 if ( (CountMiss-(inputParams%nsnp-inputParams%nSnpByChip(j))) < (1.0-inputParams%PercGenoForHD)*inputParams%nSnpByChip(j)&
                     .and. (inputParams%nsnp-CountMiss)<inputParams%nSnpByChip(j)&
@@ -2178,7 +2178,7 @@ contains
             Setter(0)=0
             Setter(1:ped%pedigreeSize-ped%nDummys)=1
             do i=1,ped%pedigreeSize-ped%nDummys
-                CountMiss=count(TempGenos(i,:)==9)
+                CountMiss=ped%pedigree(i)%individualGenotype%numMissing()
                 if (inputParams%MultiHD/=0) then
                     ! Disregard animals at LD or those HD animals with a number of markers missing
                     if (animChip(i)==0) then
@@ -2189,7 +2189,7 @@ contains
                         Setter(i)=0
                         if (.not. ped%pedigree(i)%genotyped) then
                             ! If animal is not genotyped, but enough info has been imputed, set it as genotyped
-                            call ped%setAnimalAsGenotyped(i, tempGenos(i,:))
+                            call ped%setAnimalAsGenotyped(i)
                         endif
                     endif
                 endif
@@ -2233,8 +2233,8 @@ contains
             SnpSummary=0.0
             do j=1,inputParams%nsnp
                 do i=1, ped%pedigreeSize-ped%nDummys
-                    if (TempGenos(i,j)/=9) then
-                        TempFreq(j)=TempFreq(j)+float(TempGenos(i,j))
+                    if (.not. ped%pedigree(i)%individualGenotype%isMissing(j)) then
+                        TempFreq(j)=TempFreq(j)+float(ped%pedigree(i)%individualGenotype%getGenotype(j))
                         Counter(j)=Counter(j)+2
                     else
                         if (Setter(i) == 1) then
@@ -2345,6 +2345,7 @@ contains
 
         integer :: i,j,k
         integer, allocatable, dimension(:) :: count0,count1,count2
+        integer :: tmpVal
         type(AlphaImputeInput), pointer :: inputParams
         type(individual) ,pointer :: tmpOff
         inputParams => defaultInput
@@ -2361,10 +2362,11 @@ contains
                 tmpOff => ped%pedigree(i)%offsprings(j)%p
                 if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==inputParams%hetGameticStatus).and.(tmpOff%gender==inputParams%hetGameticStatus)) cycle
                 do k=1,inputParams%nsnp
-                    if (TempGenos(i,k)==9) then ! If my parent is not genotyped
-                        if (TempGenos(tmpOff%id,k)==0) Count0(k)=Count0(k)+1    ! Number of offspring genotype as 0
-                        if (TempGenos(tmpOff%id,k)==1) Count1(k)=Count1(k)+1    ! Number of offspring genotype as 1
-                        if (TempGenos(tmpOff%id,k)==2) Count2(k)=Count2(k)+1    ! Number of offspring genotype as 2
+                    if (ped%pedigree(i)%individualGenotype%isMissing(k)) then ! If my parent is not genotyped
+                        tmpVal = tmpOff%individualGenotype%getGenotype(k)
+                        if (tmpVal==0) Count0(k)=Count0(k)+1    ! Number of offspring genotype as 0
+                        if (tmpVal==1) Count1(k)=Count1(k)+1    ! Number of offspring genotype as 1
+                        if (tmpVal==2) Count2(k)=Count2(k)+1    ! Number of offspring genotype as 2
                     endif
                 enddo
 
@@ -2372,10 +2374,10 @@ contains
 
             do k=1,inputParams%nsnp
                 if ((Count0(k)+Count1(k)+Count2(k))>OffspringFillMin) then
-                    if (Count0(k)==0) TempGenos(i,k)=2                       ! This is the most likely thing, but it might be not true
-                    if (Count2(k)==0) TempGenos(i,k)=0                       ! This is the most likely thing, but it might be not true
+                    if (Count0(k)==0) call ped%pedigree(i)%individualGenotype%setGenotype(k,2)                       ! This is the most likely thing, but it might be not true
+                    if (Count2(k)==0) call ped%pedigree(i)%individualGenotype%setGenotype(k,0)                       ! This is the most likely thing, but it might be not true
                     if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==inputParams%hetGameticStatus)) cycle
-                    if ((Count0(k)>2).and.(Count2(k)>2)) TempGenos(i,k)=1    ! This is the most likely thing, but it might be not true
+                    if ((Count0(k)>2).and.(Count2(k)>2)) call ped%pedigree(i)%individualGenotype%setGenotype(k,1)    ! This is the most likely thing, but it might be not true
                 endif
             enddo
         enddo
@@ -2393,12 +2395,15 @@ contains
         integer :: i,j,k,TurnOn
         type(AlphaImputeInput), pointer :: inputParams
         integer :: tmpParentId
+        type(individual), pointer :: tmpMother, tmpFather, tmpAnim
         inputParams => defaultInput
 
         do i=1,ped%pedigreeSize-ped%nDummys
+            print *, "anim",i
             do k=2,3
                 TurnOn=1
                 tmpParentId = ped%pedigree(i)%getSireDamNewIDByIndex(k)
+                tmpAnim => ped%pedigree(i)%getSireDamObjectByIndex(k)
                 ! if the proband is heterogametic, and
                 ! considering the heterogametic parent, then avoid!!
                 if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==inputParams%hetGameticStatus).and. ((k-1)==inputParams%hetGameticStatus)) TurnOn=0
@@ -2408,13 +2413,13 @@ contains
                     ! Homogametic individuals and the homogametic parent of a heterogametic individual
                     if (TurnOn==1) then
                         do j=1,inputParams%nsnp
-                            if ((TempGenos(i,j)==0).and.(TempGenos(tmpParentId,j)==2)) then
-                                TempGenos(i,j)=9
-                                TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(k),j)=9
+                            if ((ped%pedigree(i)%individualGenotype%getGenotype(j)==0).and.(ped%pedigree(tmpParentId)%individualGenotype%getGenotype(j)==2)) then
+                                call ped%pedigree(i)%individualGenotype%setGenotype(j,9)
+                                call tmpAnim%individualGenotype%setGenotype(j,9)
                             endif
-                            if ((TempGenos(i,j)==2).and.(TempGenos(tmpParentId,j)==0)) then
-                                TempGenos(i,j)=9
-                                TempGenos(tmpParentId,j)=9
+                            if ((ped%pedigree(i)%individualGenotype%getGenotype(j)==2).and.(ped%pedigree(tmpParentId)%individualGenotype%getGenotype(j)==0)) then
+                                call ped%pedigree(i)%individualGenotype%setGenotype(j,9)
+                                call tmpAnim%individualGenotype%setGenotype(j,9)
                             endif
                         enddo
                     endif
@@ -2425,24 +2430,31 @@ contains
         ! WARNING: This can be refactored
         do i=1,ped%pedigreeSize-ped%nDummys
             do j=1,inputParams%nsnp
-                if (TempGenos(i,j)==9 .and. .not. ped%pedigree(i)%hasDummyParent()) then
-                    if ((TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(2),j)==0).and.(TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(3),j)==0)) then
-                        TempGenos(i,j)=0
-                    else if ((TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(2),j)==2).and.(TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(3),j)==2)) then
-                        TempGenos(i,j)=2
+                if (ped%pedigree(i)%individualGenotype%isMissing(j) .and. .not. ped%pedigree(i)%hasDummyParent()) then
+                    tmpFather =>ped%pedigree(i)%getSireDamObjectByIndex(2)
+                    tmpMother =>ped%pedigree(i)%getSireDamObjectByIndex(3)
+                    if ((tmpFather%individualGenotype%getGenotype(j)==0).and.(tmpMother%individualGenotype%getGenotype(j)==0)) then
+                        call ped%pedigree(i)%individualGenotype%setGenotype(j,0)
+                    else if ((tmpFather%individualGenotype%getGenotype(j)==2).and.(tmpMother%individualGenotype%getGenotype(j)==2)) then
+                        call ped%pedigree(i)%individualGenotype%setGenotype(j,2)
                     endif
                     if (inputParams%SexOpt==1) then
                         if (ped%pedigree(i)%gender/=inputParams%hetGameticStatus) then
-                            if ((TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(2),j)==0).and.(TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(3),j)==2)) TempGenos(i,j)=1
-                            if ((TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(2),j)==2).and.(TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(3),j)==0)) TempGenos(i,j)=1
+                            if ((tmpFather%individualGenotype%getGenotype(j)==0).and.((tmpMother%individualGenotype%getGenotype(j)==2))) call ped%pedigree(i)%individualGenotype%setGenotype(j,1)
+                            if ((tmpFather%individualGenotype%getGenotype(j)==2).and.((tmpMother%individualGenotype%getGenotype(j)==0))) call ped%pedigree(i)%individualGenotype%setGenotype(j,1)
                         else
                             ! HomGameticSatus(1 or 2) +1 = sire (2) or dam (3)
-                            if (TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(inputParams%HomGameticStatus+1),j)==0) TempGenos(i,j)=0
-                            if (TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(inputParams%HomGameticStatus+1),j)==2) TempGenos(i,j)=2
+                            if (inputParams%HomGameticStatus == 1) then
+                                if (tmpFather%individualGenotype%getGenotype(j)==0) call ped%pedigree(i)%individualGenotype%setGenotype(j,0)
+                                if (tmpFather%individualGenotype%getGenotype(j)==2) call ped%pedigree(i)%individualGenotype%setGenotype(j,2)
+                            else if (inputParams%HomGameticStatus == 2) then 
+                                if (tmpMother%individualGenotype%getGenotype(j)==0) call ped%pedigree(i)%individualGenotype%setGenotype(j,0)
+                                if (tmpMother%individualGenotype%getGenotype(j)==2) call ped%pedigree(i)%individualGenotype%setGenotype(j,2)
+                            endif
                         endif
                     else
-                        if ((TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(2),j)==0).and.(TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(3),j)==2)) TempGenos(i,j)=1
-                        if ((TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(2),j)==2).and.(TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(3),j)==0)) TempGenos(i,j)=1
+                        if ((tmpFather%individualGenotype%getGenotype(j)==0).and.(tmpMother%individualGenotype%getGenotype(j)==2)) call ped%pedigree(i)%individualGenotype%setGenotype(j,1)
+                        if ((tmpFather%individualGenotype%getGenotype(j)==2).and.(tmpMother%individualGenotype%getGenotype(j)==0)) call ped%pedigree(i)%individualGenotype%setGenotype(j,1)
                     endif
                 endif
             enddo
@@ -2568,9 +2580,6 @@ contains
             enddo
         endif
 
-        allocate(TempGenos(0:ped%pedigreeSize,inputParams%nsnp))
-        tempGenos = 9
-        tempGenos = ped%getGenotypesAsArray()
 
     end subroutine CheckParentage
 

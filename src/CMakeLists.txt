@@ -13,16 +13,16 @@ SET(ALPHAIMPUTE_src
             main.f90
 
 )
-set (HMM_src
-    global.f90
-    par_zig_mod.f90
-    random.f90   
-    AlphaImputeSpecFileModule.f90
-    hmm.f90
-    utils.f90
-    hmmvariables.f90
-     AlphaImputeInputOutput.f90
-            hmmHaplotype.f90  )
+# set (HMM_src
+#     global.f90
+#     par_zig_mod.f90
+#     random.f90   
+#     AlphaImputeSpecFileModule.f90
+#     hmm.f90
+#     utils.f90
+#     hmmvariables.f90
+#      AlphaImputeInputOutput.f90
+#             hmmHaplotype.f90  )
 
 
 if (ALPHAIMPUTEEXE)      
