@@ -13,3 +13,6 @@
 [submodule "alphamlp"]
 	path = alphamlp
 	url = https://bitbucket.org/hickeyjohnteam/alphamlp.git
+[submodule "alphahmm"]
+	path = alphahmm
+	url = https://bitbucket.org/hickeyjohnteam/alphahmm.git

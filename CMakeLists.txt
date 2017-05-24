@@ -26,6 +26,7 @@ SET(AHLIB alphahouse)
 SET(GPLIB geneprob)
 SET(APLIB alphaphase)
 SET(AMLPLIB alphamlp)
+SET(AHMMLIB alphahmm)
 # Define some directories
 SET(SRC ${CMAKE_SOURCE_DIR}/src)
 SET(OBJ ${CMAKE_SOURCE_DIR}/objs)
@@ -76,6 +77,7 @@ SET(SRCAH ./alphahouse/src/)
 SET(SRCGP ./geneprob/src/)
 SET(SRCAP ./alphaphase/src/)
 SET(SRCAMLP ./alphamlp/src/)
+SET(SRCAHMM ./alphahmm/src/)
 # Have the .mod files placed in the OBJ folder
 SET(CMAKE_Fortran_MODULE_DIRECTORY ${OBJ})
 
