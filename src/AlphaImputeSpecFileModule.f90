@@ -66,9 +66,11 @@ module AlphaImputeSpecFileModule
         ! idum is seed
         integer(kind=int32) :: idum
         integer(kind=int32) :: nHapInSubH,nRoundsHmm,HmmBurnInRound
-        real(kind=real32) :: phasedThreshold,imputedThreshold
+        real(kind=real32) :: make ,imputedThreshold
         logical :: HapList=.FALSE.
         integer(kind=1) :: HMMOption
+        real(kind=real32) :: phasedThreshold                   !< threshold of phase information accept
+
 
         ! box 8
 
@@ -83,6 +85,8 @@ module AlphaImputeSpecFileModule
         integer(kind=int32) :: nSnpRaw,nAgreeImputeHDLib,nAgreeParentPhaseElim,nAgreeGrandParentPhaseElim,nAgreePhaseElim,nAgreeInternalHapLibElim
         integer(kind=int32) :: useProcs
         logical :: cluster
+
+        
     contains
         procedure :: ReadInParameterFile
     end type AlphaImputeInput

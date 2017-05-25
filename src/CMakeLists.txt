@@ -2,13 +2,9 @@ SET(ALPHAIMPUTE_src
             AlphaImputeSpecFileModule.f90
             global.f90
             HaplotypeBits.f90
-            hmm.f90
             AlphaImputeInputOutput.f90
-            hmmvariables.f90
-            hmmHaplotype.f90      
             informationModule.f90    
             Imputation.f90
-            utils.f90
             AlphaImpute.f90
             main.f90
 
@@ -34,7 +30,7 @@ if (ALPHAIMPUTEEXE)
     TARGET_LINK_LIBRARIES(${ALPHAIMPUTEEXE} ${GPLIB})
     #TARGET_LINK_LIBRARIES(${ALPHAIMPUTEEXE} ${AMLPLIB})
     TARGET_LINK_LIBRARIES(${ALPHAIMPUTEEXE} ${APLIB})
-    
+    TARGET_LINK_LIBRARIES(${ALPHAIMPUTEEXE} ${AHMMLIB})
 endif()
 
 # if (HMMLIB)

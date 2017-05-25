@@ -43,7 +43,6 @@ module Global
     integer :: nSnpIterate,AlphaPhasePresent,GeneProbPresent
     integer :: nSnpChips
 
-    integer,allocatable,dimension (:,:) :: Reads,ReferAllele,AlterAllele
     integer(kind=1),allocatable,dimension (:) :: SnpIncluded,GenderRaw
     integer(kind=1),allocatable,dimension (:,:) :: TmpGenos,MSTermInfo
     integer(kind=1),allocatable,dimension (:,:) :: ImputeGenos,SireDam
@@ -65,5 +64,18 @@ module Global
 
     type(AlphaPhaseResultsContainer) :: apResults
     double precision, allocatable :: GenosProbs(:,:,:) !< output of geneprob
+
+
+
+
+    ! HMM OUTPUT STUFF
+
+        real,allocatable,dimension (:,:) :: ProbImputeGenosHmm
+        real,allocatable,dimension (:,:,:) :: ProbImputePhaseHmm
+        integer, allocatable :: GenosCounts(:,:,:)
+        integer :: GlobalRoundHmm
+        integer(kind=1),allocatable,dimension(:,:,:) :: FullH !< full phase and imputation information from HMM (nanis, snps, haps[2])
+
+
 end module Global
 

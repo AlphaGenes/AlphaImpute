@@ -448,7 +448,6 @@ contains
     subroutine FromHMM2ImputePhase
         ! Impute alleles from HMM dosage probabilities
         use Global
-        use GlobalVariablesHmmMaCH
 
         use AlphaImputeSpecFileModule
 

@@ -46,7 +46,6 @@ contains
     ! subroutine WriteProbabilitiesHMM(outFile, Indexes, Ids, nAnims, nSnps)
     subroutine WriteProbabilitiesHMM(outFile, Indexes, nAnims, nSnps)
         use global
-        use GlobalVariablesHmmMaCH
         use AlphaImputeSpecFileModule
         character(len=*), intent(IN) :: outFile
         integer, intent(IN) :: nAnims, nSnps
@@ -432,7 +431,6 @@ contains
 
     subroutine MakeDirectories(HMM)
         use global
-        use GlobalVariablesHmmMaCH
         use AlphaImputeSpecFileModule
 
         implicit none

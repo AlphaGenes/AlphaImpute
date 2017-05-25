@@ -16,12 +16,12 @@ program AlphaImpute
     use Global
     use AlphaImputeModule
     use informationModule
-    use GlobalVariablesHmmMaCH
     use AlphaImputeInputOutputModule
     use AlphaImputeSpecFileModule
     use Imputation
     use GeneProbModule
     use AlphaPhaseResultsDefinition
+    
     implicit none
 
     character(len=4096) :: cmd, SpecFile
@@ -78,13 +78,11 @@ program AlphaImpute
         call MakeDirectories(RUN_HMM_NGS)
         call ReadInData
         call SnpCallRate
-        allocate(Reads(ped%nGenotyped,inputParams%nsnp))
         allocate(ImputeGenos(0:ped%pedigreeSize,inputParams%nsnpRaw))
         allocate(ImputePhase(0:ped%pedigreeSize,inputParams%nsnpRaw,2))
         allocate(SnpIncluded(inputParams%nsnp))
         call CheckParentage
-        call ped%addSequenceFromFile(inputparams%GenotypeFile, inputParams%nsnpRaw)
-        ! call ReadSeq(inputParams%GenotypeFileUnit)
+        call ped%addSequenceFromFile(inputparams%GenotypeFile, inputParams%nsnpRaw, MAX_READS_COUNT)
     endif
 
     if (inputParams%hmmoption == RUN_HMM_NGS) then

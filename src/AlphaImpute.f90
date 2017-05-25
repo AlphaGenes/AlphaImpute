@@ -638,8 +638,8 @@ contains
         use Global
 
         use AlphaImputeInputOutputModule
-        use GlobalVariablesHmmMaCH
         use AlphaImputeSpecFileModule
+        use HMMInputOutputModule
 
         implicit none
 

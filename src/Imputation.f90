@@ -36,7 +36,6 @@
 MODULE Imputation
     use Global
 
-    use GlobalVariablesHmmMaCH
     use AlphaImputeSpecFileModule
     use AlphaImputeInputOutputModule
     use ConstantModule
@@ -153,7 +152,24 @@ write(0,*) 'DEBUG: Mach Finished'
                 
 
                     if (inputParams%HMMOption==RUN_HMM_PREPHASE) Then
-                        call MaCHController(inputParams%HMMOption)
+                        block
+                            use AlphaHmmInMod
+                            use ExternalHMMWrappers
+                            type (AlphaHMMinput) :: inputParamsHMM
+
+                            inputParamsHMM%nsnp = inputParams%nsnp
+                            inputParamsHMM%nHapInSubH = inputParams%nHapInSubH
+                            inputParamsHMM%HmmBurnInRound = inputParams%HmmBurnInRound
+                            inputParamsHMM%nRoundsHmm = inputParams%nRoundsHmm
+                            inputParamsHMM%useProcs = inputParams%useProcs
+                            inputParamsHMM%imputedThreshold = inputParams%imputedThreshold
+                            inputParamsHMM%phasedThreshold = inputParams%phasedThreshold
+                            inputParamsHMM%HapList = inputParams%HapList
+
+                            call AlphaImputeHMMRunner(inputParamsHMM, ImputeGenos, ImputePhase, ped, ProbImputeGenosHmm, ProbImputePhaseHmm, GenosCounts, FullH)
+
+
+                        end block
                     else
                         print*, " "
                         print*, " ","Imputation of base animals completed"
