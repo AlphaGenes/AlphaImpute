@@ -78,16 +78,37 @@ program AlphaImpute
         call MakeDirectories(RUN_HMM_NGS)
         call ReadInData
         call SnpCallRate
-        allocate(ImputeGenos(0:ped%pedigreeSize,inputParams%nsnpRaw))
-        allocate(ImputePhase(0:ped%pedigreeSize,inputParams%nsnpRaw,2))
         allocate(SnpIncluded(inputParams%nsnp))
         call CheckParentage
         call ped%addSequenceFromFile(inputparams%GenotypeFile, inputParams%nsnpRaw, MAX_READS_COUNT)
     endif
 
+    allocate(ImputeGenos(0:ped%pedigreeSize,inputParams%nsnpraw))
+    allocate(ImputePhase(0:ped%pedigreeSize,inputParams%nsnpraw,2))
+    allocate(GlobalWorkPhase(0:ped%pedigreeSize,inputParams%nsnpraw,2))
+    call InitialiseArrays
+
     if (inputParams%hmmoption == RUN_HMM_NGS) then
 
-        call MaCHController(inputParams%hmmoption)
+
+        block
+            use AlphaHmmInMod
+            use ExternalHMMWrappers
+            type (AlphaHMMinput) :: inputParamsHMM
+
+            inputParamsHMM%nsnp = inputParams%nsnp
+            inputParamsHMM%nHapInSubH = inputParams%nHapInSubH
+            inputParamsHMM%HmmBurnInRound = inputParams%HmmBurnInRound
+            inputParamsHMM%nRoundsHmm = inputParams%nRoundsHmm
+            inputParamsHMM%useProcs = inputParams%useProcs
+            inputParamsHMM%imputedThreshold = inputParams%imputedThreshold
+            inputParamsHMM%phasedThreshold = inputParams%phasedThreshold
+            inputParamsHMM%HapList = inputParams%HapList
+
+            call AlphaImputeHMMRunner(inputParamsHMM, ImputeGenos, ImputePhase, ped, ProbImputeGenosHmm, ProbImputePhaseHmm, GenosCounts, FullH)
+
+
+        end block
         call FromHMM2ImputePhase
         call WriteOutResults
 

@@ -70,6 +70,8 @@ contains
 
         do i=1,nAnims
             do j=1,nSnps
+                print *,GenosCounts(i,j,1) 
+                print *,GenosCounts(i,j,2) 
                 n1 = GenosCounts(i,j,1)                           ! Heterozygous
                 n2 = GenosCounts(i,j,2)                           ! Homozygous: 2 case
                 n0 = (GlobalRoundHmm-inputParams%HmmBurnInRound) - n1 - n2     ! Homozygous: 0 case

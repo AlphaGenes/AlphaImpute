@@ -1112,7 +1112,7 @@ contains
 
             if (inputParams%hmmoption/=RUN_HMM_NO) then
                 ! call WriteProbabilities("./Results/GenotypeProbabilities.txt", GlobalHmmID, ID, ped%nGenotyped, inputParams%nsnp)
-                call WriteProbabilitiesHMM("./GeneProb/GenotypeProbabilities.txt", GlobalHmmID, ped%nGenotyped, inputParams%nsnp)
+                call WriteProbabilitiesHMM("./GeneProb/GenotypeProbabilities.txt", ped%genotypeMap, ped%nGenotyped, inputParams%nsnp)
             else
                 if (inputParams%bypassgeneprob==0) then
                     ! allocate(GenosProbs(ped%pedigreeSize-ped%nDummys,nSnpIterate,2))
@@ -1805,9 +1805,9 @@ contains
 
         inputParams => defaultInput
         if (inputParams%SexOpt==1) then                                                     ! Sex chromosome
-            allocate(GlobalWorkPhase(0:ped%pedigreeSize-ped%nDummys,inputParams%nsnpRaw,2))
-            allocate(ImputeGenos(0:ped%pedigreeSize-ped%nDummys,inputParams%nsnpRaw))
-            allocate(ImputePhase(0:ped%pedigreeSize-ped%nDummys,inputParams%nsnpRaw,2))
+            ! allocate(GlobalWorkPhase(0:ped%pedigreeSize-ped%nDummys,inputParams%nsnpRaw,2))
+            ! allocate(ImputeGenos(0:ped%pedigreeSize-ped%nDummys,inputParams%nsnpRaw))
+            ! allocate(ImputePhase(0:ped%pedigreeSize-ped%nDummys,inputParams%nsnpRaw,2))
 
             GlobalWorkPhase=9
             do i=1,ped%pedigreeSize-ped%nDummys
@@ -1852,9 +1852,9 @@ contains
             GlobalTmpCountInf(:,:)=0
 
         else                                                                    ! Other chromosome
-            allocate(GlobalWorkPhase(0:ped%pedigreeSize-ped%nDummys,inputParams%nsnp,2))
-            allocate(ImputeGenos(0:ped%pedigreeSize-ped%nDummys,inputParams%nsnpRaw))
-            allocate(ImputePhase(0:ped%pedigreeSize-ped%nDummys,inputParams%nsnpRaw,2))
+            ! allocate(GlobalWorkPhase(0:ped%pedigreeSize-ped%nDummys,inputParams%nsnp,2))
+            ! allocate(ImputeGenos(0:ped%pedigreeSize-ped%nDummys,inputParams%nsnpRaw))
+            ! allocate(ImputePhase(0:ped%pedigreeSize-ped%nDummys,inputParams%nsnpRaw,2))
 
             GlobalWorkPhase=9
             do i=1,ped%pedigreeSize-ped%nDummys
@@ -2589,7 +2589,7 @@ contains
     ! TODO rewrite
         use Global
 
-        use Utils
+        
         use alphahouseMod, only : countLines
         use alphastatmod, only : pearsn, moment
         use AlphaImputeSpecFileModule

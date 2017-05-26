@@ -36,7 +36,7 @@ contains
     subroutine Checker
         use Global
 
-        use Utils
+        
         use AlphaImputeSpecFileModule
         use alphahouseMod, only :countLines
         implicit none
