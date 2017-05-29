@@ -1921,8 +1921,8 @@ contains
 
         inputParams => defaultInput
 
-        allocate(TempCore(inputParams%nPhaseInternal))
-        allocate(TempCplusT(inputParams%nPhaseInternal))
+        allocate(TempCore(inputParams%nPhaseExternal))
+        allocate(TempCplusT(inputParams%nPhaseExternal))
 
         allocate(GpIndex(inputParams%useProcs,2))
 
@@ -1971,7 +1971,7 @@ contains
 
 
         ! Create AlphaPhaseSpec file
-        do i=1,inputParams%nPhaseInternal           ! Phasing is done in parallel
+        do i=1,inputParams%nPhaseExternal           ! Phasing is done in parallel
 #ifndef _WIN32
             if((inputParams%ManagePhaseOn1Off0==0).and.(inputParams%NoPhasing==1)) then
                 write (filout,'(a,"/Phase"i0,"/AlphaPhaseSpec.txt")')trim(inputParams%PhasePath), i
