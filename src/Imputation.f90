@@ -48,7 +48,7 @@ CONTAINS
         use omp_lib
         use informationModule
         use AlphaImputeInputOutputModule, only : ReadInPrePhasedData, ReReadGeneProbs,readgeneprobscluster
-        use AlphaPhaseResultsDefinition
+        use AlphaPhaseResultsModule
 
         integer :: loop
         character(len=150) :: timeOut
@@ -954,7 +954,7 @@ write(0,*) 'DEBUG: Mach Finished'
         
         use HaplotypeBits
         use AlphaImputeSpecFileModule
-        use AlphaPhaseResultsDefinition
+        use AlphaPhaseResultsModule
         implicit none
 
         integer :: e,g,i,j,GamA,GamB,nAnisHD,PosHDInd
@@ -1445,7 +1445,7 @@ write(0,*) 'DEBUG: Mach Finished'
         
         use HaplotypeBits
         use AlphaImputeSpecFileModule
-        use AlphaPhaseResultsDefinition
+        use AlphaPhaseResultsModule
         implicit none
 
 
@@ -1733,7 +1733,7 @@ write(0,*) 'DEBUG: Mach Finished'
         use ISO_Fortran_Env
         
         use AlphaImputeSpecFileModule
-        use AlphaPhaseResultsDefinition
+        use AlphaPhaseResultsModule
 
         implicit none
 
