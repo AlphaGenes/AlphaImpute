@@ -44,9 +44,9 @@ contains
     subroutine PhasingManagementNew(results)
         use AlphaImputeSpecFileModule
         use omp_lib
-        use AlphaPhaseParametersDefinition
+        use AlphaPhaseParametersModule
         use AlphaPhaseFunctions
-        use AlphaPhaseResultsDefinition
+        use AlphaPhaseResultsModule
         use Global, only : ped
         use inputoutput, only : MakeDirectories
         implicit none

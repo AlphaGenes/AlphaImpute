@@ -20,8 +20,7 @@ program AlphaImpute
     use AlphaImputeSpecFileModule
     use Imputation
     use GeneProbModule
-    use AlphaPhaseResultsDefinition
-    
+    use AlphaPhaseResultsModule    
     implicit none
 
     character(len=4096) :: cmd, SpecFile
@@ -189,7 +188,7 @@ program AlphaImpute
 
         if (inputParams%restartOption==OPT_RESTART_PHASING) then
             block
-                use OutputParametersDefinition
+                use OutputParametersModule
                 use InputOutput
                 integer :: i
                 type(OutputParameters) :: oParams
@@ -222,9 +221,9 @@ if (inputParams%hmmoption/=RUN_HMM_NGS) then
             endif
             block 
 
-                use OutputParametersDefinition
+                use OutputParametersModule
                 use InputOutput
-                use AlphaPhaseResultsDefinition
+                use AlphaPhaseResultsModule
                 integer :: i
                 type(OutputParameters) :: oParams
                 oParams = newOutputParametersImpute()

@@ -32,7 +32,7 @@ module Global
     use PARAMETERS
     use iso_fortran_env
     use PedigreeModule
-    use AlphaPhaseResultsDefinition
+    use AlphaPhaseResultsModule
     implicit none
 
 
