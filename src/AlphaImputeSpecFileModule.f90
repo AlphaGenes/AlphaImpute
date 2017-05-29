@@ -82,7 +82,7 @@ module AlphaImputeSpecFileModule
         integer :: AnimalFileUnit, prePhasedFileUnit, pedigreeFileUnit,genotypeFileUnit,GenderFileUnit,HapListUnit
 
         ! other
-        integer(kind=int32) :: nSnpRaw,nAgreeImputeHDLib,nAgreeParentPhaseElim,nAgreeGrandParentPhaseElim,nAgreePhaseElim,nAgreeInternalHapLibElim
+        integer(kind=int32) :: nSnpRaw,nAgreeInternalHapLibElim
         integer(kind=int32) :: useProcs
         logical :: cluster
 
@@ -566,28 +566,15 @@ contains
 
     ! Set parameters for parallelisation
     if (this%nPhaseInternal==2) then
-        this%nAgreeImputeHDLib=1
-        this%nAgreeParentPhaseElim=1
-        this%nAgreePhaseElim=1
         this%nAgreeInternalHapLibElim=1
     endif
     if (this%nPhaseInternal==4) then
-        this%nAgreeImputeHDLib=2
-        this%nAgreeParentPhaseElim=2
-        this%nAgreePhaseElim=2
         this%nAgreeInternalHapLibElim=2
     endif
     if (this%nPhaseInternal==6) then
-        this%nAgreeImputeHDLib=3
-        this%nAgreeParentPhaseElim=3
-        this%nAgreePhaseElim=3
         this%nAgreeInternalHapLibElim=3
     endif
     if (this%nPhaseInternal>6) then
-        this%nAgreeImputeHDLib=4
-        this%nAgreeParentPhaseElim=4
-        this%nAgreeGrandParentPhaseElim=4
-        this%nAgreePhaseElim=4
         this%nAgreeInternalHapLibElim=4
     endif
 
