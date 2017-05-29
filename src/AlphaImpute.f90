@@ -651,6 +651,7 @@ contains
         type(AlphaImputeInput), pointer :: inputParams
         character(len=300) :: TmpId
         integer :: n0, n1, n2
+        integer :: new
 
 
 
@@ -669,6 +670,9 @@ contains
 
         open (unit=33,file="." // DASH// "Results" // DASH // "ImputePhase.txt",status="unknown")
         open (unit=34,file="." // DASH// "Results" // DASH // "ImputeGenotypes.txt",status="unknown")
+
+        open (newunit=new,file="." // DASH// "Results" // DASH // "ImputeGenotypesOrig.txt",status="unknown")
+
         open (unit=40,file="." // DASH// "Results" // DASH // "ImputePhaseProbabilities.txt",status="unknown")
         open (unit=41,file="." // DASH// "Results" // DASH // "ImputeGenotypeProbabilities.txt",status="unknown")
         open (unit=50,file="." // DASH// "Results" // DASH // "ImputationQualityIndividual.txt",status="unknown")
@@ -717,12 +721,10 @@ contains
             call CheckImputationInconsistencies(ImputeGenos, ImputePhase, ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
 
             do i=1, ped%pedigreeSize-ped%nDummys
-                if (ped%pedigree(i)%isDummy) then
-                    exit
-                endif
                 write (33,*) ped%pedigree(ped%inputmap(i))%originalID,ImputePhase(ped%inputmap(i),:,1)
                 write (33,*) ped%pedigree(ped%inputmap(i))%originalID,ImputePhase(ped%inputmap(i),:,2)
                 write (34,*) ped%pedigree(ped%inputmap(i))%originalID,ImputeGenos(ped%inputmap(i),:)
+                write (new,*) ped%pedigree(ped%inputmap(i))%originalID,ImputeGenos(ped%inputmap(i),:)
             enddo
 
 
@@ -915,9 +917,9 @@ contains
             !TODODW think this should be the other way round... j,l swapped
                 if (SnpIncluded(j)==1) then
                     l=l+1
-                    TmpGenos(:,j)=ImputeGenos(:,l)
-                    TmpPhase(:,j,1)=ImputePhase(:,l,1)
-                    TmpPhase(:,j,2)=ImputePhase(:,l,2)
+                    TmpGenos(:,l)=ImputeGenos(:,j)
+                    TmpPhase(:,l,1)=ImputePhase(:,j,1)
+                    TmpPhase(:,l,2)=ImputePhase(:,j,2)
                 endif
             enddo
 
