@@ -1,3 +1,36 @@
+#ifdef _WIN32
+
+#define STRINGIFY(x)#x
+#define TOSTRING(x) STRINGIFY(x)
+
+#DEFINE DASH "\"
+#DEFINE COPY "copy"
+#DEFINE MD "md"
+#DEFINE RMDIR "RMDIR /S /Q"
+#DEFINE RM "del"
+#DEFINE RENAME "MOVE /Y"
+#DEFINE SH "BAT"
+#DEFINE EXE ".exe"
+#DEFINE NULL " >NUL"
+
+
+#else
+
+#define STRINGIFY(x)#x
+#define TOSTRING(x) STRINGIFY(x)
+
+#DEFINE DASH "/"
+#DEFINE COPY "cp"
+#DEFINE MD "mkdir"
+#DEFINE RMDIR "rm -r"
+#DEFINE RM "rm"
+#DEFINE RENAME "mv"
+#DEFINE SH "sh"
+#DEFINE EXE ""
+#DEFINE NULL ""
+
+
+#endif
 !######################################################################
 
 program AlphaImpute
@@ -241,6 +274,16 @@ if (inputParams%hmmoption/=RUN_HMM_NGS) then
     if (inputParams%PhaseTheDataOnly==0) Then
         call ImputationManagement
 
+        block
+            integer :: new,i
+            open (newunit=new,file="." // DASH// "Results" // DASH // "ImputeGenotypesAFterImputation.txt",status="unknown")
+
+            do i=1, ped%pedigreeSize-ped%nDummys
+                write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputeGenos(ped%inputmap(i),:)
+
+            enddo
+            close(new)
+        end block
         call WriteOutResults
 
 

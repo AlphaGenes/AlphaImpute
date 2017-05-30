@@ -129,7 +129,6 @@ write(0,*) 'DEBUG: Mach Finished'
                 endif
 
                 ! Get Genotype information
-                ! call InitialiseArrays       ! This is similar to InsteadOfReReadGeneProb subroutine but allocating ImputePhase
                 call GeneProbPhase          ! Recover and store information about which and how many alleles/SNPs have been genotyped/phased
 
             else
@@ -1914,7 +1913,6 @@ write(0,*) 'DEBUG: Mach Finished'
                         UpToSnp=apresults%results(MiddleResultShift)%endIndexes(UpToCoreB)
                     end if
                 else                                    ! if EVEN
-                    ! TODO discuss with roberto on monday
                     do g=1,apresults%results(MiddleResult)%nCores
                         if ((apresults%results(MiddleResult)%startIndexes(g)<UptoSnp)&
                             .AND.(apresults%results(MiddleResult)%endIndexes(g))>UptoSnp) then
@@ -2009,7 +2007,8 @@ write(0,*) 'DEBUG: Mach Finished'
         ImputePhase=9
         inputParams => defaultInput
 
-        imputeGenos(:,:) = ped%getGenotypesAsArray()
+        ! imputeGenos(:,:) = ped%getGenotypesAsArray()
+        imputeGenos(:,:) = ped%getGenotypesAsArrayWitHMissing()
         do i=1, ped%pedigreeSize
             do j=1,inputParams%nsnp
                 if (ImputeGenos(i,j)==0) ImputePhase(i,j,:)=0
@@ -2367,8 +2366,6 @@ write(0,*) 'DEBUG: Mach Finished'
             Informativeness(:,:)=9 ! What the hell is this variable for??
             j=0
 
-
-            ! if (ped%pedigree(i)%hasDummyParent()) cycle
             ! Check whether my parents and grandparents are heterozygous
             do m=1,inputParams%nsnpRaw
                 if (SnpIncluded(m)==1) then                     ! Whether to consider this SNP
