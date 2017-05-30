@@ -648,9 +648,13 @@ contains
         integer,allocatable,dimension(:):: WorkTmp
         double precision :: ImputationQuality(ped%pedigreeSize-ped%nDummys,6)
 
+        integer(kind=1),allocatable,dimension (:,:) :: ImputeGenosHMM
+        integer(kind=1),allocatable,dimension (:,:,:) :: ImputePhaseHMM
+
         type(AlphaImputeInput), pointer :: inputParams
         character(len=300) :: TmpId
         integer :: n0, n1, n2
+        integer :: new
 
 
 
@@ -669,6 +673,9 @@ contains
 
         open (unit=33,file="." // DASH// "Results" // DASH // "ImputePhase.txt",status="unknown")
         open (unit=34,file="." // DASH// "Results" // DASH // "ImputeGenotypes.txt",status="unknown")
+
+        open (newunit=new,file="." // DASH// "Results" // DASH // "ImputeGenotypesOrig.txt",status="unknown")
+
         open (unit=40,file="." // DASH// "Results" // DASH // "ImputePhaseProbabilities.txt",status="unknown")
         open (unit=41,file="." // DASH// "Results" // DASH // "ImputeGenotypeProbabilities.txt",status="unknown")
         open (unit=50,file="." // DASH// "Results" // DASH // "ImputationQualityIndividual.txt",status="unknown")
@@ -679,6 +686,10 @@ contains
         open (unit=54,file="." // DASH// "Results" // DASH // "ImputeGenotypesHMM.txt",status="unknown")
 
 
+
+        do i=1, ped%pedigreeSize- ped%ndummys
+        write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,ImputeGenos(ped%inputmap(i),:)
+        enddo
 #ifdef DEBUG
         write(0,*) 'DEBUG: output=0 [WriteOutResults]'
 #endif
@@ -717,14 +728,11 @@ contains
             call CheckImputationInconsistencies(ImputeGenos, ImputePhase, ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
 
             do i=1, ped%pedigreeSize-ped%nDummys
-                if (ped%pedigree(i)%isDummy) then
-                    exit
-                endif
                 write (33,*) ped%pedigree(ped%inputmap(i))%originalID,ImputePhase(ped%inputmap(i),:,1)
                 write (33,*) ped%pedigree(ped%inputmap(i))%originalID,ImputePhase(ped%inputmap(i),:,2)
                 write (34,*) ped%pedigree(ped%inputmap(i))%originalID,ImputeGenos(ped%inputmap(i),:)
             enddo
-
+            ! close(new)
 
             if (inputParams%hmmoption /= RUN_HMM_NO) then
 
@@ -732,27 +740,29 @@ contains
         write(0,*) 'DEBUG: Write HMM results [WriteOutResults]'
 #endif
 
-                if (allocated(ImputeGenos)) then
-                    deallocate(ImputeGenos)
+                if (.not. allocated(ImputeGenos)) then
+                    allocate(ImputeGenos(0:ped%pedigreeSize,inputParams%nSnpRaw))
                 end if
-                if (allocated(ImputePhase)) then
-                    deallocate(ImputePhase)
+                if (.not. allocated(ImputePhase)) then
+                    allocate(ImputePhase(0:ped%pedigreeSize,inputParams%nSnpraw,2))
                 end if
-                if (allocated(ProbImputeGenos)) then
-                    deallocate(ProbImputeGenos)
-                end if
-                if (allocated(ProbImputePhase)) then
-                    deallocate(ProbImputePhase)
-                end if
-                if (allocated(maf)) then
-                    deallocate(maf)
-                end if
-                allocate(ImputeGenos(0:ped%pedigreeSize,inputParams%nSnpRaw))
-                allocate(ImputePhase(0:ped%pedigreeSize,inputParams%nSnpraw,2))
-                allocate(ProbImputeGenos(0:ped%pedigreeSize-ped%nDummys,inputParams%nSnpraw))
-                allocate(ProbImputePhase(0:ped%pedigreeSize-ped%nDummys,inputParams%nSnpraw,2))
-                allocate(Maf(inputParams%nSnp))
 
+                if (.not. allocated(ImputeGenosHMM)) then
+                    allocate(ImputeGenosHMM(0:ped%pedigreeSize,inputParams%nSnpRaw))
+                end if
+                if (.not. allocated(ImputePhaseHMM)) then
+                    allocate(ImputePhaseHMM(0:ped%pedigreeSize,inputParams%nSnpraw,2))
+                end if
+                if (.not. allocated(ProbImputeGenos)) then
+                    allocate(ProbImputeGenos(0:ped%pedigreeSize-ped%nDummys,inputParams%nSnpraw))
+                end if
+                if (.not. allocated(ProbImputePhase)) then
+                    allocate(ProbImputePhase(0:ped%pedigreeSize-ped%nDummys,inputParams%nSnpraw,2))
+                end if
+                if (.not. allocated(maf)) then
+                    allocate(Maf(inputParams%nSnp))           
+                end if
+                
                 ImputeGenos = 9
                 ImputePhase = 9
                 ProbImputeGenos(1:ped%pedigreeSize-ped%nDummys,:) = 9.0
@@ -783,20 +793,21 @@ contains
                         n1 = GenosCounts(ped%genotypeMap(i),j,1)                           ! Heterozygous
                         n0 = (inputParams%nRoundsHmm-inputParams%HmmBurnInRound) - n1 - n2        ! Homozygous: 0 case
                         if ((n0>n1).and.(n0>n2)) then
-                            ImputeGenos(ped%genotypeMap(i),j)   = 0
-                            ImputePhase(ped%genotypeMap(i),j,:) = 0
+                            ImputeGenosHMM(ped%genotypeMap(i),j)   = 0
+                            ImputePhaseHMM(ped%genotypeMap(i),j,:) = 0
                         elseif (n1>n2) then
                             ImputeGenos(ped%genotypeMap(i),j) = 1
                             if (ProbImputePhaseHmm(ped%genotypeMap(i),j,1) > ProbImputePhaseHmm(ped%genotypeMap(i),j,2) ) then
-                                ImputePhase(ped%genotypeMap(i),j,1) = 1
-                                ImputePhase(ped%genotypeMap(i),j,2) = 0
+                                ImputePhaseHMM(ped%genotypeMap(i),j,1) = 1
+                                ImputePhaseHMM(ped%genotypeMap(i),j,2) = 0
                             else
-                                ImputePhase(ped%genotypeMap(i),j,1) = 0
-                                ImputePhase(ped%genotypeMap(i),j,2) = 1
+                                ImputePhaseHMM(ped%genotypeMap(i),j,1) = 0
+                                ImputePhaseHMM(ped%genotypeMap(i),j,2) = 1
                             endif
                         else
-                            ImputeGenos(ped%genotypeMap(i),j)   = 2
-                            ImputePhase(ped%genotypeMap(i),j,:) = 1
+                            ImputeGenosHMM(ped%genotypeMap(i),j)   = 2
+                            ImputePhaseHMM(ped%genotypeMap(i),j,:) = 1
+                            ! TODO this is lowering accuracy
                         endif
                     enddo
                 enddo
@@ -806,12 +817,10 @@ contains
                 BLOCK
                     integer :: hmmID
                     do i=1,ped%nGenotyped
-                        ! TODO: Remove this variable with the isssue is really fixed
-                        ! hmmID = GlobalHmmID(i)
                         hmmID = ped%genotypeMap(i)
-                        write (53,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(hmmID)%originalID,ImputePhase(hmmID,:,1)
-                        write (53,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(hmmID)%originalID,ImputePhase(hmmID,:,2)
-                        write (54,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(hmmID)%originalID,ImputeGenos(hmmID,:)
+                        write (53,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(hmmID)%originalID,ImputePhaseHMM(hmmID,:,1)
+                        write (53,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(hmmID)%originalID,ImputePhaseHMM(hmmID,:,2)
+                        write (54,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(hmmID)%originalID,ImputeGenosHMM(hmmID,:)
                         write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(hmmID)%originalID,ProbImputePhase(hmmID,:,1)
                         write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(hmmID)%originalID,ProbImputePhase(hmmID,:,2)
                         write (41,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(hmmID)%originalID,ProbImputeGenos(hmmID,:)
@@ -871,9 +880,6 @@ contains
             call CheckImputationInconsistencies(ImputeGenos, ImputePhase, ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
             inputParams%WellPhasedThresh=inputParams%WellPhasedThresh/100
             do i=1, ped%pedigreeSize-ped%nDummys
-                if (ped%pedigree(i)%isDummy) then
-                    exit
-                endif
                 if (ImputationQuality(i,5)>=inputParams%WellPhasedThresh) then
                     write (52,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,ImputePhase(ped%inputmap(i),:,1)
                     write (52,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,ImputePhase(ped%inputmap(i),:,2)
@@ -888,15 +894,6 @@ contains
 
             call CheckImputationInconsistencies(ImputeGenos, ImputePhase, ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
 
-! block 
-! integer :: funit,i
-! open (newunit=funit,file="." // DASH // "ImputeGenotypes3ma.txt",status="unknown")
-! do i=1, ped%pedigreeSize - ped%nDummys
-! write(funit, '(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%Pedigree(ped%inputmap(i))%originalId, imputeGenos(ped%inputmap(i),:)
-! enddo
-! close(funit)
-! end block
-            
 
             if (inputParams%outopt == 1) then
                 allocate(TmpGenos(0:ped%pedigreeSize-ped%nDummys,inputParams%nSnpRaw))
@@ -912,12 +909,11 @@ contains
             l=0
             do j=1,inputParams%nSnpRaw
 
-            !TODODW think this should be the other way round... j,l swapped
                 if (SnpIncluded(j)==1) then
                     l=l+1
-                    TmpGenos(:,j)=ImputeGenos(:,l)
-                    TmpPhase(:,j,1)=ImputePhase(:,l,1)
-                    TmpPhase(:,j,2)=ImputePhase(:,l,2)
+                    TmpGenos(:,l)=ImputeGenos(:,j)
+                    TmpPhase(:,l,1)=ImputePhase(:,j,1)
+                    TmpPhase(:,l,2)=ImputePhase(:,j,2)
                 endif
             enddo
 
@@ -954,9 +950,10 @@ contains
             call CheckImputationInconsistencies(TmpGenos, TmpPhase, ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
             do i=1, ped%pedigreeSize-ped%nDummys
                 ! TODO these might want to be tmpGenos and tmp hpase
-                write (33,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputePhase(ped%inputmap(i),:,1)
-                write (33,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputePhase(ped%inputmap(i),:,2)
-                write (34,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputeGenos(ped%inputmap(i),:)
+                write (33,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,TmpPhase(ped%inputmap(i),:,1)
+                write (33,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,TmpPhase(ped%inputmap(i),:,2)
+                write (34,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,tmpGenos(ped%inputmap(i),:)
+                
             enddo
 
 
@@ -972,11 +969,7 @@ contains
 
             !REMOVE THIS WHEN HMM IS FINALISED
             if (inputParams%hmmoption==RUN_HMM_NO) then
-                deallocate(ImputePhase)
-                deallocate(ImputeGenos)
-                allocate(imputeGenos(0:ped%pedigreeSize-ped%nDummys,inputParams%nSnpRaw))
-                allocate(ImputePhase(0:ped%pedigreeSize-ped%nDummys,inputParams%nSnpRaw,2))
-
+              
                 if (allocated(ProbImputeGenos)) then
                     deallocate(ProbImputeGenos)
                 end if
@@ -1002,7 +995,6 @@ contains
                     endif
                 endif
                 if (inputParams%SexOpt==1) then
-                    print *,"WRONG"
                     call IterateInsteadOfGeneProbs
                 endif
             endif
@@ -1115,8 +1107,6 @@ contains
                 call WriteProbabilitiesHMM("./GeneProb/GenotypeProbabilities.txt", ped%genotypeMap, ped%nGenotyped, inputParams%nsnp)
             else
                 if (inputParams%bypassgeneprob==0) then
-                    ! allocate(GenosProbs(ped%pedigreeSize-ped%nDummys,nSnpIterate,2))
-                    ! TODOGENEPROB geneprob should not have been bypassed here so check that it indeed is not
                     call WriteProbabilities("./Results/GenotypeProbabilities.txt", GenosProbs, ped,ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
                 endif
             endif
@@ -1176,9 +1166,6 @@ contains
             call CheckImputationInconsistencies(TmpGenos, TmpPhase, ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
             inputParams%WellPhasedThresh=inputParams%WellPhasedThresh/100
             do i=1, ped%pedigreeSize-ped%nDummys
-                if (ped%pedigree(i)%isDummy) then
-                    exit
-                endif
                 if (ImputationQuality(i,5)>=inputParams%WellPhasedThresh) then
                     write (52,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,TmpPhase(ped%inputmap(i),:,1)
                     write (52,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,TmpPhase(ped%inputmap(i),:,2)
