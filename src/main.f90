@@ -120,6 +120,8 @@ program AlphaImpute
     allocate(GlobalWorkPhase(0:ped%pedigreeSize,inputParams%nsnpraw,2))
     call InitialiseArrays
 
+
+
     if (inputParams%hmmoption == RUN_HMM_NGS) then
 
 
@@ -240,11 +242,14 @@ program AlphaImpute
 
 endif
 
+
+
 if (inputParams%hmmoption/=RUN_HMM_NGS) then
         if (inputParams%restartOption> OPT_RESTART_PHASING) Then
             print *,"Reading in Phasing information"
             ! Read back in geneprob data
 
+            
             if (inputParams%BypassGeneProb == 0) then
                 if (inputParams%cluster) then
                     call readProbabilitiesFullCluster(GenosProbs,ped%pedigreeSize-ped%nDummys, inputParams%nsnp,inputparams,GpIndex)
@@ -270,10 +275,23 @@ if (inputParams%hmmoption/=RUN_HMM_NGS) then
         endif
         print *, "Phasing Completed"
 
+
+
+
+     block
+            integer :: new,i
+            open (newunit=new,file="." // DASH// "Results" // DASH // "ImputePHasing.txt",status="unknown")
+
+            do i=1, ped%pedigreeSize-ped%nDummys
+                write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputeGenos(ped%inputmap(i),:)
+
+            enddo
+            close(new)
+    end block
+
     ! If we only want to phase data, then skip all the imputation steps
     if (inputParams%PhaseTheDataOnly==0) Then
         call ImputationManagement
-
         block
             integer :: new,i
             open (newunit=new,file="." // DASH// "Results" // DASH // "ImputeGenotypesAFterImputation.txt",status="unknown")
