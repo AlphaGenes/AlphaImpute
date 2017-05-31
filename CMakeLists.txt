@@ -20,6 +20,7 @@ INCLUDE(${CMAKE_MODULE_PATH}/setVersion.cmake)
 add_definitions(-DCLUSTER=${CLUSTER})
 # Define the executable name
 SET(ALPHAIMPUTEEXE AlphaImpute)
+SET(GENEPROBEXE GeneProbForAlphaImpute)
 MESSAGE("Prog name ${ALPHAIMPUTEEXE}")
 # Define the library name
 SET(AHLIB alphahouse)
