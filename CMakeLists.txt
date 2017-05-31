@@ -36,6 +36,8 @@ SET(TESTS ${CMAKE_SOURCE_DIR}/tests)
 SET(SRCALPHAIMPUTE ${SRC}/)
 
 
+set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${BIN})
+
 INCLUDE(${CMAKE_MODULE_PATH}/findDoxygen.cmake)
 # Defined libary source
 
