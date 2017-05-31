@@ -443,27 +443,25 @@ contains
         inputParams => defaultInput
 
         if (HMM == RUN_HMM_NGS) then
-            ! call rmdir("Results")
             ! call rmdir("Miscellaneous")
-            call system(RMDIR // " Results")
+            call system(RMDIR // " " // trim(inputparams%resultFolderPath))
             call system(RMDIR // " Miscellaneous")
-            ! call system("mkdir Results")
             ! call system("mkdir Miscellaneous")
-            call system(MD // " Results")
+            call system(MD // " " // trim(inputParams%resultFolderPath))
             call system(MD // " Miscellaneous")
 
         else
             print*, ""
             call system(RMDIR // " Miscellaneous")
             call system(RMDIR // " Phasing")
-            call system(RMDIR // " Results")
+            call system(RMDIR // " " // trim(inputParams%resultFolderPath))
             call system(RMDIR // " InputFiles")
             call system(RMDIR // " GeneProb")
             call system(RMDIR // " IterateGeneProb")
 
             call system(MD // " Phasing")
             call system(MD // " Miscellaneous")
-            call system(MD // " Results")
+            call system(MD // " " // trim(inputParams%resultFolderPath))
             call system(MD // " InputFiles")
             call system(MD // " GeneProb")
             call system(MD // " IterateGeneProb")

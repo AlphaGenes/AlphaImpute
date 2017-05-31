@@ -671,19 +671,19 @@ contains
         write(cm,'(I7)') inputParams%nSnpRaw !for formatting
         cm = adjustl(cm)
 
-        open (unit=33,file="." // DASH// "Results" // DASH // "ImputePhase.txt",status="unknown")
-        open (unit=34,file="." // DASH// "Results" // DASH // "ImputeGenotypes.txt",status="unknown")
+        open (unit=33,file="." // DASH// trim(inputparams%resultFolderPath)// DASH // "ImputePhase.txt",status="unknown")
+        open (unit=34,file="." // DASH// trim(inputparams%resultFolderPath) // DASH // "ImputeGenotypes.txt",status="unknown")
 
-        open (newunit=new,file="." // DASH// "Results" // DASH // "ImputeGenotypesOrig.txt",status="unknown")
+        open (newunit=new,file="." // DASH// trim(inputparams%resultFolderPath)// DASH // "ImputeGenotypesOrig.txt",status="unknown")
 
-        open (unit=40,file="." // DASH// "Results" // DASH // "ImputePhaseProbabilities.txt",status="unknown")
-        open (unit=41,file="." // DASH// "Results" // DASH // "ImputeGenotypeProbabilities.txt",status="unknown")
-        open (unit=50,file="." // DASH// "Results" // DASH // "ImputationQualityIndividual.txt",status="unknown")
-        open (unit=51,file="." // DASH// "Results" // DASH // "ImputationQualitySnp.txt",status="unknown")
-        open (unit=52,file="." // DASH// "Results" // DASH // "WellPhasedIndividuals.txt",status="unknown")
+        open (unit=40,file="." // DASH// trim(inputparams%resultFolderPath) // DASH // "ImputePhaseProbabilities.txt",status="unknown")
+        open (unit=41,file="." // DASH// trim(inputparams%resultFolderPath)// DASH // "ImputeGenotypeProbabilities.txt",status="unknown")
+        open (unit=50,file="." // DASH// trim(inputparams%resultFolderPath) // DASH // "ImputationQualityIndividual.txt",status="unknown")
+        open (unit=51,file="." // DASH// trim(inputparams%resultFolderPath) // DASH // "ImputationQualitySnp.txt",status="unknown")
+        open (unit=52,file="." // DASH// trim(inputparams%resultFolderPath) // DASH // "WellPhasedIndividuals.txt",status="unknown")
 
-        open (unit=53,file="." // DASH// "Results" // DASH // "ImputePhaseHMM.txt",status="unknown")
-        open (unit=54,file="." // DASH// "Results" // DASH // "ImputeGenotypesHMM.txt",status="unknown")
+        open (unit=53,file="." // DASH// trim(inputparams%resultFolderPath) // DASH // "ImputePhaseHMM.txt",status="unknown")
+        open (unit=54,file="." // DASH// trim(inputparams%resultFolderPath) // DASH // "ImputeGenotypesHMM.txt",status="unknown")
 
 
 
@@ -1103,11 +1103,12 @@ contains
             endif
 
             if (inputParams%hmmoption/=RUN_HMM_NO) then
-                ! call WriteProbabilities("./Results/GenotypeProbabilities.txt", GlobalHmmID, ID, ped%nGenotyped, inputParams%nsnp)
-                call WriteProbabilitiesHMM("./GeneProb/GenotypeProbabilities.txt", ped%genotypeMap, ped%nGenotyped, inputParams%nsnp)
+
+                
+                call WriteProbabilitiesHMM("." // DASH // "GeneProb" // DASH // "GenotypeProbabilities.txt", ped%genotypeMap, ped%nGenotyped, inputParams%nsnp)
             else
                 if (inputParams%bypassgeneprob==0) then
-                    call WriteProbabilities("./Results/GenotypeProbabilities.txt", GenosProbs, ped,ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
+                    call WriteProbabilities("." // DASH // trim(inputParams%resultFolderPath) // DASH // "GenotypeProbabilities.txt", GenosProbs, ped,ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
                 endif
             endif
 
@@ -1214,11 +1215,11 @@ contains
         write(cm,'(I7)') inputParams%nSnpRaw !for formatting
         cm = adjustl(cm)
 
-        open (unit=42, file="Results" // DASH // "RecombinationInformation.txt")
-        open (unit=43, file="Results" // DASH // "RecombinationInformationNarrow.txt")
-        open (unit=44, file="Results" // DASH // "NumberRecombinations.txt")
-        open (unit=45, file="Results" // DASH // "RecombinationInformationR.txt")
-        open (unit=46, file="Results" // DASH // "RecombinationInformationNarrowR.txt")
+        open (unit=42, file=trim(inputparams%resultFolderPath) // DASH // "RecombinationInformation.txt")
+        open (unit=43, file=trim(inputparams%resultFolderPath) // DASH // "RecombinationInformationNarrow.txt")
+        open (unit=44, file=trim(inputparams%resultFolderPath) // DASH // "NumberRecombinations.txt")
+        open (unit=45, file=trim(inputparams%resultFolderPath) // DASH // "RecombinationInformationR.txt")
+        open (unit=46, file=trim(inputparams%resultFolderPath) // DASH // "RecombinationInformationNarrowR.txt")
 
             
 
@@ -1266,7 +1267,7 @@ contains
                 if (inputParams%cluster) then
                     call readGeneProbsCluster(GlobalWorkPhase,ped,GpIndex, inputParams,GeneProbThresh)
                 else
-                    call ReReadGeneProbs(GlobalWorkPhase,ped,"./Results/GenotypeProbabilities.txt", inputParams%nsnp,GeneProbThresh)
+                    call ReReadGeneProbs(GlobalWorkPhase,ped,"." // DASH // trim(inputParams%resultFolderPath) // DASH // "GenotypeProbabilities.txt", inputParams%nsnp,GeneProbThresh)
                 endif
             else
                 call InsteadOfReReadGeneProb
@@ -1501,10 +1502,10 @@ contains
 
         enddo
 
-        open (unit=33,file="Results" // DASH // "ImputePhase.txt",status="unknown")
-        open (unit=34,file="Results" // DASH // "ImputeGenotypes.txt",status="unknown")
-        open (unit=40,file="Results" // DASH // "ImputePhaseProbabilities.txt",status="unknown")
-        open (unit=41,file="Results" // DASH // "ImputeGenotypeProbabilities.txt",status="unknown")
+        open (unit=33,file=trim(inputparams%resultFolderPath) // DASH // "ImputePhase.txt",status="unknown")
+        open (unit=34,file=trim(inputparams%resultFolderPath) // DASH // "ImputeGenotypes.txt",status="unknown")
+        open (unit=40,file=trim(inputparams%resultFolderPath) // DASH // "ImputePhaseProbabilities.txt",status="unknown")
+        open (unit=41,file=trim(inputparams%resultFolderPath) // DASH // "ImputeGenotypeProbabilities.txt",status="unknown")
         block
             integer :: tmpID
             do i=1, ped%pedigreeSize - ped%nDummys
@@ -2388,13 +2389,12 @@ contains
         do i=1,ped%pedigreeSize-ped%nDummys
             do k=2,3
                 TurnOn=1
-                tmpParentId = ped%pedigree(i)%getSireDamNewIDByIndex(k)
+                tmpParentId = ped%pedigree(i)%getSireDamNewIDByIndexNoDummy(k)
                 tmpAnim => ped%pedigree(i)%getSireDamObjectByIndex(k)
                 ! if the proband is heterogametic, and
                 ! considering the heterogametic parent, then avoid!!
                 if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==inputParams%hetGameticStatus).and. ((k-1)==inputParams%hetGameticStatus)) TurnOn=0
                 if (tmpParentId /= 0) then
-                    if (ped%pedigree(tmpParentId)%isDummy) cycle
                     ! if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==inputParams%hetGameticStatus).and. (pedigree%(i)%parent(k-1)%gender==inputParams%hetGameticStatus)) TurnOn=0
                     ! Homogametic individuals and the homogametic parent of a heterogametic individual
                     if (TurnOn==1) then
@@ -2413,38 +2413,53 @@ contains
             enddo
         enddo
 
+
         ! WARNING: This can be refactored
         do i=1,ped%pedigreeSize-ped%nDummys
-          do j=1,inputParams%nsnp
-                if (ped%pedigree(i)%individualGenotype%isMissing(j) .and. .not. ped%pedigree(i)%hasDummyParent() .and. .not. ped%pedigree(i)%Founder) then
-                    tmpFather =>ped%pedigree(i)%getSireDamObjectByIndex(2)
-                    tmpMother =>ped%pedigree(i)%getSireDamObjectByIndex(3)
-                    if ((tmpFather%individualGenotype%getGenotype(j)==0).and.(tmpMother%individualGenotype%getGenotype(j)==0)) then
-                        call ped%pedigree(i)%individualGenotype%setGenotype(j,0)
-                    else if ((tmpFather%individualGenotype%getGenotype(j)==2).and.(tmpMother%individualGenotype%getGenotype(j)==2)) then
-                        call ped%pedigree(i)%individualGenotype%setGenotype(j,2)
-                    endif
-                    if (inputParams%SexOpt==1) then
-                        if (ped%pedigree(i)%gender/=inputParams%hetGameticStatus) then
-                            if ((tmpFather%individualGenotype%getGenotype(j)==0).and.((tmpMother%individualGenotype%getGenotype(j)==2))) call ped%pedigree(i)%individualGenotype%setGenotype(j,1)
-                            if ((tmpFather%individualGenotype%getGenotype(j)==2).and.((tmpMother%individualGenotype%getGenotype(j)==0))) call ped%pedigree(i)%individualGenotype%setGenotype(j,1)
-                        else
-                            ! HomGameticSatus(1 or 2) +1 = sire (2) or dam (3)
-                            if (inputParams%HomGameticStatus == 1) then
-                                if (tmpFather%individualGenotype%getGenotype(j)==0) call ped%pedigree(i)%individualGenotype%setGenotype(j,0)
-                                if (tmpFather%individualGenotype%getGenotype(j)==2) call ped%pedigree(i)%individualGenotype%setGenotype(j,2)
-                            else if (inputParams%HomGameticStatus == 2) then 
-                                if (tmpMother%individualGenotype%getGenotype(j)==0) call ped%pedigree(i)%individualGenotype%setGenotype(j,0)
-                                if (tmpMother%individualGenotype%getGenotype(j)==2) call ped%pedigree(i)%individualGenotype%setGenotype(j,2)
-                            endif
+
+         if(.not. ped%pedigree(i)%hasDummyParent() .and. .not. ped%pedigree(i)%Founder) then
+                tmpFather =>ped%pedigree(i)%getSireDamObjectByIndex(2)
+                tmpMother =>ped%pedigree(i)%getSireDamObjectByIndex(3)
+            do j=1,inputParams%nsnp
+                    if (ped%pedigree(i)%individualGenotype%isMissing(j)) then
+
+                        if ((tmpFather%individualGenotype%getGenotype(j)==0).and.(tmpMother%individualGenotype%getGenotype(j)==0)) then
+                            ! print *,"id: ",ped%pedigree(i)%originalId," snp:",j, " father ", tmpFather%originalId, " mother ",tmpMother%originalId, " newGenos ", 0
+                            call ped%pedigree(i)%individualGenotype%setGenotype(j,0)                            
+                        else if ((tmpFather%individualGenotype%getGenotype(j)==2).and.(tmpMother%individualGenotype%getGenotype(j)==2)) then
+                            ! print *,"id: ",ped%pedigree(i)%originalId," snp:",j," father ", tmpFather%originalId, " mother ",tmpMother%originalId, " newGenos ", 2
+                            call ped%pedigree(i)%individualGenotype%setGenotype(j,2)
                         endif
-                    else
-                        if ((tmpFather%individualGenotype%getGenotype(j)==0).and.(tmpMother%individualGenotype%getGenotype(j)==2)) call ped%pedigree(i)%individualGenotype%setGenotype(j,1)
-                        if ((tmpFather%individualGenotype%getGenotype(j)==2).and.(tmpMother%individualGenotype%getGenotype(j)==0)) call ped%pedigree(i)%individualGenotype%setGenotype(j,1)
+                        if (inputParams%SexOpt==1) then
+                            if (ped%pedigree(i)%gender/=inputParams%hetGameticStatus) then
+                                if ((tmpFather%individualGenotype%getGenotype(j)==0).and.((tmpMother%individualGenotype%getGenotype(j)==2))) call ped%pedigree(i)%individualGenotype%setGenotype(j,1)
+                                if ((tmpFather%individualGenotype%getGenotype(j)==2).and.((tmpMother%individualGenotype%getGenotype(j)==0))) call ped%pedigree(i)%individualGenotype%setGenotype(j,1)
+                            else
+                                ! HomGameticSatus(1 or 2) +1 = sire (2) or dam (3)
+                                if (inputParams%HomGameticStatus == 1) then
+                                    if (tmpFather%individualGenotype%getGenotype(j)==0) call ped%pedigree(i)%individualGenotype%setGenotype(j,0)
+                                    if (tmpFather%individualGenotype%getGenotype(j)==2) call ped%pedigree(i)%individualGenotype%setGenotype(j,2)
+                                else if (inputParams%HomGameticStatus == 2) then 
+                                    if (tmpMother%individualGenotype%getGenotype(j)==0) call ped%pedigree(i)%individualGenotype%setGenotype(j,0)
+                                    if (tmpMother%individualGenotype%getGenotype(j)==2) call ped%pedigree(i)%individualGenotype%setGenotype(j,2)
+                                endif
+                            endif
+                        else
+                            if ((tmpFather%individualGenotype%getGenotype(j)==0).and.(tmpMother%individualGenotype%getGenotype(j)==2)) Then
+                                call ped%pedigree(i)%individualGenotype%setGenotype(j,1)
+                                ! print *,"id: ",ped%pedigree(i)%originalId," snp:",j," father ", tmpFather%originalId, " mother ",tmpMother%originalId, " newGenos ", 1
+                            else if ((tmpFather%individualGenotype%getGenotype(j)==2).and.(tmpMother%individualGenotype%getGenotype(j)==0)) Then
+                                call ped%pedigree(i)%individualGenotype%setGenotype(j,1)
+                                ! print *,"id: ",ped%pedigree(i)%originalId," snp:",j," father ", tmpFather%originalId, " mother ",tmpMother%originalId, " newGenos ", 1
+
+                            endif 
+                        endif
                     endif
-                endif
-            enddo
+                enddo
+            endif
         enddo
+
+        
 
     end subroutine FillInSnp
 
@@ -2457,7 +2472,7 @@ contains
         ! has no parents or its parents have been pruned
 
         use AlphaImputeSpecFileModule
-        use Global
+        use Global, only: ped, DisagreeThreshold,nanisingenderfile
 
         implicit none
 
@@ -2506,8 +2521,11 @@ contains
                                         nBothHomo =  nBothHomo + 1
                                     end if
                                 end if
-                                if ((ped%pedigree(IndId)%individualGenotype%getGenotype(j)==0).and.(ped%pedigree(parId)%individualGenotype%getGenotype(j)==2)) CountDisagree=CountDisagree+1
-                                if ((ped%pedigree(IndId)%individualGenotype%getGenotype(j)==2).and.(ped%pedigree(parId)%individualGenotype%getGenotype(j)==0)) CountDisagree=CountDisagree+1
+                                if ((ped%pedigree(IndId)%individualGenotype%getGenotype(j)==0).and.(ped%pedigree(parId)%individualGenotype%getGenotype(j)==2)) then
+                                    CountDisagree=CountDisagree+1
+                                else if ((ped%pedigree(IndId)%individualGenotype%getGenotype(j)==2).and.(ped%pedigree(parId)%individualGenotype%getGenotype(j)==0)) then
+                                    CountDisagree=CountDisagree+1
+                                endif
                             endif
                         enddo
                         if ((float(CountDisagree)/CountBothGeno)>DisagreeThreshold) then ! Mendelenian error
@@ -2556,15 +2574,6 @@ contains
 
 
         call ped%sortPedigreeAndOverwrite()
-        if (inputParams%SexOpt==1) then
-            do j=1,nAnisInGenderFile
-                tmpId = ped%dictionary%getValue(genderId(j))
-                if (tmpID /= dict_null) then
-                    ped%pedigree(tmpId)%gender=GenderRaw(j)
-                    TurnOn=0
-                endif
-            enddo
-        endif
 
 
     end subroutine CheckParentage

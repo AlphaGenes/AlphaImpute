@@ -32,6 +32,7 @@ module AlphaImputeSpecFileModule
     type AlphaImputeInput
         ! box 1
         character(len=300):: PedigreeFile = "Pedigree.txt",GenotypeFile="Genotypes.txt",TrueGenotypeFile="TrueGenotypes.txt",GenderFile="None",InbredAnimalsFile="None", HapListFile="None"
+        character(len=300) :: resultFolderPath
         integer(kind=1) :: TrueGenos1None0
         logical :: PlinkFormat, VCFFormat
 
@@ -127,6 +128,7 @@ contains
         this%cluster = .false.
         this%iterateMethod = "Off"
         this%PhaseNIterations = 1
+        this%resultFolderPath = "Results"
         open(newunit=unit, file=SpecFile, action="read", status="old")
         IOStatus = 0
         
@@ -553,6 +555,8 @@ contains
                     write(error_unit,*) "WARNING - more processors than are available are specified under parallelprocessors"
                     write(error_unit,*) this%useProcs, " set vs ",OMP_get_num_procs()," available"
                 endif
+            case("resultfolderpath")
+                read(second(1), *) this%resultFolderPath                
             case default
                 write(*,"(A,A)") trim(tag), " is not valid for the AlphaImpute Spec File."
                 cycle

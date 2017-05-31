@@ -129,30 +129,8 @@ write(0,*) 'DEBUG: Mach Finished'
                 endif
 
 
-
-    block
-            integer :: new,i
-            open (newunit=new,file="." // DASH// "Results" // DASH // "During1.txt",status="unknown")
-
-            do i=1, ped%pedigreeSize-ped%nDummys
-                write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputeGenos(ped%inputmap(i),:)
-
-            enddo
-            close(new)
-    end block
-
                 ! Get Genotype information
                 call GeneProbPhase          ! Recover and store information about which and how many alleles/SNPs have been genotyped/phased
-                    block
-            integer :: new,i
-            open (newunit=new,file="." // DASH// "Results" // DASH // "During11.txt",status="unknown")
-
-            do i=1, ped%pedigreeSize-ped%nDummys
-                write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputeGenos(ped%inputmap(i),:)
-
-            enddo
-            close(new)
-    end block
             else
                 allocate(MSTermInfo(ped%pedigreeSize,2))
                 MSTermInfo=0
@@ -171,17 +149,6 @@ write(0,*) 'DEBUG: Mach Finished'
                 ! General imputation procedures
                 call GeneralFillIn
 
-                   block
-            integer :: new,i
-            open (newunit=new,file="." // DASH// "Results" // DASH // "During12.txt",status="unknown")
-
-            do i=1, ped%pedigreeSize-ped%nDummys
-                write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputeGenos(ped%inputmap(i),:)
-
-            enddo
-            close(new)
-    end block                         
-            
 
                 if (inputParams%HMMOption==RUN_HMM_PREPHASE) Then
                     block
@@ -207,17 +174,6 @@ write(0,*) 'DEBUG: Mach Finished'
                     print*, " ","Imputation of base animals completed"
                     
 
-
-                        block
-            integer :: new,i
-            open (newunit=new,file="." // DASH// "Results" // DASH // "During2.txt",status="unknown")
-
-            do i=1, ped%pedigreeSize-ped%nDummys
-                write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputeGenos(ped%inputmap(i),:)
-
-            enddo
-            close(new)
-    end block
                     do loop=1,inputParams%InternalIterations
                         print*, " "
                         print*, "Performing imputation loop",loop
@@ -288,33 +244,11 @@ write(0,*) 'DEBUG: Mach Finished'
                     enddo
 
 
-                        block
-            integer :: new,i
-            open (newunit=new,file="." // DASH// "Results" // DASH // "During3.txt",status="unknown")
-
-            do i=1, ped%pedigreeSize-ped%nDummys
-                write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputeGenos(ped%inputmap(i),:)
-
-            enddo
-            close(new)
-    end block
-
 
                     call ManageWorkLeftRight
 
                 endif
 
-
-                    block
-            integer :: new,i
-            open (newunit=new,file="." // DASH// "Results" // DASH // "During4.txt",status="unknown")
-
-            do i=1, ped%pedigreeSize-ped%nDummys
-                write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputeGenos(ped%inputmap(i),:)
-
-            enddo
-            close(new)
-    end block
 
                 if (inputParams%sexopt==1) then
                     call EnsureHetGametic

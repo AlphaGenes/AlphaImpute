@@ -85,15 +85,26 @@ program AlphaImpute
     if (inputParams%hmmoption /= RUN_HMM_NGS) then
         if (inputParams%restartOption<OPT_RESTART_PHASING) call MakeDirectories(RUN_HMM_NULL)
 
+
+
         call ReadInData
+            allocate(ImputeGenos(0:ped%pedigreeSize,inputParams%nsnpraw))
+    allocate(ImputePhase(0:ped%pedigreeSize,inputParams%nsnpraw,2))
+
         !call cpu_time(start)
         call SnpCallRate
+
+
         call CheckParentage
 
-        if (inputParams%MultiHD/=0) call ClassifyAnimByChips
 
+
+        if (inputParams%MultiHD/=0) then 
+            call ClassifyAnimByChips
+
+        endif
+        
         call FillInSnp
-
         call FillInBasedOnOffspring
         call InternalEdit
 
@@ -105,6 +116,7 @@ program AlphaImpute
             print*, "  ","ERROR: PREPROCESSING OPTION IS NO LONGER AVAILABLE WITH CLUSTER MODE DISABLED"
             stop
         endif
+
     else
 
         call MakeDirectories(RUN_HMM_NGS)
@@ -119,8 +131,6 @@ program AlphaImpute
     allocate(ImputePhase(0:ped%pedigreeSize,inputParams%nsnpraw,2))
     allocate(GlobalWorkPhase(0:ped%pedigreeSize,inputParams%nsnpraw,2))
     call InitialiseArrays
-
-
 
     if (inputParams%hmmoption == RUN_HMM_NGS) then
 
@@ -177,15 +187,15 @@ program AlphaImpute
                         print *, "Calling geneprob"
                         call runGeneProbAlphaImpute(1, inputParams%nsnp, ped, GenosProbs, MAF)
                         print *, "writing probabilities"
-                        call WriteProbabilitiesFull("./GeneProb/GenotypeProbabilities.txt", GenosProbs, ped,ped%pedigreeSize-ped%nDummys)
-                        call WriteProbabilities("./Results/GenotypeProbabilities.txt", GenosProbs, ped,ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
+                        call WriteProbabilitiesFull("." // DASH // "GeneProb" // DASH // "GenotypeProbabilities.txt", GenosProbs, ped,ped%pedigreeSize-ped%nDummys)
+                        call WriteProbabilities("." // DASH // trim(inputParams%resultFolderPath) // DASH // "GenotypeProbabilities.txt", GenosProbs, ped,ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
                     endif
 
                     ! deallocate(GenosProbs)
 
                     if (inputParams%restartOption==OPT_RESTART_GENEPROB) then
-                        call ped%writeOutGenotypes("./GeneProb/individualGenotypes.txt")
-                        call WriteProbabilitiesFull("./GeneProb/GenotypeProbabilities.txt", GenosProbs, ped,ped%pedigreeSize-ped%nDummys)
+                        call ped%writeOutGenotypes("." // DASH // "GeneProb" // DASH // "IndividualGenotypes.txt")
+                        call WriteProbabilitiesFull("." // DASH // "GeneProb" // DASH // "GenotypeProbabilities.txt", GenosProbs, ped,ped%pedigreeSize-ped%nDummys)
                         write(6,*) "Restart option 1 stops program after Geneprobs jobs have finished"
                         stop
                     endif
@@ -229,7 +239,7 @@ program AlphaImpute
                 type(OutputParameters) :: oParams
                 oParams = newOutputParametersImpute()
                 do i=1, apResults%nResults
-                    write(oParams%outputDirectory,'("./Phasing/Phase"i0)') i
+                    write(oParams%outputDirectory,'("."a"Phasing",a,"Phase"i0)') DASH,DASH, i
                     call writeAlphaPhaseResults(APResults%results(i), ped, oParams)
 
                 enddo
@@ -254,7 +264,7 @@ if (inputParams%hmmoption/=RUN_HMM_NGS) then
                 if (inputParams%cluster) then
                     call readProbabilitiesFullCluster(GenosProbs,ped%pedigreeSize-ped%nDummys, inputParams%nsnp,inputparams,GpIndex)
                 else
-                    call readProbabilitiesFull("./GeneProb/GenotypeProbabilities.txt",GenosProbs,ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
+                    call readProbabilitiesFull("." // DASH // "GeneProb" // DASH // "GenotypeProbabilities.txt",GenosProbs,ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
                 endif
             endif
             block 
@@ -268,7 +278,7 @@ if (inputParams%hmmoption/=RUN_HMM_NGS) then
                 ApResults%nResults = size(inputParams%CoreLengths)
                 allocate(ApResults%results(ApResults%nResults))
                 do i=1, ApResults%nResults
-                    write(oParams%outputDirectory,'("./Phasing/Phase"i0)') i
+                     write(oParams%outputDirectory,'("."a"Phasing",a,"Phase"i0)') DASH,DASH, i
                     call readAlphaPhaseResults(ApResults%results(i), oParams, ped)
                 enddo
             end block
@@ -276,32 +286,9 @@ if (inputParams%hmmoption/=RUN_HMM_NGS) then
         print *, "Phasing Completed"
 
 
-
-
-     block
-            integer :: new,i
-            open (newunit=new,file="." // DASH// "Results" // DASH // "ImputePHasing.txt",status="unknown")
-
-            do i=1, ped%pedigreeSize-ped%nDummys
-                write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputeGenos(ped%inputmap(i),:)
-
-            enddo
-            close(new)
-    end block
-
     ! If we only want to phase data, then skip all the imputation steps
     if (inputParams%PhaseTheDataOnly==0) Then
         call ImputationManagement
-        block
-            integer :: new,i
-            open (newunit=new,file="." // DASH// "Results" // DASH // "ImputeGenotypesAFterImputation.txt",status="unknown")
-
-            do i=1, ped%pedigreeSize-ped%nDummys
-                write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputeGenos(ped%inputmap(i),:)
-
-            enddo
-            close(new)
-        end block
         call WriteOutResults
 
 
