@@ -88,8 +88,7 @@ program AlphaImpute
 
 
         call ReadInData
-            allocate(ImputeGenos(0:ped%pedigreeSize,inputParams%nsnpraw))
-    allocate(ImputePhase(0:ped%pedigreeSize,inputParams%nsnpraw,2))
+
 
         !call cpu_time(start)
         call SnpCallRate
