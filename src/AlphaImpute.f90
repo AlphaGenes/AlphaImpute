@@ -740,13 +740,6 @@ contains
         write(0,*) 'DEBUG: Write HMM results [WriteOutResults]'
 #endif
 
-                if (.not. allocated(ImputeGenos)) then
-                    allocate(ImputeGenos(0:ped%pedigreeSize,inputParams%nSnpRaw))
-                end if
-                if (.not. allocated(ImputePhase)) then
-                    allocate(ImputePhase(0:ped%pedigreeSize,inputParams%nSnpraw,2))
-                end if
-
                 if (.not. allocated(ImputeGenosHMM)) then
                     allocate(ImputeGenosHMM(0:ped%pedigreeSize,inputParams%nSnpRaw))
                 end if
@@ -763,8 +756,6 @@ contains
                     allocate(Maf(inputParams%nSnp))           
                 end if
                 
-                ImputeGenos = 9
-                ImputePhase = 9
                 ProbImputeGenos(1:ped%pedigreeSize-ped%nDummys,:) = 9.0
                 ProbImputePhase(1:ped%pedigreeSize-ped%nDummys,:,:) = 9.0
 
@@ -1008,13 +999,13 @@ contains
                 write(0,*) 'DEBUG: Write HMM results [WriteOutResults]'
 #endif
                 ! nSnpIterate=inputParams%nsnp
-                if (allocated(ImputeGenos)) then
-                    deallocate(ImputeGenos)
-                end if
-                allocate(ImputeGenos(0:ped%pedigreeSize-ped%nDummys,inputParams%nSnpRaw))
-                if (allocated(ImputePhase)) then
-                    deallocate(ImputePhase)
-                end if
+                ! if (allocated(ImputeGenos)) then
+                !     deallocate(ImputeGenos)
+                ! end if
+                ! allocate(ImputeGenos(0:ped%pedigreeSize-ped%nDummys,inputParams%nSnpRaw))
+                ! if (allocated(ImputePhase)) then
+                !     deallocate(ImputePhase)
+                ! end if
                 allocate(ImputePhase(0:ped%pedigreeSize-ped%nDummys,inputParams%nSnpRaw,2))
                 if (allocated(ProbImputeGenos)) then
                     deallocate(ProbImputeGenos)
@@ -1054,20 +1045,20 @@ contains
                         n1 = GenosCounts(ped%genotypeMap(i),j,1)                           ! Heterozygous
                         n0 = (inputParams%nRoundsHmm-inputParams%HmmBurnInRound) - n1 - n2        ! Homozygous: 0 case
                         if ((n0>n1).and.(n0>n2)) then
-                            ImputeGenos(ped%genotypeMap(i),j)   = 0
-                            ImputePhase(ped%genotypeMap(i),j,:) = 0
+                            ImputeGenosHMM(ped%genotypeMap(i),j)   = 0
+                            ImputePhaseHMM(ped%genotypeMap(i),j,:) = 0
                         elseif (n1>n2) then
-                            ImputeGenos(ped%genotypeMap(i),j) = 1
+                            ImputeGenosHMM(ped%genotypeMap(i),j) = 1
                             if (ProbImputePhaseHmm(ped%genotypeMap(i),j,1) > ProbImputePhaseHmm(ped%genotypeMap(i),j,2) ) then
-                                ImputePhase(ped%genotypeMap(i),j,1) = 1
-                                ImputePhase(ped%genotypeMap(i),j,2) = 0
+                                ImputePhaseHMM(ped%genotypeMap(i),j,1) = 1
+                                ImputePhaseHMM(ped%genotypeMap(i),j,2) = 0
                             else
-                                ImputePhase(ped%genotypeMap(i),j,1) = 0
-                                ImputePhase(ped%genotypeMap(i),j,2) = 1
+                                ImputePhaseHMM(ped%genotypeMap(i),j,1) = 0
+                                ImputePhaseHMM(ped%genotypeMap(i),j,2) = 1
                             endif
                         else
-                            ImputeGenos(ped%genotypeMap(i),j)   = 2
-                            ImputePhase(ped%genotypeMap(i),j,:) = 1
+                            ImputeGenosHMM(ped%genotypeMap(i),j)   = 2
+                            ImputePhaseHMM(ped%genotypeMap(i),j,:) = 1
                         endif
                     enddo
                 enddo
@@ -1082,13 +1073,13 @@ contains
                     do i=1, ped%nGenotyped
                         ! TODO: Remove this variable when this issue is really fixed
                         hmmID =ped%genotypeMap(i)
-                        write (53,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(hmmID)%originalID,ImputePhase(hmmID,:,1)
-                        write (53,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(hmmID)%originalID,ImputePhase(hmmID,:,2)
-                        write (54,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(hmmID)%originalID,ImputeGenos(hmmID,:)
+                        write (53,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(hmmID)%originalID,ImputePhaseHMM(hmmID,:,1)
+                        write (53,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(hmmID)%originalID,ImputePhaseHMM(hmmID,:,2)
+                        write (54,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(hmmID)%originalID,ImputeGenosHMM(hmmID,:)
 
-                        write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(hmmID)%originalID,ProbImputePhase(hmmID,:,1)
-                        write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(hmmID)%originalID,ProbImputePhase(hmmID,:,2)
-                        write (41,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(hmmID)%originalID,ProbImputeGenos(hmmID,:)
+                        write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(hmmID)%originalID,ProbImputePhaseHMM(hmmID,:,1)
+                        write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(hmmID)%originalID,ProbImputePhaseHMM(hmmID,:,2)
+                        write (41,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(hmmID)%originalID,ProbImputeGenosHMM(hmmID,:)
                     enddo
                 END BLOCK
             else
