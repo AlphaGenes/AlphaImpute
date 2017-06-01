@@ -304,7 +304,8 @@ contains
                     allocate(character(len(second(2))) :: this%phasePath)
 
                     this%phasePath = second(2)
-                    read(second(3),*) this%nPhaseInternal
+                    read(second(3),*) this%nPhaseExternal
+                    this%nPhaseInternal = this%nPhaseExternal*2
                 else if(ToLower(trim(second(1))) == "nophase") then
                     this%noPhasing = 1
                     this%managephaseon1off0 = 0

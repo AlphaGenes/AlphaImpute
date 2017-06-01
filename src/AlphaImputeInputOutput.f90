@@ -471,7 +471,7 @@ contains
                 ! call system ("mkdir GeneProb/" // FolderName)       !here
                 call system(MD // " GeneProb" // DASH // FolderName)
             enddo
-            do i=1,inputParams%nPhaseExternal
+            do i=1,inputParams%nPhaseInternal
                 write (FolderName,'("Phase"i0)')i
                 ! call system ("mkdir Phasing/" // FolderName)
                 call system(MD // " Phasing" // DASH // FolderName)

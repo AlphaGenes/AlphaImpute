@@ -54,13 +54,13 @@ contains
         type(AlphaImputeInput), pointer :: inputParams
         type(AlphaPhaseParameters) :: params
         type(AlphaPhaseResultsContainer), intent(out) :: results
-        integer :: nCoreLengths,i
+        integer :: nCoreLengths,i, coreIndexes
 
         inputParams=> defaultInput
         nCoreLengths = size(inputParams%CoreAndTailLengths)
-        results%nResults = nCoreLengths
-                ! todo we need to handle shifted and non shifted outputs!
-        allocate(results%results(nCoreLengths))
+        results%nResults = nCoreLengths*2
+        
+        allocate(results%results(nCoreLengths*2))
         params = newParameters()
         params%iterateType = inputParams%iterateMethod
         params%iterateNumber = inputParams%PhaseSubsetSize
@@ -76,11 +76,23 @@ contains
       print *, "Running AlphaPhase"
        !$OMP parallel DO schedule(dynamic) &
        !$OMP FIRSTPRIVATE(params)
-        do i= 1, nCoreLengths
-            params%CoreAndTailLength = inputParams%CoreAndTailLengths(i)
-            params%jump = inputParams%CoreAndTailLengths(i)
+        do i= 1, nCoreLengths*2
+            coreIndexes = i
+
+            if ( i > nCoreLengths) Then
+                params%offset = .true.
+                coreIndexes = i - nCoreLengths
+            endif
+
+            
+
+            
+            params%CoreAndTailLength = inputParams%CoreAndTailLengths(coreIndexes)
+            params%jump = inputParams%CoreAndTailLengths(coreIndexes)
             params%numsurrdisagree = 10
             params%useSurrsN = 10
+           
+
             params%PercGenoHaploDisagree = inputParams%GenotypeErrorPhase
             results%results(i) = phaseAndCreateLibraries(ped, params, quiet=.true.)
         enddo
@@ -1539,16 +1551,6 @@ contains
             endif
             allocate(Maf(nSnpIterate))
 
-            if (allocated(ImputeGenos)) then
-                deallocate(ImputeGenos)
-            endif
-            if (allocated(ImputePhase)) then
-                deallocate(ImputePhase)
-            endif
-
-            ! TODO tidy this
-            allocate(ImputeGenos(0:ped%pedigreeSize,inputParams%nSnpraw))
-            allocate(ImputePhase(0:ped%pedigreeSize,inputParams%nSnpRaw,2))
             open (newunit=fileUnit,file="Tmp2345678.txt",status="old")
             do i=1,ped%nGenotyped
                 read (fileUnit,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ImputePhase(ped%genotypeMap(i),:,1)
