@@ -98,7 +98,6 @@ write(0,*) 'DEBUG: Mach Finished'
         else
 
             if (inputParams%sexopt==0) then    
-                print *,"IN IMPUTATION"                
                 if (inputParams%BypassGeneProb==0) then
 
 
@@ -451,6 +450,7 @@ write(0,*) 'DEBUG: Mach Finished'
 
                                         if (ped%pedigree(i)%isDummyBasedOnIndex(e+1)) cycle
                                         parent => ped%pedigree(i)%getSireDamObjectByIndex(e+1)
+                                        ! parent => ped%pedigree(ped%pedigree(i)%getSireDamNewIDByIndex(e+1))
                                         ! Skip if, in the case of sex chromosome, me and my parent are heterogametic
                                         if ((inputParams%sexopt==1).and.(ped%pedigree(i)%gender==inputParams%HetGameticStatus).and.(parent%gender==inputParams%HetGameticStatus)) cycle
                                         ! If not a Base Animal
@@ -994,9 +994,8 @@ write(0,*) 'DEBUG: Mach Finished'
                 use AlphaPhaseResultsModule
                 implicit none
 
-                integer :: e,g,i,j,GamA,GamB,nAnisHD,PosHDInd
+                integer :: e,g,i,j,GamA,GamB,PosHDInd
                 integer :: StartSnp,EndSnp,Gam1,Gam2,AnimalOn(ped%pedigreeSize,2)
-                integer,allocatable,dimension (:) :: PosHD
                 integer,allocatable,dimension (:,:,:) :: PhaseHD
                 integer(kind=8), allocatable, dimension(:,:,:) :: BitPhaseHD, BitImputePhase, MissPhaseHD, MissImputePhase
                 integer(kind=1),allocatable,dimension (:,:,:,:) :: Temp
@@ -1011,19 +1010,17 @@ write(0,*) 'DEBUG: Mach Finished'
 
                 inputParams => defaultInput
                 ! Number of animals that have been HD phased
-                nAnisHD=(count(Setter(:)==1))
 
                 allocate(Temp(ped%pedigreeSize,inputParams%nsnpraw,2,2))
-                allocate(PhaseHD(nAnisHD,inputParams%nsnpraw,2))
-                allocate(PosHD(ped%pedigreeSize))
-                PosHD=0
+                allocate(PhaseHD(ped%nHd,inputParams%nsnpraw,2))
+
                 Temp=0
                 AnimalOn=0
                 ! FOR EACH CORE OF EACH ROUND OF THE LRPHLI
                 do unknownFreeIterator=1,apresults%nResults
                     !    TODOPhase read in phase info here if not red
                     ! Get phase information
-                    ! call ReadPhased(nAnisHD, FileNamePhase, Ped, PhaseHD, PosHD)
+                    ! call ReadPhased(ped%nHd, FileNamePhase, Ped, PhaseHD, PosHD)
 
                     startSnp = 1
                     EndSnp = 0
@@ -1037,9 +1034,9 @@ write(0,*) 'DEBUG: Mach Finished'
                         Section = BitSection((EndSnp - StartSnp + 1), 64)
                         numSections = Section%numSections
 
-                        allocate(BitPhaseHD(nAnisHD,numSections,2))
+                        allocate(BitPhaseHD(ped%nHd,numSections,2))
                         allocate(BitImputePhase(0:ped%pedigreeSize,numSections,2))
-                        allocate(MissPhaseHD(nAnisHD,numSections,2))
+                        allocate(MissPhaseHD(ped%nHd,numSections,2))
                         allocate(MissImputePhase(0:ped%pedigreeSize,numSections,2))
 
                         BitPhaseHD = 0
@@ -1053,7 +1050,7 @@ write(0,*) 'DEBUG: Mach Finished'
 
                             do j = StartSnp, EndSnp
 
-                                do i = 1, nAnisHD
+                                do i = 1, ped%nHd
                                     select case (PhaseHD(i, j, e))
                                     case (1)
                                         ! set that phase information exists
@@ -1083,31 +1080,31 @@ write(0,*) 'DEBUG: Mach Finished'
 
                         !$OMP PARALLEL DO &
                         !$OMP DEFAULT(SHARED) &
-                        !$OMP FIRSTPRIVATE(i,j,e,PosHDInd,Gam1,Gam2,GamA,GamB)
-                        do i=1,ped%pedigreeSize- ped%nDummys
+                        !$OMP FIRSTPRIVATE(i,j,e,Gam1,Gam2,GamA,GamB)
+                        do i=1,ped%nHd
                             ! Look for possible gametes through the Haplotype
                             ! Library constructed during the phasing step
-                            PosHDInd=PosHD(i)         ! Index of the individual in the HD phase information
+                            PosHDInd=ped%hdMap(i)         ! Index of the individual in the HD phase information
 
                             ! If there is one allele phased at least
-                            if ((Section%BitCountAllelesImputed(MissImputePhase(i,:,1)) + &
-                                Section%BitCountAllelesImputed(MissImputePhase(i,:,2))) > 0 .AND. PosHDInd>0) then
+                            if ((Section%BitCountAllelesImputed(MissImputePhase(PosHDInd,:,1)) + &
+                                Section%BitCountAllelesImputed(MissImputePhase(PosHDInd,:,2))) > 0) then
                                 ! If at least one locus is heterozygous
-                                if (.NOT. Section%compareHaplotype(BitImputePhase(i,:,1), BitImputePhase(i,:,2), &
-                                    MissImputePhase(i,:,1), MissImputePhase(i,:,2))) then
+                                if (.NOT. Section%compareHaplotype(BitImputePhase(PosHDInd,:,1), BitImputePhase(PosHDInd,:,2), &
+                                    MissImputePhase(PosHDInd,:,1), MissImputePhase(PosHDInd,:,2))) then
                                     Gam1=0
                                     Gam2=0
                                     do e=1,2
                                         GamA=18
                                         GamB=1
 
-                                        if (.NOT. Section%compareHaplotypeAllowMissing(BitPhaseHD(PosHDInd,:,1), BitImputePhase(i,:,e), &
-                                            MissPhaseHD(PosHDInd,:,1), MissImputePhase(i,:,e), ImputeFromHDPhaseThresh)) then
+                                        if (.NOT. Section%compareHaplotypeAllowMissing(BitPhaseHD(i,:,1), BitImputePhase(PosHDInd,:,e), &
+                                            MissPhaseHD(i,:,1), MissImputePhase(PosHDInd,:,e), ImputeFromHDPhaseThresh)) then
                                             GamA = 0
                                         end if
 
-                                        if (.NOT. Section%compareHaplotypeAllowMissing(BitPhaseHD(PosHDInd,:,2), BitImputePhase(i,:,e), &
-                                            MissPhaseHD(PosHDInd,:,2), MissImputePhase(i,:,e), ImputeFromHDPhaseThresh)) then
+                                        if (.NOT. Section%compareHaplotypeAllowMissing(BitPhaseHD(i,:,2), BitImputePhase(PosHDInd,:,e), &
+                                            MissPhaseHD(i,:,2), MissImputePhase(PosHDInd,:,e), ImputeFromHDPhaseThresh)) then
                                             GamB = 0
                                         end if
 
@@ -1127,20 +1124,20 @@ write(0,*) 'DEBUG: Mach Finished'
 
                                     ! If the paternal and maternal gametes are different
                                     if (Gam1/=Gam2) then
-                                        AnimalOn(i,:)=1             ! Consider this animal in further steps
+                                        AnimalOn(PosHDInd,:)=1             ! Consider this animal in further steps
 
                                         ! Paternal gamete is in the Hap Library
                                         if (Gam1/=0) then
                                             do j=StartSnp,EndSnp
                                                 ! Count the number of alleles coded with 0 and 1
-                                                if (ImputePhase(i,j,1)==9) then
-                                                    if(PhaseHD(PosHDInd,j,Gam1)==0) then
+                                                if (ImputePhase(PosHDInd,j,1)==9) then
+                                                    if(PhaseHD(i,j,Gam1)==0) then
                                                         !$OMP ATOMIC
-                                                        Temp(i,j,1,1)=Temp(i,j,1,1)+1
+                                                        Temp(PosHDInd,j,1,1)=Temp(PosHDInd,j,1,1)+1
                                                     end if
-                                                    if(PhaseHD(PosHDInd,j,Gam1)==1) then
+                                                    if(PhaseHD(i,j,Gam1)==1) then
                                                         !$OMP ATOMIC
-                                                        Temp(i,j,1,2)=Temp(i,j,1,2)+1
+                                                        Temp(PosHDInd,j,1,2)=Temp(PosHDInd,j,1,2)+1
                                                     end if
                                                 endif
                                             enddo
@@ -1150,14 +1147,14 @@ write(0,*) 'DEBUG: Mach Finished'
                                         if (Gam2/=0) then
                                             do j=StartSnp,EndSnp
                                                 ! Count the number of alleles coded with 0 and 1
-                                                if (ImputePhase(i,j,2)==9) then
-                                                    if(PhaseHD(PosHDInd,j,Gam2)==0) then
-                                                        !$OMP ATOMIC
-                                                        Temp(i,j,2,1)=Temp(i,j,2,1)+1
+                                                if (ImputePhase(ped%hdMap(i),j,2)==9) then
+                                                    if(PhaseHD(i,j,Gam2)==0) then
+                                                        !$!OMP ATOMIC
+                                                        Temp(PosHDInd,j,2,1)=Temp(PosHDInd,j,2,1)+1
                                                     end if
-                                                    if(PhaseHD(PosHDInd,j,Gam2)==1) then
+                                                    if(PhaseHD(i,j,Gam2)==1) then
                                                         !$OMP ATOMIC
-                                                        Temp(i,j,2,2)=Temp(i,j,2,2)+1
+                                                        Temp(PosHDInd,j,2,2)=Temp(PosHDInd,j,2,2)+1
                                                     end if
                                                 endif
                                             enddo
@@ -1227,9 +1224,8 @@ write(0,*) 'DEBUG: Mach Finished'
                 use AlphaImputeSpecFileModule
                 implicit none
 
-                integer :: e,g,h,i,j,PedId,GamA,GamB,nAnisHD,PosHDInd
+                integer :: e,g,h,i,j,PedId,GamA,GamB,PosHDInd
                 integer :: StartSnp,EndSnp,AnimalOn(ped%pedigreeSize,2)
-                integer,allocatable,dimension (:) :: PosHD
                 integer,allocatable,dimension (:,:,:) :: PhaseHD
                 integer(kind=1),allocatable,dimension (:,:,:,:) :: Temp
                 integer(kind=8), allocatable, dimension(:,:,:) :: BitPhaseHD, BitImputePhase, MissPhaseHD, MissImputePhase
@@ -1241,12 +1237,10 @@ write(0,*) 'DEBUG: Mach Finished'
 
 
                 inputParams => defaultInput
-                nAnisHD=(count(Setter(:)==1))
+                ped%nHd=(count(Setter(:)==1))
 
                 allocate(Temp(ped%pedigreeSize,inputParams%nsnpraw,2,2))
-                allocate(PhaseHD(nAnisHD,inputParams%nsnpraw,2))
-                allocate(PosHD(ped%pedigreeSize))
-                PosHD=0
+                allocate(PhaseHD(ped%nHd,inputParams%nsnpraw,2))
                 Temp=0
                 AnimalOn=0
 
@@ -1266,9 +1260,9 @@ write(0,*) 'DEBUG: Mach Finished'
                         Section = BitSection((EndSnp - StartSnp + 1), 64)
                         numSections = Section%numSections
 
-                        allocate(BitPhaseHD(nAnisHD,numSections,2))
+                        allocate(BitPhaseHD(ped%nHd,numSections,2))
                         allocate(BitImputePhase(0:ped%pedigreeSize,numSections,2))
-                        allocate(MissPhaseHD(nAnisHD,numSections,2))
+                        allocate(MissPhaseHD(ped%nHd,numSections,2))
                         allocate(MissImputePhase(0:ped%pedigreeSize,numSections,2))
 
                         BitPhaseHD = 0
@@ -1282,7 +1276,7 @@ write(0,*) 'DEBUG: Mach Finished'
 
                             do j = StartSnp, EndSnp
 
-                                do i = 1, nAnisHD
+                                do i = 1, ped%nHd
                                     select case (PhaseHD(i, j, e))
                                     case (1)
                                         BitPhaseHD(i, curSection, e) = ibset(BitPhaseHD(i, curSection, e), curPos)
@@ -1320,6 +1314,9 @@ write(0,*) 'DEBUG: Mach Finished'
                                     PedId=e+1
                                     if (ped%pedigree(i)%isDummyBasedOnIndex(pedId)) cycle !checked this one makes sense
                                     parent => ped%pedigree(i)%getSireDamObjectByIndex(pedId)
+
+                                    ! parent => ped%pedigree((ped%pedigree(i)%getSireDamNewIDByIndex(pedID)))
+
                                     ! Skip if, in the case of sex chromosome, me and my parent are heterogametic
                                     if ((inputParams%sexopt==1).and.(ped%pedigree(i)%gender==inputParams%HetGameticStatus).and.&
                                         (parent%gender == inputParams%HetGameticStatus)) then
@@ -1330,12 +1327,13 @@ write(0,*) 'DEBUG: Mach Finished'
                                     if (associated(parent)) then
                                         ! We look for possible gametes within the haplotypes identified to each of the
                                         ! individual's parents constructed during the phasing step
-                                        PosHDInd=PosHD(parent%id)   ! Index of the parent in the HD phase information
+                                        ! PosHDInd=ped%hdMap(parent%id)   ! Index of the parent in the HD phase information
+                                        posHDInd = ped%hdDIctionary%getValue(parent%originalId)
                                         !TODO check- SHOULD THIS BE INDIVIDUAL id (above) rather than parent ID?
 
                                         ! If there is one allele phased at least
                                         if ((Section%BitCountAllelesImputed(MissImputePhase(i,:,1)) + &
-                                            Section%BitCountAllelesImputed(MissImputePhase(i,:,2))) > 0 .AND. PosHDInd>0) then
+                                            Section%BitCountAllelesImputed(MissImputePhase(i,:,2))) > 0 .AND. PosHDInd/= DICT_NULL) then
 
                                             GamA=1
                                             GamB=1
@@ -1769,10 +1767,9 @@ write(0,*) 'DEBUG: Mach Finished'
 
                 implicit none
 
-                integer :: e,h,i,g,j,MiddleResult,MiddleResultShift,CoreLength,nAnisHD,CountDisagree
+                integer :: e,h,i,g,j,MiddleResult,MiddleResultShift,CoreLength,CountDisagree
                 integer :: CompJump,StartSnp,EndSnp,UptoRightSnp,UptoLeftSnp,UpToCoreA,UpToCoreB,C1,C2,C3,C4,Recmb,CompLength,RL
                 integer :: UpToSnp,StPt,EndPt,FillInSt,FillInEnd
-                integer,allocatable,dimension (:) :: PosHD
                 ! integer,allocatable,dimension (:,:) :: CoreIndexA,CoreIndexB,AnimRecomb
                 integer,allocatable,dimension (:,:) :: AnimRecomb
                 integer,allocatable,dimension (:,:,:,:) :: PhaseHD
@@ -1780,13 +1777,11 @@ write(0,*) 'DEBUG: Mach Finished'
 
 
                 inputParams => defaultInput
-                nAnisHD=(count(Setter(:)==1))
+                ped%nHd=(count(Setter(:)==1))
 
-                allocate(PhaseHD(nAnisHD,inputParams%nsnpraw,2,2))     ! HIGH DENSITY PHASING: PhaseHD = (Animals, SNPs, Haplotypes, Nonshifted and Shifted phasing)
+                allocate(PhaseHD(ped%nHd,inputParams%nsnpraw,2,2))     ! HIGH DENSITY PHASING: PhaseHD = (Animals, SNPs, Haplotypes, Nonshifted and Shifted phasing)
                 allocate(AnimRecomb(ped%pedigreeSize,2))
-                allocate(PosHD(ped%pedigreeSize))
                 AnimRecomb=0
-                PosHD=0
 
                 ! Get core information of number of cores and allocate start and end cores information
 
@@ -1818,9 +1813,10 @@ write(0,*) 'DEBUG: Mach Finished'
                 StartSnp=apresults%results(MiddleResult)%startIndexes(middleCoreIndex)
                 EndSnp=apresults%results(MiddleResult)%endIndexes(middleCoreIndex)
                 CoreLength=(EndSnp-StartSnp)+1
-                do i=1,ped%pedigreeSize- ped%nDummys
+                ! do i=1,ped%pedigreeSize- ped%nDummys
+                do i=1,ped%nHd
                     ! If I have no parents and if I am somebody
-                    if (ped%pedigree(i)%founder .and.(PosHD(i)/=0)) then
+                    if (ped%pedigree(i)%founder .and.(ped%hdMap(i)/=0)) then
                         CountDisagree=0
                         ! Check if the two haplotypes are equal
                         do j=StartSnp,EndSnp
@@ -1832,8 +1828,8 @@ write(0,*) 'DEBUG: Mach Finished'
                         ! If haplotypes are equal
                         ! Impute High Density phase
                         if (CountDisagree==0) then
-                            ImputePhase(i,StartSnp:EndSnp,1)=PhaseHD(PosHD(i),StartSnp:EndSnp,1,1)
-                            ImputePhase(i,StartSnp:EndSnp,2)=PhaseHD(PosHD(i),StartSnp:EndSnp,2,1)
+                            ImputePhase(ped%hdMap(i),StartSnp:EndSnp,1)=PhaseHD(i,StartSnp:EndSnp,1,1)
+                            ImputePhase(ped%hdMap(i),StartSnp:EndSnp,2)=PhaseHD(i,StartSnp:EndSnp,2,1)
                         endif
                     endif
                 enddo
@@ -1896,7 +1892,7 @@ write(0,*) 'DEBUG: Mach Finished'
                             CompLength=abs(UpToSnp-StartSnp)+1
 
                             do i=1,ped%pedigreeSize- ped%nDummys
-                                if (ped%pedigree(i)%founder .and.(PosHD(i)/=0).and.(AnimRecomb(i,RL)==0)) then
+                                if (ped%pedigree(i)%founder .and.(ped%hdMap(i)/=0).and.(AnimRecomb(i,RL)==0)) then
                                     C1=0
                                     C2=0
                                     C3=0
@@ -1904,33 +1900,33 @@ write(0,*) 'DEBUG: Mach Finished'
                                     Recmb=1
                                     do j=StPt,EndPt
                                         ! NOTE: ImputePhase array is a HD phase data because the SNPs are within the MiddleResult core
-                                        if (PhaseHD(PosHD(i),j,1,2)==ImputePhase(i,j,1)) C1=C1+1
-                                        if (PhaseHD(PosHD(i),j,1,2)==ImputePhase(i,j,2)) C2=C2+1
-                                        if (PhaseHD(PosHD(i),j,2,2)==ImputePhase(i,j,1)) C3=C3+1
-                                        if (PhaseHD(PosHD(i),j,2,2)==ImputePhase(i,j,2)) C4=C4+1
+                                        if (PhaseHD(ped%hdMap(i),j,1,2)==ImputePhase(i,j,1)) C1=C1+1
+                                        if (PhaseHD(ped%hdMap(i),j,1,2)==ImputePhase(i,j,2)) C2=C2+1
+                                        if (PhaseHD(ped%hdMap(i),j,2,2)==ImputePhase(i,j,1)) C3=C3+1
+                                        if (PhaseHD(ped%hdMap(i),j,2,2)==ImputePhase(i,j,2)) C4=C4+1
                                     enddo
 
                                     ! If one haplotype is the same as the paternal, impute
                                     if ((CompLength==C1).and.(CompLength/=C3)) then
-                                        ImputePhase(i,FillInSt:FillInEnd,1)=PhaseHD(PosHD(i),FillInSt:FillInEnd,1,2)
+                                        ImputePhase(i,FillInSt:FillInEnd,1)=PhaseHD(ped%hdMap(i),FillInSt:FillInEnd,1,2)
                                         Recmb=0
                                     endif
 
                                     ! If one haplotype is the same as the paternal, impute
                                     if ((CompLength/=C1).and.(CompLength==C3)) then
-                                        ImputePhase(i,FillInSt:FillInEnd,1)=PhaseHD(PosHD(i),FillInSt:FillInEnd,2,2)
+                                        ImputePhase(i,FillInSt:FillInEnd,1)=PhaseHD(ped%hdMap(i),FillInSt:FillInEnd,2,2)
                                         Recmb=0
                                     endif
 
                                     ! If one haplotype is the same as the maternal, impute
                                     if ((CompLength==C2).and.(CompLength/=C4)) then
-                                        ImputePhase(i,FillInSt:FillInEnd,2)=PhaseHD(PosHD(i),FillInSt:FillInEnd,1,2)
+                                        ImputePhase(i,FillInSt:FillInEnd,2)=PhaseHD(ped%hdMap(i),FillInSt:FillInEnd,1,2)
                                         Recmb=0
                                     endif
 
                                     ! If one haplotype is the same as the maternal, impute
                                     if ((CompLength/=C2).and.(CompLength==C4)) then
-                                        ImputePhase(i,FillInSt:FillInEnd,2)=PhaseHD(PosHD(i),FillInSt:FillInEnd,2,2)
+                                        ImputePhase(i,FillInSt:FillInEnd,2)=PhaseHD(ped%hdMap(i),FillInSt:FillInEnd,2,2)
                                         Recmb=0
                                     endif
 
@@ -1971,32 +1967,32 @@ write(0,*) 'DEBUG: Mach Finished'
                             endif
                             CompLength=abs(UpToSnp-StartSnp)+1
                             do i=1,ped%pedigreeSize- ped%nDummys
-                                if ( ped%pedigree(i)%founder .and.(PosHD(i)/=0).and.(AnimRecomb(i,RL)==0)) then
+                                if ( ped%pedigree(i)%founder .and.(ped%hdMap(i)/=0).and.(AnimRecomb(i,RL)==0)) then
                                     C1=0
                                     C2=0
                                     C3=0
                                     C4=0
                                     Recmb=1
                                     do j=StPt,EndPt
-                                        if (PhaseHD(PosHD(i),j,1,1)==ImputePhase(i,j,1)) C1=C1+1
-                                        if (PhaseHD(PosHD(i),j,1,1)==ImputePhase(i,j,2)) C2=C2+1
-                                        if (PhaseHD(PosHD(i),j,2,1)==ImputePhase(i,j,1)) C3=C3+1
-                                        if (PhaseHD(PosHD(i),j,2,1)==ImputePhase(i,j,2)) C4=C4+1
+                                        if (PhaseHD(ped%hdMap(i),j,1,1)==ImputePhase(i,j,1)) C1=C1+1
+                                        if (PhaseHD(ped%hdMap(i),j,1,1)==ImputePhase(i,j,2)) C2=C2+1
+                                        if (PhaseHD(ped%hdMap(i),j,2,1)==ImputePhase(i,j,1)) C3=C3+1
+                                        if (PhaseHD(ped%hdMap(i),j,2,1)==ImputePhase(i,j,2)) C4=C4+1
                                     enddo
                                     if ((CompLength==C1).and.(CompLength/=C3)) then
-                                        ImputePhase(i,FillInSt:FillInEnd,1)=PhaseHD(PosHD(i),FillInSt:FillInEnd,1,1)
+                                        ImputePhase(i,FillInSt:FillInEnd,1)=PhaseHD(ped%hdMap(i),FillInSt:FillInEnd,1,1)
                                         Recmb=0
                                     endif
                                     if ((CompLength/=C1).and.(CompLength==C3)) then
-                                        ImputePhase(i,FillInSt:FillInEnd,1)=PhaseHD(PosHD(i),FillInSt:FillInEnd,2,1)
+                                        ImputePhase(i,FillInSt:FillInEnd,1)=PhaseHD(ped%hdMap(i),FillInSt:FillInEnd,2,1)
                                         Recmb=0
                                     endif
                                     if ((CompLength==C2).and.(CompLength/=C4)) then
-                                        ImputePhase(i,FillInSt:FillInEnd,2)=PhaseHD(PosHD(i),FillInSt:FillInEnd,1,1)
+                                        ImputePhase(i,FillInSt:FillInEnd,2)=PhaseHD(ped%hdMap(i),FillInSt:FillInEnd,1,1)
                                         Recmb=0
                                     endif
                                     if ((CompLength/=C2).and.(CompLength==C4)) then
-                                        ImputePhase(i,FillInSt:FillInEnd,2)=PhaseHD(PosHD(i),FillInSt:FillInEnd,2,1)
+                                        ImputePhase(i,FillInSt:FillInEnd,2)=PhaseHD(ped%hdMap(i),FillInSt:FillInEnd,2,1)
                                         Recmb=0
                                     endif
                                     if (Recmb==1) then

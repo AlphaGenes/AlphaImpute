@@ -305,6 +305,17 @@ program AlphaImpute
 
     if (inputParams%managephaseon1off0==1) then
 
+           block
+                    integer :: new,i
+                    open (newunit=new,file="." // DASH// trim(inputParams%resultFolderPath) // DASH // "beforePhase.txt",status="unknown")
+
+                    do i=1, ped%pedigreeSize-ped%nDummys
+                        write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputeGenos(ped%inputmap(i),:)
+
+                    enddo
+                    close(new)
+                end block
+
         if (inputParams%restartOption<OPT_RESTART_IMPUTATION) Then
             call PhasingManagementNew(APResults)
 

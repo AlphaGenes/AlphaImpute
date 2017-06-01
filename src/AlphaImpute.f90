@@ -59,7 +59,7 @@ contains
         inputParams=> defaultInput
         nCoreLengths = size(inputParams%CoreAndTailLengths)
         results%nResults = nCoreLengths*2
-        
+
         allocate(results%results(nCoreLengths*2))
         params = newParameters()
         params%iterateType = inputParams%iterateMethod
@@ -83,9 +83,6 @@ contains
                 params%offset = .true.
                 coreIndexes = i - nCoreLengths
             endif
-
-            
-
             
             params%CoreAndTailLength = inputParams%CoreAndTailLengths(coreIndexes)
             params%jump = inputParams%CoreAndTailLengths(coreIndexes)
@@ -2383,11 +2380,13 @@ contains
             do k=2,3
                 TurnOn=1
                 tmpParentId = ped%pedigree(i)%getSireDamNewIDByIndexNoDummy(k)
-                tmpAnim => ped%pedigree(i)%getSireDamObjectByIndex(k)
+                ! tmpAnim => ped%pedigree(i)%getSireDamObjectByIndex(k)
+
                 ! if the proband is heterogametic, and
                 ! considering the heterogametic parent, then avoid!!
                 if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==inputParams%hetGameticStatus).and. ((k-1)==inputParams%hetGameticStatus)) TurnOn=0
                 if (tmpParentId /= 0) then
+                    tmpAnim => ped%pedigree(tmpParentId)
                     ! if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==inputParams%hetGameticStatus).and. (pedigree%(i)%parent(k-1)%gender==inputParams%hetGameticStatus)) TurnOn=0
                     ! Homogametic individuals and the homogametic parent of a heterogametic individual
                     if (TurnOn==1) then
@@ -2407,22 +2406,79 @@ contains
         enddo
 
 
+        
+
+         block
+            
+            use imputation
+            integer :: new,i
+
+
+            call InitialiseArrays
+            open (newunit=new,file="." // DASH// trim(inputParams%resultFolderPath) // DASH // "afterStage1.txt",status="unknown")
+
+            do i=1, ped%pedigreeSize-ped%nDummys
+                write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputeGenos(ped%inputmap(i),:)
+
+            enddo
+            close(new)
+    end block
+
+
+    block 
+        integer :: new,i
+        open (newunit=new,file="." // DASH// trim(inputParams%resultFolderPath) // DASH // "anim1Geno.txt",status="unknown")
+        write (new,'(a20)', advance='no')  ped%pedigree(1)%originalId
+        do i=1,inputParams%nsnpRaw
+            write (new,'(20000i2)', advance='no')  ped%pedigree(1)%individualGenotype%getGenotype(i)
+        enddo
+        close(new)
+
+    end block
+
+    block
+        integer :: new
+
+        open (newunit=new,file="." // DASH// trim(inputParams%resultFolderPath) // DASH // "ped.txt",status="unknown")
+        do i=1,ped%pedigreeSize-ped%nDummys
+            write(new, *) ped%pedigree(i)%originalId, ped%pedigree(i)%generation
+
+            
+
+        enddo
+        close(new)
+    end block
+
         ! WARNING: This can be refactored
         do i=1,ped%pedigreeSize-ped%nDummys
 
-         if(.not. ped%pedigree(i)%hasDummyParent() .and. .not. ped%pedigree(i)%Founder) then
-                tmpFather =>ped%pedigree(i)%getSireDamObjectByIndex(2)
-                tmpMother =>ped%pedigree(i)%getSireDamObjectByIndex(3)
-            do j=1,inputParams%nsnp
-                    if (ped%pedigree(i)%individualGenotype%isMissing(j)) then
+         if(.not. ped%pedigree(i)%Founder) then
+                ! tmpFather =>ped%pedigree(i)%getSireDamObjectByIndex(2)
+                ! tmpMother =>ped%pedigree(i)%getSireDamObjectByIndex(3)
 
+                tmpFather =>ped%pedigree(ped%pedigree(i)%getSireDamNewIDByIndex(2))
+                tmpMother =>ped%pedigree(ped%pedigree(i)%getSireDamNewIDByIndex(3))
+
+            do j=1,inputParams%nsnp
+
+                    
+                    if (ped%pedigree(i)%individualGenotype%isMissing(j)) then
+                        ! if (trim(ped%pedigree(i)%originalId) == "3899" .and.  j ==5) then
+                        !     print *, "DEBUG1:",ped%pedigree(i)%individualGenotype%getGenotype(j)
+                        ! endif 
+                        ! if (trim(tmpMother%originalId) == "3899" .and.  j ==5) then
+                        !     print *, "as parent DEBUG1",tmpMother%individualGenotype%getGenotype(j)
+                        ! endif 
                         if ((tmpFather%individualGenotype%getGenotype(j)==0).and.(tmpMother%individualGenotype%getGenotype(j)==0)) then
                             ! print *,"id: ",ped%pedigree(i)%originalId," snp:",j, " father ", tmpFather%originalId, " mother ",tmpMother%originalId, " newGenos ", 0
-                            call ped%pedigree(i)%individualGenotype%setGenotype(j,0)                            
+                            call ped%pedigree(i)%individualGenotype%setGenotype(j,0)
+
+                      
                         else if ((tmpFather%individualGenotype%getGenotype(j)==2).and.(tmpMother%individualGenotype%getGenotype(j)==2)) then
                             ! print *,"id: ",ped%pedigree(i)%originalId," snp:",j," father ", tmpFather%originalId, " mother ",tmpMother%originalId, " newGenos ", 2
                             call ped%pedigree(i)%individualGenotype%setGenotype(j,2)
                         endif
+
                         if (inputParams%SexOpt==1) then
                             if (ped%pedigree(i)%gender/=inputParams%hetGameticStatus) then
                                 if ((tmpFather%individualGenotype%getGenotype(j)==0).and.((tmpMother%individualGenotype%getGenotype(j)==2))) call ped%pedigree(i)%individualGenotype%setGenotype(j,1)
@@ -2451,6 +2507,8 @@ contains
                 enddo
             endif
         enddo
+
+        
 
         
 
