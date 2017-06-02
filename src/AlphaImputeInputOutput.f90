@@ -301,6 +301,7 @@ contains
 
             endif
         enddo
+        rewind(inputParams%prePhasedFileUnit)
 
         print*, " "
         print*, " ",CountPrePhased," valid pre-phased indiviudals in the user specified pre-phased file"

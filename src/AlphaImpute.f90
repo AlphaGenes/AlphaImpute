@@ -1007,15 +1007,7 @@ contains
 #ifdef DEBUG
                 write(0,*) 'DEBUG: Write HMM results [WriteOutResults]'
 #endif
-                ! nSnpIterate=inputParams%nsnp
-                ! if (allocated(ImputeGenos)) then
-                !     deallocate(ImputeGenos)
-                ! end if
-                ! allocate(ImputeGenos(0:ped%pedigreeSize-ped%nDummys,inputParams%nSnpRaw))
-                ! if (allocated(ImputePhase)) then
-                !     deallocate(ImputePhase)
-                ! end if
-                allocate(ImputePhase(0:ped%pedigreeSize-ped%nDummys,inputParams%nSnpRaw,2))
+
                 if (allocated(ProbImputeGenos)) then
                     deallocate(ProbImputeGenos)
                 end if
@@ -1028,6 +1020,14 @@ contains
                     deallocate(Maf)
                 end if
                 allocate(Maf(inputParams%nSnpRaw))
+
+
+                if (.not. allocated(ImputeGenosHMM)) then
+                    allocate(ImputeGenosHMM(0:ped%pedigreeSize,inputParams%nSnpRaw))
+                end if
+                if (.not. allocated(ImputePhaseHMM)) then
+                    allocate(ImputePhaseHMM(0:ped%pedigreeSize,inputParams%nSnpraw,2))
+                end if
                 ProbImputeGenos(1:ped%pedigreeSize-ped%nDummys,:)= 9.0
                 ProbImputePhase(1:ped%pedigreeSize-ped%nDummys,:,:)= 9.0
             
