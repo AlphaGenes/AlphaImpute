@@ -67,13 +67,14 @@ contains
         params%numIter = inputParams%PhaseNIterations
         params%minOverlap = inputparams%minoverlaphaplotype
         params%percGenoHaploDisagree = inputparams%GenotypeErrorPhase*0.01
-
+        params%Offset = .false.
         if (inputparams%minoverlaphaplotype /= 0) then
             params%percMinPresent = 0
         endif
         call omp_set_nested(.true.)
 
-      print *, "Running AlphaPhase"
+        write(6,*) " "
+        write(6,*) " ", "Running AlphaPhase"
        !$OMP parallel DO schedule(dynamic) &
        !$OMP FIRSTPRIVATE(params)
         do i= 1, nCoreLengths*2
@@ -85,17 +86,16 @@ contains
             endif
             
             params%CoreAndTailLength = inputParams%CoreAndTailLengths(coreIndexes)
-            params%jump = inputParams%CoreAndTailLengths(coreIndexes)
+            params%jump = inputParams%CoreLengths(coreIndexes)
             params%numsurrdisagree = 10
             params%useSurrsN = 10
            
 
-            params%PercGenoHaploDisagree = inputParams%GenotypeErrorPhase
             results%results(i) = phaseAndCreateLibraries(ped, params, quiet=.true.)
         enddo
 
         !$omp end parallel do
-        print *, "Finished Running AlphaPhase"
+        write(6,*) " ", "Finished Running AlphaPhase"
 
 
     end subroutine PhasingManagementNew

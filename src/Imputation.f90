@@ -56,6 +56,8 @@ CONTAINS
         inputParams => defaultInput
 
 
+
+        print *," in imputation"
         ! WARNING: Need to discuss this part of code with John. Nonsense going on here!
 
         if (inputParams%HMMOption==RUN_HMM_ONLY) then ! Avoid any adulteration of genotypes with imputation subroutines
@@ -1769,7 +1771,7 @@ write(0,*) 'DEBUG: Mach Finished'
 
                 integer :: e,h,i,g,j,MiddleResult,MiddleResultShift,CoreLength,CountDisagree
                 integer :: CompJump,StartSnp,EndSnp,UptoRightSnp,UptoLeftSnp,UpToCoreA,UpToCoreB,C1,C2,C3,C4,Recmb,CompLength,RL
-                integer :: UpToSnp,StPt,EndPt,FillInSt,FillInEnd
+                integer :: UpToSnp,StPt,EndPt,FillInSt,FillInEnd,hdAnimid
                 ! integer,allocatable,dimension (:,:) :: CoreIndexA,CoreIndexB,AnimRecomb
                 integer,allocatable,dimension (:,:) :: AnimRecomb
                 integer,allocatable,dimension (:,:,:,:) :: PhaseHD
@@ -1777,7 +1779,9 @@ write(0,*) 'DEBUG: Mach Finished'
 
 
                 inputParams => defaultInput
-                ped%nHd=(count(Setter(:)==1))
+
+                ! TODO This should be removed
+                ! ped%nHd=(count(Setter(:)==1))
 
                 allocate(PhaseHD(ped%nHd,inputParams%nsnpraw,2,2))     ! HIGH DENSITY PHASING: PhaseHD = (Animals, SNPs, Haplotypes, Nonshifted and Shifted phasing)
                 allocate(AnimRecomb(ped%pedigreeSize,2))
@@ -1816,11 +1820,11 @@ write(0,*) 'DEBUG: Mach Finished'
                 ! do i=1,ped%pedigreeSize- ped%nDummys
                 do i=1,ped%nHd
                     ! If I have no parents and if I am somebody
-                    if (ped%pedigree(i)%founder .and.(ped%hdMap(i)/=0)) then
+                    if (ped%pedigree(ped%hdMap(i))%founder) then
                         CountDisagree=0
                         ! Check if the two haplotypes are equal
                         do j=StartSnp,EndSnp
-                            if (ImputePhase(i,j,1)/=ImputePhase(i,j,2)) then
+                            if (ImputePhase(ped%hdMap(i),j,1)/=ImputePhase(ped%hdMap(i),j,2)) then
                                 CountDisagree=CountDisagree+1
                                 if (CountDisagree>1) exit
                             endif
@@ -1864,7 +1868,6 @@ write(0,*) 'DEBUG: Mach Finished'
                         h=h+1
                         if (mod(h,2)/=0) then                   ! If ODD
                             do g=1,apresults%results(MiddleResultShift)%nCores
-
                                 if ((apresults%results(MiddleResultShift)%startIndexes(g)<UptoSnp)&
                                     .AND.(apresults%results(MiddleResultShift)%endIndexes(g)>UptoSnp)) then
 
@@ -1892,7 +1895,8 @@ write(0,*) 'DEBUG: Mach Finished'
                             CompLength=abs(UpToSnp-StartSnp)+1
 
                             do i=1,ped%pedigreeSize- ped%nDummys
-                                if (ped%pedigree(i)%founder .and.(ped%hdMap(i)/=0).and.(AnimRecomb(i,RL)==0)) then
+                                hdAnimid = ped%hdDIctionary%getValue(ped%pedigree(i)%originalId)
+                                if (ped%pedigree(i)%founder .and.(hdAnimid/=0).and.(AnimRecomb(i,RL)==0)) then
                                     C1=0
                                     C2=0
                                     C3=0
@@ -1900,33 +1904,35 @@ write(0,*) 'DEBUG: Mach Finished'
                                     Recmb=1
                                     do j=StPt,EndPt
                                         ! NOTE: ImputePhase array is a HD phase data because the SNPs are within the MiddleResult core
-                                        if (PhaseHD(ped%hdMap(i),j,1,2)==ImputePhase(i,j,1)) C1=C1+1
-                                        if (PhaseHD(ped%hdMap(i),j,1,2)==ImputePhase(i,j,2)) C2=C2+1
-                                        if (PhaseHD(ped%hdMap(i),j,2,2)==ImputePhase(i,j,1)) C3=C3+1
-                                        if (PhaseHD(ped%hdMap(i),j,2,2)==ImputePhase(i,j,2)) C4=C4+1
+
+                                        
+                                        if (PhaseHD(hdAnimid,j,1,2)==ImputePhase(i,j,1)) C1=C1+1
+                                        if (PhaseHD(hdAnimid,j,1,2)==ImputePhase(i,j,2)) C2=C2+1
+                                        if (PhaseHD(hdAnimid,j,2,2)==ImputePhase(i,j,1)) C3=C3+1
+                                        if (PhaseHD(hdAnimid,j,2,2)==ImputePhase(i,j,2)) C4=C4+1
                                     enddo
 
                                     ! If one haplotype is the same as the paternal, impute
                                     if ((CompLength==C1).and.(CompLength/=C3)) then
-                                        ImputePhase(i,FillInSt:FillInEnd,1)=PhaseHD(ped%hdMap(i),FillInSt:FillInEnd,1,2)
+                                        ImputePhase(i,FillInSt:FillInEnd,1)=PhaseHD(hdAnimid,FillInSt:FillInEnd,1,2)
                                         Recmb=0
                                     endif
 
                                     ! If one haplotype is the same as the paternal, impute
                                     if ((CompLength/=C1).and.(CompLength==C3)) then
-                                        ImputePhase(i,FillInSt:FillInEnd,1)=PhaseHD(ped%hdMap(i),FillInSt:FillInEnd,2,2)
+                                        ImputePhase(i,FillInSt:FillInEnd,1)=PhaseHD(hdAnimid,FillInSt:FillInEnd,2,2)
                                         Recmb=0
                                     endif
 
                                     ! If one haplotype is the same as the maternal, impute
                                     if ((CompLength==C2).and.(CompLength/=C4)) then
-                                        ImputePhase(i,FillInSt:FillInEnd,2)=PhaseHD(ped%hdMap(i),FillInSt:FillInEnd,1,2)
+                                        ImputePhase(i,FillInSt:FillInEnd,2)=PhaseHD(hdAnimid,FillInSt:FillInEnd,1,2)
                                         Recmb=0
                                     endif
 
                                     ! If one haplotype is the same as the maternal, impute
                                     if ((CompLength/=C2).and.(CompLength==C4)) then
-                                        ImputePhase(i,FillInSt:FillInEnd,2)=PhaseHD(ped%hdMap(i),FillInSt:FillInEnd,2,2)
+                                        ImputePhase(i,FillInSt:FillInEnd,2)=PhaseHD(hdAnimid,FillInSt:FillInEnd,2,2)
                                         Recmb=0
                                     endif
 
@@ -1967,32 +1973,34 @@ write(0,*) 'DEBUG: Mach Finished'
                             endif
                             CompLength=abs(UpToSnp-StartSnp)+1
                             do i=1,ped%pedigreeSize- ped%nDummys
-                                if ( ped%pedigree(i)%founder .and.(ped%hdMap(i)/=0).and.(AnimRecomb(i,RL)==0)) then
+
+                                hdAnimid = ped%hdDIctionary%getValue(ped%pedigree(i)%originalID)
+                                if ( ped%pedigree(i)%founder .and.(hdAnimid/= DICT_NULL).and.(AnimRecomb(i,RL)==0)) then
                                     C1=0
                                     C2=0
                                     C3=0
                                     C4=0
                                     Recmb=1
                                     do j=StPt,EndPt
-                                        if (PhaseHD(ped%hdMap(i),j,1,1)==ImputePhase(i,j,1)) C1=C1+1
-                                        if (PhaseHD(ped%hdMap(i),j,1,1)==ImputePhase(i,j,2)) C2=C2+1
-                                        if (PhaseHD(ped%hdMap(i),j,2,1)==ImputePhase(i,j,1)) C3=C3+1
-                                        if (PhaseHD(ped%hdMap(i),j,2,1)==ImputePhase(i,j,2)) C4=C4+1
+                                        if (PhaseHD(hdAnimid,j,1,1)==ImputePhase(i,j,1)) C1=C1+1
+                                        if (PhaseHD(hdAnimid,j,1,1)==ImputePhase(i,j,2)) C2=C2+1
+                                        if (PhaseHD(hdAnimid,j,2,1)==ImputePhase(i,j,1)) C3=C3+1
+                                        if (PhaseHD(hdAnimid,j,2,1)==ImputePhase(i,j,2)) C4=C4+1
                                     enddo
                                     if ((CompLength==C1).and.(CompLength/=C3)) then
-                                        ImputePhase(i,FillInSt:FillInEnd,1)=PhaseHD(ped%hdMap(i),FillInSt:FillInEnd,1,1)
+                                        ImputePhase(i,FillInSt:FillInEnd,1)=PhaseHD(hdAnimid,FillInSt:FillInEnd,1,1)
                                         Recmb=0
                                     endif
                                     if ((CompLength/=C1).and.(CompLength==C3)) then
-                                        ImputePhase(i,FillInSt:FillInEnd,1)=PhaseHD(ped%hdMap(i),FillInSt:FillInEnd,2,1)
+                                        ImputePhase(i,FillInSt:FillInEnd,1)=PhaseHD(hdAnimid,FillInSt:FillInEnd,2,1)
                                         Recmb=0
                                     endif
                                     if ((CompLength==C2).and.(CompLength/=C4)) then
-                                        ImputePhase(i,FillInSt:FillInEnd,2)=PhaseHD(ped%hdMap(i),FillInSt:FillInEnd,1,1)
+                                        ImputePhase(i,FillInSt:FillInEnd,2)=PhaseHD(hdAnimid,FillInSt:FillInEnd,1,1)
                                         Recmb=0
                                     endif
                                     if ((CompLength/=C2).and.(CompLength==C4)) then
-                                        ImputePhase(i,FillInSt:FillInEnd,2)=PhaseHD(ped%hdMap(i),FillInSt:FillInEnd,2,1)
+                                        ImputePhase(i,FillInSt:FillInEnd,2)=PhaseHD(hdAnimid,FillInSt:FillInEnd,2,1)
                                         Recmb=0
                                     endif
                                     if (Recmb==1) then
@@ -2110,8 +2118,8 @@ write(0,*) 'DEBUG: Mach Finished'
                 integer :: i,j
 
                 inputParams => defaultInput
-                do j=1,inputParams%nsnp
-                    do i=1,ped%pedigreeSize- ped%nDummys
+                do i=1,ped%pedigreeSize- ped%nDummys
+                    do j=1,inputParams%nsnp         
                         if (ImputeGenos(i,j)==9) then
                             if ((ImputePhase(i,j,1)/=9).and.(ImputePhase(i,j,2)/=9)) then
                                 ImputeGenos(i,j)=sum(ImputePhase(i,j,:))
@@ -2135,8 +2143,8 @@ write(0,*) 'DEBUG: Mach Finished'
 
                 integer :: i,j
 
-                do j=1,inputParams%nsnp
-                    do i=1,ped%pedigreeSize- ped%nDummys
+                do i=1,ped%pedigreeSize- ped%nDummys
+                    do j=1,inputParams%nsnp 
                         if (ImputeGenos(i,j)/=9) then
                             if ((ImputePhase(i,j,1)/=9).and.(ImputePhase(i,j,2)==9)) then
                                 ImputePhase(i,j,2)=ImputeGenos(i,j)-ImputePhase(i,j,1)
