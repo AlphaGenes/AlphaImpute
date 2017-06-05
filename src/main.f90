@@ -365,7 +365,7 @@ if (inputParams%hmmoption/=RUN_HMM_NGS) then
                 integer :: i
                 type(OutputParameters) :: oParams
                 oParams = newOutputParametersImpute()
-                ApResults%nResults = size(inputParams%CoreLengths*2)
+                ApResults%nResults = size(inputParams%CoreLengths)*2
                 allocate(ApResults%results(ApResults%nResults))
                 do i=1, ApResults%nResults
                      write(oParams%outputDirectory,'("."a"Phasing",a,"Phase"i0)') DASH,DASH, i

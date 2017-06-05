@@ -45,7 +45,7 @@ module Global
 
     integer(kind=1),allocatable,dimension (:) :: SnpIncluded,GenderRaw
     integer(kind=1),allocatable,dimension (:,:) :: TmpGenos,MSTermInfo
-    integer(kind=1),allocatable,dimension (:,:) :: ImputeGenos,SireDam
+    integer(kind=1),allocatable,dimension (:,:) :: ImputeGenos
     integer(kind=1),allocatable,dimension (:,:,:) :: ImputePhase,TmpPhase,GlobalWorkPhase
     integer,allocatable :: Setter(:),GpIndex(:,:),GlobalTmpCountInf(:,:)
     integer,allocatable :: GlobalHmmID(:)

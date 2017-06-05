@@ -55,6 +55,9 @@ contains
         type(AlphaPhaseParameters) :: params
         type(AlphaPhaseResultsContainer), intent(out) :: results
         integer :: nCoreLengths,i, coreIndexes
+        
+        integer :: new
+        character(len=10) :: itStr
 
         inputParams=> defaultInput
         nCoreLengths = size(inputParams%CoreAndTailLengths)
@@ -67,7 +70,8 @@ contains
         params%numIter = inputParams%PhaseNIterations
         params%minOverlap = inputparams%minoverlaphaplotype
         params%percGenoHaploDisagree = inputparams%GenotypeErrorPhase*0.01
-        params%Offset = .false.
+        params%Offset = .true.
+        
         if (inputparams%minoverlaphaplotype /= 0) then
             params%percMinPresent = 0
         endif
@@ -80,14 +84,14 @@ contains
         do i= 1, nCoreLengths*2
             coreIndexes = i
 
-            if ( i > nCoreLengths) Then
-                params%offset = .true.
+            if (i > nCoreLengths) Then
+                params%offset = .false.
                 coreIndexes = i - nCoreLengths
             endif
             
             params%CoreAndTailLength = inputParams%CoreAndTailLengths(coreIndexes)
             params%jump = inputParams%CoreLengths(coreIndexes)
-            params%numsurrdisagree = 10
+            params%numsurrdisagree = 1
             params%useSurrsN = 10
            
 

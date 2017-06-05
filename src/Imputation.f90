@@ -154,7 +154,21 @@ write(0,*) 'DEBUG: Mach Finished'
                     if (inputParams%sexopt==1) call EnsureHetGametic
 
                     ! General imputation procedures
-                    call GeneralFillIn
+                    call GeneralFillInInit
+
+
+                                block
+                    integer :: new,i
+                    open (newunit=new,file="." // DASH// trim(inputParams%resultFolderPath) // DASH // "generalPhase.txt",status="unknown")
+
+                    do i=1, ped%pedigreeSize-ped%nDummys
+                        write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputePhase(ped%inputmap(i),:,1)
+                        write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputePhase(ped%inputmap(i),:,2)
+                    
+
+                    enddo
+                    close(new)
+                end block
 
                     block
                         integer :: new,i
@@ -1769,7 +1783,7 @@ write(0,*) 'DEBUG: Mach Finished'
 
                 implicit none
 
-                integer :: e,h,i,g,j,MiddleResult,MiddleResultShift,CoreLength,CountDisagree
+                integer :: e,h,i,g,j,MiddleResult,MiddleResultNoShift,CoreLength,CountDisagree
                 integer :: CompJump,StartSnp,EndSnp,UptoRightSnp,UptoLeftSnp,UpToCoreA,UpToCoreB,C1,C2,C3,C4,Recmb,CompLength,RL
                 integer :: UpToSnp,StPt,EndPt,FillInSt,FillInEnd,hdAnimid
                 ! integer,allocatable,dimension (:,:) :: CoreIndexA,CoreIndexB,AnimRecomb
@@ -1795,13 +1809,48 @@ write(0,*) 'DEBUG: Mach Finished'
 
                 CompJump = apresults%nResults/2
                 if (CompJump==0) CompJump=1
-                MiddleResultShift = MiddleResult + CompJump
+                MiddleResultNoShift = MiddleResult + CompJump
 
                 ! Get HIGH DENSITY phase information of this phasing step
                 ! WARNING: If I only want to phase base animals, why do I need to read the whole file?
 
+                print *, "middle result", middleResult
+                print *, "middle result ns:", MiddleResultNoShift
                 phaseHD(:,:,:,1) = apResults%results(MiddleResult)%getFullPhaseIntArray()
-                phaseHD(:,:,:,2) = apResults%results(MiddleResultShift)%getFullPhaseIntArray()
+                phaseHD(:,:,:,2) = apResults%results(MiddleResultNoShift)%getFullPhaseIntArray()
+
+
+
+
+
+
+block
+    integer :: new,i
+    
+    open (newunit=new,file="." // DASH// "Results" // DASH // "baseHDNormal.txt",status="unknown")
+
+    do i=1, ped%nHd
+        write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%hdMap(i))%originalID,PhaseHD(i,:,1,1)
+        write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%hdMap(i))%originalID,PhaseHD(i,:,2,1)
+    
+
+    enddo
+    close(new)
+end block
+
+
+
+block
+    integer :: new,i
+    
+    open (newunit=new,file="." // DASH// "Results" // DASH // "baseHDShift.txt",status="unknown")
+
+    do i=1, ped%nHd
+        write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%hdMap(i))%originalID,PhaseHD(i,:,1,2)
+        write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%hdMap(i))%originalID,PhaseHD(i,:,2,2)
+    enddo
+    close(new)
+end block
                 ! Impute HD phase of the middle core of the middle phasing step
                 ! WARNING: Why to impute phase information only for this case?
                 middleCoreIndex = apresults%results(MiddleResult)%nCores/2
@@ -1809,7 +1858,7 @@ write(0,*) 'DEBUG: Mach Finished'
                     middleCoreIndex = 1
                 endif
 
-                middleCoreIndexShift = apresults%results(MiddleResultShift)%nCores/2
+                middleCoreIndexShift = apresults%results(MiddleResultNoShift)%nCores/2
                 if (middleCoreIndexShift == 0) then
                     middleCoreIndexShift = 1
                 endif
@@ -1862,30 +1911,30 @@ write(0,*) 'DEBUG: Mach Finished'
                     h=0
                     do ! Repeat till all SNPs have been covered
                         if ((apResults%results(MiddleResult)%nCores==1)&
-                            .AND.(apResults%results(MiddleResultShift)%nCores==1)) exit ! If the number of cores is 1, EXIT
+                            .AND.(apResults%results(MiddleResultNoShift)%nCores==1)) exit ! If the number of cores is 1, EXIT
                         ! This will force the subroutine to finish
                         ! since it will be exit from both DO statements
                         h=h+1
                         if (mod(h,2)/=0) then                   ! If ODD
-                            do g=1,apresults%results(MiddleResultShift)%nCores
-                                if ((apresults%results(MiddleResultShift)%startIndexes(g)<UptoSnp)&
-                                    .AND.(apresults%results(MiddleResultShift)%endIndexes(g)>UptoSnp)) then
+                            do g=1,apresults%results(MiddleResultNoShift)%nCores
+                                if ((apresults%results(MiddleResultNoShift)%startIndexes(g)<UptoSnp)&
+                                    .AND.(apresults%results(MiddleResultNoShift)%endIndexes(g)>UptoSnp)) then
 
                                     UpToCoreB=g
                                     exit
                                 endif
                             enddo
                             if (e==1) then
-                                StartSnp=apresults%results(MiddleResultShift)%startIndexes(UpToCoreB)
-                                EndSnp=apresults%results(MiddleResultShift)%endIndexes(UpToCoreB)
+                                StartSnp=apresults%results(MiddleResultNoShift)%startIndexes(UpToCoreB)
+                                EndSnp=apresults%results(MiddleResultNoShift)%endIndexes(UpToCoreB)
 
                                 StPt=StartSnp
                                 EndPt=UpToSnp
                                 FillInSt=StartSnp
                                 FillInEnd=EndSnp
                             else
-                                StartSnp=apresults%results(MiddleResultShift)%endIndexes(UpToCoreB)
-                                EndSnp=apresults%results(MiddleResultShift)%startIndexes(UpToCoreB)
+                                StartSnp=apresults%results(MiddleResultNoShift)%endIndexes(UpToCoreB)
+                                EndSnp=apresults%results(MiddleResultNoShift)%startIndexes(UpToCoreB)
                                 StPt=UpToSnp
                                 EndPt=StartSnp
                                 FillInSt=EndSnp
@@ -1943,9 +1992,9 @@ write(0,*) 'DEBUG: Mach Finished'
                                 endif
                             enddo
                             if (RL == 1) then
-                                UpToSnp=apresults%results(MiddleResultShift)%startIndexes(UpToCoreB)
+                                UpToSnp=apresults%results(MiddleResultNoShift)%startIndexes(UpToCoreB)
                             else
-                                UpToSnp=apresults%results(MiddleResultShift)%endIndexes(UpToCoreB)
+                                UpToSnp=apresults%results(MiddleResultNoShift)%endIndexes(UpToCoreB)
                             end if
                         else                                    ! if EVEN
                             do g=1,apresults%results(MiddleResult)%nCores
@@ -2029,6 +2078,21 @@ write(0,*) 'DEBUG: Mach Finished'
                 ImputePhase(0,:,:)=9
                 ImputeGenos(0,:)=9
 
+
+                      block
+                    integer :: new,i
+                    open (newunit=new,file="." // DASH// trim(inputParams%resultFolderPath) // DASH // "basePhase.txt",status="unknown")
+
+                    do i=1, ped%pedigreeSize-ped%nDummys
+                        write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputePhase(ped%inputmap(i),:,1)
+                        write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputePhase(ped%inputmap(i),:,2)
+                    
+
+                    enddo
+                    close(new)
+                end block
+                
+
             END SUBROUTINE BaseAnimalFillIn
 
             !#############################################################################################################################################################################################################################
@@ -2078,6 +2142,136 @@ write(0,*) 'DEBUG: Mach Finished'
 
             end subroutine GeneralFillIn
 
+
+
+            subroutine GeneralFillInInit
+                ! This function implements the four Minor sub-steps explained in Hickey et al. (2012; Appendix A)
+                use Global
+                use informationModule
+
+                implicit none
+
+                call ParentHomoFill                     ! Minor sub-step 1. Parent Homozygous fill in
+                    block
+                                integer :: new,i
+                                open (newunit=new,file="." // DASH// trim(inputParams%resultFolderPath) // DASH // "general1.txt",status="unknown")
+
+                                do i=1, ped%pedigreeSize-ped%nDummys
+                                    write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputeGenos(ped%inputmap(i),:)
+
+                                enddo
+                                close(new)
+                            end block
+
+
+
+                                                            block
+                    integer :: new,i
+                    open (newunit=new,file="." // DASH// trim(inputParams%resultFolderPath) // DASH // "general41.txt",status="unknown")
+
+                    do i=1, ped%pedigreeSize-ped%nDummys
+                        write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputePhase(ped%inputmap(i),:,1)
+                        write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputePhase(ped%inputmap(i),:,2)
+                    
+
+                    enddo
+                    close(new)
+                end block
+
+                call PhaseComplement                    ! Minor sub-step 2. Phase Complement
+
+
+
+
+                                                block
+                    integer :: new,i
+                    open (newunit=new,file="." // DASH// trim(inputParams%resultFolderPath) // DASH // "general42.txt",status="unknown")
+
+                    do i=1, ped%pedigreeSize-ped%nDummys
+                        write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputePhase(ped%inputmap(i),:,1)
+                        write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputePhase(ped%inputmap(i),:,2)
+                    
+
+                    enddo
+                    close(new)
+                end block
+
+
+
+
+                    block
+                                integer :: new,i
+                                open (newunit=new,file="." // DASH// trim(inputParams%resultFolderPath) // DASH // "general2.txt",status="unknown")
+
+                                do i=1, ped%pedigreeSize-ped%nDummys
+                                    write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputeGenos(ped%inputmap(i),:)
+
+                                enddo
+                                close(new)
+                            end block
+                call ImputeParentByProgenyComplement    ! Minor sub-step 3. Impute Parents from Progeny Complement
+
+
+
+
+                                                block
+                    integer :: new,i
+                    open (newunit=new,file="." // DASH// trim(inputParams%resultFolderPath) // DASH // "general43.txt",status="unknown")
+
+                    do i=1, ped%pedigreeSize-ped%nDummys
+                        write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputePhase(ped%inputmap(i),:,1)
+                        write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputePhase(ped%inputmap(i),:,2)
+                    
+
+                    enddo
+                    close(new)
+                end block
+
+
+                    block
+                                integer :: new,i
+                                open (newunit=new,file="." // DASH// trim(inputParams%resultFolderPath) // DASH // "general3.txt",status="unknown")
+
+                                do i=1, ped%pedigreeSize-ped%nDummys
+                                    write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputeGenos(ped%inputmap(i),:)
+
+                                enddo
+                                close(new)
+                            end block
+                call MakeGenotype                       ! Minor sub-step 4. Make Genotype
+
+
+                                                block
+                    integer :: new,i
+                    open (newunit=new,file="." // DASH// trim(inputParams%resultFolderPath) // DASH // "general44.txt",status="unknown")
+
+                    do i=1, ped%pedigreeSize-ped%nDummys
+                        write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputePhase(ped%inputmap(i),:,1)
+                        write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputePhase(ped%inputmap(i),:,2)
+                    
+
+                    enddo
+                    close(new)
+                end block
+
+
+                    block
+                                integer :: new,i
+                                open (newunit=new,file="." // DASH// trim(inputParams%resultFolderPath) // DASH // "general4.txt",status="unknown")
+
+                                do i=1, ped%pedigreeSize-ped%nDummys
+                                    write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputeGenos(ped%inputmap(i),:)
+
+                                enddo
+                                close(new)
+                            end block
+                ! if (TestVersion==1) call CurrentYield
+                ! if (TestVersion==1) call Checker
+
+                ImputePhase(0,:,:)=9
+                ImputeGenos(0,:)=9
+
+            end subroutine GeneralFillInInit
             !#############################################################################################################################################################################################################################
 
             SUBROUTINE EnsureHetGametic
@@ -2146,12 +2340,15 @@ write(0,*) 'DEBUG: Mach Finished'
                 do i=1,ped%pedigreeSize- ped%nDummys
                     do j=1,inputParams%nsnp 
                         if (ImputeGenos(i,j)/=9) then
-                            if ((ImputePhase(i,j,1)/=9).and.(ImputePhase(i,j,2)==9)) then
-                                ImputePhase(i,j,2)=ImputeGenos(i,j)-ImputePhase(i,j,1)
-                            end if
-                            if ((ImputePhase(i,j,2)/=9).and.(ImputePhase(i,j,1)==9)) then
-                                ImputePhase(i,j,1)=ImputeGenos(i,j)-ImputePhase(i,j,2)
-                            end if
+                            ! TODO check if this is  correct
+                            if (imputeGenos(i,j) /= 0) then
+                                if ((ImputePhase(i,j,1)/=9).and.(ImputePhase(i,j,2)==9)) then
+                                    ImputePhase(i,j,2)=ImputeGenos(i,j)-ImputePhase(i,j,1)
+                                end if
+                                if ((ImputePhase(i,j,2)/=9).and.(ImputePhase(i,j,1)==9)) then
+                                    ImputePhase(i,j,1)=ImputeGenos(i,j)-ImputePhase(i,j,2)
+                                end if
+                            endif
                         endif
                     enddo
                 enddo
@@ -2217,114 +2414,137 @@ write(0,*) 'DEBUG: Mach Finished'
                 use individualModule
                 implicit none
 
-                integer :: i,j,k,l,Count1,Count0
+                integer :: i,k,l,Count1,Count0
+                integer :: sireDam
                 type(individual), pointer :: tmpChild
                 inputParams => defaultInput
+                ! TODO maybe change this to pedigreeSIze? 
                 do i=1,ped%pedigreeSize- ped%nDummys
-                    do j=1,2
-                        if (ped%pedigree(i)%nOffs /= 0) then       ! check that animal i,j is a sire or a dam
+                    if (ped%pedigree(i)%nOffs /= 0) then       ! check that animal i,j is a sire or a dam
 
-                            ! Sex chromosome
-                            if (inputParams%sexopt==1) then
-                                do k=1,inputParams%nsnp
+                        ! Sex chromosome
+                        if (inputParams%sexopt==1) then
+                            do k=1,inputParams%nsnp
 
-                                    ! Mat gamete missing -> fill if offspring suggest heterozygous
-                                    ! WARNING: This was comment the other way around in the original version of the code
-                                    if ((ImputePhase(i,k,1)/=9).and.(ImputePhase(i,k,2)==9)) then
-                                        Count1=0
-                                        Count0=0
-                                        if (ImputePhase(i,k,1)==1) Count1=1
-                                        if (ImputePhase(i,k,1)==0) Count0=1
+                                ! Mat gamete missing -> fill if offspring suggest heterozygous
+                                ! WARNING: This was comment the other way around in the original version of the code
+                                if ((ImputePhase(i,k,1)/=9).and.(ImputePhase(i,k,2)==9)) then
+                                    Count1=0
+                                    Count0=0
+                                    if (ImputePhase(i,k,1)==1) Count1=1
+                                    if (ImputePhase(i,k,1)==0) Count0=1
 
-                                        ! Look for the individual progeny and count their phase
-                                        do l=1,ped%pedigree(i)%nOffs
+                                    ! Look for the individual progeny and count their phase
+                                    do l=1,ped%pedigree(i)%nOffs
 
-                                            tmpChild => ped%pedigree(i)%offsprings(l)%p
-                                            ! This is the only difference with the inputParams%sexopt=0 code below. Duplicating
-                                            ! the code can be avoided by including the IF statement here instead than
-                                            ! outside the SNPs loop.
-                                            if ((ped%pedigree(i)%gender ==inputParams%HetGameticStatus).and.(tmpChild%gender==inputParams%HetGameticStatus)) cycle
-                                            if (ImputePhase(tmpChild%id,k,j)==0) Count0=Count0+1
-                                            if (ImputePhase(tmpChild%id,k,j)==1) Count1=Count1+1
 
-                                            if ((Count0>0).and.(Count1>0)) then                 !Consider increasing the number of offspring required to all ow for genotyping error
-                                                if (ImputePhase(i,k,1)==0) ImputePhase(i,k,2)=1
-                                                if (ImputePhase(i,k,1)==1) ImputePhase(i,k,2)=0
-                                                exit
+                                        
+                                        tmpChild => ped%pedigree(i)%offsprings(l)%p
+
+                                        ! This is the only difference with the inputParams%sexopt=0 code below. Duplicating
+                                        ! the code can be avoided by including the IF statement here instead than
+                                        ! outside the SNPs loop.
+                                        if ((ped%pedigree(i)%gender ==inputParams%HetGameticStatus).and.(tmpChild%gender==inputParams%HetGameticStatus)) cycle
+                                        if (tmpChild%sirePointer == ped%pedigree(i)) then
+                                                sireDam = 1
+                                            else
+                                                sireDam = 2
                                             endif
-                                        enddo
-                                    endif
+                                        if (ImputePhase(tmpChild%id,k,sireDam)==0) Count0=Count0+1
+                                        if (ImputePhase(tmpChild%id,k,sireDam)==1) Count1=Count1+1
 
-                                    !Pat gamete missing -> fill if offspring suggest heterozygous
-                                    ! WARNING: This comment was the other way around in the original version of the code
-                                    if ((ImputePhase(i,k,2)/=9).and.(ImputePhase(i,k,1)==9)) then
-                                        Count1=0
-                                        Count0=0
-                                        if (ImputePhase(i,k,2)==1) Count1=1
-                                        if (ImputePhase(i,k,2)==0) Count0=1
+                                        if ((Count0>0).and.(Count1>0)) then                 !Consider increasing the number of offspring required to all ow for genotyping error
+                                            if (ImputePhase(i,k,1)==0) ImputePhase(i,k,2)=1
+                                            if (ImputePhase(i,k,1)==1) ImputePhase(i,k,2)=0
+                                        endif
+                                    enddo
+                                endif
 
-                                        do l=1,ped%pedigree(i)%nOffs
+                                !Pat gamete missing -> fill if offspring suggest heterozygous
+                                ! WARNING: This comment was the other way around in the original version of the code
+                                if ((ImputePhase(i,k,2)/=9).and.(ImputePhase(i,k,1)==9)) then
+                                    Count1=0
+                                    Count0=0
+                                    if (ImputePhase(i,k,2)==1) Count1=1
+                                    if (ImputePhase(i,k,2)==0) Count0=1
 
-                                            tmpChild => ped%pedigree(i)%offsprings(l)%p
+                                    do l=1,ped%pedigree(i)%nOffs
 
-                                            ! This is the only difference with the inputParams%sexopt=0 code below. Duplicating
-                                            ! the code can be avoided by including the IF statement here instead than
-                                            ! outside the SNPs loop.
-                                            if ((ped%pedigree(i)%gender ==inputParams%HetGameticStatus).and.(tmpChild%gender==inputParams%HetGameticStatus)) cycle
-                                            if (ImputePhase(tmpChild%id,k,j)==0) Count0=Count0+1
-                                            if (ImputePhase(tmpChild%id,k,j)==1) Count1=Count1+1
-
-                                            if ((Count0>0).and.(Count1>0)) then                 !Consider increasing the number of offspring required to all ow for genotyping error
-                                                if (ImputePhase(i,k,2)==0) ImputePhase(i,k,1)=1
-                                                if (ImputePhase(i,k,2)==1) ImputePhase(i,k,1)=0
-                                                exit
+                                        tmpChild => ped%pedigree(i)%offsprings(l)%p
+                                        ! This is the only difference with the inputParams%sexopt=0 code below. Duplicating
+                                        ! the code can be avoided by including the IF statement here instead than
+                                        ! outside the SNPs loop.
+                                        if ((ped%pedigree(i)%gender ==inputParams%HetGameticStatus).and.(tmpChild%gender==inputParams%HetGameticStatus)) cycle
+                                        
+                                          if (tmpChild%sirePointer == ped%pedigree(i)) then
+                                                sireDam = 1
+                                            else
+                                                sireDam = 2
                                             endif
-                                        enddo
-                                    endif
-                                enddo
+                                        
+                                        if (ImputePhase(tmpChild%id,k,sireDam)==0) Count0=Count0+1
+                                        if (ImputePhase(tmpChild%id,k,sireDam)==1) Count1=Count1+1
 
-                                ! Generic chromosome
-                            else
-                                do k=1,inputParams%nsnp
-                                    if ((ImputePhase(i,k,1)/=9).and.(ImputePhase(i,k,2)==9)) then               !Pat gamete missing fill if offspring suggest heterozygous
-                                        Count1=0
-                                        Count0=0
-                                        if (ImputePhase(i,k,1)==1) Count1=1
-                                        if (ImputePhase(i,k,1)==0) Count0=1
+                                        if ((Count0>0).and.(Count1>0)) then                 !Consider increasing the number of offspring required to all ow for genotyping error
+                                            if (ImputePhase(i,k,2)==0) ImputePhase(i,k,1)=1
+                                            if (ImputePhase(i,k,2)==1) ImputePhase(i,k,1)=0
+                                        endif
+                                    enddo
+                                endif
+                            enddo
 
-                                        do l=1,ped%pedigree(i)%nOffs
-                                            tmpChild => ped%pedigree(i)%offsprings(l)%p
-                                            if (ImputePhase(tmpChild%id,k,j)==0) Count0=Count0+1
-                                            if (ImputePhase(tmpChild%id,k,j)==1) Count1=Count1+1
-                                            if ((Count0>0).and.(Count1>0)) then                 !Consider increasing the number of offspring required to all ow for genotyping error
-                                                if (ImputePhase(i,k,1)==0) ImputePhase(i,k,2)=1
-                                                if (ImputePhase(i,k,1)==1) ImputePhase(i,k,2)=0
-                                                exit
+                            ! Generic chromosome
+                        else
+                            do k=1,inputParams%nsnp
+                                if ((ImputePhase(i,k,1)/=9).and.(ImputePhase(i,k,2)==9)) then               !Pat gamete missing fill if offspring suggest heterozygous
+                                    Count1=0
+                                    Count0=0
+                                    if (ImputePhase(i,k,1)==1) Count1=1
+                                    if (ImputePhase(i,k,1)==0) Count0=1
+                                    
+
+                                    do l=1,ped%pedigree(i)%nOffs
+                                        tmpChild => ped%pedigree(i)%offsprings(l)%p
+
+                                          if (tmpChild%sirePointer == ped%pedigree(i)) then
+                                                sireDam = 1
+                                            else
+                                                sireDam = 2
                                             endif
-                                        enddo
-                                    endif
 
-                                    if ((ImputePhase(i,k,2)/=9).and.(ImputePhase(i,k,1)==9)) then               !Mat gamete missing fill if offspring suggest heterozygous
-                                        Count1=0
-                                        Count0=0
-                                        if (ImputePhase(i,k,2)==1) Count1=1
-                                        if (ImputePhase(i,k,2)==0) Count0=1
-                                        do l=1,ped%pedigree(i)%nOffs
-                                            tmpChild => ped%pedigree(i)%offsprings(l)%p
-                                            if (ImputePhase(Tmpchild%id,k,j)==0) Count0=Count0+1
-                                            if (ImputePhase(Tmpchild%id,k,j)==1) Count1=Count1+1
+                                        if (ImputePhase(tmpChild%id,k,sireDam)==0) Count0=Count0+1
+                                        if (ImputePhase(tmpChild%id,k,sireDam)==1) Count1=Count1+1
+                                        if ((Count0>0).and.(Count1>0)) then                 !Consider increasing the number of offspring required to all ow for genotyping error
+                                            if (ImputePhase(i,k,1)==0) ImputePhase(i,k,2)=1
+                                            if (ImputePhase(i,k,1)==1) ImputePhase(i,k,2)=0
+                                        endif
+                                    enddo
+                                endif
+                                ! TODO change to else 
+                                if ((ImputePhase(i,k,2)/=9).and.(ImputePhase(i,k,1)==9)) then               !Mat gamete missing fill if offspring suggest heterozygous
+                                    Count1=0
+                                    Count0=0
+                                    if (ImputePhase(i,k,2)==1) Count1=1
+                                    if (ImputePhase(i,k,2)==0) Count0=1
+                                    do l=1,ped%pedigree(i)%nOffs
+                                        tmpChild => ped%pedigree(i)%offsprings(l)%p
+                                        if (tmpChild%sirePointer == ped%pedigree(i)) then
+                                            sireDam = 1
+                                        else
+                                            sireDam = 2
+                                        endif
+                                        if (ImputePhase(Tmpchild%id,k,sireDam)==0) Count0=Count0+1
+                                        if (ImputePhase(Tmpchild%id,k,sireDam)==1) Count1=Count1+1
 
-                                            if ((Count0>0).and.(Count1>0)) then                 !Consider increasing the number of offspring required to all ow for genotyping error
-                                                if (ImputePhase(i,k,2)==0) ImputePhase(i,k,1)=1
-                                                if (ImputePhase(i,k,2)==1) ImputePhase(i,k,1)=0
-                                                exit
-                                            endif
-                                        enddo
-                                    endif
-                                enddo
-                            endif
+                                        if ((Count0>0).and.(Count1>0)) then                 !Consider increasing the number of offspring required to all ow for genotyping error
+                                            if (ImputePhase(i,k,2)==0) ImputePhase(i,k,1)=1
+                                            if (ImputePhase(i,k,2)==1) ImputePhase(i,k,1)=0
+                                        endif
+                                    enddo
+                                endif
+                            enddo
                         endif
-                    enddo
+                    endif
                 enddo
 
                 ImputePhase(0,:,:)=9
