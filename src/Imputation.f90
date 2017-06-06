@@ -1124,15 +1124,25 @@ write(0,*) 'DEBUG: Mach Finished'
                                             GamB = 0
                                         end if
 
-                                        ! Paternal haplotype is strictly my paternal haplotype from the Hap Library
-                                        if ((e==1).and.(GamA==1).and.(GamB==0)) Gam1=1
-                                        ! Paternal haplotype is strictly my maternal haplotype from the Hap Library
-                                        if ((e==1).and.(GamA==0).and.(GamB==1)) Gam1=2
-                                        ! Maternal haplotype is strictly my paternal haplotype from the Hap Library
-                                        if ((e==2).and.(GamA==1).and.(GamB==0)) Gam2=1
-                                        ! Maternal haplotype is strictly my maternal haplotype from the Hap Library
-                                        if ((e==2).and.(GamA==0).and.(GamB==1)) Gam2=2
 
+                                        if (e == 1) Then
+                                            ! Paternal haplotype is strictly my paternal haplotype from the Hap Library
+                                            if (GamA==1 .and. GamB == 0) Then
+                                                gam1 = 1
+                                                ! Paternal haplotype is strictly my maternal haplotype from the Hap Library
+                                            else if (GamA==0 .and. GamB == 1) Then
+                                                gam2 = 0
+                                            endif
+
+                                        else if (e==2) Then
+                                        ! Maternal haplotype is strictly my paternal haplotype from the Hap Library
+                                            if (GamA==1 .and. GamB == 0) Then
+                                                gam2 = 1
+                                        ! Maternal haplotype is strictly my maternal haplotype from the Hap Library
+                                            else if (GamA == 0 .and. GamB == 1) Then
+                                                gam2 = 2
+                                            endif
+                                        endif
                                         ! Basically the important thing is that haplotype e is present in the Haplotype
                                         ! library. It is not important which haplotype it is, whether the paternal or the
                                         ! maternal.
@@ -1343,9 +1353,8 @@ write(0,*) 'DEBUG: Mach Finished'
                                     if (associated(parent)) then
                                         ! We look for possible gametes within the haplotypes identified to each of the
                                         ! individual's parents constructed during the phasing step
-                                        ! PosHDInd=ped%hdMap(parent%id)   ! Index of the parent in the HD phase information
+                                     ! Index of the parent in the HD phase information
                                         posHDInd = ped%hdDIctionary%getValue(parent%originalId)
-                                        !TODO check- SHOULD THIS BE INDIVIDUAL id (above) rather than parent ID?
 
                                         ! If there is one allele phased at least
                                         if ((Section%BitCountAllelesImputed(MissImputePhase(i,:,1)) + &
@@ -1562,19 +1571,7 @@ write(0,*) 'DEBUG: Mach Finished'
                         do z=1, apResults%results(h)%libraries(g)%size
                             hapLib(z,:) = apResults%results(h)%libraries(g)%newStore(z)%toIntegerArray()
                         enddo
-                        ! ! TODO phase read in haplib (unformatted!!!)
-                        ! open (newunit=UHLib,file=trim(FileName),status="old",form="unformatted")
 
-                        ! ! Read the number of Hap in the library and how long they are
-                        ! read(UHLib) nHap,CoreLength
-
-                        ! if(nHap/=0) then
-                        !     ! Allocate the Haplo,alLibrary and read it from file
-                        !     allocate(HapLib(nHap, CoreLength))
-                        !     do l=1,nHap
-                        !         read(UHLib) HapLib(l,:)
-                        !     enddo
-                        !     close (UHLib)
 
                         allocate(BitHapLib(nHap,numSections))
                         allocate(MissHapLib(nHap,numSections))
@@ -1945,7 +1942,7 @@ end block
 
                             do i=1,ped%pedigreeSize- ped%nDummys
                                 hdAnimid = ped%hdDIctionary%getValue(ped%pedigree(i)%originalId)
-                                if (ped%pedigree(i)%founder .and.(hdAnimid/=0).and.(AnimRecomb(i,RL)==0)) then
+                                if (ped%pedigree(i)%founder .and.(hdAnimid/=DICT_NULL).and.(AnimRecomb(i,RL)==0)) then
                                     C1=0
                                     C2=0
                                     C3=0
@@ -2341,14 +2338,20 @@ end block
                     do j=1,inputParams%nsnp 
                         if (ImputeGenos(i,j)/=9) then
                             ! TODO check if this is  correct
-                            if (imputeGenos(i,j) /= 0) then
+                            ! if (imputeGenos(i,j) /= 0) then
                                 if ((ImputePhase(i,j,1)/=9).and.(ImputePhase(i,j,2)==9)) then
                                     ImputePhase(i,j,2)=ImputeGenos(i,j)-ImputePhase(i,j,1)
+                                    if (ImputePhase(i,j,2) < 0) Then
+                                        ImputePhase(i,j,2) = 0
+                                    endif
                                 end if
                                 if ((ImputePhase(i,j,2)/=9).and.(ImputePhase(i,j,1)==9)) then
                                     ImputePhase(i,j,1)=ImputeGenos(i,j)-ImputePhase(i,j,2)
+                                    if (ImputePhase(i,j,2) < 0) Then
+                                        ImputePhase(i,j,2) = 0
+                                    endif
                                 end if
-                            endif
+                            ! endif
                         endif
                     enddo
                 enddo
@@ -2519,9 +2522,9 @@ end block
                                             if (ImputePhase(i,k,1)==1) ImputePhase(i,k,2)=0
                                         endif
                                     enddo
-                                endif
+                                
                                 ! TODO change to else 
-                                if ((ImputePhase(i,k,2)/=9).and.(ImputePhase(i,k,1)==9)) then               !Mat gamete missing fill if offspring suggest heterozygous
+                                else if ((ImputePhase(i,k,2)/=9).and.(ImputePhase(i,k,1)==9)) then               !Mat gamete missing fill if offspring suggest heterozygous
                                     Count1=0
                                     Count0=0
                                     if (ImputePhase(i,k,2)==1) Count1=1
