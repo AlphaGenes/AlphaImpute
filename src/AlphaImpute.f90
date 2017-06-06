@@ -2410,48 +2410,6 @@ contains
         enddo
 
 
-        
-
-         block
-            
-            use imputation
-            integer :: new,i
-
-
-            call InitialiseArrays
-            open (newunit=new,file="." // DASH// trim(inputParams%resultFolderPath) // DASH // "afterStage1.txt",status="unknown")
-
-            do i=1, ped%pedigreeSize-ped%nDummys
-                write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputeGenos(ped%inputmap(i),:)
-
-            enddo
-            close(new)
-    end block
-
-
-    block 
-        integer :: new,i
-        open (newunit=new,file="." // DASH// trim(inputParams%resultFolderPath) // DASH // "anim1Geno.txt",status="unknown")
-        write (new,'(a20)', advance='no')  ped%pedigree(1)%originalId
-        do i=1,inputParams%nsnpRaw
-            write (new,'(20000i2)', advance='no')  ped%pedigree(1)%individualGenotype%getGenotype(i)
-        enddo
-        close(new)
-
-    end block
-
-    block
-        integer :: new
-
-        open (newunit=new,file="." // DASH// trim(inputParams%resultFolderPath) // DASH // "ped.txt",status="unknown")
-        do i=1,ped%pedigreeSize-ped%nDummys
-            write(new, *) ped%pedigree(i)%originalId, ped%pedigree(i)%generation
-
-            
-
-        enddo
-        close(new)
-    end block
 
         ! WARNING: This can be refactored
         do i=1,ped%pedigreeSize-ped%nDummys

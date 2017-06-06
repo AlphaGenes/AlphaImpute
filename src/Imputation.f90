@@ -124,29 +124,8 @@ write(0,*) 'DEBUG: Mach Finished'
 
             if (inputParams%NoPhasing==1) then
                 ! Major sub-step 2 as explained in Hickey et al. (2012; Appendix A)
-                block
-                    integer :: new,i
-                    open (newunit=new,file="." // DASH// trim(inputParams%resultFolderPath) // DASH // "beforeBase.txt",status="unknown")
-
-                    do i=1, ped%pedigreeSize-ped%nDummys
-                        write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputeGenos(ped%inputmap(i),:)
-
-                    enddo
-                    close(new)
-                end block
-
                 call BaseAnimalFillIn
 
-                block
-                    integer :: new,i
-                    open (newunit=new,file="." // DASH// trim(inputParams%resultFolderPath) // DASH // "afterBase.txt",status="unknown")
-
-                    do i=1, ped%pedigreeSize-ped%nDummys
-                        write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputeGenos(ped%inputmap(i),:)
-
-                    enddo
-                    close(new)
-                end block
                     ! Impute phase whenever a pre-phase file exists
                     if (inputParams%PrePhased==1) call ReadInPrePhasedData
 
@@ -155,32 +134,6 @@ write(0,*) 'DEBUG: Mach Finished'
 
                     ! General imputation procedures
                     call GeneralFillInInit
-
-
-                                block
-                    integer :: new,i
-                    open (newunit=new,file="." // DASH// trim(inputParams%resultFolderPath) // DASH // "generalPhase.txt",status="unknown")
-
-                    do i=1, ped%pedigreeSize-ped%nDummys
-                        write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputePhase(ped%inputmap(i),:,1)
-                        write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputePhase(ped%inputmap(i),:,2)
-                    
-
-                    enddo
-                    close(new)
-                end block
-
-                    block
-                        integer :: new,i
-                        open (newunit=new,file="." // DASH// trim(inputParams%resultFolderPath) // DASH // "afterGeneral.txt",status="unknown")
-
-                        do i=1, ped%pedigreeSize-ped%nDummys
-                            write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputeGenos(ped%inputmap(i),:)
-
-                        enddo
-                        close(new)
-
-                    end block
                         if (inputParams%HMMOption==RUN_HMM_PREPHASE) Then
                             block
                                 use AlphaHmmInMod
@@ -204,17 +157,6 @@ write(0,*) 'DEBUG: Mach Finished'
                             print*, " "
                             print*, " ","Imputation of base animals completed"
 
-
-                            block
-                                integer :: new,i
-                                open (newunit=new,file="." // DASH// trim(inputParams%resultFolderPath) // DASH // "beforeLoop.txt",status="unknown")
-
-                                do i=1, ped%pedigreeSize-ped%nDummys
-                                    write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputeGenos(ped%inputmap(i),:)
-
-                                enddo
-                                close(new)
-                            end block
                             do loop=1,inputParams%InternalIterations
                                 print*, " "
                                 print*, "Performing imputation loop",loop
@@ -227,10 +169,14 @@ write(0,*) 'DEBUG: Mach Finished'
                                 print*, " "
                                 print*, " ","Parent of origin assigmnent of high density haplotypes completed"
 
+                                
                                 call ParentPhaseElimination             ! Major Sub-Step 4 (Hickey et al., 2012; Appendix A)
+                                
                                 if (inputParams%sexopt==1) then
                                     call EnsureHetGametic
                                 end if
+
+
                                 call GeneralFillIn
                                 call RestrictedWorkLeftRight            ! Major Sub-Step 8 (Hickey et al., 2012; Appendix A)
                                 if (inputParams%sexopt==1) then
@@ -242,6 +188,7 @@ write(0,*) 'DEBUG: Mach Finished'
                                 print*, " ","Imputation from high-density parents completed at: ",trim(timeOut)
 
                                 call ImputeFromHDLibrary                ! Major Sub-Step 3 (Hickey et al., 2012; Appendix A)
+
                                 if (inputParams%sexopt==1) then
                                     call EnsureHetGametic
                                 end if
@@ -256,6 +203,7 @@ write(0,*) 'DEBUG: Mach Finished'
                                 print*, " ","Haplotype library imputation completed at: ",trim(timeOut)
 
                                 call InternalParentPhaseElim            ! Major Sub-Step 7 (Hickey et al., 2012; Appendix A)
+
                                 if (inputParams%sexopt==1) then
                                     call EnsureHetGametic
                                 end if
@@ -269,7 +217,7 @@ write(0,*) 'DEBUG: Mach Finished'
                                 CALL DATE_AND_TIME(time=timeOut)
                                 print*, " ","Internal imputation from parents haplotype completed at: ",timeOut
 
-                                call InternalHapLibImputation           ! Major Sub-Step 6 (Hickey et al., 2012; Appendix A)
+                                call InternalHapLibImputationOld           ! Major Sub-Step 6 (Hickey et al., 2012; Appendix A)
                                 if (inputParams%sexopt==1) then
                                     call EnsureHetGametic
                                 end if
@@ -282,19 +230,10 @@ write(0,*) 'DEBUG: Mach Finished'
                                 print*, " "
                                 CALL DATE_AND_TIME(time=timeOut)
                                 print*, " ","Internal haplotype library imputation completed at: ", timeOut
-                            enddo
+                                                      
+                             enddo
 
 
-                            block
-                                integer :: new,i
-                                open (newunit=new,file="." // DASH// trim(inputParams%resultFolderPath) // DASH // "afterLoop.txt",status="unknown")
-
-                                do i=1, ped%pedigreeSize-ped%nDummys
-                                    write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputeGenos(ped%inputmap(i),:)
-
-                                enddo
-                                close(new)
-                            end block
                             call ManageWorkLeftRight
 
                         endif
@@ -457,6 +396,7 @@ write(0,*) 'DEBUG: Mach Finished'
                             block
                                 use individualModule
                                 type(individual), pointer :: parent
+
                                 !$OMP PARALLEL DO &
                                 !$OMP DEFAULT(SHARED) &
                                 !$OMP PRIVATE(i,j,e,CompPhase,GamA,GamB,curPos,curSection, parent)
@@ -531,12 +471,15 @@ write(0,*) 'DEBUG: Mach Finished'
                                                     do j=CoreStart,CoreEnd
 
                                                         if ( BTEST(MissImputePhase(curSection,e,i), curPos) == .TRUE. ) then
+
+                                                        ! if phase is 0
                                                             if ( BTEST(BitImputePhase(curSection,2,parent%id), curPos) == .FALSE. .AND. &
                                                                 BTEST(MissImputePhase(curSection,2,parent%id), curPos) == .FALSE. ) then
                                                                 !$OMP ATOMIC
                                                                 Temp(i,j,e,1)=Temp(i,j,e,1)+1
                                                             end if
 
+                                                            ! if  phase is 1
                                                             if ( BTEST(BitImputePhase(curSection,2, parent%id), curPos) == .TRUE. ) then
                                                                 !$OMP ATOMIC
                                                                 Temp(i,j,e,2)=Temp(i,j,e,2)+1
@@ -567,37 +510,38 @@ write(0,*) 'DEBUG: Mach Finished'
 
                 ! If all alleles across the cores and across the internal phasing steps have been phased the same way, impute
                 ! The individual has two haplotypes
+            do i=1,ped%pedigreeSize- ped%nDummys
                 do e=1,2
-                    do j=1,inputParams%nsnp
-                        do i=1,ped%pedigreeSize- ped%nDummys
-                            if (AnimalOn(i,e)==1) then
-                                if ((inputParams%sexopt==0).or.(ped%pedigree(i)%gender==inputParams%HomGameticStatus)) then
-
-                                    if (ImputePhase(i,j,e)==9) then
-                                        if ((Temp(i,j,e,1)>inputParams%nAgreeInternalHapLibElim).and.(Temp(i,j,e,2)==0)) ImputePhase(i,j,e)=0
-                                        if ((Temp(i,j,e,1)==0).and.(Temp(i,j,e,2)>inputParams%nAgreeInternalHapLibElim)) ImputePhase(i,j,e)=1
-                                    endif
-                                end if
-                            endif
-                        end do
-                    enddo
-                enddo
+                
+                    if (AnimalOn(i,e)==1) then
+                        if ((inputParams%sexopt==0).or.(ped%pedigree(i)%gender==inputParams%HomGameticStatus)) then
+                            do j=1,inputParams%nsnp
+                                if (ImputePhase(i,j,e)==9) then
+                                    if ((Temp(i,j,e,1)>inputParams%nAgreeInternalHapLibElim).and.(Temp(i,j,e,2)==0)) ImputePhase(i,j,e)=0
+                                    if ((Temp(i,j,e,1)==0).and.(Temp(i,j,e,2)>inputParams%nAgreeInternalHapLibElim)) ImputePhase(i,j,e)=1
+                                endif
+                                enddo
+                        end if
+                    endif
+            
 
                 ! The individual is has one haplotype: In Sex Chromosome, the heterogametic case
-                do j=1,inputParams%nsnp
-                    do i =1, ped%pedigreeSize- ped%nDummys
-                        if ((inputParams%sexopt==1).and.(ped%pedigree(i)%gender==inputParams%HetGameticStatus)) then
-                            if (AnimalOn(i,inputParams%HomGameticStatus)==1) then
+                
+                    if ((inputParams%sexopt==1).and.(ped%pedigree(i)%gender==inputParams%HetGameticStatus)) then
+                        if (AnimalOn(i,inputParams%HomGameticStatus)==1) then
+                            do j=1,inputParams%nsnp
                                 if (ImputePhase(i,j,inputParams%HomGameticStatus)==9) then
                                     if ((Temp(i,j,inputParams%HomGameticStatus,1)>inputParams%nAgreeInternalHapLibElim).and.(Temp(i,j,inputParams%HomGameticStatus,2)==0))&
                                         ImputePhase(i,j,:)=0
                                     if ((Temp(i,j,inputParams%HomGameticStatus,1)==0).and.(Temp(i,j,inputParams%HomGameticStatus,2)>inputParams%nAgreeInternalHapLibElim))&
                                         ImputePhase(i,j,:)=1
                                 endif
-                            end if
+                            enddo
                         end if
-                    end do
+                    end if
                 enddo
+            enddo
+
 
                 deallocate(Temp)
 
@@ -795,9 +739,9 @@ write(0,*) 'DEBUG: Mach Finished'
                             allocate(MissWork(numSections,2))
                             allocate(HapElim(ped%pedigreeSize*2,2))
                             HapElim = 0 !  changed from HapElim=1 to improve speed
-                            !$OMP PARALLEL DO &
-                            !$OMP DEFAULT(SHARED) &
-                            !$OMP PRIVATE(i,j,e,h,HapElim,BanBoth,counter,Count0,Count1,Ban,curPos,curSection,BitWork,MissWork,BitGeno)
+                            !$!OMP PARALLEL DO &
+                            !$!OMP DEFAULT(SHARED) &
+                            !$!OMP PRIVATE(i,j,e,h,HapElim,BanBoth,counter,Count0,Count1,Ban,curPos,curSection,BitWork,MissWork,BitGeno)
                             do i=1,ped%pedigreeSize- ped%nDummys
 
 
@@ -934,7 +878,7 @@ write(0,*) 'DEBUG: Mach Finished'
                                 enddo
 
                             enddo
-                            !$OMP END PARALLEL DO
+                            !$!OMP END PARALLEL DO
 
 
                             deallocate(HapElim)
@@ -950,9 +894,9 @@ write(0,*) 'DEBUG: Mach Finished'
                     deallocate(HapLib)
                 enddo
 
-                !$OMP PARALLEL DEFAULT(SHARED)
+                !$!OMP PARALLEL DEFAULT(SHARED)
                 do e=1,2
-                    !$OMP DO PRIVATE(i,j)
+                    !$!OMP DO PRIVATE(i,j)
                     do j=1,inputParams%nsnp
                         do i=1,ped%pedigreeSize- ped%nDummys
                             ! If GeneProbPhase has been executed, that is, if not considering the Sex Chromosome, then MSTermInfo={0,1}.
@@ -973,9 +917,9 @@ write(0,*) 'DEBUG: Mach Finished'
                             end if
                         enddo
                     enddo
-                    !$OMP END DO
+                    !$!OMP END DO
                 enddo
-                !$OMP END PARALLEL
+                !$!OMP END PARALLEL
 
                 deallocate(Temp)
 
@@ -983,6 +927,321 @@ write(0,*) 'DEBUG: Mach Finished'
                 ImputeGenos(0,:)=9
 
             END SUBROUTINE InternalHapLibImputation
+
+
+
+subroutine InternalHapLibImputationOld
+! Internal candidate haplotype library imputation of alleles.q
+! Haplotype libraries are internally built using the information that has been previously imputed.
+! Several different core lengths are used to define the length of the haplotypes and to ensure to
+! prevent the use of phasing errors that originate from LRPHLI. For each core, all haplotypes that
+! have been found and stored in the haplotype library are initially considered to be candidates for
+! the true haplotype that an individual carries on its gametes. Within the core, all alleles that
+! are known are compared to corresponding alleles in each of the haplotypes in the library.
+! Haplotypes that have a number of disagreements greater than a small error threshold have their
+! candidacy rejected. At the end of this loop, the surviving candidate haplotypes are checked for
+! locations that have unanimous agreement about a particular allele. For alleles with complete
+! agreement, a count of the suggested allele is incremented. Alleles are imputed if, at the end of
+! passing across each core and each round of the LRPHLI algorithm, the count of whether the alleles
+! are 0 or 1 is above a threshold in one direction and below a threshold in the other.
+! This subroutine corresponds to Major sub-step 6 from Hickey et al., 2012 (Appendix A)
+
+use Global
+implicit none
+
+integer :: f,e,h,g,i,j,k,l,nCore,nHap,nGlobalLoop,CoreLength,CoreStart,CoreEnd,InLib,NotHere,CompPhase,Count0,Count1
+integer, dimension(:,:), allocatable :: Work
+integer :: Counter,BanBoth(2),Ban(2),AnimalOn(ped%pedigreesize-ped%ndummys,2)
+integer :: LoopStart,OffSet
+
+integer,allocatable,dimension (:,:) :: CoreIndex,HapLib,LoopIndex,HapElim
+integer(kind=1),allocatable,dimension (:,:,:,:) :: Temp
+
+
+inputParams => defaultInput
+
+! WARNING: This should go in a function since it is the same code as InternalParentPhaseElim subroutine
+nGlobalLoop=25
+
+
+allocate(work(inputParams%nsnp,2))
+! LoopeIndex is a matrix with two columns that will serve to define:
+!   * 1.- nCores
+!   * 2.- Core lengths
+allocate(LoopIndex(nGlobalLoop,2))
+
+LoopIndex(1,1)=400
+LoopIndex(2,1)=300
+LoopIndex(3,1)=250
+LoopIndex(4,1)=200
+LoopIndex(5,1)=175
+LoopIndex(6,1)=150
+LoopIndex(7,1)=125
+LoopIndex(8,1)=115
+LoopIndex(9,1)=100
+LoopIndex(10,1)=80
+LoopIndex(11,1)=70
+LoopIndex(12,1)=60
+LoopIndex(13,1)=50
+LoopIndex(14,1)=40
+LoopIndex(15,1)=35
+LoopIndex(16,1)=30
+LoopIndex(17,1)=25
+LoopIndex(18,1)=20
+LoopIndex(19,1)=15
+LoopIndex(20,1)=12
+LoopIndex(21,1)=10
+LoopIndex(22,1)=8
+LoopIndex(23,1)=6
+LoopIndex(24,1)=5
+LoopIndex(25,1)=4
+
+! WARNING: This can be better arrange with a ELSEIF statement and should go in a function since it
+!          is the same code as InternalParentPhaseElim subroutine
+! LoopStart indicates which is the first loop the algorithm should treat. The bigger the number of
+! SNPs, the more the loops to be considered
+if(inputParams%nsnp<=50) return
+if(inputParams%nsnp>50) LoopStart=24
+if(inputParams%nsnp>100) LoopStart=21
+if(inputParams%nsnp>200) LoopStart=20
+if(inputParams%nsnp>400) LoopStart=17
+if(inputParams%nsnp>800) LoopStart=17
+if(inputParams%nsnp>1000) LoopStart=15
+if(inputParams%nsnp>1500) LoopStart=13
+if(inputParams%nsnp>2000) LoopStart=10
+if(inputParams%nsnp>3000) LoopStart=6
+if(inputParams%nsnp>4000) LoopStart=3
+if(inputParams%nsnp>5000) LoopStart=1
+
+! Assumed that LoopIndex(:,1) are the numbers of cores for each phase step, LoopIndex):,2) are the core lengths
+do i=LoopStart,nGlobalLoop
+    LoopIndex(i,2)=int(float(inputParams%nsnp)/LoopIndex(i,1))
+enddo
+
+allocate(Temp(ped%pedigreeSize,inputParams%nsnp,2,2))
+Temp=0
+AnimalOn=0
+
+! SIMULATE PHASING
+! f is a variable to simulate shift or no-shift phasing
+do f=1,2
+    ! Allocate the Internal Haplotype Library
+    allocate(HapLib(ped%pedigreeSize*2,inputParams%nsnp))
+    do l=LoopStart,nGlobalLoop
+
+        ! Simulate phase without shift
+        if (f==1) then
+            nCore=inputParams%nsnp/LoopIndex(l,2)
+            CoreStart=1
+            CoreEnd=LoopIndex(l,2)
+
+        ! Simulate phase with shift
+        else
+            OffSet=int(float(LoopIndex(l,2))/2)
+            nCore=(inputParams%nsnp-(2*OffSet))/LoopIndex(l,2)
+            CoreStart=1+Offset
+            CoreEnd=LoopIndex(l,2)+Offset
+        endif
+
+        do g=1,nCore
+            ! Make sure that cores ends correctly
+            if ((f==1).and.(g==nCore)) CoreEnd=inputParams%nsnp
+            if ((f==2).and.(g==nCore)) CoreEnd=inputParams%nsnp-OffSet
+
+            ! Exit if the corelength is too small
+            CoreLength=(CoreEnd-CoreStart)+1
+            if (CoreLength<10) exit
+
+            nHap=0
+            HapLib=9
+
+            ! THE FIRST PARALLELIZATION BEGINS: POPULATE THE INTERNAL HAPLOTYPE LIBRARY
+            !# PARALLEL DO SHARED (ped%pedigreesize-ped%ndummys,ImputePhase,CoreStart,CoreEnd,nHap,HapLib) private(i,e,CompPhase,InLib,h,NotHere,j)
+            do i=1,ped%pedigreesize-ped%ndummys
+                do e=1,2
+                    ! WARNING: If GeneProbPhase has been executed, that is, if not considering the Sex Chromosome, then MSTermInfo={0,1}.
+                    !          Else, if Sex Chromosome, then MSTermInfo is 0 always
+                    !          So, if a Conservative imputation of haplotypes is selected, this DO statement will do nothing
+                    if ((inputParams%ConservativeHapLibImputation==1).and.(MSTermInfo(i,e)==0)) cycle
+
+                    ! Check if the haplotype for this core is completely phased
+                    CompPhase=1
+                    if (count(ImputePhase(i,CoreStart:CoreEnd,e)==9)>0) CompPhase=0
+
+                    ! If haplotype is completely phased, populate HapLib
+                    ! NOTE: Since there is code in order to populate the Haplotype Library in
+                    !       in AlphaPhase, it can be convenient to create a share procedure in
+                    !       AlphaHouse
+                    if (CompPhase==1) then
+                        if (nHap==0) then       ! The first haplotype in the library
+                            HapLib(1,CoreStart:CoreEnd)=ImputePhase(i,CoreStart:CoreEnd,e)
+                            nHap=1
+                        else
+                            InLib=0
+                            do h=1,nHap
+                                NotHere=1
+                                ! Check if haplotype is in the Library
+                                do j=CoreStart,CoreEnd
+                                    if(ImputePhase(i,j,e)/=HapLib(h,j)) then
+                                        NotHere=0
+                                        exit
+                                    endif
+                                enddo
+                                ! If haplotype in the library, do nothing
+                                if (NotHere==1) then
+                                    InLib=1
+                                    exit
+                                endif
+                            enddo
+                            ! If haplotype is not in the library, then
+                            ! a new haplotype has been found, then populate the library
+                            if (InLib==0) then
+                                nHap=nHap+1
+                                HapLib(nHap,CoreStart:CoreEnd)=ImputePhase(i,CoreStart:CoreEnd,e)
+                            endif
+                        endif
+                    endif
+                enddo
+            enddo
+            !# END PARALLEL DO
+
+            ! THE SECOND PARALLELIZATION BEGINS
+            !# PARALLEL DO SHARED (ped%pedigreesize-ped%ndummys,ImputePhase,CoreStart,CoreEnd,CoreLength,nHap,HapLib,ImputeGenos,AnimalOn,Temp) private(i,HapElim,Work,BanBoth,e,h,j,Counter,Count0,Count1,Ban)
+
+            ! WARNING: This code does not match the corresponding code of the subroutine ImputeFromHDLibrary
+            !          In ImputeFromHDLibrary, there are two steps, counting agreements and impute
+            !          across candidate haplotypes, and counting agreements and impute across cores
+            !          and phasing steps.
+            do i=1,ped%pedigreesize-ped%ndummys
+                allocate(HapElim(ped%pedigreesize-ped%ndummys*2,2))
+                HapElim=1
+                Work=9
+                BanBoth=0
+                do e=1,2
+                    ! WARNING: If GeneProbPhase has been executed, that is, if not considering the Sex Chromosome, then MSTermInfo={0,1}.
+                    !          Else, if Sex Chromosome, then MSTermInfo is 0 always
+                    !          So, if a Conservative imputation of haplotypes is selected, this DO statement will do nothing
+                    if ((inputParams%ConservativeHapLibImputation==1).and.(MSTermInfo(i,e)==0)) cycle
+
+                    ! If haplotype is partially phased
+                    if ((count(ImputePhase(i,CoreStart:CoreEnd,e)==9)/=CoreLength)&
+                            .and.(count(ImputePhase(i,CoreStart:CoreEnd,e)/=9)/=CoreLength)) then
+
+                        ! Identify and reject the candidate haplotypes if it does not explain the whole haplotype
+                        do h=1,nHap
+                            do j=CoreStart,CoreEnd
+                                if ((ImputePhase(i,j,e)/=9)&
+                                        .and.(ImputePhase(i,j,e)/=HapLib(h,j))) then
+                                    HapElim(h,e)=0
+                                    exit
+                                endif
+                            enddo
+                        enddo
+
+                        ! If the number of candidate haplotypes is less than the 25% of the Library,
+                        ! then impute if all alleles have been phased the same way
+                        Counter=count(HapElim(1:nHap,e)==1)
+                        if (float(Counter)<(float(nHap)*0.25)) then
+                            ! Ban this haplotype will be phased here and nowhere else
+                            BanBoth(e)=1
+                            do j=CoreStart,CoreEnd
+                                ! How many haplotypes has been phased as 0 or 1 in this particular allele?
+                                Count0=0
+                                Count1=0
+
+                                ! Count the occurrences in phasing of alleles across candidate haplotypes
+                                do h=1,nHap
+                                    if (HapElim(h,e)==1) then
+                                        if (HapLib(h,j)==0) Count0=Count0+1
+                                        if (HapLib(h,j)==1) Count1=Count1+1
+                                        if ((Count0>0).and.(Count1>0)) exit
+                                    endif
+                                enddo
+
+                                ! If all alleles across the candidate haplotypes have been phased the same way, impute
+                                if (Count0>0) then
+                                    if (Count1==0) Work(j,e)=0
+                                else
+                                    if (Count1>0) Work(j,e)=1
+                                endif
+                            enddo
+                        endif
+                    endif
+                enddo
+
+                ! Has any haplotype been previously banned/phased?
+                Ban=0
+                if (BanBoth(1)==1) Ban(1)=1
+                if (BanBoth(2)==1) Ban(2)=1
+                ! If both gametes have been previously banned/phased, and
+                ! if allele phases disagree with the genotype, then unban haplotypes
+                if (sum(BanBoth(:))==2) then
+                    do j=CoreStart,CoreEnd
+                        if (ImputeGenos(i,j)/=9) then
+                            if ((Work(j,1)/=9).and.(Work(j,2)/=9)) then
+                                if (ImputeGenos(i,j)/=(Work(j,1)+Work(j,2))) then
+                                    Ban=0
+                                    exit
+                                endif
+                            endif
+                        endif
+                    enddo
+                endif
+
+                ! Count the number of occurrences a particular phase is impute in a particular
+                ! allele across the cores and across the internal phasing steps
+                ! This implies occurrences across all the haplotype libraries of the different internal phasing steps
+                do e=1,2
+                    if ((inputParams%ConservativeHapLibImputation==1).and.(MSTermInfo(i,e)==0)) cycle
+                    if (Ban(e)==1) then
+                        AnimalOn(i,e)=1
+                        do j=CoreStart,CoreEnd
+                            if (Work(j,e)==0) Temp(i,j,e,1)=Temp(i,j,e,1)+1
+                            if (Work(j,e)==1) Temp(i,j,e,2)=Temp(i,j,e,2)+1
+                        enddo
+                    endif
+                enddo
+                deallocate(HapElim)
+            enddo
+            !# END PARALLEL DO
+
+            ! Prepare the core for the next cycle
+            CoreStart=CoreStart+LoopIndex(l,2)
+            CoreEnd=CoreEnd+LoopIndex(l,2)
+            if ((f==2).and.(g==nCore)) exit
+        enddo
+    enddo
+    deallocate(HapLib)
+enddo
+
+
+do i=1,ped%pedigreesize-ped%ndummys
+    do e=1,2
+        ! WARNING: If GeneProbPhase has been executed, that is, if not considering the Sex Chromosome, then MSTermInfo={0,1}.
+        !          Else, if Sex Chromosome, then MSTermInfo is 0 always
+        !          So, if a Conservative imputation of haplotypes is selected, this DO statement will do nothing
+        if ((inputParams%ConservativeHapLibImputation==1).and.(MSTermInfo(i,e)==0)) cycle
+
+        ! If all alleles across the cores and across the internal phasing steps have been phased the same way, impute
+        if (AnimalOn(i,e)==1) then
+            do j=1,inputParams%nsnp
+                if (ImputePhase(i,j,e)==9) then
+                    if ((Temp(i,j,e,1)>inputParams%nAgreeInternalHapLibElim).and.(Temp(i,j,e,2)==0))&
+                        ImputePhase(i,j,e)=0
+                    if ((Temp(i,j,e,1)==0).and.(Temp(i,j,e,2)>inputParams%nAgreeInternalHapLibElim))&
+                        ImputePhase(i,j,e)=1
+                endif
+            enddo
+        endif
+    enddo
+enddo
+
+deallocate(Temp)
+
+ImputePhase(0,:,:)=9
+ImputeGenos(0,:)=9
+
+end subroutine InternalHapLibImputationOld
 
             !#############################################################################################################################################################################################################################
 
@@ -1096,7 +1355,8 @@ write(0,*) 'DEBUG: Mach Finished'
 
                         !$OMP PARALLEL DO &
                         !$OMP DEFAULT(SHARED) &
-                        !$OMP FIRSTPRIVATE(i,j,e,Gam1,Gam2,GamA,GamB)
+                        !$OMP FIRSTPRIVATE(i,j,e,Gam1,Gam2,GamA,GamB) &
+                        !$OMP PRIVATE(PosHDInd)
                         do i=1,ped%nHd
                             ! Look for possible gametes through the Haplotype
                             ! Library constructed during the phasing step
@@ -1173,9 +1433,9 @@ write(0,*) 'DEBUG: Mach Finished'
                                         if (Gam2/=0) then
                                             do j=StartSnp,EndSnp
                                                 ! Count the number of alleles coded with 0 and 1
-                                                if (ImputePhase(ped%hdMap(i),j,2)==9) then
+                                                if (ImputePhase(PosHDInd,j,2)==9) then
                                                     if(PhaseHD(i,j,Gam2)==0) then
-                                                        !$!OMP ATOMIC
+                                                        !$OMP ATOMIC
                                                         Temp(PosHDInd,j,2,1)=Temp(PosHDInd,j,2,1)+1
                                                     end if
                                                     if(PhaseHD(i,j,Gam2)==1) then
@@ -1331,6 +1591,7 @@ write(0,*) 'DEBUG: Mach Finished'
                         block
                             use individualModule
                             type(individual) ,pointer :: parent
+
                             !$OMP PARALLEL DO &
                             !$OMP DEFAULT(SHARED) &
                             !$OMP PRIVATE(i,j,e,PedId,PosHDInd,GamA,GamB,parent)
@@ -1811,43 +2072,9 @@ write(0,*) 'DEBUG: Mach Finished'
                 ! Get HIGH DENSITY phase information of this phasing step
                 ! WARNING: If I only want to phase base animals, why do I need to read the whole file?
 
-                print *, "middle result", middleResult
-                print *, "middle result ns:", MiddleResultNoShift
                 phaseHD(:,:,:,1) = apResults%results(MiddleResult)%getFullPhaseIntArray()
                 phaseHD(:,:,:,2) = apResults%results(MiddleResultNoShift)%getFullPhaseIntArray()
 
-
-
-
-
-
-block
-    integer :: new,i
-    
-    open (newunit=new,file="." // DASH// "Results" // DASH // "baseHDNormal.txt",status="unknown")
-
-    do i=1, ped%nHd
-        write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%hdMap(i))%originalID,PhaseHD(i,:,1,1)
-        write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%hdMap(i))%originalID,PhaseHD(i,:,2,1)
-    
-
-    enddo
-    close(new)
-end block
-
-
-
-block
-    integer :: new,i
-    
-    open (newunit=new,file="." // DASH// "Results" // DASH // "baseHDShift.txt",status="unknown")
-
-    do i=1, ped%nHd
-        write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%hdMap(i))%originalID,PhaseHD(i,:,1,2)
-        write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%hdMap(i))%originalID,PhaseHD(i,:,2,2)
-    enddo
-    close(new)
-end block
                 ! Impute HD phase of the middle core of the middle phasing step
                 ! WARNING: Why to impute phase information only for this case?
                 middleCoreIndex = apresults%results(MiddleResult)%nCores/2
@@ -2075,21 +2302,6 @@ end block
                 ImputePhase(0,:,:)=9
                 ImputeGenos(0,:)=9
 
-
-                      block
-                    integer :: new,i
-                    open (newunit=new,file="." // DASH// trim(inputParams%resultFolderPath) // DASH // "basePhase.txt",status="unknown")
-
-                    do i=1, ped%pedigreeSize-ped%nDummys
-                        write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputePhase(ped%inputmap(i),:,1)
-                        write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputePhase(ped%inputmap(i),:,2)
-                    
-
-                    enddo
-                    close(new)
-                end block
-                
-
             END SUBROUTINE BaseAnimalFillIn
 
             !#############################################################################################################################################################################################################################
@@ -2149,119 +2361,9 @@ end block
                 implicit none
 
                 call ParentHomoFill                     ! Minor sub-step 1. Parent Homozygous fill in
-                    block
-                                integer :: new,i
-                                open (newunit=new,file="." // DASH// trim(inputParams%resultFolderPath) // DASH // "general1.txt",status="unknown")
-
-                                do i=1, ped%pedigreeSize-ped%nDummys
-                                    write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputeGenos(ped%inputmap(i),:)
-
-                                enddo
-                                close(new)
-                            end block
-
-
-
-                                                            block
-                    integer :: new,i
-                    open (newunit=new,file="." // DASH// trim(inputParams%resultFolderPath) // DASH // "general41.txt",status="unknown")
-
-                    do i=1, ped%pedigreeSize-ped%nDummys
-                        write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputePhase(ped%inputmap(i),:,1)
-                        write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputePhase(ped%inputmap(i),:,2)
-                    
-
-                    enddo
-                    close(new)
-                end block
-
                 call PhaseComplement                    ! Minor sub-step 2. Phase Complement
-
-
-
-
-                                                block
-                    integer :: new,i
-                    open (newunit=new,file="." // DASH// trim(inputParams%resultFolderPath) // DASH // "general42.txt",status="unknown")
-
-                    do i=1, ped%pedigreeSize-ped%nDummys
-                        write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputePhase(ped%inputmap(i),:,1)
-                        write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputePhase(ped%inputmap(i),:,2)
-                    
-
-                    enddo
-                    close(new)
-                end block
-
-
-
-
-                    block
-                                integer :: new,i
-                                open (newunit=new,file="." // DASH// trim(inputParams%resultFolderPath) // DASH // "general2.txt",status="unknown")
-
-                                do i=1, ped%pedigreeSize-ped%nDummys
-                                    write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputeGenos(ped%inputmap(i),:)
-
-                                enddo
-                                close(new)
-                            end block
                 call ImputeParentByProgenyComplement    ! Minor sub-step 3. Impute Parents from Progeny Complement
-
-
-
-
-                                                block
-                    integer :: new,i
-                    open (newunit=new,file="." // DASH// trim(inputParams%resultFolderPath) // DASH // "general43.txt",status="unknown")
-
-                    do i=1, ped%pedigreeSize-ped%nDummys
-                        write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputePhase(ped%inputmap(i),:,1)
-                        write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputePhase(ped%inputmap(i),:,2)
-                    
-
-                    enddo
-                    close(new)
-                end block
-
-
-                    block
-                                integer :: new,i
-                                open (newunit=new,file="." // DASH// trim(inputParams%resultFolderPath) // DASH // "general3.txt",status="unknown")
-
-                                do i=1, ped%pedigreeSize-ped%nDummys
-                                    write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputeGenos(ped%inputmap(i),:)
-
-                                enddo
-                                close(new)
-                            end block
                 call MakeGenotype                       ! Minor sub-step 4. Make Genotype
-
-
-                                                block
-                    integer :: new,i
-                    open (newunit=new,file="." // DASH// trim(inputParams%resultFolderPath) // DASH // "general44.txt",status="unknown")
-
-                    do i=1, ped%pedigreeSize-ped%nDummys
-                        write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputePhase(ped%inputmap(i),:,1)
-                        write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputePhase(ped%inputmap(i),:,2)
-                    
-
-                    enddo
-                    close(new)
-                end block
-
-
-                    block
-                                integer :: new,i
-                                open (newunit=new,file="." // DASH// trim(inputParams%resultFolderPath) // DASH // "general4.txt",status="unknown")
-
-                                do i=1, ped%pedigreeSize-ped%nDummys
-                                    write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputeGenos(ped%inputmap(i),:)
-
-                                enddo
-                                close(new)
-                            end block
                 ! if (TestVersion==1) call CurrentYield
                 ! if (TestVersion==1) call Checker
 

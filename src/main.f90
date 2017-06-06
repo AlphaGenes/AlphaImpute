@@ -91,56 +91,14 @@ program AlphaImpute
             allocate(ImputeGenos(0:ped%pedigreeSize,inputParams%nsnpraw))
     allocate(ImputePhase(0:ped%pedigreeSize,inputParams%nsnpraw,2))
         call InitialiseArrays
-
-         block
-            integer :: new,i
-            open (newunit=new,file="." // DASH// trim(inputParams%resultFolderPath) // DASH // "p0.txt",status="unknown")
-
-            do i=1, ped%pedigreeSize-ped%nDummys
-                write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputeGenos(ped%inputmap(i),:)
-
-            enddo
-            close(new)
-    end block
         !call cpu_time(start)
         call SnpCallRate
         call InitialiseArrays
 
 
-         block
-            integer :: new,i
-            open (newunit=new,file="." // DASH// trim(inputParams%resultFolderPath) // DASH // "p11.txt",status="unknown")
-
-            do i=1, ped%pedigreeSize-ped%nDummys
-                write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputeGenos(ped%inputmap(i),:)
-
-            enddo
-            close(new)
-    end block
-
-             block
-            integer :: new,i
-            open (newunit=new,file="." // DASH// trim(inputParams%resultFolderPath) // DASH // "p111.txt",status="unknown")
-
-            do i=1, ped%pedigreeSize-ped%nDummys
-                write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputeGenos(ped%inputmap(i),:)
-
-            enddo
-            close(new)
-    end block
-
         call CheckParentage
         call InitialiseArrays
-         block
-            integer :: new,i
-            open (newunit=new,file="." // DASH// trim(inputParams%resultFolderPath) // DASH // "p12.txt",status="unknown")
 
-            do i=1, ped%pedigreeSize-ped%nDummys
-                write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputeGenos(ped%inputmap(i),:)
-
-            enddo
-            close(new)
-    end block
 
         if (inputParams%MultiHD/=0) then 
             call ClassifyAnimByChips
@@ -150,29 +108,7 @@ program AlphaImpute
         call FillInSnp
         call InitialiseArrays
 
-         block
-            integer :: new,i
-            open (newunit=new,file="." // DASH// trim(inputParams%resultFolderPath) // DASH // "p13.txt",status="unknown")
 
-            do i=1, ped%pedigreeSize-ped%nDummys
-                write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputeGenos(ped%inputmap(i),:)
-
-            enddo
-            close(new)
-    end block
-
-! call InitialiseArrays
-
-         block
-            integer :: new,i
-            open (newunit=new,file="." // DASH// trim(inputParams%resultFolderPath) // DASH // "p1.txt",status="unknown")
-
-            do i=1, ped%pedigreeSize-ped%nDummys
-                write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputeGenos(ped%inputmap(i),:)
-
-            enddo
-            close(new)
-    end block
         call FillInBasedOnOffspring
         call InternalEdit
 
@@ -199,19 +135,6 @@ program AlphaImpute
     ! allocate(ImputePhase(0:ped%pedigreeSize,inputParams%nsnpraw,2))
     allocate(GlobalWorkPhase(0:ped%pedigreeSize,inputParams%nsnpraw,2))
     call InitialiseArrays
-
-         block
-            integer :: new,i
-            open (newunit=new,file="." // DASH// trim(inputParams%resultFolderPath) // DASH // "firstPoint.txt",status="unknown")
-
-            do i=1, ped%pedigreeSize-ped%nDummys
-                write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputeGenos(ped%inputmap(i),:)
-
-            enddo
-            close(new)
-    end block
-
-
 
     if (inputParams%hmmoption == RUN_HMM_NGS) then
 
@@ -305,16 +228,6 @@ program AlphaImpute
 
     if (inputParams%managephaseon1off0==1) then
 
-           block
-                    integer :: new,i
-                    open (newunit=new,file="." // DASH// trim(inputParams%resultFolderPath) // DASH // "beforePhase.txt",status="unknown")
-
-                    do i=1, ped%pedigreeSize-ped%nDummys
-                        write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputeGenos(ped%inputmap(i),:)
-
-                    enddo
-                    close(new)
-                end block
 
         if (inputParams%restartOption<OPT_RESTART_IMPUTATION) Then
             call PhasingManagementNew(APResults)
@@ -375,21 +288,9 @@ if (inputParams%hmmoption/=RUN_HMM_NGS) then
         endif
         print *, "Phasing Completed"
 
-
-
     ! If we only want to phase data, then skip all the imputation steps
     if (inputParams%PhaseTheDataOnly==0) Then
         call ImputationManagement
-        block
-            integer :: new,i
-            open (newunit=new,file="." // DASH// trim(inputParams%resultFolderPath) // DASH // "ImputeGenotypesAFterImputation.txt",status="unknown")
-
-            do i=1, ped%pedigreeSize-ped%nDummys
-                write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,imputeGenos(ped%inputmap(i),:)
-
-            enddo
-            close(new)
-        end block
         call WriteOutResults
 
 
