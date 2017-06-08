@@ -82,6 +82,7 @@ program AlphaImpute
 
     inputParams => defaultInput
 
+
     if (inputParams%hmmoption /= RUN_HMM_NGS) then
         if (inputParams%restartOption<OPT_RESTART_PHASING) call MakeDirectories(RUN_HMM_NULL)
 
@@ -151,7 +152,6 @@ program AlphaImpute
             inputParamsHMM%phasedThreshold = inputParams%phasedThreshold
             inputParamsHMM%HapList = inputParams%HapList
 
-            print *, "NSNPS3:",inputParams%nsnp
             call AlphaImputeHMMRunner(inputParamsHMM, ImputeGenos, ImputePhase, ped, ProbImputeGenosHmm, ProbImputePhaseHmm, GenosCounts, FullH)
 
 

@@ -58,6 +58,7 @@ CONTAINS
 
 
         print *," in imputation"
+
         ! WARNING: Need to disuss this part of code with John. Nonsense going on here!
 
         if (inputParams%HMMOption==RUN_HMM_ONLY) then ! Avoid any adulteration of genotypes with imputation subroutines
@@ -87,7 +88,6 @@ write(0,*) 'DEBUG: Call Mach'
                 inputParamsHMM%imputedThreshold = inputParams%imputedThreshold
                 inputParamsHMM%phasedThreshold = inputParams%phasedThreshold
                 inputParamsHMM%HapList = inputParams%HapList
-                print *, "NSNPS2:",inputParams%nsnp
                 call AlphaImputeHMMRunner(inputParamsHMM, ImputeGenos, ImputePhase, ped, ProbImputeGenosHmm, ProbImputePhaseHmm, GenosCounts, FullH)
 
 
@@ -151,7 +151,6 @@ write(0,*) 'DEBUG: Mach Finished'
                                 inputParamsHMM%HapList = inputParams%HapList
 
 
-                                print *, "NSNPS1:",inputParams%nsnp
 
                                 call AlphaImputeHMMRunner(inputParamsHMM, ImputeGenos, ImputePhase, ped, ProbImputeGenosHmm, ProbImputePhaseHmm, GenosCounts, FullH)
 
@@ -263,7 +262,6 @@ write(0,*) 'DEBUG: Mach Finished'
                                 inputParamsHMM%imputedThreshold = inputParams%imputedThreshold
                                 inputParamsHMM%phasedThreshold = inputParams%phasedThreshold
                                 inputParamsHMM%HapList = inputParams%HapList
-                                print *, "NSNPS4:",inputParams%nsnp
                                 call AlphaImputeHMMRunner(inputParamsHMM, ImputeGenos, ImputePhase, ped, ProbImputeGenosHmm, ProbImputePhaseHmm, GenosCounts, FullH)
 
 
