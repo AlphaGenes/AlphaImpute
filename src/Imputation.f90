@@ -1274,6 +1274,10 @@ integer(kind=1),allocatable,dimension (:,:,:,:) :: Temp
 
 type(HaplotypeLibrary) :: hapLib
 
+type(Haplotype), dimension(2) :: workHap
+type(Haplotype) :: tempHap
+type(Genotype) :: workGeno
+
 inputParams => defaultInput
 
 ! WARNING: This should go in a function since it is the same code as InternalParentPhaseElim subroutine
@@ -1395,32 +1399,19 @@ do f=1,2
                     !       in AlphaPhase, it can be convenient to create a share procedure in
                     !       AlphaHouse
                     if (CompPhase==1) then
-                        if (haplib%size==0) then       ! The first haplotype in the library
-                            block 
-                                type(haplotype) :: hap
-                                integer :: id
+                         block 
+                            type(haplotype) :: hap
+                            integer :: id
 
-                                hap = Haplotype(ImputePhase(i,CoreStart:CoreEnd,e))
+                            hap = Haplotype(ImputePhase(i,CoreStart:CoreEnd,e))
+                            id = hapLib%hasHap(hap)
+                            if (id == 0) then 
+                             ! If haplotype is not in the library, then
+                             ! a new haplotype has been found, then populate the library
                                 id = hapLib%addHap(hap)
-                                
-                            end block
-                            ! HapLib(1,CoreStart:CoreEnd)=ImputePhase(i,CoreStart:CoreEnd,e)
-                            ! nHap=1
-                        else
-                             block 
-                                type(haplotype) :: hap
-                                integer :: id
-
-                                hap = Haplotype(ImputePhase(i,CoreStart:CoreEnd,e))
-                                id = hapLib%hasHap(hap)
-                                if (id == 0) then 
-                                 ! If haplotype is not in the library, then
-                            ! a new haplotype has been found, then populate the library
-                                    id = hapLib%addHap(hap)
-                                endif
-                            end block
-                        endif
-                    endif
+                            endif
+                        end block
+                      endif
                 enddo
             enddo
 
@@ -1434,21 +1425,10 @@ do f=1,2
             !          In ImputeFromHDLibrary, there are two steps, counting agreements and impute
             !          across candidate haplotypes, and counting agreements and impute across cores
             !          and phasing steps.
-            do i=1,ped%pedigreesize-ped%ndummys
-            
-                allocate(HapElim((ped%pedigreesize-ped%ndummys)*2,2))
-                HapElim=1
-                Work=9
+            do i=1,ped%pedigreesize-ped%ndummys            
                 BanBoth=0
                 do e=1,2
-
-                      block 
-                            
-                                type(haplotype) :: hap, tmpHap
-                                integer :: phase
-                                
-
-                                tmpHap = Haplotype(ImputePhase(i,CoreStart:CoreEnd,e))
+                    tmpHap = Haplotype(ImputePhase(i,CoreStart:CoreEnd,e))
 
 
                     ! WARNING: If GeneProbPhase has been executed, that is, if not considering the Sex Chromosome, then MSTermInfo={0,1}.
@@ -1459,75 +1439,18 @@ do f=1,2
                     ! If haplotype is partially phased  
 
                     if (.not. tmpHap%allMissingOrError() .and. .not. tmpHap%allPresent()) then
-                    ! if ((count(ImputePhase(i,CoreStart:CoreEnd,e)==9)/=CoreLength) .and.(count(ImputePhase(i,CoreStart:CoreEnd,e)/=9)/=CoreLength)) then
-
-
-                        ! Identify and reject the candidate haplotypes if it does not explain the whole haplotype
-                        
-                           
-                            do h=1,haplib%size 
-                                hap = haplib%getHap(h)
-                                if (.not. hap%noMismatches(tmpHap)) then
-                                    HapElim(h,e)=0
-                                endif
-                            enddo
-                        end block
+                        ! Identify matching haplotypes in library]
+                        ! THIS SHOULD PROBABLY USE A NEW FUNCTION IN HAPLIB (match) THAT DOESN'T TEST ERRORS BUT FOR NOW...
+                        matches = hapLib%matchWithError(tmpHap,0)
 
 
                         ! If the number of candidate haplotypes is less than the 25% of the Library,
                         ! then impute if all alleles have been phased the same way
-                        Counter=count(HapElim(1:hapLib%size,e)==1)
-                        if (float(Counter)<(float(hapLib%size)*0.25)) then
+                        if (size(matches)<(float(hapLib%size)*0.25)) then
                             ! Ban this haplotype will be phased here and nowhere else
                             BanBoth(e)=1
 
-                            do j=CoreStart,CoreEnd
-                                Count0=0
-                                Count1=0
-
-                            ! Count the occurrences in phasing of alleles across candidate haplotypes
-
-
-
-
-                                do h=1,hapLib%size
-                                    if (HapElim(h,e)==1) then
-                                        block 
-                                            type(haplotype) :: hap
-                                            integer :: phase
-
-                                            hap = haplib%getHap(h)
-                                            
-                                                ! How many haplotypes has been phased as 0 or 1 in this particular allele?
-                                                Count0=0
-                                                Count1=0
-
-                                                if ((j-coreStart)+1 > hap%length) Then
-                                                    print *,"Block 2"
-                                                    print *,"coreLength", coreEnd-CoreStart
-                                                    print *,"hapSize",  hap%length
-                                                    print *,"hapIndex", h
-
-                                                endif
-
-                                                phase = hap%getPhase((j-coreStart)+1)
-                                                ! print *,"DEBUGGETPHASE:",(j-coreStart)+1, hap%length
-                                        
-                                                if (phase==0) Count0=Count0+1
-                                                if (phase==1) Count1=Count1+1
-                                                if ((Count0>0).and.(Count1>0)) exit
-
-                                            
-                                        end block
-                                    endif
-                                enddo
-                                if (Count0>0) then
-                                    if (Count1==0) Work(j,e)=0
-                                else
-                                    if (Count1>0) Work(j,e)=1
-                                endif
-                            enddo
-
+                            workHap(e) = library%getConsensusHap(matches)
                         endif
                     endif
                 enddo
@@ -1539,16 +1462,10 @@ do f=1,2
                 ! If both gametes have been previously banned/phased, and
                 ! if allele phases disagree with the genotype, then unban haplotypes
                 if (sum(BanBoth(:))==2) then
-                    do j=CoreStart,CoreEnd
-                        if (ImputeGenos(i,j)/=9) then
-                            if ((Work(j,1)/=9).and.(Work(j,2)/=9)) then
-                                if (ImputeGenos(i,j)/=(Work(j,1)+Work(j,2))) then
-                                    Ban=0
-                                    exit
-                                endif
-                            endif
-                        endif
-                    enddo
+                    workGeno = newGenotypeInt(ImputeGenos(i,CoreStart:CoreEnd))
+                    if (.not. workGeno%compitableHaplotypes(workHap(1),workHap(2))) then
+                        Ban=0
+                    endif
                 endif
 
                 ! Count the number of occurrences a particular phase is impute in a particular
@@ -1559,12 +1476,11 @@ do f=1,2
                     if (Ban(e)==1) then
                         AnimalOn(i,e)=1
                         do j=CoreStart,CoreEnd
-                            if (Work(j,e)==0) Temp(i,j,e,1)=Temp(i,j,e,1)+1
-                            if (Work(j,e)==1) Temp(i,j,e,2)=Temp(i,j,e,2)+1
+                            if (WorkHap(e)%isZero(j)) Temp(i,j,e,1)=Temp(i,j,e,1)+1
+                            if (WorkHap(e)%isOne(j)) Temp(i,j,e,2)=Temp(i,j,e,2)+1
                         enddo
                     endif
                 enddo
-                deallocate(HapElim)
             enddo
             !# END PARALLEL DO
             ! Prepare the core for the next cycle
