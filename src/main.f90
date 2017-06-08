@@ -151,6 +151,7 @@ program AlphaImpute
             inputParamsHMM%phasedThreshold = inputParams%phasedThreshold
             inputParamsHMM%HapList = inputParams%HapList
 
+            print *, "NSNPS3:",inputParams%nsnp
             call AlphaImputeHMMRunner(inputParamsHMM, ImputeGenos, ImputePhase, ped, ProbImputeGenosHmm, ProbImputePhaseHmm, GenosCounts, FullH)
 
 
