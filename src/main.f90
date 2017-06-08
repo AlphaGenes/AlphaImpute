@@ -88,16 +88,14 @@ program AlphaImpute
 
 
         call ReadInData
-            allocate(ImputeGenos(0:ped%pedigreeSize,inputParams%nsnpraw))
-    allocate(ImputePhase(0:ped%pedigreeSize,inputParams%nsnpraw,2))
-        call InitialiseArrays
+       
+        ! call InitialiseArrays
         !call cpu_time(start)
         call SnpCallRate
-        call InitialiseArrays
 
 
         call CheckParentage
-        call InitialiseArrays
+
 
 
         if (inputParams%MultiHD/=0) then 
@@ -106,7 +104,6 @@ program AlphaImpute
         endif
         
         call FillInSnp
-        call InitialiseArrays
 
 
         call FillInBasedOnOffspring
@@ -120,6 +117,10 @@ program AlphaImpute
             print*, "  ","ERROR: PREPROCESSING OPTION IS NO LONGER AVAILABLE WITH CLUSTER MODE DISABLED"
             stop
         endif
+        allocate(ImputeGenos(0:ped%pedigreeSize,inputParams%nsnpraw))
+        allocate(ImputePhase(0:ped%pedigreeSize,inputParams%nsnpraw,2))
+        allocate(GlobalWorkPhase(0:ped%pedigreeSize,inputParams%nsnpraw,2))
+        call InitialiseArrays
 
     else
 
@@ -131,10 +132,7 @@ program AlphaImpute
         call ped%addSequenceFromFile(inputparams%GenotypeFile, inputParams%nsnpRaw, MAX_READS_COUNT)
     endif
 
-    ! allocate(ImputeGenos(0:ped%pedigreeSize,inputParams%nsnpraw))
-    ! allocate(ImputePhase(0:ped%pedigreeSize,inputParams%nsnpraw,2))
-    allocate(GlobalWorkPhase(0:ped%pedigreeSize,inputParams%nsnpraw,2))
-    call InitialiseArrays
+        
 
     if (inputParams%hmmoption == RUN_HMM_NGS) then
 
