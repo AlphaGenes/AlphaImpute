@@ -379,7 +379,7 @@ write(0,*) 'DEBUG: Mach Finished'
                             do i = 1, ped%pedigreeSize - ped%nDummys
                                 do e = 1, 2
                                     curSection = 1
-                                    curPos = 1
+                                    curPos = 0
                                     do j = CoreStart, CoreEnd
                                         select case (ImputePhase(i, j, e))
                                         case (1)
@@ -389,8 +389,8 @@ write(0,*) 'DEBUG: Mach Finished'
                                         end select
 
                                         curPos = curPos + 1
-                                        if (curPos == 65) then
-                                            curPos = 1
+                                        if (curPos == 64) then
+                                            curPos = 0
                                             curSection = curSection + 1
                                         end if
                                     end do
@@ -438,7 +438,7 @@ write(0,*) 'DEBUG: Mach Finished'
                                                 ! a particular allele across the cores and across the internal phasing steps
                                                 if ((GamA==1).and.(GamB==0)) then
                                                     AnimalOn(i,e)=1
-                                                    curPos = 1
+                                                    curPos = 0
                                                     curSection = 1
 
                                                     do j=CoreStart,CoreEnd
@@ -456,8 +456,8 @@ write(0,*) 'DEBUG: Mach Finished'
                                                         end if
 
                                                         curPos = curPos + 1
-                                                        if (curPos == 65) then
-                                                            curPos = 1
+                                                        if (curPos == 64) then
+                                                            curPos = 0
                                                             curSection = curSection + 1
                                                         end if
                                                     enddo
@@ -469,7 +469,7 @@ write(0,*) 'DEBUG: Mach Finished'
                                                 ! a particular allele across the cores and across the internal phasing steps
                                                 if ((GamA==0).and.(GamB==1)) then
                                                     AnimalOn(i,e)=1
-                                                    curPos = 1
+                                                    curPos = 0
                                                     curSection = 1
                                                     do j=CoreStart,CoreEnd
 
@@ -490,8 +490,8 @@ write(0,*) 'DEBUG: Mach Finished'
                                                         end if
 
                                                         curPos = curPos + 1
-                                                        if (curPos == 65) then
-                                                            curPos = 1
+                                                        if (curPos == 64) then
+                                                            curPos = 0
                                                             curSection = curSection + 1
                                                         end if
                                                     enddo
@@ -1232,7 +1232,7 @@ end subroutine InternalHapLibImputationOld
 
                         do e=1,2
                             curSection = 1
-                            curPos = 1
+                            curPos = 0
 
                             do j = StartSnp, EndSnp
 
@@ -1257,8 +1257,8 @@ end subroutine InternalHapLibImputationOld
                                 end do
 
                                 curPos = curPos + 1
-                                if (curPos == 65) then
-                                    curPos = 1
+                                if (curPos == 64) then
+                                    curPos = 0
                                     curSection = curSection + 1
                                 end if
                             end do
@@ -1469,7 +1469,7 @@ end subroutine InternalHapLibImputationOld
 
                         do e=1,2
                             curSection = 1
-                            curPos = 1
+                            curPos = 0
 
                             do j = StartSnp, EndSnp
 
@@ -1492,8 +1492,8 @@ end subroutine InternalHapLibImputationOld
                                 end do
 
                                 curPos = curPos + 1
-                                if (curPos == 65) then
-                                    curPos = 1
+                                if (curPos == 64) then
+                                    curPos = 0
                                     curSection = curSection + 1
                                 end if
                             end do
@@ -1718,7 +1718,7 @@ end subroutine InternalHapLibImputationOld
 
                         do e=1,2
                             curSection = 1
-                            curPos = 1
+                            curPos = 0
                             do j = StartSnp, EndSnp
                                 do i = 1, ped%pedigreeSize- ped%nDummys
                                     select case (ImputePhase(i, j, e))
@@ -1730,8 +1730,8 @@ end subroutine InternalHapLibImputationOld
                                 end do
 
                                 curPos = curPos + 1
-                                if (curPos == 65) then
-                                    curPos = 1
+                                if (curPos == 64) then
+                                    curPos = 0
                                     curSection = curSection + 1
                                 end if
                             end do
@@ -1752,7 +1752,7 @@ end subroutine InternalHapLibImputationOld
                         MissHapLib = 0
 
                         curSection = 1
-                        curPos = 1
+                        curPos = 0
                         do j = 1, CoreLength
                             do i = 1, nHap
                                 select case (HapLib(i, j))
@@ -1764,8 +1764,8 @@ end subroutine InternalHapLibImputationOld
                             end do
 
                             curPos = curPos + 1
-                            if (curPos == 65) then
-                                curPos = 1
+                            if (curPos == 64) then
+                                curPos = 0
                                 curSection = curSection + 1
                             end if
                         end do
