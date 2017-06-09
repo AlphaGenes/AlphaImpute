@@ -56,9 +56,6 @@ contains
         type(AlphaPhaseResultsContainer), intent(out) :: results
         integer :: nCoreLengths,i, coreIndexes
         
-        integer :: new
-        character(len=10) :: itStr
-
         inputParams=> defaultInput
         nCoreLengths = size(inputParams%CoreAndTailLengths)
         results%nResults = nCoreLengths*2
@@ -2485,14 +2482,14 @@ contains
         ! has no parents or its parents have been pruned
 
         use AlphaImputeSpecFileModule
-        use Global, only: ped, DisagreeThreshold,nanisingenderfile
+        use Global, only: ped, DisagreeThreshold
 
         implicit none
 
         integer :: e,i,j,CountBothGeno,CountDisagree,CountChanges,IndId,ParId,ParPos
         integer :: TurnOn
         type(AlphaImputeInput), pointer :: inputParams
-        integer :: tmpID,dumId
+        integer :: dumId
         integer :: nHomoParent, nBothHomo
 
         inputParams => defaultInput

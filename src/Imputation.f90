@@ -509,12 +509,11 @@ subroutine InternalHapLibImputation
 use Global
 implicit none
 
-integer :: f,e,h,g,i,j,k,l,nCore,nHap,nGlobalLoop,CoreLength,CoreStart,CoreEnd,InLib,NotHere,CompPhase,Count0,Count1
-integer, dimension(:,:), allocatable :: Work
+integer :: f,e,h,g,i,j,l,nCore,nHap,nGlobalLoop,CoreLength,CoreStart,CoreEnd,InLib,NotHere,CompPhase,Count0,Count1
+integer, dimension(:,:), allocatable :: Work,LoopIndex,haplib,HapElim
 integer :: Counter,BanBoth(2),Ban(2),AnimalOn(ped%pedigreesize-ped%ndummys,2)
 integer :: LoopStart,OffSet
 
-integer,allocatable,dimension (:,:) :: CoreIndex,HapLib,LoopIndex,HapElim
 integer(kind=1),allocatable,dimension (:,:,:,:) :: Temp
 
 
@@ -825,12 +824,11 @@ use HaplotypeModule
 use HaplotypeLibraryModule
 implicit none
 
-integer :: f,e,h,g,i,j,k,l,nCore,nGlobalLoop,CoreLength,CoreStart,CoreEnd,NotHere,CompPhase,Count0,Count1
-integer, dimension(:,:), allocatable :: Work
-integer :: Counter,BanBoth(2),Ban(2),AnimalOn(ped%pedigreesize-ped%ndummys,2)
+integer :: f,e,g,i,j,l,nCore,nGlobalLoop,CoreLength,CoreStart,CoreEnd,CompPhase
+integer :: BanBoth(2),Ban(2),AnimalOn(ped%pedigreesize-ped%ndummys,2)
 integer :: LoopStart,OffSet
 
-integer,allocatable,dimension (:,:) :: CoreIndex,LoopIndex,HapElim
+integer,allocatable,dimension (:,:) :: LoopIndex
 integer(kind=1),allocatable,dimension (:,:,:,:) :: Temp
 
 type(HaplotypeLibrary) :: hapLib
@@ -846,7 +844,6 @@ inputParams => defaultInput
 nGlobalLoop=25
 
 
-allocate(work(inputParams%nsnp,2))
 ! LoopeIndex is a matrix with two columns that will serve to define:
 !   * 1.- nCores
 !   * 2.- Core lengths
@@ -1120,11 +1117,6 @@ end subroutine InternalHapLibImputationOld
                 integer,allocatable,dimension (:,:,:) :: PhaseHD
                 integer(kind=1),allocatable,dimension (:,:,:,:) :: Temp
                 integer :: unknownFreeIterator, TempCount
-
-
-
-
-                integer :: numSections, curSection, curPos
 
 
                 inputParams => defaultInput
@@ -1503,13 +1495,12 @@ end subroutine InternalHapLibImputationOld
                 implicit none
 
 
-                integer :: i,j,k,h,e,f,g,CoreLength,nHap,CountAB(inputParams%nsnpraw,0:1),Work(inputParams%nsnpraw,2),TempCount
+                integer :: i,j,k,h,e,f,g,CoreLength,nHap,CountAB(inputParams%nsnpraw,0:1),TempCount
                 integer :: StartSnp,EndSnp,Counter,BanBoth(2),Ban(2),AnimalOn(ped%pedigreeSize,2)
                 logical :: PatMatDone(2)
                 integer,allocatable,dimension (:,:,:,:) :: Temp
 
-                integer :: numSections, curSection, curPos
-                integer :: z, phase
+                integer :: phase
 
                 type(Haplotype), dimension(:),allocatable :: workHap
                 type(Haplotype) :: tmpHap
