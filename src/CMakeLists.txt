@@ -1,7 +1,6 @@
 SET(ALPHAIMPUTE_src
             AlphaImputeSpecFileModule.f90
             global.f90
-            HaplotypeBits.f90
             AlphaImputeInputOutput.f90
             informationModule.f90    
             Imputation.f90
