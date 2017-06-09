@@ -2253,7 +2253,6 @@ contains
                         endif
                     enddo
                     inputParams%nsnp=nSnpR
-                    print *,"NSNPS FJADKASDADASD", inputParams%nsnp
                 endif
             endif
            
