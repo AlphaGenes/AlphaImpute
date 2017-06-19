@@ -919,12 +919,16 @@ contains
             enddo
 
             block
-                integer :: tmpIDInt
+                integer :: tmpIDInt,f
                 if (inputParams%inteditstat == 1) then
                     open (unit=42,file=trim(inputParams%GenotypeFile),status='old')
-                    do i=1,ped%nGenotyped
-                        read (42,*) TmpId,WorkTmp(:)
+                    do
+                        read (42,*, iostat=f) TmpId,WorkTmp(:)
 
+                        if (f /= 0) then
+                            exit
+                        endif
+                        
                         tmpIDInt = ped%dictionary%getValue(trim(tmpID))
 
                         if (tmpIDInt /= DICT_NULL) then
