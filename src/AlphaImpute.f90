@@ -918,7 +918,7 @@ contains
             enddo
 
             do j=1,inputParams%nsnp
-                write (51,'(i10,20000f7.2)') j,float(((ped%pedigreeSize-(ped%nDummys+1))+1)-count(ImputeGenos(ped%nDummys+1:ped%pedigreeSize,j)==9))/((ped%pedigreeSize-(ped%nDummys+1))+1)
+                write (51,'(i10,20000f7.2)') j,float(((ped%pedigreeSize-(ped%nDummys+1))+1)-ped%countMissingGenotypesNoDummys())/((ped%pedigreeSize-(ped%nDummys+1))+1)
             enddo
 
             inputParams%WellPhasedThresh=inputParams%WellPhasedThresh/100
@@ -1196,7 +1196,7 @@ contains
 #endif
 
             do j=1,inputParams%nSnpRaw
-                write (51,'(i10,20000f7.2)') j,float(((ped%pedigreeSize-ped%nDummys-(ped%nDummys+1))+1)-ped%ccountMissingGenotypesNoDummys() /((ped%pedigreeSize-ped%nDummys-(ped%nDummys+1))+1)
+                write (51,'(i10,20000f7.2)') j,float(((ped%pedigreeSize-ped%nDummys-(ped%nDummys+1))+1)-ped%countMissingGenotypesNoDummys() /((ped%pedigreeSize-ped%nDummys-(ped%nDummys+1))+1)
             enddo
 
             inputParams%WellPhasedThresh=inputParams%WellPhasedThresh/100
