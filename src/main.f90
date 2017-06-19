@@ -48,7 +48,6 @@ program AlphaImpute
     !   * inputParams%restartOption=4 =>
     use Global
     use AlphaImputeModule
-    use informationModule
     use AlphaImputeInputOutputModule
     use AlphaImputeSpecFileModule
     use Imputation
@@ -118,8 +117,6 @@ program AlphaImpute
             print*, "  ","ERROR: PREPROCESSING OPTION IS NO LONGER AVAILABLE WITH CLUSTER MODE DISABLED"
             stop
         endif
-        allocate(ImputeGenos(0:ped%pedigreeSize,inputParams%nsnpraw))
-        allocate(ImputePhase(0:ped%pedigreeSize,inputParams%nsnpraw,2))
         allocate(GlobalWorkPhase(0:ped%pedigreeSize,inputParams%nsnpraw,2))
         call InitialiseArrays
 
@@ -142,6 +139,7 @@ program AlphaImpute
             use AlphaHmmInMod
             use ExternalHMMWrappers
             type (AlphaHMMinput) :: inputParamsHMM
+            integer(kind=1) ,dimension(:,:), allocatable :: res
 
             inputParamsHMM%nsnp = inputParams%nsnp
             inputParamsHMM%nHapInSubH = inputParams%nHapInSubH
@@ -152,7 +150,8 @@ program AlphaImpute
             inputParamsHMM%phasedThreshold = inputParams%phasedThreshold
             inputParamsHMM%HapList = inputParams%HapList
 
-            call AlphaImputeHMMRunner(inputParamsHMM, ImputeGenos, ImputePhase, ped, ProbImputeGenosHmm, ProbImputePhaseHmm, GenosCounts, FullH)
+            res = ped%getGenotypesAsArray
+            call AlphaImputeHMMRunner(inputParamsHMM, res, ImputePhase, ped, ProbImputeGenosHmm, ProbImputePhaseHmm, GenosCounts, FullH)
 
 
         end block
@@ -174,7 +173,6 @@ program AlphaImpute
                 case (0)
 
                     if (inputParams%restartOption== OPT_RESTART_ALL .or. inputParams%restartOption== OPT_RESTART_GENEPROB) Then
-                        ! call ped%addGenotypeInformation(imputeGenos)
                         ! WriteOutResults is a piece of shit and makes life hard
                         ! call ped%addGenotypeInformation(Genos)
                         if (inputParams%cluster) then

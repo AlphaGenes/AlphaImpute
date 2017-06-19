@@ -46,7 +46,6 @@ CONTAINS
 
     SUBROUTINE ImputationManagement
         use omp_lib
-        use informationModule
         use AlphaImputeInputOutputModule, only : ReadInPrePhasedData, ReReadGeneProbs,readgeneprobscluster
         use AlphaPhaseResultsModule
 
@@ -79,7 +78,9 @@ write(0,*) 'DEBUG: Call Mach'
                 use AlphaHmmInMod
                 use ExternalHMMWrappers
                 type (AlphaHMMinput) :: inputParamsHMM
-
+                integer(kind=1) ,dimension(:,:), allocatable :: genos
+                integer(kind=1) ,dimension(:,:,:), allocatable :: phase
+                
                 inputParamsHMM%nsnp = inputParams%nsnp
                 inputParamsHMM%nHapInSubH = inputParams%nHapInSubH
                 inputParamsHMM%HmmBurnInRound = inputParams%HmmBurnInRound
@@ -88,7 +89,10 @@ write(0,*) 'DEBUG: Call Mach'
                 inputParamsHMM%imputedThreshold = inputParams%imputedThreshold
                 inputParamsHMM%phasedThreshold = inputParams%phasedThreshold
                 inputParamsHMM%HapList = inputParams%HapList
-                call AlphaImputeHMMRunner(inputParamsHMM, ImputeGenos, ImputePhase, ped, ProbImputeGenosHmm, ProbImputePhaseHmm, GenosCounts, FullH)
+
+                genos = ped%getGenotypesAsArray()
+                phase = ped%getPhaseAsArray()
+                call AlphaImputeHMMRunner(inputParamsHMM, genos, phase, ped, ProbImputeGenosHmm, ProbImputePhaseHmm, GenosCounts, FullH)
 
 
             end block
@@ -152,7 +156,7 @@ write(0,*) 'DEBUG: Mach Finished'
 
 
 
-                                call AlphaImputeHMMRunner(inputParamsHMM, ImputeGenos, ImputePhase, ped, ProbImputeGenosHmm, ProbImputePhaseHmm, GenosCounts, FullH)
+                                call AlphaImputeHMMRunner(inputParamsHMM, ped%getGenotypesAsArray(), ped%getPhaseAsArray(), ped, ProbImputeGenosHmm, ProbImputePhaseHmm, GenosCounts, FullH)
 
 
                             end block
@@ -262,7 +266,7 @@ write(0,*) 'DEBUG: Mach Finished'
                                 inputParamsHMM%imputedThreshold = inputParams%imputedThreshold
                                 inputParamsHMM%phasedThreshold = inputParams%phasedThreshold
                                 inputParamsHMM%HapList = inputParams%HapList
-                                call AlphaImputeHMMRunner(inputParamsHMM, ImputeGenos, ImputePhase, ped, ProbImputeGenosHmm, ProbImputePhaseHmm, GenosCounts, FullH)
+                                call AlphaImputeHMMRunner(inputParamsHMM, ped, ProbImputeGenosHmm, ProbImputePhaseHmm, GenosCounts, FullH)
 
 
                             end block
@@ -481,8 +485,6 @@ write(0,*) 'DEBUG: Mach Finished'
 
                 deallocate(Temp)
 
-                ImputePhase(0,:,:)=9
-                ImputeGenos(0,:)=9
 
             end subroutine InternalParentPhaseElim
 
@@ -665,7 +667,7 @@ do f=1,2
             !# END PARALLEL DO
 
             ! THE SECOND PARALLELIZATION BEGINS
-            !# PARALLEL DO SHARED (ped%pedigreesize-ped%ndummys,ImputePhase,CoreStart,CoreEnd,CoreLength,nHap,HapLib,ImputeGenos,AnimalOn,Temp) private(i,HapElim,Work,BanBoth,e,h,j,Counter,Count0,Count1,Ban)
+            !# PARALLEL DO SHARED (ped%pedigreesize-ped%ndummys,ImputePhase,CoreStart,CoreEnd,CoreLength,nHap,HapLib,AnimalOn,Temp) private(i,HapElim,Work,BanBoth,e,h,j,Counter,Count0,Count1,Ban)
 
             ! WARNING: This code does not match the corresponding code of the subroutine ImputeFromHDLibrary
             !          In ImputeFromHDLibrary, there are two steps, counting agreements and impute
@@ -736,9 +738,13 @@ do f=1,2
                 ! if allele phases disagree with the genotype, then unban haplotypes
                 if (sum(BanBoth(:))==2) then
                     do j=CoreStart,CoreEnd
-                        if (ImputeGenos(i,j)/=9) then
+                        block 
+
+                        integer(kind=1) :: geno
+                        geno = ped%pedigree(i)%individualGenotype%getGenotype(j)
+                        if (geno/=9) then
                             if ((Work(j,1)/=9).and.(Work(j,2)/=9)) then
-                                if (ImputeGenos(i,j)/=(Work(j,1)+Work(j,2))) then
+                                if (geno/=(Work(j,1)+Work(j,2))) then
                                     Ban=0
                                     exit
                                 endif
@@ -786,9 +792,9 @@ do i=1,ped%pedigreesize-ped%ndummys
             do j=1,inputParams%nsnp
                 if (ImputePhase(i,j,e)==9) then
                     if ((Temp(i,j,e,1)>inputParams%nAgreeInternalHapLibElim).and.(Temp(i,j,e,2)==0))&
-                        ImputePhase(i,j,e)=0
+                        ped%pedigree(i)%individualPhase(e)%setPhase(j,0)
                     if ((Temp(i,j,e,1)==0).and.(Temp(i,j,e,2)>inputParams%nAgreeInternalHapLibElim))&
-                        ImputePhase(i,j,e)=1
+                        ped%pedigree(i)%individualPhase(e)%setPhase(j,1)
                 endif
             enddo
         endif
@@ -796,9 +802,6 @@ do i=1,ped%pedigreesize-ped%ndummys
 enddo
 
 deallocate(Temp)
-
-ImputePhase(0,:,:)=9
-ImputeGenos(0,:)=9
 
 end subroutine InternalHapLibImputation
 
@@ -978,7 +981,7 @@ do f=1,2
             !# END PARALLEL DO
 
             ! THE SECOND PARALLELIZATION BEGINS
-            !# PARALLEL DO SHARED (ped%pedigreesize-ped%ndummys,ImputePhase,CoreStart,CoreEnd,CoreLength,nHap,HapLib,ImputeGenos,AnimalOn,Temp) private(i,HapElim,Work,BanBoth,e,h,j,Counter,Count0,Count1,Ban)
+            !# PARALLEL DO SHARED (ped%pedigreesize-ped%ndummys,ImputePhase,CoreStart,CoreEnd,CoreLength,nHap,HapLib,AnimalOn,Temp) private(i,HapElim,Work,BanBoth,e,h,j,Counter,Count0,Count1,Ban)
 
             ! WARNING: This code does not match the corresponding code of the subroutine ImputeFromHDLibrary
             !          In ImputeFromHDLibrary, there are two steps, counting agreements and impute
@@ -1021,7 +1024,8 @@ do f=1,2
                 ! If both gametes have been previously banned/phased, and
                 ! if allele phases disagree with the genotype, then unban haplotypes
                 if (sum(BanBoth(:))==2) then
-                    workGeno = newGenotypeInt(ImputeGenos(i,CoreStart:CoreEnd))
+
+                    workGeno = ped%pedigree(i)%individualGenotype%subset(corestart,coreEnd)
                     if (.not. workGeno%compatibleHaplotypes(workHap(1),workHap(2), 0)) then
                         Ban=0
                     endif
@@ -1082,8 +1086,6 @@ enddo
 ! call hapLib%destroyHaplotypeLibrary()
 deallocate(Temp)
 
-ImputePhase(0,:,:)=9
-ImputeGenos(0,:)=9
 
 end subroutine InternalHapLibImputationOld
 
@@ -1261,9 +1263,6 @@ end subroutine InternalHapLibImputationOld
                     enddo
                 enddo
                 deallocate(Temp)
-
-                ImputePhase(0,:,:)=9
-                ImputeGenos(0,:)=9
 
             END SUBROUTINE PhaseElimination
 
@@ -1465,9 +1464,6 @@ end subroutine InternalHapLibImputationOld
                 enddo
                 deallocate(Temp)
 
-                ImputePhase(0,:,:)=9
-                ImputeGenos(0,:)=9
-
             END SUBROUTINE ParentPhaseElimination
 
             !#############################################################################################################################################################################################################################
@@ -1589,7 +1585,7 @@ end subroutine InternalHapLibImputationOld
                                 ! If both gametes have been previously banned/phased,
                                 ! check whether the phase given agrees with genotype
                                 if (sum(BanBoth(:))==2) then
-                                    workGeno = newGenotypeInt(ImputeGenos(i,startSnp:endSnp))
+                                    workGeno = ped%pedigree(i)%individualGenotype%subset(corestart,coreEnd)
                                     if (.not. workGeno%compatibleHaplotypes(workHap(1),workHap(2), 0)) then
                                         Ban=0
                                     endif
@@ -1650,8 +1646,6 @@ end subroutine InternalHapLibImputationOld
                 enddo
                 deallocate(Temp)
 
-                ImputePhase(0,:,:)=9
-                ImputeGenos(0,:)=9
 
             END SUBROUTINE ImputeFromHDLibrary
 
@@ -1932,9 +1926,6 @@ end subroutine InternalHapLibImputationOld
                     enddo
                 enddo
 
-                ImputePhase(0,:,:)=9
-                ImputeGenos(0,:)=9
-
             END SUBROUTINE BaseAnimalFillIn
 
             !#############################################################################################################################################################################################################################
@@ -1946,20 +1937,12 @@ end subroutine InternalHapLibImputationOld
                 implicit none
 
                 integer :: i,j
-                ! ImputeGenos=9
-                ImputePhase=9
                 inputParams => defaultInput
 
-                ! imputeGenos(:,:) = ped%getGenotypesAsArray()
-                imputeGenos(:,:) = ped%getGenotypesAsArrayWitHMissing()
                 do i=1, ped%pedigreeSize
-                    do j=1,inputParams%nsnp
-                        if (ImputeGenos(i,j)==0) ImputePhase(i,j,:)=0
-                        if (ImputeGenos(i,j)==2) ImputePhase(i,j,:)=1
-                    enddo
+                    ped%pedigree(i)%individualGenotype%setHaplotypeFromGenotype(ped%pedigree(i)%individualPhase(1))
+                    ped%pedigree(i)%individualGenotype%setHaplotypeFromGenotype(ped%pedigree(i)%individualPhase(2))
                 enddo
-
-
 
             end subroutine InitialiseArrays
 
@@ -1968,7 +1951,6 @@ end subroutine InternalHapLibImputationOld
             subroutine GeneralFillIn
                 ! This function implements the four Minor sub-steps explained in Hickey et al. (2012; Appendix A)
                 use Global
-                use informationModule
 
                 implicit none
 
@@ -1979,8 +1961,6 @@ end subroutine InternalHapLibImputationOld
                 ! if (TestVersion==1) call CurrentYield
                 ! if (TestVersion==1) call Checker
 
-                ImputePhase(0,:,:)=9
-                ImputeGenos(0,:)=9
 
             end subroutine GeneralFillIn
 
@@ -1989,7 +1969,6 @@ end subroutine InternalHapLibImputationOld
             subroutine GeneralFillInInit
                 ! This function implements the four Minor sub-steps explained in Hickey et al. (2012; Appendix A)
                 use Global
-                use informationModule
 
                 implicit none
 
@@ -2000,8 +1979,6 @@ end subroutine InternalHapLibImputationOld
                 ! if (TestVersion==1) call CurrentYield
                 ! if (TestVersion==1) call Checker
 
-                ImputePhase(0,:,:)=9
-                ImputeGenos(0,:)=9
 
             end subroutine GeneralFillInInit
             !#############################################################################################################################################################################################################################
@@ -2012,22 +1989,17 @@ end subroutine InternalHapLibImputationOld
                 use AlphaImputeSpecFileModule
                 implicit none
 
-                integer :: i,j
+                integer :: i
 
                 inputParams => defaultInput
 
-                do j=1,inputParams%nsnp
                     do i=1,ped%pedigreeSize- ped%nDummys
                         if (ped%pedigree(i)%gender==inputParams%HetGameticStatus) then
-                            if ((ImputePhase(i,j,1)==9).and.(ImputePhase(i,j,2)/=9)) then
-                                ImputePhase(i,j,1)=ImputePhase(i,j,2)
-                            end if
-                            if ((ImputePhase(i,j,2)==9).and.(ImputePhase(i,j,1)/=9)) then
-                                ImputePhase(i,j,2)=ImputePhase(i,j,1)
-                            end if
-                        end if
+                            ped%pedigree(i)%individualPhase(1)%setFromOtherIfMissing(ped%pedigree(i)%individualPhase(2))
+                            ped%pedigree(i)%individualPhase(2)%setFromOtherIfMissing(ped%pedigree(i)%individualPhase(1))
+                        endif
                     enddo
-                enddo
+                
 
             END SUBROUTINE EnsureHetGametic
 
@@ -2041,21 +2013,11 @@ end subroutine InternalHapLibImputationOld
 
                 implicit none
 
-                integer :: i,j
 
-                inputParams => defaultInput
-                do i=1,ped%pedigreeSize- ped%nDummys
-                    do j=1,inputParams%nsnp         
-                        if (ImputeGenos(i,j)==9) then
-                            if ((ImputePhase(i,j,1)/=9).and.(ImputePhase(i,j,2)/=9)) then
-                                ImputeGenos(i,j)=sum(ImputePhase(i,j,:))
-                            end if
-                        endif
-                    enddo
-                enddo
+                do i=1,ped%pedigreeSize-ped%nDummys
+                    ped%pedigree(i)%IndividualGenotype%setFromHaplotypesIfMisssing(ped%pedigree(i)%individualPhase(1),ped%pedigree(i)%individualPhase(2))
+                enddo 
 
-                ImputePhase(0,:,:)=9
-                ImputeGenos(0,:)=9
 
             END SUBROUTINE MakeGenotype
 
@@ -2067,32 +2029,16 @@ end subroutine InternalHapLibImputationOld
                 use Global
                 implicit none
 
-                integer :: i,j
+                integer :: i10
+                type(haplotype) :: comp1, comp2
 
-                do i=1,ped%pedigreeSize- ped%nDummys
-                    do j=1,inputParams%nsnp 
-                        if (ImputeGenos(i,j)/=9) then
-                            ! TODO check if this is  correct
-                            ! if (imputeGenos(i,j) /= 0) then
-                                if ((ImputePhase(i,j,1)/=9).and.(ImputePhase(i,j,2)==9)) then
-                                    ImputePhase(i,j,2)=ImputeGenos(i,j)-ImputePhase(i,j,1)
-                                    if (ImputePhase(i,j,2) < 0) Then
-                                        ImputePhase(i,j,2) = 0
-                                    endif
-                                end if
-                                if ((ImputePhase(i,j,2)/=9).and.(ImputePhase(i,j,1)==9)) then
-                                    ImputePhase(i,j,1)=ImputeGenos(i,j)-ImputePhase(i,j,2)
-                                    if (ImputePhase(i,j,2) < 0) Then
-                                        ImputePhase(i,j,2) = 0
-                                    endif
-                                end if
-                            ! endif
-                        endif
-                    enddo
+                do i=1,ped%pedigreeSize- ped%nDummys  
+                    comp2 = ped%pedigree(i)%individualGenotype%complement(ped%pedigree(i)%individalPhase(1))
+                    comp1 = ped%pedigree(i)%individualGenotype%complement(ped%pedigree(i)%individalPhase(2))
+
+                    call ped%pedigree(i)%individalPhase(1)%setErrorToMissing()
+                    call ped%pedigree(i)%individalPhase(2)%setErrorToMissing()
                 enddo
-
-                ImputePhase(0,:,:)=9
-                ImputeGenos(0,:)=9
 
             end subroutine PhaseComplement
 
@@ -2106,6 +2052,7 @@ end subroutine InternalHapLibImputationOld
                 implicit none
 
                 integer :: e,i,j,ParId
+                type(Genotype) :: tmpGeno
 
                 inputParams => defaultInput
                 do i=1,ped%pedigreeSize- ped%nDummys
@@ -2113,31 +2060,16 @@ end subroutine InternalHapLibImputationOld
                         do e=1,2
                             if (ped%pedigree(i)%isDummyBasedOnIndex(e+1)) cycle
                             ParId=ped%pedigree(i)%getSireDamNewIDByIndex(e+1)
-                            do j=1,inputParams%nsnp
-                                if (ImputePhase(i,j,e)==9) then                 ! Always that the SNP is not genotyped
-                                    if ((ImputePhase(ParId,j,1)==ImputePhase(ParId,j,2)).and. &
-                                        (ImputePhase(ParId,j,1)/=9)) then
-                                        ! Imput phase if parent is homozygous
-                                        ImputePhase(i,j,e)=ImputePhase(ParId,j,1)
-                                    end if
-                                endif
-                            enddo
+                            tmpGeno = newGenotypeHap(ped%pedigree(parId)%IndividualPhase(1),ped%pedigree(parId)%individualPhase(2))
+                                call tmpGeno%setHaplotypeFromGenotypeIfMissing(ped%pedigree(i)%individualPhase(e))                                
                         enddo
                     else
                         ParId= ped%pedigree(i)%getSireDamNewIDByIndex(inputParams%HomGameticStatus+1) !the homogametic parent
-                        do j=1,inputParams%nsnp
-                            if (ImputePhase(i,j,1)==9) then !Comment from John Hickey see analogous iterate subroutine
-                                if ((ImputePhase(ParId,j,1)==ImputePhase(ParId,j,2)).and. &
-                                    (ImputePhase(ParId,j,1)/=9)) then
-                                    ! Imput phase to the two haplotypes if parent is homozygous
-                                    ImputePhase(i,j,:)=ImputePhase(ParId,j,1)
-                                end if
-                            endif
-                        enddo
+                        tmpGeno = newGenotypeHap(ped%pedigree(parId)%IndividualPhase(1),ped%pedigree(parId)%individualPhase(2))
+                        call tmpGeno%setHaplotypeFromGenotypeIfMissing(ped%pedigree(i)%individualPhase(1)) 
+                        call tmpGeno%setHaplotypeFromGenotypeIfMissing(ped%pedigree(i)%individualPhase(2)) 
                     endif
                 enddo
-                ImputePhase(0,:,:)=9
-                ImputeGenos(0,:)=9
 
             end subroutine ParentHomoFill
 
@@ -2285,8 +2217,7 @@ end subroutine InternalHapLibImputationOld
                     endif
                 enddo
 
-                ImputePhase(0,:,:)=9
-                ImputeGenos(0,:)=9
+    
 
             end subroutine ImputeParentByProgenyComplement
 
@@ -2343,7 +2274,7 @@ end subroutine InternalHapLibImputationOld
                             if (PatAlleleProb(j,2)>=GeneProbThresh) ImputePhase(i,j,1)=1
                             if (MatAlleleProb(j,1)>=GeneProbThresh) ImputePhase(i,j,2)=0
                             if (MatAlleleProb(j,2)>=GeneProbThresh) ImputePhase(i,j,2)=1
-                            if (HetProb(j)>=GeneProbThresh) ImputeGenos(i,j)=1
+                            if (HetProb(j)>=GeneProbThresh) ped%pedigree(i)%individualGenotype%setGenotype(j,1)
                         enddo
                     enddo
                 endif
@@ -2368,11 +2299,13 @@ end subroutine InternalHapLibImputationOld
                         if (SnpIncluded(m)==1) then                     ! Whether to consider this SNP
                             j=j+1                                       ! Number of SNPs included so far
 
-                            if (ImputeGenos(i,j)==1) then               ! If heterozygous
+                            if (ped%pedigree(i)%individualGenotype%getgenotype(j)==1) then               ! If heterozygous
 
                                 if (.not. ped%pedigree(i)%isDummyBasedOnIndex(2)) then
                                     ! My father is heterozygous
-                                    if (ImputeGenos(ped%pedigree(i)%getSireDamNewIDByIndex(2),j)==1) then
+
+                                    
+                                    if (ped%pedigree(ped%pedigree(i)%getSireDamNewIDByIndex(2))%individualGenotype%getGenotype(j)==1) then
                                         ! And have my father haplotype phased
                                         if ((ImputePhase(i,j,1)==0).or.(ImputePhase(i,j,1)==1)) then
                                             Informativeness(j,1)=1
@@ -2384,7 +2317,7 @@ end subroutine InternalHapLibImputationOld
 
                                 ! My mother is heterozygous
                                 if (.not. ped%pedigree(i)%isDummyBasedOnIndex(3)) then
-                                    if (ImputeGenos(ped%pedigree(i)%getSireDamNewIDByIndex(3),j)==1) then
+                                    if (ped%pedigree(ped%pedigree(i)%getSireDamNewIDByIndex(3))%individualGenotype%getGenotype(j),j)==1) then
                                         ! And have my mother haplotype phased
                                         if ((ImputePhase(i,j,2)==0).or.(ImputePhase(i,j,2)==1)) then
                                             Informativeness(j,2)=1
@@ -2399,14 +2332,14 @@ end subroutine InternalHapLibImputationOld
                                 if ((ImputePhase(i,j,1)==0).or.(ImputePhase(i,j,1)==1)) then
                                     ! If my paternal GranSire is heterozygous
                                     GrandPar=ped%pedigree(i)%getPaternalGrandSireRecodedIndexNoDummy()
-                                    if (ImputeGenos(GrandPar,j)==1) then
+                                    if (ped%pedigree(granPar)%individualGenotype%getgenotype(j)==1) then
                                         Informativeness(j,3)=1
                                         GlobalTmpCountInf(i,3)=GlobalTmpCountInf(i,3)+1
                                         TmpInfor(GlobalTmpCountInf(i,3),3)=j
                                     endif
                                     ! If my maternal GranDam is heterozygous
                                     GrandPar=ped%pedigree(i)%getPaternalGrandSireRecodedIndexNoDummy()
-                                    if (ImputeGenos(GrandPar,j)==1) then
+                                    if (ped%pedigree(granPar)%individualGenotype%getgenotype(j)==1) then
                                         Informativeness(j,4)=1
                                         GlobalTmpCountInf(i,4)=GlobalTmpCountInf(i,4)+1
                                         TmpInfor(GlobalTmpCountInf(i,4),4)=j
@@ -2420,14 +2353,14 @@ end subroutine InternalHapLibImputationOld
                                     ! TODO make this return 0
                                     GrandPar= ped%pedigree(i)%getPaternalGrandSireRecodedIndexNoDummy()
 
-                                    if (ImputeGenos(GrandPar,j)==1) then
+                                    if (ped%pedigree(granPar)%individualGenotype%getgenotype(j)==1) then
                                         Informativeness(j,5)=1
                                         GlobalTmpCountInf(i,5)=GlobalTmpCountInf(i,5)+1
                                         TmpInfor(GlobalTmpCountInf(i,5),5)=j
                                     endif
                                     ! If my maternal GranDam is heterozygous
                                     GrandPar=ped%pedigree(i)%getmaternalGrandDamRecodedIndexNoDummy()
-                                    if (ImputeGenos(GrandPar,j)==1) then
+                                    if (ped%pedigree(granPar)%individualGenotype%getgenotype(j)==1) then
                                         Informativeness(j,6)=1
                                         GlobalTmpCountInf(i,6)=GlobalTmpCountInf(i,6)+1
                                         TmpInfor(GlobalTmpCountInf(i,6),6)=j
@@ -2596,10 +2529,6 @@ end subroutine InternalHapLibImputationOld
                 allocate(WorkLeft(inputParams%nsnp))
                 allocate(TempVec(inputParams%nsnp))
                 allocate(LengthVec(inputParams%nsnp))
-
-
-                ImputePhase(0,:,:)=9
-                ImputeGenos(0,:)=9
 
                 MaxLeftRightSwitch=4; MinSpan=200
 
@@ -2780,14 +2709,17 @@ end subroutine InternalHapLibImputationOld
 
                             ! Remove phase and genotype for those alleles with no explanation due to heterozygosity and recombination
                             do j=1,inputParams%nSnp
-                                if ( TempVec(j)==3 .AND. &
-                                    (ImputePhase(PedId,j,1)/=ImputePhase(PedId,j,2)) .AND. &
+                                if ( TempVec(j)==3) then
+                                    block
+                                    integer(kind=1) :: phase
+                                    if (ImputePhase(PedId,j,1)/=ImputePhase(PedId,j,2)) .AND. &
                                     (ImputePhase(PedId,j,1)/=9) .and. (ImputePhase(PedId,j,2)/=9) ) then
 
-                                    ImputePhase(i,j,e)=9
+                                    ped%pedigree(i)%individualPhase(e)%setPhase(j,9)
                                     if (Setter(i)/=1) then ! Skip HD individuals
-                                        ImputeGenos(i,j)=9
+                                        ped%pedigree(i)%individualGenotype%setGenotype(j,9)
                                     end if
+                                endif
 
                                 endif
                             enddo
@@ -2863,9 +2795,6 @@ end subroutine InternalHapLibImputationOld
                     endif
                 enddo
 
-                ImputePhase(0,:,:)=9
-                ImputeGenos(0,:)=9
-
                 deallocate(WorkRight)
                 deallocate(WorkLeft)
                 deallocate(TempVec)
@@ -2914,9 +2843,6 @@ end subroutine InternalHapLibImputationOld
                 allocate(TempVec(inputParams%nsnp))
                 allocate(LengthVec(inputParams%nsnp))
 
-
-                ImputePhase(0,:,:)=9
-                ImputeGenos(0,:)=9
 
                 do i=1,ped%pedigreeSize- ped%nDummys
                     HetEnd=-1
@@ -3083,18 +3009,24 @@ end subroutine InternalHapLibImputationOld
                             enddo
 
                             ! Remove phase and genotype for those alleles with no explanation due to heterozygosity and recombination
-                            do j=1,inputParams%nSnp
-                                if ( TempVec(j)==3 .AND. &
-                                    (ImputePhase(PedId,j,1)/=ImputePhase(PedId,j,2)) .AND. &
-                                    (ImputePhase(PedId,j,1)/=9) .and. (ImputePhase(PedId,j,2)/=9) ) then
+                            block 
+                                integer(kind=1) :: phase1,phase2
+                                do j=1,inputParams%nSnp
+                                    if ( TempVec(j)==3) then
+                                        phase1 = ped%pedigree(pedId)%individualPhase(1)%getPhase(j)
+                                        phase2 = ped%pedigree(pedId)%individualPhase(2)%getPhase(j)
+                                        if (phase1/=phase2) .AND. &
+                                        (phase1/=9) .and. (phase2/=9) ) then
 
-                                    ImputePhase(i,j,e)=9
-                                    if (Setter(i)/=1) then ! Skip HD individuals
-                                        ImputeGenos(i,j)=9
-                                    end if
+                                        ped%pedigree(i)%IndividualPhase(e)%setGenotype(j,9)
+                                        if (Setter(i)/=1) then ! Skip HD individuals
+                                            ped%pedigree(i)%IndividualGenotypes%setGenotype(j,9)
+                                        end if
 
-                                endif
-                            enddo
+                                    endif
+                                enddo
+                        
+                            end block
 
                             GlobalWorkPhase(i,:,:)=ImputePhase(i,:,:)
 
@@ -3167,10 +3099,87 @@ end subroutine InternalHapLibImputationOld
                     endif
                 enddo
 
-                ImputePhase(0,:,:)=9
-                ImputeGenos(0,:)=9
-
             end subroutine WorkLeftRight
+
+
+
+    subroutine FromHMM2ImputePhase
+        ! Impute alleles from HMM dosage probabilities
+        use Global
+
+        use AlphaImputeSpecFileModule
+
+        implicit none
+
+        integer :: i,j,k
+        type(AlphaImputeInput), pointer :: inputParams
+
+        inputParams => defaultInput
+
+        do i=1,ped%nGenotyped
+            do j=1,inputParams%nsnp
+                do k=1,2
+                    if (FullH(i,j,k)<0.001.and.FullH(i,j,k)>=0.0) Then
+                        ImputePhase(ped%genotypeMap(i),j,k)=0
+                    elseif (FullH(i,j,k)>0.999.and.FullH(i,j,k)<=1.0) then
+                        ImputePhase(ped%genotypeMap(i),j,k)=1
+                    else
+                        ImputePhase(ped%genotypeMap(i),j,k)=9
+                    endif
+                enddo
+            enddo
+        enddo
+
+    end subroutine FromHMM2ImputePhase
+
+
+        subroutine InsteadOfReReadGeneProb
+        ! Phase alleles in the SEX CHROMOSOME whenever it is possible (homozygous case).
+        ! Phasing information is store in the variable GlobalWorkPhase
+        use Global
+        use AlphaImputeSpecFileModule
+        implicit none
+
+        type(AlphaImputeInput), pointer :: inputParams
+        integer :: e,i,j,ParId
+        integer, dimension(:,:) , allocatable :: Genos !  Temp variable
+
+
+        genos = ped%getGenotypesAsArray()
+
+        inputParams => defaultInput
+        if (defaultInput%SexOpt==1) then                                         ! Sex chromosome
+            deallocate(GlobalWorkPhase)
+            allocate(GlobalWorkPhase(0:ped%pedigreeSize-ped%nDummys,inputParams%nsnp,2))
+            GlobalWorkPhase=9
+            do i=1,ped%pedigreeSize
+                do j=1,inputParams%nsnp                                                     ! Phase alleles in the homozygous case
+                    if (Genos(i,j)==0) GlobalWorkPhase(i,j,:)=0
+                    if (Genos(i,j)==2) GlobalWorkPhase(i,j,:)=1
+                enddo
+                if (ped%pedigree(i)%gender/=inputParams%hetGameticStatus) then
+                    do e=1,2                                                    ! Phase alleles for homogametic individuals in the homozygous case
+                        ParId=ped%pedigree(i)%getSireDamNewIDByIndex(e+1)
+                        do j=1,inputParams%nsnp
+                            if (Genos(ParId,j)==0) GlobalWorkPhase(i,j,e)=0
+                            if (Genos(ParId,j)==2) GlobalWorkPhase(i,j,e)=1
+                        enddo
+                    enddo
+                else
+                    ParId=ped%pedigree(i)%getSireDamNewIDByIndex(inputParams%HomGameticStatus+1)                          ! Phase alleles for heterogametic individuals in the homozygous case
+                    do j=1,inputParams%nsnp
+                        if (Genos(ParId,j)==0) GlobalWorkPhase(i,j,:)=0
+                        if (Genos(ParId,j)==2) GlobalWorkPhase(i,j,:)=1
+                    enddo
+                endif
+            enddo
+            GlobalWorkPhase(0,:,:)=9
+        else                                ! Nothing is done in other chromosomes
+            !! WARNING: This should be some copied, pasted and erased stuff
+        endif
+
+    end subroutine InsteadOfReReadGeneProb
+
 
 
         END MODULE Imputation

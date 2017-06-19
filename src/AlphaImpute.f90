@@ -105,7 +105,7 @@ contains
     subroutine IterateGeneProbsNew(GenosProbs)
 
         use iso_fortran_env
-        use global, only : Maf,ImputePhase,ImputeGenos, ped,ProbImputePhase, ProbImputeGenos,OPT_RESTART_IMPUTATION
+        use global, only : Maf, ped,ProbImputePhase, ProbImputeGenos,OPT_RESTART_IMPUTATION
         use AlphaImputeSpecFileModule
         use GeneProbModule , only : runGeneProbAlphaImpute
         use imputation, only : PhaseComplement
@@ -138,9 +138,9 @@ contains
         if (inputParams%restartOption==OPT_RESTART_IMPUTATION) then
                 open (unit=109,file="Tmp2345678.txt",status="unknown")
                 do i=1,ped%nGenotyped
-                    write (109,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ImputePhase(ped%genotypeMap(i),:,1)
-                    write (109,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ImputePhase(ped%genotypeMap(i),:,2)
-                    write (109,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ImputeGenos(ped%genotypeMap(i),:)
+                    write (109,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(pedgenotypeMap(i))%individalPhase(1)%haplotypeToIntegerArray()
+                    write (109,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(pedgenotypeMap(i))%individalPhase(2)%haplotypeToIntegerArray()
+                    write (109,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(pedgenotypeMap(i))%individualGenotype%toIntegerArray()
                 enddo
                 close (109)
                 write(*,*) "Restart option 3 stops program before Iterate Geneprob jobs have been finished"
@@ -163,12 +163,15 @@ contains
                        if (phase/=9) ProbImputePhase(i,j,k)=float(phase)                     
                        end block
                 enddo
-
-                if (ImputeGenos(i,j)/=9) then
-                    ProbImputeGenos(i,j)=float(ImputeGenos(i,j))
+                block
+                integer(kind=1) :: geno
+                geno = ped%pedigree(i)%individalgenotype%getGenotype(j)    
+                if (geno/=9) then
+                    ProbImputeGenos(i,j)=float(geno)
                 else
                     ProbImputeGenos(i,j)=sum(ProbImputePhase(i,j,:))
                 endif
+                end block
             enddo
         enddo
 
@@ -294,9 +297,9 @@ contains
             if (inputParams%restartOption==OPT_RESTART_IMPUTATION) then
                 open (unit=109,file="Tmp2345678.txt",status="unknown")
                 do i=1,ped%nGenotyped
-                    write (109,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ImputePhase(ped%genotypeMap(i),:,1)
-                    write (109,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ImputePhase(ped%genotypeMap(i),:,2)
-                    write (109,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ImputeGenos(ped%genotypeMap(i),:)
+                    write (109,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)')  ped%pedigree(ped%genotypemap(i))%individalPhase(1)%haplotypeToIntegerArray()
+                    write (109,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)')  ped%pedigree(ped%genotypemap(i))%individalPhase(2)%haplotypeToIntegerArray()
+                    write (109,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)')  ped%pedigree(ped%genotypeMap(i))%individualGenotype%toIntegerArray()
                 enddo
                 close (109)
                 write(*,*) "Restart option 3 stops program before Iterate Geneprob jobs have been finished"
@@ -322,11 +325,15 @@ contains
                     end block
                 enddo
 
-                if (ImputeGenos(i,j)/=9) then
-                    ProbImputeGenos(i,j)=float(ImputeGenos(i,j))
-                else
+                block 
+                    integer(kind=1) :: geno
+                    geno = ped%pedigree(i)%individualGenotype%getGenotype(j)
+                if (geno/=9) then
+                    ProbImputeGenos(i,j)=float(geno)
+/                else
                     ProbImputeGenos(i,j)=sum(ProbImputePhase(i,j,:))
                 endif
+                end block
             enddo
         enddo
 
@@ -432,6 +439,8 @@ contains
         implicit none
 
         integer :: e,i,j,k,Counter,ParId
+
+        integer(kind=1) :: genos
         real,allocatable,dimension(:) :: TempAlleleFreq
 
         inputParams => defaultInput
@@ -448,8 +457,9 @@ contains
             do j=1,nSnpIterate
                 Counter=0
                 do i=1,ped%pedigreeSize-ped%nDummys
-                    if (ImputeGenos(i,j)/=9) then
-                        TempAlleleFreq(j)=TempAlleleFreq(j)+ImputeGenos(i,j)
+                    genos = ped%pedigree(i)%individualGenotype%getGenotype(j)
+                    if (genos=MISSINGGENOTYPECODE) then
+                        TempAlleleFreq(j)=TempAlleleFreq(j)+genos
                         Counter=Counter+2
                     endif
                 enddo
@@ -473,7 +483,11 @@ contains
             do i=1,ped%pedigreeSize-ped%nDummys
                 do j=1,nSnpIterate
                     do e=1,2
-                        if (ImputePhase(i,j,e)/=9) ProbImputePhase(i,j,e)=float(ImputePhase(i,j,e))
+                          block                          
+                           integer(kind=1) :: phase                         
+                           phase = ped%pedigree(i)%individalPhase(e)%getPhase(j)                         
+                           if (phase/=9) ProbImputePhase(i,j,e)=float(phase)                     
+                           end block
                     enddo
                 enddo
             enddo
@@ -483,14 +497,22 @@ contains
                     parId = ped%pedigree(i)%getSireDamNewIDByIndex(e+1)
                     if (ParId==0) then
                         do j=1,nSnpIterate
-                            if (ImputePhase(i,j,e)==9) ProbImputePhase(i,j,e)=TempAlleleFreq(j)
+                            block                          
+                                integer(kind=1) :: phase                         
+                                phase = ped%pedigree(i)%individalPhase(e)%getPhase(j)  
+                                if (phase==9) ProbImputePhase(i,j,e)=TempAlleleFreq(j)
+                            end block
                         enddo
                     endif
                     if (ped%pedigree(i)%gender==inputParams%HomGameticStatus) then
                         do j=1,nSnpIterate
-                            if (ImputePhase(i,j,e)==9) then
-                                ProbImputePhase(i,j,e)=(sum(ProbImputePhase(ParId,j,:))/2)
-                            endif
+                            block                          
+                                integer(kind=1) :: phase                         
+                                phase = ped%pedigree(i)%individalPhase(e)%getPhase(j)  
+                                if (phase==9) then
+                                    ProbImputePhase(i,j,e)=(sum(ProbImputePhase(ParId,j,:))/2)
+                                endif
+                            end block
                         enddo
                     endif
                 enddo
@@ -513,8 +535,11 @@ contains
                            if (phase/=9) ProbImputePhase(i,j,k)=float(phase)                     
                            end block
                     enddo
-                    if (ImputeGenos(i,j)/=9) then
-                        ProbImputeGenos(i,j)=float(ImputeGenos(i,j))
+                    block                          
+                        integer(kind=1) :: genos                         
+                        genos = ped%pedigree(i)%individualGenotype%getGenotype(j)  
+                    if (genos/=9) then
+                        ProbImputeGenos(i,j)=float(genos)
                     else
                         ProbImputeGenos(i,j)=sum(ProbImputePhase(i,j,:))
                     endif
@@ -537,9 +562,9 @@ contains
             do i=1,ped%pedigreeSize-ped%nDummys
                 do j=1,nSnpIterate
                     if (ProbImputeGenos(i,j)==-9.0) ProbImputeGenos(i,j)=sum(ProbImputePhase(i,j,:))
-                    if (ProbImputeGenos(i,j)>1.999) ImputeGenos(i,j)=2
-                    if (ProbImputeGenos(i,j)<0.0001) ImputeGenos(i,j)=0
-                    if ((ProbImputeGenos(i,j)>0.999).and.(ProbImputeGenos(i,j)<1.00001)) ImputeGenos(i,j)=1
+                    if (ProbImputeGenos(i,j)>1.999)  ped%pedigree(i)%individualGenotype%setGenotype(j,2)
+                    if (ProbImputeGenos(i,j)<0.0001) ped%pedigree(i)%individualGenotype%setGenotype(j,0)
+                    if ((ProbImputeGenos(i,j)>0.999).and.(ProbImputeGenos(i,j)<1.00001)) ped%pedigree(i)%individualGenotype%setGenotype(j,1)
                 enddo
             enddo
 
@@ -550,9 +575,6 @@ contains
                     ProbImputePhase(:,j,:)=9.0
                 endif
             enddo
-
-            ImputePhase(0,:,:)=9
-            ImputeGenos(0,:)=9
 
         else
 
@@ -567,10 +589,15 @@ contains
             do j=1,nSnpIterate
                 Counter=0
                 do i=1,ped%pedigreeSize-ped%nDummys
-                    if (ImputeGenos(i,j)/=9) then
-                        TempAlleleFreq(j)=TempAlleleFreq(j)+ImputeGenos(i,j)
+                    block 
+
+                    integer(kind=1) :: geno
+                    geno = ped%pedigree(i)%individualGenotype%getGenotype(j)
+                    if (Geno/=9) then
+                        TempAlleleFreq(j)=TempAlleleFreq(j)+geno
                         Counter=Counter+2
                     endif
+                    end block
                 enddo
                 if (Counter/=0) then
                     TempAlleleFreq(j)=TempAlleleFreq(j)/Counter
@@ -592,7 +619,12 @@ contains
             do i=1,ped%pedigreeSize-ped%nDummys
                 do j=1,nSnpIterate
                     do e=1,2
-                        if (ImputePhase(i,j,e)/=9) ProbImputePhase(i,j,e)=float(ImputePhase(i,j,e))
+                        block 
+                        integer(kind=1) :: phase
+
+                        phase = ped%pedigree(i)%individualPhase(e)%getPhase(j)
+                        if (phase /=9) ProbImputePhase(i,j,e)=float(phase)
+                        end block
                     enddo
                 enddo
             enddo
@@ -602,11 +634,15 @@ contains
                     parID=ped%pedigree(i)%getSireDamNewIDByIndex(e+1)
                     if (ParId==0) then
                         do j=1,nSnpIterate
-                            if (ImputePhase(i,j,e)==9) ProbImputePhase(i,j,e)=TempAlleleFreq(j)
+                            block
+                            integer :: phase 
+                            
+                            phase = ped%pedigree(i)%individualPhase(e)%getPhase(j)
+                            if (phase==9) ProbImputePhase(i,j,e)=TempAlleleFreq(j)
                         enddo
                     endif
                     do j=1,nSnpIterate
-                        if (ImputePhase(i,j,e)==9) then
+                        if (ped%pedigree(i)%individualPhase(e)%getPhase(j)=9) then
                             ProbImputePhase(i,j,e)=(sum(ProbImputePhase(ParId,j,:))/2)
                         endif
                     enddo
@@ -622,8 +658,13 @@ contains
                         if (phase/=9) ProbImputePhase(i,j,k)=float(phase)                     
                         end block
                     enddo
-                    if (ImputeGenos(i,j)/=9) then
-                        ProbImputeGenos(i,j)=float(ImputeGenos(i,j))
+
+                    block 
+                        integer(kind=1) :: geno
+
+                        geno = ped%pedigree(i)%individualGenotype%getGenotype(j)
+                    if (geno/=9) then
+                        ProbImputeGenos(i,j)=float(geno)
                     else
                         ProbImputeGenos(i,j)=sum(ProbImputePhase(i,j,:))
                     endif
@@ -633,9 +674,9 @@ contains
             do i=1,ped%pedigreeSize-ped%nDummys
                 do j=1,nSnpIterate
                     if (ProbImputeGenos(i,j)==-9.0) ProbImputeGenos(i,j)=sum(ProbImputePhase(i,j,:))
-                    if (ProbImputeGenos(i,j)>1.999) ImputeGenos(i,j)=2
-                    if (ProbImputeGenos(i,j)<0.0001) ImputeGenos(i,j)=0
-                    if ((ProbImputeGenos(i,j)>0.999).and.(ProbImputeGenos(i,j)<1.00001)) ImputeGenos(i,j)=1
+                    if (ProbImputeGenos(i,j)>1.999) ped%pedigree(i)%individualGenotype%setGenotype(j,2)
+                    if (ProbImputeGenos(i,j)<0.0001) ped%pedigree(i)%individualGenotype%setGenotype(j,0)
+                    if ((ProbImputeGenos(i,j)>0.999).and.(ProbImputeGenos(i,j)<1.00001)) ped%pedigree(i)%individualGenotype%setGenotype(j,1)
                 enddo
             enddo
 
@@ -645,9 +686,6 @@ contains
                     ProbImputePhase(:,j,:)=9.0
                 endif
             enddo
-
-            ImputePhase(0,:,:)=9
-            ImputeGenos(0,:)=9
 
         endif
 
@@ -709,7 +747,7 @@ contains
 
 
         do i=1, ped%pedigreeSize- ped%ndummys
-        write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,ImputeGenos(ped%inputmap(i),:)
+        write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,ped%pedigree(ped%inputMap(i))%individualGenotype%toIntegerArray()
         enddo
 #ifdef DEBUG
         write(0,*) 'DEBUG: output=0 [WriteOutResults]'
@@ -719,11 +757,9 @@ contains
 
             if (inputParams%SexOpt==0) then
 
-                call CheckImputationInconsistencies(ImputeGenos, ImputePhase, ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
-
                 open (unit=39, file="IterateGeneProb" // DASH // "IterateGeneProbInput.txt")
                 do i=1,ped%pedigreeSize-ped%nDummys
-                    write (39,*) ped%pedigree(i)%getIntegerVectorOfRecodedIdsNoDummy(),ImputeGenos(i,:)
+                    write (39,*) ped%pedigree(i)%getIntegerVectorOfRecodedIdsNoDummy(),ped%pedigree(i)%individualGenotype%toIntegerArray()
                 enddo
                 call flush(39)
                 ! close (39)
@@ -741,17 +777,13 @@ contains
                 end if
             else
 
-                call CheckImputationInconsistencies(ImputeGenos, ImputePhase, ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
-
                 call IterateInsteadOfGeneProbs
             endif
 
-            call CheckImputationInconsistencies(ImputeGenos, ImputePhase, ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
-
             do i=1, ped%pedigreeSize-ped%nDummys
-                write (33,*) ped%pedigree(ped%inputmap(i))%originalID,ImputePhase(ped%inputmap(i),:,1)
-                write (33,*) ped%pedigree(ped%inputmap(i))%originalID,ImputePhase(ped%inputmap(i),:,2)
-                write (34,*) ped%pedigree(ped%inputmap(i))%originalID,ImputeGenos(ped%inputmap(i),:)
+                write (33,*) ped%pedigree(ped%inputmap(i))%originalID,ped%pedigree(ped%inputmap(i))%individualPhase(1)%toIntegerArray()
+                write (33,*) ped%pedigree(ped%inputmap(i))%originalID,ped%pedigree(ped%inputmap(i))%individualPhase(2)%toIntegerArray()
+                write (34,*) ped%pedigree(ped%inputmap(i))%originalID,ped%pedigree(ped%inputmap(i))%individualGenotype%toIntegerArray()
             enddo
             ! close(new)
 
@@ -808,7 +840,8 @@ contains
                             ImputeGenosHMM(ped%genotypeMap(i),j)   = 0
                             ImputePhaseHMM(ped%genotypeMap(i),j,:) = 0
                         elseif (n1>n2) then
-                            ImputeGenos(ped%genotypeMap(i),j) = 1
+                            ! TODO check if this should be imputephase
+                            ped%pedigree(ped%genotypeMap(i))%individualGenotype%setGenotype(j,1)
                             if (ProbImputePhaseHmm(ped%genotypeMap(i),j,1) > ProbImputePhaseHmm(ped%genotypeMap(i),j,2) ) then
                                 ImputePhaseHMM(ped%genotypeMap(i),j,1) = 1
                                 ImputePhaseHMM(ped%genotypeMap(i),j,2) = 0
@@ -823,8 +856,6 @@ contains
                         endif
                     enddo
                 enddo
-
-                ! call CheckImputationInconsistencies(ImputeGenos, ImputePhase, ped%nGenotyped, inputParams%nSnp)
 
                 BLOCK
                     integer :: hmmID
@@ -878,10 +909,11 @@ contains
                     ImputationQuality(i,2)=ImputationQuality(i,2)+abs(ProbImputeGenos(i,j)-((Maf(j)**4)+(4*(Maf(j)**2)*((1.0-Maf(j))**2))+(1.0-Maf(j)**4)))
                 enddo
                 ImputationQuality(i,2)=ImputationQuality(i,2)/inputParams%nsnp
-                ImputationQuality(i,3)=float(inputParams%nsnp-count(ImputePhase(i,:,1)==9))/inputParams%nsnp
-                ImputationQuality(i,4)=float(inputParams%nsnp-count(ImputePhase(i,:,2)==9))/inputParams%nsnp
+                ImputationQuality(i,3)=float(inputParams%nsnp-ped%pedigree(i)%IndividualPhase(1)%numberMissing())/inputParams%nsnp
+                ImputationQuality(i,4)=float(inputParams%nsnp-ped%pedigree(i)%IndividualPhase(2)%numberMissing())/inputParams%nsnp
                 ImputationQuality(i,5)=(ImputationQuality(i,3)+ImputationQuality(i,4))/2
-                ImputationQuality(i,6)=float(inputParams%nsnp-count(ImputeGenos(i,:)==9))/inputParams%nsnp
+                
+                ImputationQuality(i,6)=float(inputParams%nsnp-ped%pedigree(i)%IndividualGenotype%numMissing())/inputParams%nsnp
                 write (50,'(a20,20000f7.2)') ped%pedigree(i)%originalID,ImputationQuality(i,:)
             enddo
 
@@ -889,12 +921,11 @@ contains
                 write (51,'(i10,20000f7.2)') j,float(((ped%pedigreeSize-(ped%nDummys+1))+1)-count(ImputeGenos(ped%nDummys+1:ped%pedigreeSize,j)==9))/((ped%pedigreeSize-(ped%nDummys+1))+1)
             enddo
 
-            call CheckImputationInconsistencies(ImputeGenos, ImputePhase, ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
             inputParams%WellPhasedThresh=inputParams%WellPhasedThresh/100
             do i=1, ped%pedigreeSize-ped%nDummys
                 if (ImputationQuality(i,5)>=inputParams%WellPhasedThresh) then
-                    write (52,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,ImputePhase(ped%inputmap(i),:,1)
-                    write (52,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,ImputePhase(ped%inputmap(i),:,2)
+                    write (52,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,ped%pedigree(ped%inputmap(i))%IndividualPhase(1)%toIntegerArray()
+                    write (52,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,ped%pedigree(ped%inputmap(i))%IndividualPhase(2)%toIntegerArray()
                 endif
             enddo
 
@@ -903,8 +934,6 @@ contains
 #ifdef DEBUG
             write(0,*) 'DEBUG: Unphase wrong alleles [WriteOutResults]'
 #endif
-
-            call CheckImputationInconsistencies(ImputeGenos, ImputePhase, ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
 
 
             if (inputParams%outopt == 1) then
@@ -923,9 +952,9 @@ contains
 
                 if (SnpIncluded(j)==1) then
                     l=l+1
-                    TmpGenos(:,l)=ImputeGenos(:,j)
-                    TmpPhase(:,l,1)=ImputePhase(:,j,1)
-                    TmpPhase(:,l,2)=ImputePhase(:,j,2)
+                    TmpGenos(:,l)=ped%getAllGenotypesAtPosition(j)
+                    TmpPhase(:,l,1)=ped%getPhaseAtPositionUngenotypedAnimals(j,1)
+                    TmpPhase(:,l,2)=ped%getPhaseAtPositionUngenotypedAnimals(j,2)
                 endif
             enddo
 
@@ -959,7 +988,6 @@ contains
                     close(42)
                 end if
             endblock
-            call CheckImputationInconsistencies(TmpGenos, TmpPhase, ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
             do i=1, ped%pedigreeSize-ped%nDummys
                 ! TODO these might want to be tmpGenos and tmp hpase
                 write (33,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,TmpPhase(ped%inputmap(i),:,1)
@@ -991,10 +1019,8 @@ contains
                 end if
                 allocate(ProbImputePhase(0:ped%pedigreeSize,inputParams%nSnpRaw,2))
 
-                ImputeGenos=TmpGenos
-
-
-                ImputePhase=TmpPhase
+                call ped%setGenotypeFromArray(tmpGenos)
+                call ped%setPhaseFromArray(TmpPhase)
                 if (inputParams%SexOpt==0) then
                     if (inputParams%bypassgeneprob==0) then
                          if (inputParams%cluster) then
@@ -1011,7 +1037,6 @@ contains
                 endif
             endif
 
-            call CheckImputationInconsistencies(ImputeGenos, ImputePhase, ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
 
             !if (inputParams%hmmoption==RUN_HMM_ONLY.or.inputParams%hmmoption==RUN_HMM_PREPHASE) then
             if (inputParams%hmmoption/=RUN_HMM_NO) then
@@ -1087,8 +1112,6 @@ contains
 #ifdef DEBUG
                 write(0,*) 'DEBUG: Write phase, genotypes and probabilities into files [WriteOutResults]'
 #endif
-                ! call CheckImputationInconsistencies(ImputeGenos, ImputePhase, nAnisP, inputParams%nsnp)
-                !  TODO remove
                 BLOCK
                     integer :: hmmID
                     do i=1, ped%nGenotyped
@@ -1161,10 +1184,10 @@ contains
                     ImputationQuality(i,2)=ImputationQuality(i,2)+abs(ProbImputeGenos(i,j)-((Maf(j)**4)+(4*(Maf(j)**2)*((1.0-Maf(j))**2))+(1.0-Maf(j)**4)))
                 enddo
                 ImputationQuality(i,2)=ImputationQuality(i,2)/inputParams%nSnpRaw
-                ImputationQuality(i,3)=float(inputParams%nSnpRaw-count(ImputePhase(i,:,1)==9))/inputParams%nSnpRaw
-                ImputationQuality(i,4)=float(inputParams%nSnpRaw-count(ImputePhase(i,:,2)==9))/inputParams%nSnpRaw
+                ImputationQuality(i,3)=float(inputParams%nSnpRaw-ped%pedigree(i)%individualPhase(1)%numberMissing))/inputParams%nSnpRaw
+                ImputationQuality(i,4)=float(inputParams%nSnpRaw-ped%pedigree(i)%individualPhase(2)%numberMissing)/inputParams%nSnpRaw
                 ImputationQuality(i,5)=(ImputationQuality(i,3)+ImputationQuality(i,4))/2
-                ImputationQuality(i,6)=float(inputParams%nSnpRaw-count(ImputeGenos(i,:)==9))/inputParams%nSnpRaw
+                ImputationQuality(i,6)=float(inputParams%nSnpRaw-ped%pedigree(i)%individualGenotype%numMissing)/inputParams%nSnpRaw
                 write (50,'(a20,20000f7.2)') ped%pedigree(i)%originalID,ImputationQuality(i,:)
             enddo
 
@@ -1173,10 +1196,9 @@ contains
 #endif
 
             do j=1,inputParams%nSnpRaw
-                write (51,'(i10,20000f7.2)') j,float(((ped%pedigreeSize-ped%nDummys-(ped%nDummys+1))+1)-count(ImputeGenos(ped%nDummys+1:ped%pedigreeSize-ped%nDummys,j)==9))/((ped%pedigreeSize-ped%nDummys-(ped%nDummys+1))+1)
+                write (51,'(i10,20000f7.2)') j,float(((ped%pedigreeSize-ped%nDummys-(ped%nDummys+1))+1)-ped%ccountMissingGenotypesNoDummys() /((ped%pedigreeSize-ped%nDummys-(ped%nDummys+1))+1)
             enddo
 
-            call CheckImputationInconsistencies(TmpGenos, TmpPhase, ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
             inputParams%WellPhasedThresh=inputParams%WellPhasedThresh/100
             do i=1, ped%pedigreeSize-ped%nDummys
                 if (ImputationQuality(i,5)>=inputParams%WellPhasedThresh) then
@@ -1204,7 +1226,7 @@ contains
 
     subroutine ModelRecomb
         use Global
-        use informationModule, only : InsteadOfReReadGeneProb
+        use imputation, only : InsteadOfReReadGeneProb
         use AlphaImputeSpecFileModule
         use AlphaImputeInputOutputModule
         implicit none
@@ -1484,10 +1506,16 @@ contains
                         if (RecombOnOff==1) then
                             Counter=Counter+1
                             if (Counter/=1) then
-                                if (ImputePhase(PedId,j,1)/=ImputePhase(PedId,j,2)) then
-                                    if ((ImputePhase(PedId,j,1)/=9).and.(ImputePhase(PedId,j,2)/=9)) then
-                                        ImputePhase(i,j,e)=9
-                                        ImputeGenos(i,j)=9
+                                block 
+
+                                integer(kind=1) :: phase1, phase2
+
+                                phase1 = ped%pedigree(PedId)%individualPhase(1)%getPhase(j)
+                                phase2 = ped%pedigree(PedId)%individualPhase(2)%getPhase(j)
+                                if ([phase1 ]/= phase2) then
+                                    if (phase1=9).and.(phase2/=9)) then
+                                        ped%pedigree(i)%individualPhase(e)%setPhase(j,9)
+                                        ped%pedigree(i)%individualGenotype%setGenotype(j,9)
                                         ProbImputePhase(i,j,e)&
                                             =((1.0-(LengthVec(j)*Counter))*ImputePhase(PedId,j,GamA))&
                                             +(LengthVec(j)*Counter*ImputePhase(PedId,j,GamB))
@@ -1526,9 +1554,9 @@ contains
                 endif
                 !outputs in order read in
                 tmpId = ped%inputMap(i)
-                write (33,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(tmpId)%originalID,ImputePhase(tmpId,:,1)
-                write (33,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(tmpId)%originalID,ImputePhase(tmpId,:,2)
-                write (34,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(tmpId)%originalID,ImputeGenos(tmpId,:)
+                write (33,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(tmpId)%originalID,ped%pedigree(tmpId)%individualPhase(1)%toIntegerArray()
+                write (33,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(tmpId)%originalID,ped%pedigree(tmpId)%individualPhase(2)%toIntegerArray()
+                write (34,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(tmpId)%originalID,ped%pedigree(tmpId)%individualGenotype%toIntegerArray()
                 write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(tmpId)%originalID,ProbImputePhase(tmpId,:,1)
                 write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(tmpId)%originalID,ProbImputePhase(tmpId,:,2)
                 write (41,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(tmpId)%originalID,ProbImputeGenos(tmpId,:)
@@ -1562,9 +1590,9 @@ contains
 
             open (newunit=fileUnit,file="Tmp2345678.txt",status="old")
             do i=1,ped%nGenotyped
-                read (fileUnit,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ImputePhase(ped%genotypeMap(i),:,1)
-                read (fileUnit,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ImputePhase(ped%genotypeMap(i),:,2)
-                read (fileUnit,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ImputeGenos(ped%genotypeMap(i),:)
+                read (fileUnit,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%genotypemap(i))%individalPhase(1)%haplotypeToIntegerArray()
+                read (fileUnit,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%genotypemap(i))%individalPhase(2)%haplotypeToIntegerArray()
+                read (fileUnit,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%genotypemap(i))%individualGenotype%toIntegerArray()
             enddo
             close (fileUnit)
         endif
@@ -1580,8 +1608,6 @@ contains
         ! TODO this is called twice...from iterate geneprobnew
         call IterateMakeGenotype
 
-        ImputePhase(0,:,:)=9
-        ImputeGenos(0,:)=9
 
     end subroutine IterateGeneProbPhase
 
@@ -1592,7 +1618,7 @@ contains
         use AlphaImputeSpecFileModule
         implicit none
 
-        integer :: h,i,j,dum,StSnp,EnSnp,counter,fileUnit,geneprobfile,mafFile
+        integer :: h,i,j,dum,StSnp,EnSnp,counter,fileUnit,geneprobfile,mafFile, tmpG(nSnpIterate), tmpPhase(nSnpIterate,2)
         real :: PatAlleleProb(nSnpIterate,2),MatAlleleProb(nSnpIterate,2),HetProb(nSnpIterate),GeneProbWork(nSnpIterate,4)
         character(len=300) :: filout
         type(AlphaImputeInput), pointer :: inputParams
@@ -1605,9 +1631,13 @@ contains
         if (inputParams%restartOption==4) then
             open (unit=fileUnit,file="Tmp2345678.txt",status="old")
             do i=1,ped%nGenotyped
-                read (fileUnit,*) ImputePhase(ped%genotypeMap(i),:,1)
-                read (fileUnit,*) ImputePhase(ped%genotypeMap(i),:,2)
-                read (fileUnit,*) ImputeGenos(ped%genotypeMap(i),:)
+                read (fileUnit,*) tmpPhase(:,1)
+                read (fileUnit,*) tmpPhase(:,2)
+                read (fileUnit,*) tmpG(:)
+
+                ped%pedigree(ped%genotypemap(i))%individualPhase(1) = newHaplotypeInt(tmpPhase(:,1))
+                ped%pedigree(ped%genotypemap(i))%individualPhase(2) = newHaplotypeInt(tmpPhase(:,2))
+                ped%pedigree(ped%genotypemap(i))%individualgenotype() = newGenotypeInt(tmpG)
             enddo
             close (fileUnit)
         endif
@@ -1647,21 +1677,30 @@ contains
                     HetProb(StSnp:EnSnp)=GeneProbWork(StSnp:EnSnp,2)+GeneProbWork(StSnp:EnSnp,3)
 
                     do j=StSnp,EnSnp
-                        if ((PatAlleleProb(j,1)>=GeneProbThresh).and.(ImputePhase(i,j,1)==9)) ImputePhase(i,j,1)=0
-                        if ((PatAlleleProb(j,2)>=GeneProbThresh).and.(ImputePhase(i,j,1)==9)) ImputePhase(i,j,1)=1
-                        if ((MatAlleleProb(j,1)>=GeneProbThresh).and.(ImputePhase(i,j,2)==9)) ImputePhase(i,j,2)=0
-                        if ((MatAlleleProb(j,2)>=GeneProbThresh).and.(ImputePhase(i,j,2)==9)) ImputePhase(i,j,2)=1
-                        if (ImputePhase(i,j,1)==9) then
+                    
+                        if ((PatAlleleProb(j,1)>=GeneProbThresh).and.(ImputePhase(i,j,1)==9)) ped%pedigree(i)%individualPhase(1)%setPhase(j,0)
+                        if ((PatAlleleProb(j,2)>=GeneProbThresh).and.(ImputePhase(i,j,1)==9)) ped%pedigree(i)%individualPhase(1)%setPhase(j,1)
+                        if ((MatAlleleProb(j,1)>=GeneProbThresh).and.(ImputePhase(i,j,2)==9)) ped%pedigree(i)%individualPhase(2)%setPhase(j,0)
+                        if ((MatAlleleProb(j,2)>=GeneProbThresh).and.(ImputePhase(i,j,2)==9)) ped%pedigree(i)%individualPhase(2)%setPhase(j,1)
+
+                        block
+                        integer(kind=1) :: phase
+
+                        phase = ped%pedigree(i)%individualPhase(1)%getPhase(j)
+                        if (phase==9) then
                             ProbImputePhase(i,j,1)=GeneProbWork(j,3)+GeneProbWork(j,4)
                         else
-                            ProbImputePhase(i,j,1)=float(ImputePhase(i,j,1))
+                            ProbImputePhase(i,j,1)=float(phase)
                         endif
-                        if (ImputePhase(i,j,2)==9) then
+                        phase = ped%pedigree(i)%individualPhase(2)%getPhase(j)
+                        if (phase=9) then
                             ProbImputePhase(i,j,2)=GeneProbWork(j,2)+GeneProbWork(j,4)
                         else
-                            ProbImputePhase(i,j,2)=float(ImputePhase(i,j,2))
+                            ProbImputePhase(i,j,2)=float(phase)
                         endif
                         if (HetProb(j)>=GeneProbThresh) ProbImputeGenos(i,j)=1
+
+                        end block
                     enddo
                     ProbImputeGenos(i,StSnp:EnSnp)=ProbImputePhase(i,StSnp:EnSnp,1)+ProbImputePhase(i,StSnp:EnSnp,2)
                 enddo
@@ -1682,8 +1721,6 @@ contains
             close(mafFile)
             call IterateMakeGenotype
 
-            ImputePhase(0,:,:)=9
-            ImputeGenos(0,:)=9
 
         end subroutine IterateGeneProbPhaseCluster
     !#############################################################################################################################################################################################################################
@@ -1695,15 +1732,9 @@ contains
         integer :: i,j
 
         do i=1,ped%pedigreeSize-ped%nDummys
-            do j=1,nSnpIterate
-                if (ImputeGenos(i,j)==9) then
-                    if ((ImputePhase(i,j,1)/=9).and.(ImputePhase(i,j,2)/=9)) ImputeGenos(i,j)=sum(ImputePhase(i,j,:))
-                endif
-            enddo
+            ped%pedigree(i)%individualGenotype%setFromHaplotypesIfMissing(ped%pedigree(i)%individualPhase(1),ped%pedigree(i)%individualPhase(2))
         enddo
 
-        ImputePhase(0,:,:)=9
-        ImputeGenos(0,:)=9
 
     end subroutine IterateMakeGenotype
 
@@ -1713,19 +1744,23 @@ contains
         use Global
         implicit none
 
-        integer :: i,j
+        integer :: i
+        type(haplotype) :: comp1, comp2
+
+        
 
         do i=1,ped%pedigreeSize-ped%nDummys
-            do j=1,nSnpIterate
-                if (ImputeGenos(i,j)/=9) then
-                    if ((ImputePhase(i,j,1)/=9).and.(ImputePhase(i,j,2)==9)) ImputePhase(i,j,2)=ImputeGenos(i,j)-ImputePhase(i,j,1)
-                    if ((ImputePhase(i,j,2)/=9).and.(ImputePhase(i,j,1)==9)) ImputePhase(i,j,1)=ImputeGenos(i,j)-ImputePhase(i,j,2)
-                endif
-            enddo
+
+            comp2 = ped%pedigree(i)%individualGenotype%complement(ped%pedigree(i)%individalPhase(1))
+            comp1 = ped%pedigree(i)%individualGenotype%complement(ped%pedigree(i)%individalPhase(2))
+
+            ped%pedigree(i)%individalPhase(1))%setFromOtherIfMissing(comp1)
+            ped%pedigree(i)%individalPhase(2))%setFromOtherIfMissing(comp2)
+
+            call ped%pedigree(i)%individalPhase(1)%setErrorToMissing()
+            call ped%pedigree(i)%individalPhase(2)%setErrorToMissing()
         enddo
 
-        ImputePhase(0,:,:)=9
-        ImputeGenos(0,:)=9
 
     end subroutine IteratePhaseComplement
 
@@ -1738,20 +1773,16 @@ contains
 
         integer :: e,i,j,PedLoc, id
         type(AlphaImputeInput), pointer :: inputParams
-
+        type(genotype) :: tmpGeno
         inputParams => defaultInput
 
         if (inputParams%SexOpt==0) then
             do i=1,ped%pedigreeSize-ped%nDummys
                 do e=1,2
                     PedLoc=e+1
-                    do j=1,nSnpIterate
-                        if (ImputePhase(i,j,e)==9) then
-                            id = ped%pedigree(i)%getSireDamNewIDByIndex(pedLoc)
-                            if ((ImputePhase(id,j,1)==ImputePhase(id,j,2)).and.&
-                                (ImputePhase(id,j,1)/=9)) ImputePhase(i,j,e)=ImputePhase(id,j,1)
-                        endif
-                    enddo
+                    id = ped%pedigree(i)%getSireDamNewIDByIndex(pedLoc)
+                    tmpGeno = newGenotypeHap(ped%pedigree(id)%IndividualPhase(1),ped%pedigree(id)%individualPhase(2))
+                    call tmpGeno%setHaplotypeFromGenotypeIfMissing(ped%pedigree(i)%individualPhase(e)) 
                 enddo
             enddo
         else
@@ -1759,25 +1790,19 @@ contains
                 if (ped%pedigree(i)%gender==inputParams%HomGameticStatus) then
                     do e=1,2
                         id = ped%pedigree(i)%getSireDamNewIDByIndex(e+1)
-                        do j=1,nSnpIterate
-                            if (ImputePhase(i,j,e)==9) then
-                                if ((ImputePhase(id,j,1)==ImputePhase(id,j,2)).and.(ImputePhase(id,j,1)/=9)) ImputePhase(i,j,e)=ImputePhase(id,j,1)
-                            endif
-                        enddo
+                        tmpGeno = newGenotypeHap(ped%pedigree(id)%IndividualPhase(1),ped%pedigree(id)%individualPhase(2))
+                        call tmpGeno%setHaplotypeFromGenotypeIfMissing(ped%pedigree(i)%individualPhase(e)) 
                     enddo
                 else
                     id = ped%pedigree(i)%getSireDamNewIDByIndex(inputParams%HomGameticStatus+1)
-                    do j=1,nSnpIterate
-                        if (ImputePhase(i,j,1)==9) then     !Comment From John Hickey I changed what was indexed e to 1 I think it is ok same thing in analogous routine
-                            !There is no do loop for e here
-                            if ((ImputePhase(id,j,1)==ImputePhase(id,j,2)).and.(ImputePhase(id,j,1)/=9)) ImputePhase(i,j,:)=ImputePhase(id,j,1)
-                        endif
-                    enddo
+                     id = ped%pedigree(i)%getSireDamNewIDByIndex(pedLoc)
+                    tmpGeno = newGenotypeHap(ped%pedigree(id)%IndividualPhase(1),ped%pedigree(id)%individualPhase(2))
+                    call tmpGeno%setHaplotypeFromGenotypeIfMissing(ped%pedigree(i)%individualPhase(1)) 
+                    call tmpGeno%setHaplotypeFromGenotypeIfMissing(ped%pedigree(i)%individualPhase(2))                
                 endif
             enddo
         endif
-        ImputePhase(0,:,:)=9
-        ImputeGenos(0,:)=9
+ 
 
     end subroutine IterateParentHomoFill
 
@@ -1835,16 +1860,13 @@ contains
 
             GlobalWorkPhase(0,:,:)=9
 
-            ImputeGenos(:,:)=ped%getGenotypesAsArray()
-            ImputePhase(:,:,:)=GlobalWorkPhase(:,:,:)
+            ! todo  -feel this can be optimised- do we need to do this?            
+            ped%setPhaseFromArray(GlobalWorkPhase)
 
             allocate(GlobalTmpCountInf(ped%pedigreeSize-ped%nDummys,6))
             GlobalTmpCountInf(:,:)=0
 
         else                                                                    ! Other chromosome
-            ! allocate(GlobalWorkPhase(0:ped%pedigreeSize-ped%nDummys,inputParams%nsnp,2))
-            ! allocate(ImputeGenos(0:ped%pedigreeSize-ped%nDummys,inputParams%nsnpRaw))
-            ! allocate(ImputePhase(0:ped%pedigreeSize-ped%nDummys,inputParams%nsnpRaw,2))
 
             GlobalWorkPhase=9
             do i=1,ped%pedigreeSize-ped%nDummys
@@ -1882,8 +1904,8 @@ contains
             enddo
 
             GlobalWorkPhase(0,:,:)=9
-            ImputeGenos(:,:)=ped%getGenotypesAsArray()
-            ImputePhase(:,:,:)=GlobalWorkPhase(:,:,:)
+
+            call ped%setPhaseFromArray(GlobalWorkPhase)
 
         endif
 
@@ -2600,577 +2622,528 @@ contains
     end subroutine CheckParentage
 
 
-    !#############################################################################################################################################################################################################################
+    ! !#############################################################################################################################################################################################################################
 
-    subroutine FinalChecker
-    ! TODO rewrite
-        use Global
+    ! subroutine FinalChecker
+    ! ! TODO rewrite
+    !     use Global
 
         
-        use alphahouseMod, only : countLines
-        use alphastatmod, only : pearsn, moment
-        use AlphaImputeSpecFileModule
-        implicit none
-
-        integer :: h,i,j,k,l,nAnisTest,CountCatTest(6),tmpIDInt
-        integer :: SummaryStats(3,6),Div,CountLen,Counter,Top1,Top2,Top3,Top4,Bot,ContSnpCor,CountValAnim(6)
-        double precision :: SummaryProps(3,6),SumPat(6),SumMat(6),MeanCorPerInd(6),StdDevPerGrp(6),AveCategoryInformativeness(6,6)
-        double precision :: Tmpave,Tmpadev,Tmpvar,Tmpskew,Tmpcurt
-        character(len=300) :: Names(6),FileName,dumC
-        integer,allocatable,dimension(:) :: RecTestId,FinalSetter,WorkTmp,GenoStratIndex,Work
-        integer,allocatable,dimension(:,:) :: TrueGenos,RawGenos,TestMat,TestAnimInformativeness
-        double precision,allocatable,dimension(:) :: Correlations,CorrelationPerAnimal,TmpVarPerGrp
-        double precision,allocatable,dimension(:,:) :: AnisSummary,WorkVec,RealTestGenos,CalcCorPerAnimal
-        type(AlphaImputeInput), pointer :: inputParams
-
-        character(len=lengan),allocatable,dimension(:) :: TrueGenosId
-
-        inputParams =>defaultInput
-
-        allocate(Work(inputParams%nSnpRaw))
-        allocate(WorkTmp(inputParams%nSnpRaw))
-        allocate(GenoStratIndex(ped%pedigreeSize-ped%nDummys))
-
-        FileName=trim(inputParams%TrueGenotypeFile)
-        ! call CountLines(FileName,nAnisTest)
-        nAnisTest = CountLines(FileName)
-
-
-        call system(RMDIR // " TestAlphaImpute")
-        call system(MD // " TestAlphaImpute")
-
-        open (unit=35,file=trim(inputParams%TrueGenotypeFile),status="old")
-        open (unit=36,file=trim(inputParams%GenotypeFile),status="unknown")
-        ! open (unit=37,file="./TestAlphaImpute/IndividualAnimalAccuracy.txt",status="unknown")
-        ! open (unit=38,file="./TestAlphaImpute/SummaryAnimalAccuracy.txt",status="unknown")
-        ! open (unit=44,file="./TestAlphaImpute/IndividualSummaryAccuracy.txt",status="unknown")
-        ! open (unit=45,file="./TestAlphaImpute/IndividualSummaryYield.txt",status="unknown")
-        ! open (unit=48,file="./TestAlphaImpute/IndividualSnpAccuracy.txt",status="unknown")
-        open (unit=37, file="." // DASH // "TestAlphaImpute" // DASH // "IndividualAnimalAccuracy.txt", status="unknown")
-        open (unit=38, file="." // DASH // "TestAlphaImpute" // DASH // "SummaryAnimalAccuracy.txt", status="unknown")
-        open (unit=44, file="." // DASH // "TestAlphaImpute" // DASH // "IndividualSummaryAccuracy.txt", status="unknown")
-        open (unit=45, file="." // DASH // "TestAlphaImpute" // DASH // "IndividualSummaryYield.txt", status="unknown")
-        open (unit=48, file="." // DASH // "TestAlphaImpute" // DASH // "IndividualSnpAccuracy.txt", status="unknown")
-
-        Names(1)="Both Parents Genotyped"
-        Names(2)="Sire and Maternal GrandSire Genotyped"
-        Names(3)="Dam and Paternal Grandsire Genotyped"
-        Names(4)="Sire Genotyped"
-        Names(5)="Dam Genotyped"
-        Names(6)="Other Relatives Genotyped"
-
-        if (allocated(GlobalTmpCountInf)==.FALSE.) then
-            allocate(GlobalTmpCountInf(ped%pedigreeSize-ped%nDummys,6))
-            GlobalTmpCountInf(:,:)=0
-        endif
-
-        allocate(FinalSetter(0:ped%pedigreeSize-ped%nDummys))
-        FinalSetter=0
-        do i=1,ped%nGenotyped
-            read (36,*) dumC,WorkTmp(:)
-            Counter=0
-            do j=1,inputParams%nSnpRaw
-                if ((WorkTmp(j)>=0).and.(WorkTmp(j)<=2)) Counter=Counter+1
-            enddo
-            if (float(Counter)>(float(inputParams%nSnpRaw)/2)) then
-                tmpIDInt = ped%dictionary%getValue(dumC)
-                if (tmpIDInt /= DICT_NULL) then
-                    FinalSetter(tmpIDInt)=1
-                endif
-
-            endif
-        enddo
-        rewind(36)
-
-        allocate(TestAnimInformativeness(nAnisTest,6))
-
-        if (inputParams%outopt==0) then
-
-            allocate(TrueGenos(nAnisTest,inputParams%nsnp))
-            allocate(TrueGenosId(nAnisTest))
-            allocate(RawGenos(nAnisTest,inputParams%nsnp))
-            allocate(TestMat(nAnisTest,inputParams%nsnp))
-            allocate(RecTestId(nAnisTest))
-            allocate(AnisSummary(nAnisTest,5))
-            allocate(Correlations(6))
-            allocate(RealTestGenos(nAnisTest,inputParams%nsnp))
-            allocate(CalcCorPerAnimal(inputParams%nsnp,2))
-            allocate(CorrelationPerAnimal(nAnisTest))
-            allocate(TmpVarPerGrp(nAnisTest))
-
-            do i=1,nAnisTest
-                read (35,*) TrueGenosId(i),Work(:)
-                k=0
-                do j=1,inputParams%nSnpRaw
-                    if (SnpIncluded(j)/=0) then
-                        k=k+1
-                        TrueGenos(i,k)=Work(j)
-                    endif
-                enddo
-            enddo
-
-            RecTestId(:)=-99
-            do i=1,nAnisTest
-                do j=1,ped%pedigreeSize-ped%nDummys
-                    if (trim(TrueGenosId(i))==trim((ped%pedigree(j)%originalID))) then
-                        RecTestId(i)=j
-                        TestAnimInformativeness(i,:)=GlobalTmpCountInf(j,1:6)
-                        exit
-                    endif
-                enddo
-            enddo
-            if (count(RecTestId(:)==-99)>0) print*, "Error - There seems to be unidentifiablecount ",count(RecTestId(:)==-99)," individuals in the test file"
-
-            do i=1,ped%nGenotyped
-                read (36,*) dumC,WorkTmp(:)
-                do j=1,nAnisTest
-                    if (trim(TrueGenosId(j))==dumC) then
-                        k=0
-                        do l=1,inputParams%nSnpRaw
-                            if (SnpIncluded(l)==1) then
-                                k=k+1
-                                RawGenos(j,k)=WorkTmp(l)
-                            endif
-                        enddo
-                        exit
-                    endif
-                enddo
-            enddo
-
-            GenoStratIndex(:)=0
-            do i=1,ped%pedigreeSize-ped%nDummys
-                if (FinalSetter(i)/=1) then
-                    GenoStratIndex(i)=6
-                    if (FinalSetter(ped%pedigree(i)%getSireDamNewIDByIndex(3))==1) then
-                        GenoStratIndex(i)=5
-                        if (FinalSetter(ped%pedigree(i)%getPaternalGrandSireRecodedIndex())==1) then
-                            GenoStratIndex(i)=3
-                        endif
-                    endif
-                    if (FinalSetter(ped%pedigree(i)%getSireDamNewIDByIndex(2))==1) then
-                        GenoStratIndex(i)=4
-                        if (FinalSetter(ped%pedigree(i)%getMaternalGrandSireRecodedIndex())==1) then
-                            GenoStratIndex(i)=2
-                        endif
-                    endif
-                    if ((FinalSetter(ped%pedigree(i)%getSireDamNewIDByIndex(2))==1).and.(FinalSetter(ped%pedigree(i)%getSireDamNewIDByIndex(2))==1)) then
-                        GenoStratIndex(i)=1
-                    endif
-                endif
-            enddo
-
-            TestMat=4
-            CountCatTest=0
-            AnisSummary=0.0
-
-            do i=1,nAnisTest
-                do j=1,inputParams%nsnp
-                    if ((TrueGenos(i,j)<0).or.(TrueGenos(i,j)>2)) then
-                        TestMat(i,j)=5
-                    else
-                        if ((RawGenos(i,j)<0).or.(RawGenos(i,j)>2)) then
-                            if (TrueGenos(i,j)==ImputeGenos(RecTestId(i),j)) TestMat(i,j)=1
-                            if (TrueGenos(i,j)/=ImputeGenos(RecTestId(i),j)) TestMat(i,j)=2
-                            if (ImputeGenos(RecTestId(i),j)==9) TestMat(i,j)=3
-                        endif
-                    endif
-                enddo
-                RealTestGenos(i,:)=ProbImputeGenos(RecTestId(i),:)
-                write (37,'(a20,i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') TrueGenosId(i),GenoStratIndex(RecTestId(i)),TestMat(i,:)
-                CountCatTest(GenoStratIndex(RecTestId(i)))=CountCatTest(GenoStratIndex(RecTestId(i)))+1
-                Div=(count(TestMat(i,:)==1))+(count(TestMat(i,:)==2))+(count(TestMat(i,:)==3))
-                AnisSummary(i,1)=100*(float(count(TestMat(i,:)==1))/Div)
-                AnisSummary(i,2)=100*(float(count(TestMat(i,:)==2))/Div)
-                AnisSummary(i,3)=100*(float(count(TestMat(i,:)==3))/Div)
-                AnisSummary(i,4)=100*(float(count(ImputePhase(RecTestId(i),:,1)/=9))/inputParams%nsnp)
-                AnisSummary(i,5)=100*(float(count(ImputePhase(RecTestId(i),:,2)/=9))/inputParams%nsnp)
-            enddo
-
-            SummaryStats=0
-            SumPat=0.0
-            SumMat=0.0
-            do i=1,nAnisTest
-                do j=1,6
-                    if (GenoStratIndex(RecTestId(i))==j) then
-                        SummaryStats(1,j)=SummaryStats(1,j)+(count(TestMat(i,:)==1))
-                        SummaryStats(2,j)=SummaryStats(2,j)+(count(TestMat(i,:)==2))
-                        SummaryStats(3,j)=SummaryStats(3,j)+(count(TestMat(i,:)==3))
-                        SumPat(j)=SumPat(j)+AnisSummary(i,4)
-                        SumMat(j)=SumMat(j)+AnisSummary(i,5)
-                    endif
-                enddo
-            enddo
-
-            SummaryProps=0.0
-            do i=1,3
-                do j=1,6
-                    if (CountCatTest(j)==0) then
-                        SummaryProps(i,j)=0.0
-                    else
-                        SummaryProps(i,j)=float(SummaryStats(i,j))/sum(SummaryStats(:,j))
-                        SummaryProps(i,j)=SummaryProps(i,j)*100
-                    endif
-                enddo
-            enddo
-
-            MeanCorPerInd(:)=0.0
-            CountValAnim(:)=0
-            AveCategoryInformativeness(:,:)=0.0
-            do h=1,6
-                CountLen=0
-                do i=1,nAnisTest
-                    if(GenoStratIndex(RecTestId(i))==h) then
-                        AveCategoryInformativeness(h,:)=AveCategoryInformativeness(h,:)+TestAnimInformativeness(i,:)
-                        do j=1,inputParams%nsnp
-                            if ((RawGenos(i,j)<0).or.(RawGenos(i,j)>2)) then
-                                if ((TrueGenos(i,j)>=0).and.(TrueGenos(i,j)<=2)) then
-                                    CountLen=CountLen+1
-                                endif
-                            endif
-                        enddo
-                    endif
-                enddo
-                allocate(WorkVec(CountLen,2))
-                CountLen=0
-                do i=1,nAnisTest
-                    if(GenoStratIndex(RecTestId(i))==h) then
-                        ContSnpCor=0
-                        do j=1,inputParams%nsnp
-                            if ((RawGenos(i,j)<0).or.(RawGenos(i,j)>2)) then
-                                if ((TrueGenos(i,j)>=0).and.(TrueGenos(i,j)<=2)) then
-                                    ContSnpCor=ContSnpCor+1                                         !#HereToday
-                                    CountLen=CountLen+1
-                                    WorkVec(CountLen,1)=float(TrueGenos(i,j))-(2*maf(j))
-                                    WorkVec(CountLen,2)=RealTestGenos(i,j)-(2*maf(j))
-                                    CalcCorPerAnimal(ContSnpCor,1)=float(TrueGenos(i,j))-(2*maf(j))
-                                    CalcCorPerAnimal(ContSnpCor,2)=RealTestGenos(i,j)-(2*maf(j))
-                                endif
-                            endif
-                        enddo
-                        if (ContSnpCor>5) then
-                            call Pearsn (CalcCorPerAnimal(1:ContSnpCor,1),CalcCorPerAnimal(1:ContSnpCor,2),ContSnpCor,CorrelationPerAnimal(i))
-                            MeanCorPerInd(h)=MeanCorPerInd(h)+CorrelationPerAnimal(i)
-                            CountValAnim(h)=CountValAnim(h)+1
-                            TmpVarPerGrp(CountValAnim(h))=CorrelationPerAnimal(i)
-
-                        else
-                            CorrelationPerAnimal(i)=-99.0
-                        endif
-
-                    endif
-                enddo
-                if (CountLen>5) then
-                    call Pearsn (WorkVec(:,1),WorkVec(:,2),CountLen,Correlations(h))
-                else
-                    Correlations(h)=-99.0
-                endif
-                deallocate(WorkVec)
-                if (CountValAnim(h)>5) then
-                    MeanCorPerInd(h)=MeanCorPerInd(h)/CountValAnim(h)
-
-                    call moment(TmpVarPerGrp(1:CountValAnim(h)),CountValAnim(h),Tmpave,Tmpadev,StdDevPerGrp(h),Tmpvar,Tmpskew,Tmpcurt)
-                else
-                    MeanCorPerInd(h)=-99.0
-                endif
-            enddo
-
-            do i=1,6
-                SumPat(i)=SumPat(i)/CountCatTest(i)
-                SumMat(i)=SumMat(i)/CountCatTest(i)
-                AveCategoryInformativeness(i,:)=AveCategoryInformativeness(i,:)/CountCatTest(i)
-                write (38,'(14f7.2,i7,a40)') SummaryProps(:,i),Correlations(i),MeanCorPerInd(i),StdDevPerGrp(i),SumPat(i),SumMat(i),AveCategoryInformativeness(i,:),CountCatTest(i),trim(Names(i))
-            enddo
-
-            print*, " "
-            do i=1,6
-                if (CountCatTest(i)>0) write (*,'(3f7.2,a3,3f7.2,a3,8f7.2,i7,a40)') SummaryProps(:,i),"   ",Correlations(i),MeanCorPerInd(i),StdDevPerGrp(i)&
-                    ,"   ",SumPat(i),SumMat(i),AveCategoryInformativeness(i,:),CountCatTest(i),trim(Names(i))
-            enddo
-
-            do i=1, ped%pedigreeSize-ped%nDummys
-                if (ped%pedigree(i)%isDummy) then
-                    exit
-                endif
-                write (45,'(a25,i3,2f7.2)') ped%pedigree(i)%originalID,FinalSetter(i),float(count(ImputePhase(i,:,1)/=9))/inputParams%nsnp &
-                    ,float(count(ImputePhase(i,:,2)/=9))/inputParams%nsnp
-            enddo
-
-            do j=1,inputParams%nsnp
-                Bot=count(TestMat(:,j)/=4)
-                Top1=count(TestMat(:,j)==1)
-                Top2=count(TestMat(:,j)==2)
-                Top3=count(TestMat(:,j)==3)
-                Top4=count(TestMat(:,j)==5)
-                write (48,'(2i10,4f9.2)') j,Bot,100*(float(Top1)/Bot),100*(float(Top2)/Bot),100*(float(Top3)/Bot),100*(float(Top4)/Bot)
-            enddo
-
-            do i=1,nAnisTest
-                write (44,'(a20,i3,6f7.2,6i10)') TrueGenosId(i),GenoStratIndex(RecTestId(i)),AnisSummary(i,:),CorrelationPerAnimal(i),TestAnimInformativeness(i,:)
-            enddo
-
-
-        else
-            allocate(TrueGenos(nAnisTest,inputParams%nSnpRaw))
-            allocate(TrueGenosId(nAnisTest))
-            allocate(RawGenos(nAnisTest,inputParams%nSnpRaw))
-            allocate(TestMat(nAnisTest,inputParams%nSnpRaw))
-            allocate(RecTestId(nAnisTest))
-            allocate(AnisSummary(nAnisTest,5))
-            allocate(Correlations(6))
-            allocate(RealTestGenos(nAnisTest,inputParams%nSnpRaw))
-            allocate(CalcCorPerAnimal(inputParams%nSnpRaw,2))
-            allocate(CorrelationPerAnimal(nAnisTest))
-            allocate(TmpVarPerGrp(nAnisTest))
-
-
-            RecTestId(:)=-99
-            do i=1,nAnisTest
-                read (35,*) TrueGenosId(i),TrueGenos(i,:)
-                tmpIDInt = ped%dictionary%getValue(TrueGenosId(i))
-
-                if (tmpIDInt /= DICT_NULL) then
-                    RecTestId(i)=tmpIDInt
-                    testAnimInformativeness(i,:)=GlobalTmpCountInf(tmpIDInt,1:6)
-                endif
-            enddo
-
-            if (any(RecTestId(:)==-99)) print*, "Error - There seems to be unidentifiablecount ",count(RecTestId(:)==-99)," individuals in the test file"
-
-            do i=1,ped%nGenotyped
-                read (36,*) dumC,WorkTmp(:)
-                do j=1,nAnisTest
-                    if (trim(TrueGenosId(j))==dumC) then
-                        RawGenos(j,:)=WorkTmp(:)
-                        exit
-                    endif
-                enddo
-            enddo
-            GenoStratIndex(:)=0
-            do i=1,ped%pedigreeSize-ped%nDummys
-                if (FinalSetter(i)/=1) then
-                    GenoStratIndex(i)=6
-                    if (FinalSetter(ped%pedigree(i)%getSireDamNewIDByIndex(3))==1) then
-                        GenoStratIndex(i)=5
-                        if (FinalSetter(ped%pedigree(i)%getPaternalGrandSireRecodedIndex())==1) then
-                            GenoStratIndex(i)=3
-                        endif
-                    endif
-                    if (FinalSetter(ped%pedigree(i)%getSireDamNewIDByIndex(2))==1) then
-                        GenoStratIndex(i)=4
-                        if (FinalSetter(ped%pedigree(i)%getMaternalGrandSireRecodedIndex())==1) then
-                            GenoStratIndex(i)=2
-                        endif
-                    endif
-                    if ((FinalSetter(ped%pedigree(i)%getSireDamNewIDByIndex(2))==1).and.(FinalSetter(ped%pedigree(i)%getSireDamNewIDByIndex(3))==1)) then
-                        GenoStratIndex(i)=1
-                    endif
-                endif
-            enddo
-            TestMat=4
-            CountCatTest=0
-            AnisSummary=0.0
-            do i=1,nAnisTest
-                do j=1,inputParams%nSnpRaw
-                    if ((TrueGenos(i,j)<0).or.(TrueGenos(i,j)>2)) then
-                        TestMat(i,j)=5
-                    else
-                        if ((RawGenos(i,j)<0).or.(RawGenos(i,j)>2)) then
-                            if (TrueGenos(i,j)==ImputeGenos(RecTestId(i),j)) TestMat(i,j)=1
-                            if (TrueGenos(i,j)/=ImputeGenos(RecTestId(i),j)) TestMat(i,j)=2
-                            if (ImputeGenos(RecTestId(i),j)==9) TestMat(i,j)=3
-                        endif
-                    endif
-                enddo
-                RealTestGenos(i,:)=ProbImputeGenos(RecTestId(i),:)
-                write (37,'(a20,i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') TrueGenosId(i),GenoStratIndex(RecTestId(i)),TestMat(i,:)
-                CountCatTest(GenoStratIndex(RecTestId(i)))=CountCatTest(GenoStratIndex(RecTestId(i)))+1
-                Div=(count(TestMat(i,:)==1))+(count(TestMat(i,:)==2))+(count(TestMat(i,:)==3))
-                AnisSummary(i,1)=100*(float(count(TestMat(i,:)==1))/Div)
-                AnisSummary(i,2)=100*(float(count(TestMat(i,:)==2))/Div)
-                AnisSummary(i,3)=100*(float(count(TestMat(i,:)==3))/Div)
-                AnisSummary(i,4)=100*(float(count(ImputePhase(RecTestId(i),:,1)/=9))/inputParams%nSnpRaw)
-                AnisSummary(i,5)=100*(float(count(ImputePhase(RecTestId(i),:,2)/=9))/inputParams%nSnpRaw)
-            enddo
-
-            SummaryStats=0
-            SumPat=0.0
-            SumMat=0.0
-            do i=1,nAnisTest
-                do j=1,6
-                    if (GenoStratIndex(RecTestId(i))==j) then
-                        SummaryStats(1,j)=SummaryStats(1,j)+(count(TestMat(i,:)==1))
-                        SummaryStats(2,j)=SummaryStats(2,j)+(count(TestMat(i,:)==2))
-                        SummaryStats(3,j)=SummaryStats(3,j)+(count(TestMat(i,:)==3))
-                        SumPat(j)=SumPat(j)+AnisSummary(i,4)
-                        SumMat(j)=SumMat(j)+AnisSummary(i,5)
-                    endif
-                enddo
-            enddo
-
-            SummaryProps=0.0
-            do i=1,3
-                do j=1,6
-                    if (CountCatTest(j)==0) then
-                        SummaryProps(i,j)=0.0
-                    else
-                        SummaryProps(i,j)=float(SummaryStats(i,j))/sum(SummaryStats(:,j))
-                        SummaryProps(i,j)=SummaryProps(i,j)*100
-                    endif
-                enddo
-            enddo
-
-            MeanCorPerInd(:)=0.0
-            CountValAnim(:)=0
-            AveCategoryInformativeness(:,:)=0.0
-            do h=1,6
-                CountLen=0
-                do i=1,nAnisTest
-                    if(GenoStratIndex(RecTestId(i))==h) then
-                        AveCategoryInformativeness(h,:)=AveCategoryInformativeness(h,:)+TestAnimInformativeness(i,:)
-                        do j=1,inputParams%nSnpRaw
-                            if ((RawGenos(i,j)<0).or.(RawGenos(i,j)>2)) then
-                                if ((TrueGenos(i,j)>=0).and.(TrueGenos(i,j)<=2)) then
-                                    CountLen=CountLen+1
-                                endif
-                            endif
-                        enddo
-                    endif
-                enddo
-                allocate(WorkVec(CountLen,2))
-                CountLen=0
-                do i=1,nAnisTest
-                    if(GenoStratIndex(RecTestId(i))==h) then
-                        ContSnpCor=0
-                        do j=1,inputParams%nSnpRaw
-                            if ((RawGenos(i,j)<0).or.(RawGenos(i,j)>2)) then
-                                if ((TrueGenos(i,j)>=0).and.(TrueGenos(i,j)<=2)) then
-                                    ContSnpCor=ContSnpCor+1
-                                    CountLen=CountLen+1
-                                    WorkVec(CountLen,1)=float(TrueGenos(i,j))-(2*maf(j))
-                                    WorkVec(CountLen,2)=RealTestGenos(i,j)-(2*maf(j))
-                                    CalcCorPerAnimal(ContSnpCor,1)=float(TrueGenos(i,j))-(2*maf(j))
-                                    CalcCorPerAnimal(ContSnpCor,2)=RealTestGenos(i,j)-(2*maf(j))
-                                endif
-                            endif
-                        enddo
-                        if (ContSnpCor>5) then
-                            call Pearsn (CalcCorPerAnimal(1:ContSnpCor,1),CalcCorPerAnimal(1:ContSnpCor,2),ContSnpCor,CorrelationPerAnimal(i))
-                            MeanCorPerInd(h)=MeanCorPerInd(h)+CorrelationPerAnimal(i)
-                            CountValAnim(h)=CountValAnim(h)+1
-                            TmpVarPerGrp(CountValAnim(h))=CorrelationPerAnimal(i)
-                        else
-                            CorrelationPerAnimal(i)=-99.0
-                        endif
-                    endif
-                enddo
-
-                if (CountLen>5) then
-                    call Pearsn(WorkVec(:,1),WorkVec(:,2),CountLen,Correlations(h))
-                else
-                    Correlations(h)=-99.0
-                endif
-
-                deallocate(WorkVec)
-
-                if (CountValAnim(h)>5) then
-                    MeanCorPerInd(h)=MeanCorPerInd(h)/CountValAnim(h)
-                    call moment(TmpVarPerGrp(1:CountValAnim(h)),CountValAnim(h),Tmpave,Tmpadev,StdDevPerGrp(h),Tmpvar,Tmpskew,Tmpcurt)
-                else
-                    MeanCorPerInd(h)=-99.0
-                endif
-            enddo
-
-            do i=1,6
-                SumPat(i)=SumPat(i)/CountCatTest(i)
-                SumMat(i)=SumMat(i)/CountCatTest(i)
-                AveCategoryInformativeness(i,:)=AveCategoryInformativeness(i,:)/CountCatTest(i)
-                write (38,'(14f7.2,i7,a40)') SummaryProps(:,i),Correlations(i),MeanCorPerInd(i),StdDevPerGrp(i),SumPat(i),SumMat(i),AveCategoryInformativeness(i,:),CountCatTest(i),trim(Names(i))
-            enddo
-
-            print*, " "
-            do i=1,6
-                if (CountCatTest(i)>0) write (*,'(3f7.2,a3,3f7.2,a3,8f7.2,i7,a40)') SummaryProps(:,i),"   ",Correlations(i),MeanCorPerInd(i),StdDevPerGrp(i)&
-                    ,"   ",SumPat(i),SumMat(i),AveCategoryInformativeness(i,:),CountCatTest(i),trim(Names(i))
-            enddo
-
-            do i=1, ped%pedigreeSize-ped%nDummys
-                if (ped%pedigree(i)%isDummy) then
-                    exit
-                endif
-                write (45,'(a25,i3,2f7.2)') ped%pedigree(i)%originalID,FinalSetter(i),float(count(ImputePhase(i,:,1)/=9))/inputParams%nSnpRaw &
-                    ,float(count(ImputePhase(i,:,2)/=9))/inputParams%nSnpRaw
-            enddo
-
-            do j=1,inputParams%nsnp
-                Bot=count(TestMat(:,j)/=4)
-                Top1=count(TestMat(:,j)==1)
-                Top2=count(TestMat(:,j)==2)
-                Top3=count(TestMat(:,j)==3)
-                Top4=count(TestMat(:,j)==5)
-                write (48,'(2i10,4f9.2)') j,Bot,100*(float(Top1)/Bot),100*(float(Top2)/Bot),100*(float(Top3)/Bot),100*(float(Top4)/Bot)
-            enddo
-
-            do i=1,nAnisTest
-                write (44,'(a20,i3,6f7.2,6i10)') TrueGenosId(i),GenoStratIndex(RecTestId(i)),AnisSummary(i,:),CorrelationPerAnimal(i),TestAnimInformativeness(i,:)
-            enddo
-        endif
-
-        deallocate(Work)
-        deallocate(WorkTmp)
-        deallocate(GenoStratIndex)
-    end subroutine FinalChecker
-
-
-    !#############################################################################################################################################################################################################################
-
-    subroutine Cleaner
-        use Global
-
-        use AlphaImputeSpecFileModule
-        implicit none
-
-        type(AlphaImputeInput), pointer :: inputParams
-
-        inputParams=>defaultInput
-        ! call rmdir("GeneProb")
-        ! call rmdir("IterateGeneProb")
-        call system(RMDIR // " GeneProb")
-        call system(RMDIR // " IterateGeneProb")
-
-        ! if (inputParams%SexOpt==0) call system(" rm TempGeneProb.sh")
-        ! if (inputParams%SexOpt==0) call system("rm TempIterateGeneProb.sh")
-        if (inputParams%SexOpt==0) call system(RM // " TempGeneProb." // SH)
-        if (inputParams%SexOpt==0) call system(RM // " TempIterateGeneProb." // SH)
-
-    end subroutine Cleaner
-
-    !#############################################################################################################################################################################################################################
-
-    subroutine READINJUNK
-
-        use Global
-        use AlphaImputeSpecFileModule
-
-        type(AlphaImputeInput), pointer :: inputParams
-        integer :: i,dum,j
-
-        inputParams => defaultInput
-
-        open (3001,file="fort.2008",status="old")
-        do i=1,ped%pedigreeSize-ped%nDummys
-            read (3001,*) dum,ImputePhase(i,:,1)
-            read (3001,*) dum,ImputePhase(i,:,2)
-        enddo
-
-        do i=1,ped%pedigreeSize-ped%nDummys
-            do j=1,inputParams%nsnp
-                if ((ImputePhase(i,j,1)/=9).and.(ImputePhase(i,j,2)/=9)) then
-                    if (ImputeGenos(i,j)==9) ImputeGenos(i,j)=ImputePhase(i,j,1)+ImputePhase(i,j,2)
-                endif
-            enddo
-        enddo
-
-    end subroutine READINJUNK
+    !     use alphahouseMod, only : countLines
+    !     use alphastatmod, only : pearsn, moment
+    !     use AlphaImputeSpecFileModule
+    !     implicit none
+
+    !     integer :: h,i,j,k,l,nAnisTest,CountCatTest(6),tmpIDInt
+    !     integer :: SummaryStats(3,6),Div,CountLen,Counter,Top1,Top2,Top3,Top4,Bot,ContSnpCor,CountValAnim(6)
+    !     double precision :: SummaryProps(3,6),SumPat(6),SumMat(6),MeanCorPerInd(6),StdDevPerGrp(6),AveCategoryInformativeness(6,6)
+    !     double precision :: Tmpave,Tmpadev,Tmpvar,Tmpskew,Tmpcurt
+    !     character(len=300) :: Names(6),FileName,dumC
+    !     integer,allocatable,dimension(:) :: RecTestId,FinalSetter,WorkTmp,GenoStratIndex,Work
+    !     integer,allocatable,dimension(:,:) :: TrueGenos,RawGenos,TestMat,TestAnimInformativeness
+    !     double precision,allocatable,dimension(:) :: Correlations,CorrelationPerAnimal,TmpVarPerGrp
+    !     double precision,allocatable,dimension(:,:) :: AnisSummary,WorkVec,RealTestGenos,CalcCorPerAnimal
+    !     type(AlphaImputeInput), pointer :: inputParams
+
+    !     character(len=lengan),allocatable,dimension(:) :: TrueGenosId
+
+    !     inputParams =>defaultInput
+
+    !     allocate(Work(inputParams%nSnpRaw))
+    !     allocate(WorkTmp(inputParams%nSnpRaw))
+    !     allocate(GenoStratIndex(ped%pedigreeSize-ped%nDummys))
+
+    !     FileName=trim(inputParams%TrueGenotypeFile)
+    !     ! call CountLines(FileName,nAnisTest)
+    !     nAnisTest = CountLines(FileName)
+
+
+    !     call system(RMDIR // " TestAlphaImpute")
+    !     call system(MD // " TestAlphaImpute")
+
+    !     open (unit=35,file=trim(inputParams%TrueGenotypeFile),status="old")
+    !     open (unit=36,file=trim(inputParams%GenotypeFile),status="unknown")
+    !     ! open (unit=37,file="./TestAlphaImpute/IndividualAnimalAccuracy.txt",status="unknown")
+    !     ! open (unit=38,file="./TestAlphaImpute/SummaryAnimalAccuracy.txt",status="unknown")
+    !     ! open (unit=44,file="./TestAlphaImpute/IndividualSummaryAccuracy.txt",status="unknown")
+    !     ! open (unit=45,file="./TestAlphaImpute/IndividualSummaryYield.txt",status="unknown")
+    !     ! open (unit=48,file="./TestAlphaImpute/IndividualSnpAccuracy.txt",status="unknown")
+    !     open (unit=37, file="." // DASH // "TestAlphaImpute" // DASH // "IndividualAnimalAccuracy.txt", status="unknown")
+    !     open (unit=38, file="." // DASH // "TestAlphaImpute" // DASH // "SummaryAnimalAccuracy.txt", status="unknown")
+    !     open (unit=44, file="." // DASH // "TestAlphaImpute" // DASH // "IndividualSummaryAccuracy.txt", status="unknown")
+    !     open (unit=45, file="." // DASH // "TestAlphaImpute" // DASH // "IndividualSummaryYield.txt", status="unknown")
+    !     open (unit=48, file="." // DASH // "TestAlphaImpute" // DASH // "IndividualSnpAccuracy.txt", status="unknown")
+
+    !     Names(1)="Both Parents Genotyped"
+    !     Names(2)="Sire and Maternal GrandSire Genotyped"
+    !     Names(3)="Dam and Paternal Grandsire Genotyped"
+    !     Names(4)="Sire Genotyped"
+    !     Names(5)="Dam Genotyped"
+    !     Names(6)="Other Relatives Genotyped"
+
+    !     if (allocated(GlobalTmpCountInf)==.FALSE.) then
+    !         allocate(GlobalTmpCountInf(ped%pedigreeSize-ped%nDummys,6))
+    !         GlobalTmpCountInf(:,:)=0
+    !     endif
+
+    !     allocate(FinalSetter(0:ped%pedigreeSize-ped%nDummys))
+    !     FinalSetter=0
+    !     do i=1,ped%nGenotyped
+    !         read (36,*) dumC,WorkTmp(:)
+    !         Counter=0
+    !         do j=1,inputParams%nSnpRaw
+    !             if ((WorkTmp(j)>=0).and.(WorkTmp(j)<=2)) Counter=Counter+1
+    !         enddo
+    !         if (float(Counter)>(float(inputParams%nSnpRaw)/2)) then
+    !             tmpIDInt = ped%dictionary%getValue(dumC)
+    !             if (tmpIDInt /= DICT_NULL) then
+    !                 FinalSetter(tmpIDInt)=1
+    !             endif
+
+    !         endif
+    !     enddo
+    !     rewind(36)
+
+    !     allocate(TestAnimInformativeness(nAnisTest,6))
+
+    !     if (inputParams%outopt==0) then
+
+    !         allocate(TrueGenos(nAnisTest,inputParams%nsnp))
+    !         allocate(TrueGenosId(nAnisTest))
+    !         allocate(RawGenos(nAnisTest,inputParams%nsnp))
+    !         allocate(TestMat(nAnisTest,inputParams%nsnp))
+    !         allocate(RecTestId(nAnisTest))
+    !         allocate(AnisSummary(nAnisTest,5))
+    !         allocate(Correlations(6))
+    !         allocate(RealTestGenos(nAnisTest,inputParams%nsnp))
+    !         allocate(CalcCorPerAnimal(inputParams%nsnp,2))
+    !         allocate(CorrelationPerAnimal(nAnisTest))
+    !         allocate(TmpVarPerGrp(nAnisTest))
+
+    !         do i=1,nAnisTest
+    !             read (35,*) TrueGenosId(i),Work(:)
+    !             k=0
+    !             do j=1,inputParams%nSnpRaw
+    !                 if (SnpIncluded(j)/=0) then
+    !                     k=k+1
+    !                     TrueGenos(i,k)=Work(j)
+    !                 endif
+    !             enddo
+    !         enddo
+
+    !         RecTestId(:)=-99
+    !         do i=1,nAnisTest
+    !             do j=1,ped%pedigreeSize-ped%nDummys
+    !                 if (trim(TrueGenosId(i))==trim((ped%pedigree(j)%originalID))) then
+    !                     RecTestId(i)=j
+    !                     TestAnimInformativeness(i,:)=GlobalTmpCountInf(j,1:6)
+    !                     exit
+    !                 endif
+    !             enddo
+    !         enddo
+    !         if (count(RecTestId(:)==-99)>0) print*, "Error - There seems to be unidentifiablecount ",count(RecTestId(:)==-99)," individuals in the test file"
+
+    !         do i=1,ped%nGenotyped
+    !             read (36,*) dumC,WorkTmp(:)
+    !             do j=1,nAnisTest
+    !                 if (trim(TrueGenosId(j))==dumC) then
+    !                     k=0
+    !                     do l=1,inputParams%nSnpRaw
+    !                         if (SnpIncluded(l)==1) then
+    !                             k=k+1
+    !                             RawGenos(j,k)=WorkTmp(l)
+    !                         endif
+    !                     enddo
+    !                     exit
+    !                 endif
+    !             enddo
+    !         enddo
+
+    !         GenoStratIndex(:)=0
+    !         do i=1,ped%pedigreeSize-ped%nDummys
+    !             if (FinalSetter(i)/=1) then
+    !                 GenoStratIndex(i)=6
+    !                 if (FinalSetter(ped%pedigree(i)%getSireDamNewIDByIndex(3))==1) then
+    !                     GenoStratIndex(i)=5
+    !                     if (FinalSetter(ped%pedigree(i)%getPaternalGrandSireRecodedIndex())==1) then
+    !                         GenoStratIndex(i)=3
+    !                     endif
+    !                 endif
+    !                 if (FinalSetter(ped%pedigree(i)%getSireDamNewIDByIndex(2))==1) then
+    !                     GenoStratIndex(i)=4
+    !                     if (FinalSetter(ped%pedigree(i)%getMaternalGrandSireRecodedIndex())==1) then
+    !                         GenoStratIndex(i)=2
+    !                     endif
+    !                 endif
+    !                 if ((FinalSetter(ped%pedigree(i)%getSireDamNewIDByIndex(2))==1).and.(FinalSetter(ped%pedigree(i)%getSireDamNewIDByIndex(2))==1)) then
+    !                     GenoStratIndex(i)=1
+    !                 endif
+    !             endif
+    !         enddo
+
+    !         TestMat=4
+    !         CountCatTest=0
+    !         AnisSummary=0.0
+
+    !         do i=1,nAnisTest
+    !             do j=1,inputParams%nsnp
+    !                 if ((TrueGenos(i,j)<0).or.(TrueGenos(i,j)>2)) then
+    !                     TestMat(i,j)=5
+    !                 else
+    !                     if ((RawGenos(i,j)<0).or.(RawGenos(i,j)>2)) then
+    !                         if (TrueGenos(i,j)==ImputeGenos(RecTestId(i),j)) TestMat(i,j)=1
+    !                         if (TrueGenos(i,j)/=ImputeGenos(RecTestId(i),j)) TestMat(i,j)=2
+    !                         if (ImputeGenos(RecTestId(i),j)==9) TestMat(i,j)=3
+    !                     endif
+    !                 endif
+    !             enddo
+    !             RealTestGenos(i,:)=ProbImputeGenos(RecTestId(i),:)
+    !             write (37,'(a20,i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') TrueGenosId(i),GenoStratIndex(RecTestId(i)),TestMat(i,:)
+    !             CountCatTest(GenoStratIndex(RecTestId(i)))=CountCatTest(GenoStratIndex(RecTestId(i)))+1
+    !             Div=(count(TestMat(i,:)==1))+(count(TestMat(i,:)==2))+(count(TestMat(i,:)==3))
+    !             AnisSummary(i,1)=100*(float(count(TestMat(i,:)==1))/Div)
+    !             AnisSummary(i,2)=100*(float(count(TestMat(i,:)==2))/Div)
+    !             AnisSummary(i,3)=100*(float(count(TestMat(i,:)==3))/Div)
+    !             AnisSummary(i,4)=100*(float(count(ImputePhase(RecTestId(i),:,1)/=9))/inputParams%nsnp)
+    !             AnisSummary(i,5)=100*(float(count(ImputePhase(RecTestId(i),:,2)/=9))/inputParams%nsnp)
+    !         enddo
+
+    !         SummaryStats=0
+    !         SumPat=0.0
+    !         SumMat=0.0
+    !         do i=1,nAnisTest
+    !             do j=1,6
+    !                 if (GenoStratIndex(RecTestId(i))==j) then
+    !                     SummaryStats(1,j)=SummaryStats(1,j)+(count(TestMat(i,:)==1))
+    !                     SummaryStats(2,j)=SummaryStats(2,j)+(count(TestMat(i,:)==2))
+    !                     SummaryStats(3,j)=SummaryStats(3,j)+(count(TestMat(i,:)==3))
+    !                     SumPat(j)=SumPat(j)+AnisSummary(i,4)
+    !                     SumMat(j)=SumMat(j)+AnisSummary(i,5)
+    !                 endif
+    !             enddo
+    !         enddo
+
+    !         SummaryProps=0.0
+    !         do i=1,3
+    !             do j=1,6
+    !                 if (CountCatTest(j)==0) then
+    !                     SummaryProps(i,j)=0.0
+    !                 else
+    !                     SummaryProps(i,j)=float(SummaryStats(i,j))/sum(SummaryStats(:,j))
+    !                     SummaryProps(i,j)=SummaryProps(i,j)*100
+    !                 endif
+    !             enddo
+    !         enddo
+
+    !         MeanCorPerInd(:)=0.0
+    !         CountValAnim(:)=0
+    !         AveCategoryInformativeness(:,:)=0.0
+    !         do h=1,6
+    !             CountLen=0
+    !             do i=1,nAnisTest
+    !                 if(GenoStratIndex(RecTestId(i))==h) then
+    !                     AveCategoryInformativeness(h,:)=AveCategoryInformativeness(h,:)+TestAnimInformativeness(i,:)
+    !                     do j=1,inputParams%nsnp
+    !                         if ((RawGenos(i,j)<0).or.(RawGenos(i,j)>2)) then
+    !                             if ((TrueGenos(i,j)>=0).and.(TrueGenos(i,j)<=2)) then
+    !                                 CountLen=CountLen+1
+    !                             endif
+    !                         endif
+    !                     enddo
+    !                 endif
+    !             enddo
+    !             allocate(WorkVec(CountLen,2))
+    !             CountLen=0
+    !             do i=1,nAnisTest
+    !                 if(GenoStratIndex(RecTestId(i))==h) then
+    !                     ContSnpCor=0
+    !                     do j=1,inputParams%nsnp
+    !                         if ((RawGenos(i,j)<0).or.(RawGenos(i,j)>2)) then
+    !                             if ((TrueGenos(i,j)>=0).and.(TrueGenos(i,j)<=2)) then
+    !                                 ContSnpCor=ContSnpCor+1                                         !#HereToday
+    !                                 CountLen=CountLen+1
+    !                                 WorkVec(CountLen,1)=float(TrueGenos(i,j))-(2*maf(j))
+    !                                 WorkVec(CountLen,2)=RealTestGenos(i,j)-(2*maf(j))
+    !                                 CalcCorPerAnimal(ContSnpCor,1)=float(TrueGenos(i,j))-(2*maf(j))
+    !                                 CalcCorPerAnimal(ContSnpCor,2)=RealTestGenos(i,j)-(2*maf(j))
+    !                             endif
+    !                         endif
+    !                     enddo
+    !                     if (ContSnpCor>5) then
+    !                         call Pearsn (CalcCorPerAnimal(1:ContSnpCor,1),CalcCorPerAnimal(1:ContSnpCor,2),ContSnpCor,CorrelationPerAnimal(i))
+    !                         MeanCorPerInd(h)=MeanCorPerInd(h)+CorrelationPerAnimal(i)
+    !                         CountValAnim(h)=CountValAnim(h)+1
+    !                         TmpVarPerGrp(CountValAnim(h))=CorrelationPerAnimal(i)
+
+    !                     else
+    !                         CorrelationPerAnimal(i)=-99.0
+    !                     endif
+
+    !                 endif
+    !             enddo
+    !             if (CountLen>5) then
+    !                 call Pearsn (WorkVec(:,1),WorkVec(:,2),CountLen,Correlations(h))
+    !             else
+    !                 Correlations(h)=-99.0
+    !             endif
+    !             deallocate(WorkVec)
+    !             if (CountValAnim(h)>5) then
+    !                 MeanCorPerInd(h)=MeanCorPerInd(h)/CountValAnim(h)
+
+    !                 call moment(TmpVarPerGrp(1:CountValAnim(h)),CountValAnim(h),Tmpave,Tmpadev,StdDevPerGrp(h),Tmpvar,Tmpskew,Tmpcurt)
+    !             else
+    !                 MeanCorPerInd(h)=-99.0
+    !             endif
+    !         enddo
+
+    !         do i=1,6
+    !             SumPat(i)=SumPat(i)/CountCatTest(i)
+    !             SumMat(i)=SumMat(i)/CountCatTest(i)
+    !             AveCategoryInformativeness(i,:)=AveCategoryInformativeness(i,:)/CountCatTest(i)
+    !             write (38,'(14f7.2,i7,a40)') SummaryProps(:,i),Correlations(i),MeanCorPerInd(i),StdDevPerGrp(i),SumPat(i),SumMat(i),AveCategoryInformativeness(i,:),CountCatTest(i),trim(Names(i))
+    !         enddo
+
+    !         print*, " "
+    !         do i=1,6
+    !             if (CountCatTest(i)>0) write (*,'(3f7.2,a3,3f7.2,a3,8f7.2,i7,a40)') SummaryProps(:,i),"   ",Correlations(i),MeanCorPerInd(i),StdDevPerGrp(i)&
+    !                 ,"   ",SumPat(i),SumMat(i),AveCategoryInformativeness(i,:),CountCatTest(i),trim(Names(i))
+    !         enddo
+
+    !         do i=1, ped%pedigreeSize-ped%nDummys
+    !             if (ped%pedigree(i)%isDummy) then
+    !                 exit
+    !             endif
+    !             write (45,'(a25,i3,2f7.2)') ped%pedigree(i)%originalID,FinalSetter(i),float(count(ImputePhase(i,:,1)/=9))/inputParams%nsnp &
+    !                 ,float(count(ImputePhase(i,:,2)/=9))/inputParams%nsnp
+    !         enddo
+
+    !         do j=1,inputParams%nsnp
+    !             Bot=count(TestMat(:,j)/=4)
+    !             Top1=count(TestMat(:,j)==1)
+    !             Top2=count(TestMat(:,j)==2)
+    !             Top3=count(TestMat(:,j)==3)
+    !             Top4=count(TestMat(:,j)==5)
+    !             write (48,'(2i10,4f9.2)') j,Bot,100*(float(Top1)/Bot),100*(float(Top2)/Bot),100*(float(Top3)/Bot),100*(float(Top4)/Bot)
+    !         enddo
+
+    !         do i=1,nAnisTest
+    !             write (44,'(a20,i3,6f7.2,6i10)') TrueGenosId(i),GenoStratIndex(RecTestId(i)),AnisSummary(i,:),CorrelationPerAnimal(i),TestAnimInformativeness(i,:)
+    !         enddo
+
+
+    !     else
+    !         allocate(TrueGenos(nAnisTest,inputParams%nSnpRaw))
+    !         allocate(TrueGenosId(nAnisTest))
+    !         allocate(RawGenos(nAnisTest,inputParams%nSnpRaw))
+    !         allocate(TestMat(nAnisTest,inputParams%nSnpRaw))
+    !         allocate(RecTestId(nAnisTest))
+    !         allocate(AnisSummary(nAnisTest,5))
+    !         allocate(Correlations(6))
+    !         allocate(RealTestGenos(nAnisTest,inputParams%nSnpRaw))
+    !         allocate(CalcCorPerAnimal(inputParams%nSnpRaw,2))
+    !         allocate(CorrelationPerAnimal(nAnisTest))
+    !         allocate(TmpVarPerGrp(nAnisTest))
+
+
+    !         RecTestId(:)=-99
+    !         do i=1,nAnisTest
+    !             read (35,*) TrueGenosId(i),TrueGenos(i,:)
+    !             tmpIDInt = ped%dictionary%getValue(TrueGenosId(i))
+
+    !             if (tmpIDInt /= DICT_NULL) then
+    !                 RecTestId(i)=tmpIDInt
+    !                 testAnimInformativeness(i,:)=GlobalTmpCountInf(tmpIDInt,1:6)
+    !             endif
+    !         enddo
+
+    !         if (any(RecTestId(:)==-99)) print*, "Error - There seems to be unidentifiablecount ",count(RecTestId(:)==-99)," individuals in the test file"
+
+    !         do i=1,ped%nGenotyped
+    !             read (36,*) dumC,WorkTmp(:)
+    !             do j=1,nAnisTest
+    !                 if (trim(TrueGenosId(j))==dumC) then
+    !                     RawGenos(j,:)=WorkTmp(:)
+    !                     exit
+    !                 endif
+    !             enddo
+    !         enddo
+    !         GenoStratIndex(:)=0
+    !         do i=1,ped%pedigreeSize-ped%nDummys
+    !             if (FinalSetter(i)/=1) then
+    !                 GenoStratIndex(i)=6
+    !                 if (FinalSetter(ped%pedigree(i)%getSireDamNewIDByIndex(3))==1) then
+    !                     GenoStratIndex(i)=5
+    !                     if (FinalSetter(ped%pedigree(i)%getPaternalGrandSireRecodedIndex())==1) then
+    !                         GenoStratIndex(i)=3
+    !                     endif
+    !                 endif
+    !                 if (FinalSetter(ped%pedigree(i)%getSireDamNewIDByIndex(2))==1) then
+    !                     GenoStratIndex(i)=4
+    !                     if (FinalSetter(ped%pedigree(i)%getMaternalGrandSireRecodedIndex())==1) then
+    !                         GenoStratIndex(i)=2
+    !                     endif
+    !                 endif
+    !                 if ((FinalSetter(ped%pedigree(i)%getSireDamNewIDByIndex(2))==1).and.(FinalSetter(ped%pedigree(i)%getSireDamNewIDByIndex(3))==1)) then
+    !                     GenoStratIndex(i)=1
+    !                 endif
+    !             endif
+    !         enddo
+    !         TestMat=4
+    !         CountCatTest=0
+    !         AnisSummary=0.0
+    !         do i=1,nAnisTest
+    !             do j=1,inputParams%nSnpRaw
+    !                 if ((TrueGenos(i,j)<0).or.(TrueGenos(i,j)>2)) then
+    !                     TestMat(i,j)=5
+    !                 else
+    !                     if ((RawGenos(i,j)<0).or.(RawGenos(i,j)>2)) then
+    !                         if (TrueGenos(i,j)==ImputeGenos(RecTestId(i),j)) TestMat(i,j)=1
+    !                         if (TrueGenos(i,j)/=ImputeGenos(RecTestId(i),j)) TestMat(i,j)=2
+    !                         if (ImputeGenos(RecTestId(i),j)==9) TestMat(i,j)=3
+    !                     endif
+    !                 endif
+    !             enddo
+    !             RealTestGenos(i,:)=ProbImputeGenos(RecTestId(i),:)
+    !             write (37,'(a20,i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') TrueGenosId(i),GenoStratIndex(RecTestId(i)),TestMat(i,:)
+    !             CountCatTest(GenoStratIndex(RecTestId(i)))=CountCatTest(GenoStratIndex(RecTestId(i)))+1
+    !             Div=(count(TestMat(i,:)==1))+(count(TestMat(i,:)==2))+(count(TestMat(i,:)==3))
+    !             AnisSummary(i,1)=100*(float(count(TestMat(i,:)==1))/Div)
+    !             AnisSummary(i,2)=100*(float(count(TestMat(i,:)==2))/Div)
+    !             AnisSummary(i,3)=100*(float(count(TestMat(i,:)==3))/Div)
+    !             AnisSummary(i,4)=100*(float(count(ImputePhase(RecTestId(i),:,1)/=9))/inputParams%nSnpRaw)
+    !             AnisSummary(i,5)=100*(float(count(ImputePhase(RecTestId(i),:,2)/=9))/inputParams%nSnpRaw)
+    !         enddo
+
+    !         SummaryStats=0
+    !         SumPat=0.0
+    !         SumMat=0.0
+    !         do i=1,nAnisTest
+    !             do j=1,6
+    !                 if (GenoStratIndex(RecTestId(i))==j) then
+    !                     SummaryStats(1,j)=SummaryStats(1,j)+(count(TestMat(i,:)==1))
+    !                     SummaryStats(2,j)=SummaryStats(2,j)+(count(TestMat(i,:)==2))
+    !                     SummaryStats(3,j)=SummaryStats(3,j)+(count(TestMat(i,:)==3))
+    !                     SumPat(j)=SumPat(j)+AnisSummary(i,4)
+    !                     SumMat(j)=SumMat(j)+AnisSummary(i,5)
+    !                 endif
+    !             enddo
+    !         enddo
+
+    !         SummaryProps=0.0
+    !         do i=1,3
+    !             do j=1,6
+    !                 if (CountCatTest(j)==0) then
+    !                     SummaryProps(i,j)=0.0
+    !                 else
+    !                     SummaryProps(i,j)=float(SummaryStats(i,j))/sum(SummaryStats(:,j))
+    !                     SummaryProps(i,j)=SummaryProps(i,j)*100
+    !                 endif
+    !             enddo
+    !         enddo
+
+    !         MeanCorPerInd(:)=0.0
+    !         CountValAnim(:)=0
+    !         AveCategoryInformativeness(:,:)=0.0
+    !         do h=1,6
+    !             CountLen=0
+    !             do i=1,nAnisTest
+    !                 if(GenoStratIndex(RecTestId(i))==h) then
+    !                     AveCategoryInformativeness(h,:)=AveCategoryInformativeness(h,:)+TestAnimInformativeness(i,:)
+    !                     do j=1,inputParams%nSnpRaw
+    !                         if ((RawGenos(i,j)<0).or.(RawGenos(i,j)>2)) then
+    !                             if ((TrueGenos(i,j)>=0).and.(TrueGenos(i,j)<=2)) then
+    !                                 CountLen=CountLen+1
+    !                             endif
+    !                         endif
+    !                     enddo
+    !                 endif
+    !             enddo
+    !             allocate(WorkVec(CountLen,2))
+    !             CountLen=0
+    !             do i=1,nAnisTest
+    !                 if(GenoStratIndex(RecTestId(i))==h) then
+    !                     ContSnpCor=0
+    !                     do j=1,inputParams%nSnpRaw
+    !                         if ((RawGenos(i,j)<0).or.(RawGenos(i,j)>2)) then
+    !                             if ((TrueGenos(i,j)>=0).and.(TrueGenos(i,j)<=2)) then
+    !                                 ContSnpCor=ContSnpCor+1
+    !                                 CountLen=CountLen+1
+    !                                 WorkVec(CountLen,1)=float(TrueGenos(i,j))-(2*maf(j))
+    !                                 WorkVec(CountLen,2)=RealTestGenos(i,j)-(2*maf(j))
+    !                                 CalcCorPerAnimal(ContSnpCor,1)=float(TrueGenos(i,j))-(2*maf(j))
+    !                                 CalcCorPerAnimal(ContSnpCor,2)=RealTestGenos(i,j)-(2*maf(j))
+    !                             endif
+    !                         endif
+    !                     enddo
+    !                     if (ContSnpCor>5) then
+    !                         call Pearsn (CalcCorPerAnimal(1:ContSnpCor,1),CalcCorPerAnimal(1:ContSnpCor,2),ContSnpCor,CorrelationPerAnimal(i))
+    !                         MeanCorPerInd(h)=MeanCorPerInd(h)+CorrelationPerAnimal(i)
+    !                         CountValAnim(h)=CountValAnim(h)+1
+    !                         TmpVarPerGrp(CountValAnim(h))=CorrelationPerAnimal(i)
+    !                     else
+    !                         CorrelationPerAnimal(i)=-99.0
+    !                     endif
+    !                 endif
+    !             enddo
+
+    !             if (CountLen>5) then
+    !                 call Pearsn(WorkVec(:,1),WorkVec(:,2),CountLen,Correlations(h))
+    !             else
+    !                 Correlations(h)=-99.0
+    !             endif
+
+    !             deallocate(WorkVec)
+
+    !             if (CountValAnim(h)>5) then
+    !                 MeanCorPerInd(h)=MeanCorPerInd(h)/CountValAnim(h)
+    !                 call moment(TmpVarPerGrp(1:CountValAnim(h)),CountValAnim(h),Tmpave,Tmpadev,StdDevPerGrp(h),Tmpvar,Tmpskew,Tmpcurt)
+    !             else
+    !                 MeanCorPerInd(h)=-99.0
+    !             endif
+    !         enddo
+
+    !         do i=1,6
+    !             SumPat(i)=SumPat(i)/CountCatTest(i)
+    !             SumMat(i)=SumMat(i)/CountCatTest(i)
+    !             AveCategoryInformativeness(i,:)=AveCategoryInformativeness(i,:)/CountCatTest(i)
+    !             write (38,'(14f7.2,i7,a40)') SummaryProps(:,i),Correlations(i),MeanCorPerInd(i),StdDevPerGrp(i),SumPat(i),SumMat(i),AveCategoryInformativeness(i,:),CountCatTest(i),trim(Names(i))
+    !         enddo
+
+    !         print*, " "
+    !         do i=1,6
+    !             if (CountCatTest(i)>0) write (*,'(3f7.2,a3,3f7.2,a3,8f7.2,i7,a40)') SummaryProps(:,i),"   ",Correlations(i),MeanCorPerInd(i),StdDevPerGrp(i)&
+    !                 ,"   ",SumPat(i),SumMat(i),AveCategoryInformativeness(i,:),CountCatTest(i),trim(Names(i))
+    !         enddo
+
+    !         do i=1, ped%pedigreeSize-ped%nDummys
+    !             if (ped%pedigree(i)%isDummy) then
+    !                 exit
+    !             endif
+    !             write (45,'(a25,i3,2f7.2)') ped%pedigree(i)%originalID,FinalSetter(i),float(count(ImputePhase(i,:,1)/=9))/inputParams%nSnpRaw &
+    !                 ,float(count(ImputePhase(i,:,2)/=9))/inputParams%nSnpRaw
+    !         enddo
+
+    !         do j=1,inputParams%nsnp
+    !             Bot=count(TestMat(:,j)/=4)
+    !             Top1=count(TestMat(:,j)==1)
+    !             Top2=count(TestMat(:,j)==2)
+    !             Top3=count(TestMat(:,j)==3)
+    !             Top4=count(TestMat(:,j)==5)
+    !             write (48,'(2i10,4f9.2)') j,Bot,100*(float(Top1)/Bot),100*(float(Top2)/Bot),100*(float(Top3)/Bot),100*(float(Top4)/Bot)
+    !         enddo
+
+    !         do i=1,nAnisTest
+    !             write (44,'(a20,i3,6f7.2,6i10)') TrueGenosId(i),GenoStratIndex(RecTestId(i)),AnisSummary(i,:),CorrelationPerAnimal(i),TestAnimInformativeness(i,:)
+    !         enddo
+    !     endif
+
+    !     deallocate(Work)
+    !     deallocate(WorkTmp)
+    !     deallocate(GenoStratIndex)
+    ! end subroutine FinalChecker
+
+
+
 
 
     !#############################################################################################################################################################################################################################
@@ -3197,35 +3170,6 @@ contains
         close(UOutputs)
 
     END SUBROUTINE SnpCallRate
-
-    !#############################################################################################################################################################################################################################
-    SUBROUTINE CheckImputationInconsistencies(ImpGenos, ImpPhase, n, m)
-        implicit none
-
-        integer, intent(in) :: n, m
-        integer(kind=1), dimension (:,:), intent(inout) :: ImpGenos
-        integer(kind=1), dimension (:,:,:), intent(inout) :: ImpPhase
-
-        integer :: i, j, k
-        integer :: allele, genotype
-
-        do j = 1, m
-            do i = 1, n
-                do k = 1, 2
-                    allele = ImpPhase(i, j, k)
-                    if (allele/=0 .and. allele/=1 .and. allele/=9) then
-                        ImpPhase(i, j, k) = 9
-                    end if
-                enddo
-                genotype = ImpGenos(i, j)
-                if (genotype/=0 .and. genotype/=1 .and. &
-                    genotype/=2 .and. genotype/=9) then
-                    ImpGenos(i, j) = 9
-                end if
-            enddo
-        enddo
-
-    END SUBROUTINE CheckImputationInconsistencies
 
     !#############################################################################################################################################################################################################################
 
