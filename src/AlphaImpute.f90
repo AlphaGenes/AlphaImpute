@@ -157,7 +157,11 @@ contains
         do i=1,ped%pedigreeSize-ped%nDummys
             do j=1,nSnp
                 do k=1,2
-                    if (ImputePhase(i,j,k)/=9) ProbImputePhase(i,j,k)=float(ImputePhase(i,j,k))
+                       block                          
+                       integer(kind=1) :: phase                         
+                       phase = ped%pedigree(i)%individalPhase(k)%getPhase(j)                         
+                       if (phase/=9) ProbImputePhase(i,j,k)=float(phase)                     
+                       end block
                 enddo
 
                 if (ImputeGenos(i,j)/=9) then
@@ -168,8 +172,6 @@ contains
             enddo
         enddo
 
-        ImputePhase(0,:,:)=9
-        ImputeGenos(0,:)=9
 
 
     end subroutine IterateGeneProbsNew
@@ -313,7 +315,11 @@ contains
         do i=1,ped%pedigreeSize-ped%nDummys
             do j=1,nSnpIterate
                 do k=1,2
-                    if (ImputePhase(i,j,k)/=9) ProbImputePhase(i,j,k)=float(ImputePhase(i,j,k))
+                    block 
+                        integer(kind=1) :: phase
+                        phase = ped%pedigree(i)%individalPhase(k)%getPhase(j)
+                        if (phase/=9) ProbImputePhase(i,j,k)=float(phase)
+                    end block
                 enddo
 
                 if (ImputeGenos(i,j)/=9) then
@@ -323,9 +329,6 @@ contains
                 endif
             enddo
         enddo
-
-        ImputePhase(0,:,:)=9
-        ImputeGenos(0,:)=9
 
     end subroutine IterateGeneProbs
 
@@ -504,7 +507,11 @@ contains
             do i=1,ped%pedigreeSize-ped%nDummys
                 do j=1,nSnpIterate
                     do k=1,2
-                        if (ImputePhase(i,j,k)/=9) ProbImputePhase(i,j,k)=float(ImputePhase(i,j,k))
+                           block                          
+                           integer(kind=1) :: phase                         
+                           phase = ped%pedigree(i)%individalPhase(k)%getPhase(j)                         
+                           if (phase/=9) ProbImputePhase(i,j,k)=float(phase)                     
+                           end block
                     enddo
                     if (ImputeGenos(i,j)/=9) then
                         ProbImputeGenos(i,j)=float(ImputeGenos(i,j))
@@ -609,7 +616,11 @@ contains
             do i=1,ped%pedigreeSize-ped%nDummys
                 do j=1,nSnpIterate
                     do k=1,2
-                        if (ImputePhase(i,j,k)/=9) ProbImputePhase(i,j,k)=float(ImputePhase(i,j,k))
+                        block
+                        integer(kind=1) :: phase
+                        phase = ped%pedigree(i)%individalPhase(k)%getPhase(j)                         
+                        if (phase/=9) ProbImputePhase(i,j,k)=float(phase)                     
+                        end block
                     enddo
                     if (ImputeGenos(i,j)/=9) then
                         ProbImputeGenos(i,j)=float(ImputeGenos(i,j))
