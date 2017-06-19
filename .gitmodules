@@ -1,0 +1,18 @@
+[submodule "alphahouse"]
+	path = alphahouse
+	url = git@bitbucket.org:hickeyjohnteam/alphahouse.git
+[submodule "geneprob"]
+	path = geneprob
+	url = git@bitbucket.org:hickeyjohnteam/geneprob.git
+[submodule "alphacmakefiles"]
+	path = alphacmakefiles
+  url = git@bitbucket.org:hickeyjohnteam/alphacmakefiles.git
+[submodule "alphaphase"]
+	path = alphaphase
+	url = git@bitbucket.org:hickeyjohnteam/alphaphase.git
+[submodule "alphamlp"]
+	path = alphamlp
+	url = https://bitbucket.org/hickeyjohnteam/alphamlp.git
+[submodule "alphahmm"]
+	path = alphahmm
+	url = https://bitbucket.org/hickeyjohnteam/alphahmm.git

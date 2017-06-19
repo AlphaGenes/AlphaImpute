@@ -10,7 +10,7 @@ OPTION(USE_HDF5 "Use hdf"
 
 set(CLUSTER 0 CACHE STRING "cluster size")
 # Add our local modlues to the module path
-SET(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/../alphacmakefiles/cmake/modules")
+SET(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/alphacmakefiles/cmake/modules")
 set(CMAKE_MACOSX_RPATH 0)
 
 INCLUDE(${CMAKE_MODULE_PATH}/setVersion.cmake)
@@ -20,11 +20,14 @@ INCLUDE(${CMAKE_MODULE_PATH}/setVersion.cmake)
 add_definitions(-DCLUSTER=${CLUSTER})
 # Define the executable name
 SET(ALPHAIMPUTEEXE AlphaImpute)
-MESSAGE("Prog name ${ALPHAIMPUTEEXE}")
 SET(GENEPROBEXE GeneProbForAlphaImpute)
+MESSAGE("Prog name ${ALPHAIMPUTEEXE}")
 # Define the library name
 SET(AHLIB alphahouse)
-
+SET(GPLIB geneprob)
+SET(APLIB alphaphase)
+SET(AMLPLIB alphamlp)
+SET(AHMMLIB alphahmm)
 # Define some directories
 SET(SRC ${CMAKE_SOURCE_DIR}/src)
 SET(OBJ ${CMAKE_SOURCE_DIR}/objs)
@@ -32,6 +35,8 @@ SET(BIN ${CMAKE_SOURCE_DIR}/bin)
 SET(TESTS ${CMAKE_SOURCE_DIR}/tests)
 SET(SRCALPHAIMPUTE ${SRC}/)
 
+
+set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${BIN})
 
 INCLUDE(${CMAKE_MODULE_PATH}/findDoxygen.cmake)
 # Defined libary source
@@ -71,14 +76,20 @@ endif(${USE_HDF5})
 # RELEASE, and TESTING.  You should  review this file and make sure the flags
 # are to your liking.
 INCLUDE(${CMAKE_MODULE_PATH}/SetFortranFlags.cmake)
-SET(SRCAH ../alphahouse/src/)
-
+SET(SRCAH ./alphahouse/src/)
+SET(SRCGP ./geneprob/src/)
+SET(SRCAP ./alphaphase/src/)
+SET(SRCAMLP ./alphamlp/src/)
+SET(SRCAHMM ./alphahmm/src/)
 # Have the .mod files placed in the OBJ folder
 SET(CMAKE_Fortran_MODULE_DIRECTORY ${OBJ})
 
 
 ADD_SUBDIRECTORY(${SRCAH} ${OBJ}/AH)
-
+ADD_SUBDIRECTORY(${SRCGP} ${OBJ}/GP)
+ADD_SUBDIRECTORY(${SRCAP} ${OBJ}/AP)
+ADD_SUBDIRECTORY(${SRCAHMM} ${OBJ}/AHMM)
+#ADD_SUBDIRECTORY(${SRCAMLP} ${OBJ}/AMLP)
 
 # TODO add tests to correct location
 ADD_SUBDIRECTORY(${SRCALPHAIMPUTE} ${BIN})

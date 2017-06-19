@@ -40,221 +40,141 @@ contains
 
 
 
-    !########################################################################################################################################################################
 
-
-    !#############################################################################################################################################################################################################################
-
-    subroutine GeneProbManagement
-        use Global
-        use alphaimputeinmod
-        implicit none
-
-        integer :: i
-        character(len=300) :: filout
-        type(AlphaImputeInput), pointer :: inputParams
-
-        inputParams => defaultInput
-        open (unit=109,file="TempGeneProb.sh",status="unknown")
-
-        print*, " "
-        print*, " ","       Calculating genotype probabilities"
-
-#if CLUSTER==1
-        ! PIC company algorithm to calculate probabilities of genotype
-        write (filout,'("cd GeneProb/")')
-        write(f,'(i0)') nProcessors
-        write (109,*) trim(filout)
-        write(109,*) "cp ../../../SharedFiles/AlphaImpute_scripts/runSubmitGeneProb.sh ."
-        write(109,*) "cp ../../../SharedFiles/AlphaImpute_scripts/submitGeneProb.sh ."
-        write(109,'(a,a)') "./runSubmitGeneProb.sh ",trim(f)
-        close (109)
-        call system("chmod +x TempGeneProb.sh")
-        call system("./TempGeneProb.sh")
-        call system("rm TempGeneProb.sh")
-        ! Check that every process has finished before going on
-        if (inputParams%restartOption/=OPT_RESTART_GENEPROB) call CheckGeneProbFinished(nProcessors)
-
-#else
-        ! Create bash script for run GeneProb subprocesses
-        do i=1,inputParams%nProcessors
-            write (filout,'("cd GeneProb/GeneProb"i0)')i
-            write (109,*) trim(filout)
-            ! Call the external package GeneProbForAlphaImpute
-            if (GeneProbPresent==0) write (109,*) "nohup sh -c ""GeneProbForAlphaImpute > out 2>&1"" >/dev/null &"
-            if (GeneProbPresent==1) write (109,*) "nohup sh -c ""./GeneProbForAlphaImpute > out 2>&1"" >/dev/null &"
-            write (109,*) "cd ../.."
-        enddo
-
-        close (109)
-        call system("chmod +x TempGeneProb.sh")
-        call system("./TempGeneProb.sh")
-
-        ! Check that every process has finished before going on
-        call CheckGeneProbFinished(inputParams%nProcessors)
-#endif
-
-    end subroutine GeneProbManagement
-
-    !#############################################################################################################################################################################################################################
-
-    subroutine CheckGeneProbFinished(nProcs)
-        use Global
-        implicit none
-
-        integer, intent(in) :: nProcs
-        character(len=300) :: filout
-        integer :: i,JobsDone(nProcs)
-        logical :: FileExists
-
-        JobsDone(:)=0
-        do
-            do i=1,nProcs
-#ifndef _WIN32
-                write (filout,'("./GeneProb/GeneProb"i0,"/GpDone.txt")')i
-#else
-                write (filout,'(".\GeneProb\GeneProb"i0,"\GpDone.txt")')i
-#endif
-                inquire(file=trim(filout),exist=FileExists)
-                if (FileExists .eqv. .true.) then
-                    if (JobsDone(i)==0) print*, " ","      GeneProb job ",i," done"
-                    JobsDone(i)=1
-                endif
-            enddo
-            call sleep(SleepParameter)
-            if (sum(JobsDone(:))==nProcs) exit
-        enddo
-
-    end subroutine CheckGeneProbFinished
-
-    !#############################################################################################################################################################################################################################
-
-    subroutine PhasingManagement
-        use Global
-        use AlphaImputeInMod
+    subroutine PhasingManagementNew(results)
+        use AlphaImputeSpecFileModule
+        use omp_lib
+        use AlphaPhaseParametersModule
+        use AlphaPhaseFunctions
+        use AlphaPhaseResultsModule
+        use Global, only : ped
+        use inputoutput, only : MakeDirectories
         implicit none
 
         type(AlphaImputeInput), pointer :: inputParams
-        integer :: i,StartJob,Tmp,ProcUsed
-        integer, allocatable, dimension(:) :: jobsDone, JobsStarted
-        character(len=300) :: filout,infile
-        logical :: FileExists
+        type(AlphaPhaseParameters) :: params
+        type(AlphaPhaseResultsContainer), intent(out) :: results
+        integer :: nCoreLengths,i, coreIndexes
+        
+        inputParams=> defaultInput
+        nCoreLengths = size(inputParams%CoreAndTailLengths)
+        results%nResults = nCoreLengths*2
 
+        allocate(results%results(nCoreLengths*2))
+        params = newParameters()
+        params%iterateType = inputParams%iterateMethod
+        params%iterateNumber = inputParams%PhaseSubsetSize
+        params%numIter = inputParams%PhaseNIterations
+        params%minOverlap = inputparams%minoverlaphaplotype
+        params%percGenoHaploDisagree = inputparams%GenotypeErrorPhase*0.01
+        params%Offset = .true.
+        
+        if (inputparams%minoverlaphaplotype /= 0) then
+            params%percMinPresent = 0
+        endif
+        call omp_set_nested(.true.)
+
+        write(6,*) " "
+        write(6,*) " ", "Running AlphaPhase"
+       !$OMP parallel DO schedule(dynamic) &
+       !$OMP FIRSTPRIVATE(params)
+        do i= 1, nCoreLengths*2
+            coreIndexes = i
+
+            if (i > nCoreLengths) Then
+                params%offset = .false.
+                coreIndexes = i - nCoreLengths
+            endif
+            
+            params%CoreAndTailLength = inputParams%CoreAndTailLengths(coreIndexes)
+            params%jump = inputParams%CoreLengths(coreIndexes)
+            params%numsurrdisagree = 1
+            params%useSurrsN = 10
+           
+
+            results%results(i) = phaseAndCreateLibraries(ped, params, quiet=.true.)
+        enddo
+
+        !$omp end parallel do
+        write(6,*) " ", "Finished Running AlphaPhase"
+
+
+    end subroutine PhasingManagementNew
+    !#############################################################################################################################################################################################################################
+
+    subroutine IterateGeneProbsNew(GenosProbs)
+
+        use iso_fortran_env
+        use global, only : Maf,ImputePhase,ImputeGenos, ped,ProbImputePhase, ProbImputeGenos,OPT_RESTART_IMPUTATION
+        use AlphaImputeSpecFileModule
+        use GeneProbModule , only : runGeneProbAlphaImpute
+        use imputation, only : PhaseComplement
+
+        integer :: i,j,k
+
+        integer :: startSnp, endsnp, nSnp
+        type(AlphaImputeInput), pointer :: inputParams
+        real(kind=real64), intent(out), allocatable :: GenosProbs(:,:,:)
         inputParams=> defaultInput
 
-        allocate(JobsDone(inputParams%nPhaseInternal))
-        allocate(JobsStarted(inputParams%nPhaseInternal))
-        print*, " "
-        print*, " ","       Performing the phasing of the data"
-        !if (PicVersion==.FALSE.) then
-#if CLUSTER==1
-        open (unit=107,file="TempPhase1.sh",status="unknown")
-        write (filout,'("cd Phasing/")')
-        write(f,'(i0)') inputParams%nPhaseInternal
-        write (107,*) trim(filout)
-        write(107,*) "cp ../../../SharedFiles/AlphaImpute_scripts/runSubmitPhasing.sh ."
-        write(107,*) "cp ../../../SharedFiles/AlphaImpute_scripts/submitPhasing.sh ."
-        write(107,'(a,a)') "./runSubmitPhasing.sh ",trim(f)
-        print*, " "
-        close (107)
-        call system("chmod +x TempPhase1.sh")
-        call system("./TempPhase1.sh")
-        call system("rm TempPhase1.sh")
+        if (inputParams%outopt==0) nSnp=inputParams%nsnp
+        if (inputParams%outopt==1) nSnp=inputParams%nSnpRaw
 
-        ! Check that every process has finished before AlphaImpute goes on with imputation
-        if (inputParams%restartOption/=OPT_RESTART_PHASING) Then
-            JobsDone(:)=0
-            do
-                do i=1,inputParams%nPhaseInternal
-                    if ((ManagePhaseOn1Off0==0).and.(NoPhasing==1)) then
-                        write (filout,'(a,"/Phase"i0,"/PhasingResults/Timer.txt")') trim(inputParams%PhasePath), i
-                    else
-                        write (filout,'("./Phasing/Phase"i0,"/PhasingResults/Timer.txt")')i
-                    end if
 
-                    inquire(file=trim(filout),exist=FileExists)
-                    if ((FileExists .eqv. .true.).and.(JobsDone(i)==0)) then
-                        print*, " ","AlphaPhase job ",i," done"
-                        JobsDone(i)=1
-                    endif
+        ! This will be MPI jobs in future, as right now parallelization is run using openMP inside Geneprob itself
+        ! TODO add tihs in
+        ! do i=1,inputParams%useProcs
+            ! startsnp = GpIndex(i,1)
+            ! endsnp = GpIndex(i,2)
+
+            startSnp = 1
+            endsnp = inputParams%nSnp
+            ! No writes should be made to pedigree, so this can be shared. GenosProbs and MAF need to be combined
+            call runGeneProbAlphaImpute(StartSnp, endsnp, ped, GenosProbs, MAF)
+
+        ! enddo
+
+
+        if (inputParams%restartOption==OPT_RESTART_IMPUTATION) then
+                open (unit=109,file="Tmp2345678.txt",status="unknown")
+                do i=1,ped%nGenotyped
+                    write (109,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ImputePhase(ped%genotypeMap(i),:,1)
+                    write (109,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ImputePhase(ped%genotypeMap(i),:,2)
+                    write (109,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ImputeGenos(ped%genotypeMap(i),:)
                 enddo
-                call sleep(SleepParameter)
-                if (sum(JobsDone(:))==inputParams%nPhaseInternal) exit
-            enddo
+                close (109)
+                write(*,*) "Restart option 3 stops program before Iterate Geneprob jobs have been finished"
+                stop
         endif
 
-#else
-        open (unit=107,file="TempPhase1.sh",status="unknown")
-        JobsStarted=0
-        ProcUsed=0
-        do i=1,inputParams%nprocessors
-            ProcUsed=ProcUsed+1
-            if ((inputParams%ManagePhaseOn1Off0==0).and.(inputParams%NoPhasing==1)) then
-                write (infile,'("cd "a,"/Phase"i0)') trim(inputParams%PhasePath), i
-            else
-                write (infile,'("cd Phasing/Phase"i0)')i
-            end if
 
-            write (107,*) trim(infile)
-            if (AlphaPhasePresent==0) write (107,*) "nohup sh -c ""AlphaPhase > out 2>&1"" >/dev/null &"
-            if (AlphaPhasePresent==1) write (107,*) "nohup sh -c ""./AlphaPhase > out 2>&1"" >/dev/null &"
-            write (107,*) "cd ../.."
-            JobsStarted(i)=1
-            if (ProcUsed==inputParams%nPhaseInternal) exit
-        enddo
-        StartJob=ProcUsed
-        close (107)
-        call system("chmod +x TempPhase*.sh")
-        call system("./TempPhase1.sh")
-        Tmp=inputParams%nprocessors
-        JobsDone(:)=0
+        call IterateGeneProbPhase
 
-        if (inputParams%nProcessors<inputParams%nPhaseInternal) then
-            print*, "ERROR - To use this Restart option you need as many processors as phasing internal jobs"
-            stop
-        endif
+        call IterateParentHomoFill
+        call PhaseComplement
+        call IterateMakeGenotype
 
-        ! Check that every process has finished before go on
-        do
-            do i=1,inputParams%nPhaseInternal
-                if ((inputParams%ManagePhaseOn1Off0==0).and.(inputParams%NoPhasing==1)) then
-                    write (filout,'(a,"/Phase"i0,"/PhasingResults/Timer.txt")') trim(inputParams%PhasePath), i
+        do i=1,ped%pedigreeSize-ped%nDummys
+            do j=1,nSnp
+                do k=1,2
+                    if (ImputePhase(i,j,k)/=9) ProbImputePhase(i,j,k)=float(ImputePhase(i,j,k))
+                enddo
+
+                if (ImputeGenos(i,j)/=9) then
+                    ProbImputeGenos(i,j)=float(ImputeGenos(i,j))
                 else
-                    write (filout,'("./Phasing/Phase"i0,"/PhasingResults/Timer.txt")')i
-                end if
-
-                inquire(file=trim(filout),exist=FileExists)
-                if ((FileExists .eqv. .true.).and.(JobsDone(i)==0)) then
-                    print*, " ","AlphaPhase job ",i," done"
-                    JobsDone(i)=1
-                    if ((sum(JobsStarted(:))<inputParams%nPhaseInternal).and.(sum(JobsDone(:))<inputParams%nPhaseInternal)) then
-                        Tmp=Tmp+1
-                        JobsStarted(Tmp)=1
-                        write (filout,'("TempPhase"i0,".sh")')Tmp
-                        open (unit=107,file=trim(filout),status="unknown")
-                        if ((inputParams%ManagePhaseOn1Off0==0).and.(inputParams%NoPhasing==1)) then
-                            write (infile,'("cd "a,"/Phase"i0)') trim(inputParams%PhasePath), Tmp
-                        else
-                            write (infile,'("cd Phasing/Phase"i0)')Tmp
-                        end if
-                        write (107,*) trim(infile)
-                        if (AlphaPhasePresent==0) write (107,*) "nohup sh -c ""AlphaPhase > out 2>&1"" >/dev/null &"
-                        if (AlphaPhasePresent==1) write (107,*) "nohup sh -c ""./AlphaPhase > out 2>&1"" >/dev/null &"
-                        close(107)
-                        call system("chmod +x TempPhase*.sh")
-                        call system("./" // filout)
-                    endif
+                    ProbImputeGenos(i,j)=sum(ProbImputePhase(i,j,:))
                 endif
             enddo
-            call sleep(SleepParameter)
-            if (sum(JobsDone(:))==inputParams%nPhaseInternal) exit
         enddo
-        call system("rm TempPhase*.sh")
-        !endif
-#endif
-        deallocate(JobsDone)
-        deallocate(JobsStarted)
-    end subroutine PhasingManagement
+
+        ImputePhase(0,:,:)=9
+        ImputeGenos(0,:)=9
+
+
+    end subroutine IterateGeneProbsNew
+
+
 
     !#############################################################################################################################################################################################################################
 
@@ -268,141 +188,75 @@ contains
         integer,dimension(:), allocatable :: JobsDone
         real,allocatable :: PatAlleleProb(:,:),MatAlleleProb(:,:),HetProb(:),GeneProbWork(:,:)
         character(len=300) :: filout
-        logical :: FileExists
 
         inputParams=> defaultInput
 
         if (inputParams%outopt==0) nSnpIterate=inputParams%nsnp
         if (inputParams%outopt==1) nSnpIterate=inputParams%nSnpRaw
 
-        allocate(jobsDone(inputParams%nProcessors))
+        allocate(jobsDone(inputParams%useProcs))
 
         allocate(PatAlleleProb(nSnpIterate,2))
         allocate(MatAlleleProb(nSnpIterate,2))
         allocate(HetProb(nSnpIterate))
         allocate(GeneProbWork(nSnpIterate,4))
-        allocate(ProbImputeGenos(0:nAnisP,nSnpIterate))
-        allocate(ProbImputePhase(0:nAnisP,nSnpIterate,2))
-        allocate(GPI(nAnisP,nSnpIterate))
+        if (.not. allocated(ProbImputeGenos)) then
+            allocate(ProbImputeGenos(0:ped%pedigreeSize,nSnpIterate))
+        endif
+        if (.not. allocated(ProbImputePhase)) then
+            allocate(ProbImputePhase(0:ped%pedigreeSize,nSnpIterate,2))
+        endif
+
         deallocate(GpIndex)
 
-        allocate(GpIndex(inputParams%nprocessors,2))
+        allocate(GpIndex(inputParams%useProcs,2))
 
         ProbImputeGenos(0,:)=0.0
         ProbImputePhase(0,:,:)=0.0
-        ProbImputeGenos(1:nAnisP,:)=-9.0
-        ProbImputePhase(1:nAnisP,:,:)=-9.0
+        ProbImputeGenos(1:ped%pedigreeSize,:)=-9.0
+        ProbImputePhase(1:ped%pedigreeSize,:,:)=-9.0
 
-        Tmp=int(float(nSnpIterate)/inputParams%nprocessors)
+        Tmp=int(float(nSnpIterate)/inputParams%useProcs)
         GpIndex(1,1)=1
         GpIndex(1,2)=Tmp
-        if (inputParams%nprocessors>1) then
-            do i=2,inputParams%nprocessors
+        if (inputParams%useProcs>1) then
+            do i=2,inputParams%useProcs
                 GpIndex(i,1)=GpIndex(i-1,1)+Tmp
                 GpIndex(i,2)=GpIndex(i-1,2)+Tmp
             enddo
         endif
-        GpIndex(inputParams%nprocessors,2)=nSnpIterate
+        GpIndex(inputParams%useProcs,2)=nSnpIterate
 
 
-        do i=1,inputParams%nprocessors
+        do i=1,inputParams%useProcs
 #ifndef _WIN32
             write (filout,'("./IterateGeneProb/GeneProb"i0,"/GeneProbSpec.txt")')i
 #else
             write (filout,'(".\IterateGeneProb\GeneProb"i0,"\GeneProbSpec.txt")')i
 #endif
             open (unit=108,file=trim(filout),status='unknown')
-            write (108,*) "nAnis        ,",nAnisP
+            write (108,*) "nAnis        ,",ped%pedigreeSize-ped%nDummys
             write (108,*) "nsnp     ,",nSnpIterate
 #ifndef _WIN32
-            write (108,*) "InputFilePath    ,",'"../IterateGeneProbInput.txt"'
+            write (108,*) "InputFilePath    ,",'../IterateGeneProbInput.txt'
 #else
-            write (108,*) "InputFilePath    ,",'"..\IterateGeneProbInput.txt"'
+            write (108,*) "InputFilePath    ,",'..\IterateGeneProbInput.txt'
 #endif
-            write (108,*) "OutputFilePath   ,",'"GeneProbs.txt"'
+            write (108,*) "OutputFilePath   ,",'GeneProbs.txt'
             write (108,*) "StartSnp     ,",GpIndex(i,1)
             write (108,*) "EndSnp       ,",GpIndex(i,2)
+            write (108,*) "cores       ,",1
             close(108)
-            write (filout,'("GeneProb"i0)')i
-            ! call system ("cp GeneProbForAlphaImpute IterateGeneProb/" // filout)
-            if (GeneProbPresent==1) call system (COPY // " GeneProbForAlphaImpute" // EXE // " IterateGeneProb" // DASH // filout // NULL)
         enddo
 
-#ifndef _WIN32
-        open (unit=109,file="TempIterateGeneProb.sh",status="unknown")
-#else
-        open (unit=109,file="TempIterateGeneProb.BAT",status="unknown")
-#endif
+
 
         if (inputParams%restartOption/=4) then
             !if (PicVersion==.FALSE.) then
-#if CLUSTER==0
-            do i=1,inputParams%nprocessors
-#ifndef _WIN32
-                write (filout,'("cd IterateGeneProb/GeneProb"i0)')i
-#else
-                write (filout,'("cd IterateGeneProb\GeneProb"i0)')i
-#endif
-                write (109,*) trim(filout)
-#ifndef _WIN32
-                if (GeneProbPresent==0) write (109,*) "nohup sh -c ""GeneProbForAlphaImpute > out 2>&1"" >/dev/null &"
-                if (GeneProbPresent==1) write (109,*) "nohup sh -c ""./GeneProbForAlphaImpute > out 2>&1"" >/dev/null &"
-#else
-                if (GeneProbPresent==0) write (109,*) "start /b GeneProbForAlphaImpute.exe > out 2>&1"
-                if (GeneProbPresent==1) write (109,*) "start /b .\GeneProbForAlphaImpute.exe > out 2>&1"
-#endif
-                write (109,*) "cd ../.."
-                !#ifndef _WIN32
-                !#else
-                !         write (109,*) "exit"
-                !#endif
-                call flush(109)
-            enddo
-            close(109)
 
-#ifndef _WIN32
-            call system("chmod +x TempIterateGeneProb.sh")
-            call system("./TempIterateGeneProb.sh")
-#else
-            call system("start ""Iterate GeneProbs"" .\TempIterateGeneProb.BAT >NUL")
-#endif
-
-            print*, " "
-            print*, " ","       Calculating genotype probabilities"
-            JobsDone(:)=0
-            !JDone(:)=0
-
-#ifndef _WIN32
-            call system("rm -f ./IterateGeneProb/GeneProb*/GpDone.txt")
-#else
-            do i=1,inputParams%nprocessors
-                write (filout,'("IterateGeneProb\GeneProb"i0"\GpDone.txt")')i
-                inquire(file=trim(filout),exist=FileExists)
-                if (FileExists .eqv. .TRUE.) call system("del /f /q " // filout // NULL)
-            enddo
-#endif
-
-            !if (inputParams%restartOption/=OPT_RESTART_IMPUTATION) then
-            do
-                do i=1,inputParams%nprocessors
-#ifndef _WIN32
-                    write (filout,'("./IterateGeneProb/GeneProb"i0,"/GpDone.txt")')i
-#else
-                    write (filout,'(".\IterateGeneProb\GeneProb"i0,"\GpDone.txt")')i
-#endif
-                    inquire(file=trim(filout),exist=FileExists)
-                    if (FileExists .eqv. .true.) then
-                        if (JobsDone(i)==0) print*, " ","      GeneProb job ",i," done"
-                        JobsDone(i)=1
-                        !JDone(i)=1
-                    endif
-                enddo
-                if (sum(JobsDone(:))==inputParams%nprocessors) exit
-            enddo
-            !endif
-#elif CLUSTER==1
+#if CLUSTER==1
             write (filout,'("cd IterateGeneProb/")')
-            write(f,'(i0)') inputParams%nprocessors
+            write(f,'(i0)') inputParams%useProcs
             write (109,*) trim(filout)
             write(109,*) "cp ../../../SharedFiles/AlphaImpute_scripts/runSubmitGeneProb.sh ."
             write(109,*) "cp ../../../SharedFiles/AlphaImpute_scripts/submitGeneProb.sh ."
@@ -418,7 +272,7 @@ contains
 
             if (inputParams%restartOption/=OPT_RESTART_IMPUTATION) then
                 do
-                    do i=1,inputParams%nprocessors
+                    do i=1,inputParams%useProcs
                         write (filout,'("./IterateGeneProb/GeneProb"i0,"/GpDone.txt")')i
                         inquire(file=trim(filout),exist=FileExists)
                         if ((FileExists .eqv. .true.).and.(JobsDone(i)==0)) then
@@ -427,38 +281,36 @@ contains
                         endif
                     enddo
                     call sleep(SleepParameter)
-                    if (sum(JobsDone(:))==inputParams%nprocessors) exit
+                    if (sum(JobsDone(:))==inputParams%useProcs) exit
                 enddo
             endif
 #else
+! cluster == 2 here
 #endif
             close (109)
 
             if (inputParams%restartOption==OPT_RESTART_IMPUTATION) then
                 open (unit=109,file="Tmp2345678.txt",status="unknown")
-                do i=1,nAnisP
-                    write (109,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ImputePhase(i,:,1)
-                    write (109,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ImputePhase(i,:,2)
-                    write (109,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ImputeGenos(i,:)
+                do i=1,ped%nGenotyped
+                    write (109,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ImputePhase(ped%genotypeMap(i),:,1)
+                    write (109,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ImputePhase(ped%genotypeMap(i),:,2)
+                    write (109,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ImputeGenos(ped%genotypeMap(i),:)
                 enddo
                 close (109)
-#if CLUSTER==1
-                write(6,*) "Restart option 3 stops program before Iterate Geneprob jobs have been finished"
-#elif CLUSTER==0
-                write(6,*) "Restart option 3 stops program after Iterate Geneprob jobs have been finished"
-#else
-                write(6,*) "Restart option 3 stops program before Iterate Geneprob jobs have been submitted"
-#endif
+                write(*,*) "Restart option 3 stops program before Iterate Geneprob jobs have been finished"
                 stop
             endif
         endif
 
-        call IterateGeneProbPhase
+
+        call IterateGeneProbPhaseCluster
+
+
         call IterateParentHomoFill
         call PhaseComplement
         call IterateMakeGenotype
 
-        do i=1,nAnisP
+        do i=1,ped%pedigreeSize-ped%nDummys
             do j=1,nSnpIterate
                 do k=1,2
                     if (ImputePhase(i,j,k)/=9) ProbImputePhase(i,j,k)=float(ImputePhase(i,j,k))
@@ -479,10 +331,101 @@ contains
 
     !#############################################################################################################################################################################################################################
 
+
+
+
+    !#############################################################################################################################################################################################################################
+
+    subroutine GeneProbManagement
+        use Global
+        use AlphaImputeSpecFileModule
+        implicit none
+
+        integer :: i
+        character(len=300) :: filout
+        type(AlphaImputeInput), pointer :: inputParams
+
+        inputParams => defaultInput
+        open (unit=109,file="TempGeneProb.sh",status="unknown")
+
+        print*, " "
+        print*, " ","       Calculating genotype probabilities"
+
+#if CLUSTER==1
+        ! PIC company algorithm to calculate probabilities of genotype
+        write (filout,'("cd GeneProb/")')
+        write(f,'(i0)') useProcs
+        write (109,*) trim(filout)
+        write(109,*) "cp ../../../SharedFiles/AlphaImpute_scripts/runSubmitGeneProb.sh ."
+        write(109,*) "cp ../../../SharedFiles/AlphaImpute_scripts/submitGeneProb.sh ."
+        write(109,'(a,a)') "./runSubmitGeneProb.sh ",trim(f)
+        close (109)
+        call system("chmod +x TempGeneProb.sh")
+        call system("./TempGeneProb.sh")
+        call system("rm TempGeneProb.sh")
+        ! Check that every process has finished before going on
+        if (inputParams%restartOption/=OPT_RESTART_GENEPROB) call CheckGeneProbFinished(useProcs)
+
+#else
+        ! Create bash script for run GeneProb subprocesses
+        do i=1,inputParams%useProcs
+            write (filout,'("cd GeneProb/GeneProb"i0)')i
+            write (109,*) trim(filout)
+            ! Call the external program geneprob
+            if (GeneProbPresent==0) write (109,*) "nohup sh -c ""./geneProb > out 2>&1"" >/dev/null &"
+            if (GeneProbPresent==1) write (109,*) "nohup sh -c ""./geneprob > out 2>&1"" >/dev/null &"
+            write (109,*) "cd ../.."
+        enddo
+
+        close (109)
+        call system("chmod +x TempGeneProb.sh")
+        call system("./TempGeneProb.sh")
+
+        ! Check that every process has finished before going on
+        call CheckGeneProbFinished(inputParams%useProcs)
+#endif
+
+    end subroutine GeneProbManagement
+
+
+! #####################################################################################################################################
+
+    subroutine CheckGeneProbFinished(nProcs)
+        use Global
+        implicit none
+
+        integer, intent(in) :: nProcs
+        character(len=300) :: filout
+        integer :: i,JobsDone(nProcs)
+        logical :: FileExists
+
+        JobsDone(:)=0
+        do
+            do i=1,nProcs
+#ifdef _WIN32
+                write (filout,'(".\GeneProb\GeneProb"i0,"\GpDone.txt")')i
+#else
+                write (filout,'("./GeneProb/GeneProb"i0,"/GpDone.txt")')i
+#endif
+                inquire(file=trim(filout),exist=FileExists)
+                if (FileExists .eqv. .true.) then
+                    if (JobsDone(i)==0) print*, " ","      GeneProb job ",i," done"
+                    JobsDone(i)=1
+                endif
+            enddo
+            call sleep(SleepParameter)
+            if (sum(JobsDone(:))==nProcs) exit
+        enddo
+
+    end subroutine CheckGeneProbFinished
+
+
+    !#############################################################################################################################################################################################################################
+
     subroutine IterateInsteadOfGeneProbs
         use Global
         use Imputation
-        use alphaimputeinmod
+        use AlphaImputeSpecFileModule
         implicit none
 
         integer :: e,i,j,k,Counter,ParId
@@ -493,14 +436,15 @@ contains
             if (inputParams%outopt==0) nSnpIterate=inputParams%nsnp
             if (inputParams%outopt==1) nSnpIterate=inputParams%nSnpRaw
 
-            allocate(ProbImputeGenos(0:nAnisP,nSnpIterate))
-            allocate(ProbImputePhase(0:nAnisP,nSnpIterate,2))
-            allocate(TempAlleleFreq(nSnpIterate))
+
+            if (.not. allocated(ProbImputeGenos)) allocate(ProbImputeGenos(0:ped%pedigreeSize,nSnpIterate))
+            if (.not. allocated(ProbImputePhase)) allocate(ProbImputePhase(0:ped%pedigreeSize,nSnpIterate,2))
+            if (.not. allocated(TempAlleleFreq)) allocate(TempAlleleFreq(nSnpIterate))
 
             TempAlleleFreq=0.0
             do j=1,nSnpIterate
                 Counter=0
-                do i=1,nAnisP
+                do i=1,ped%pedigreeSize-ped%nDummys
                     if (ImputeGenos(i,j)/=9) then
                         TempAlleleFreq(j)=TempAlleleFreq(j)+ImputeGenos(i,j)
                         Counter=Counter+2
@@ -516,14 +460,14 @@ contains
             ProbImputePhase(0,:,1)=TempAlleleFreq(:)
             ProbImputePhase(0,:,2)=TempAlleleFreq(:)
             ProbImputeGenos(0,:)=2*TempAlleleFreq(:)
-            ProbImputeGenos(1:nAnisP,:)=-9.0
-            ProbImputePhase(1:nAnisP,:,:)=-9.0
+            ProbImputeGenos(1:ped%pedigreeSize-ped%nDummys,:)=-9.0
+            ProbImputePhase(1:ped%pedigreeSize-ped%nDummys,:,:)=-9.0
 
             call IterateParentHomoFill
             call PhaseComplement
             call IterateMakeGenotype
 
-            do i=1,nAnisP
+            do i=1,ped%pedigreeSize-ped%nDummys
                 do j=1,nSnpIterate
                     do e=1,2
                         if (ImputePhase(i,j,e)/=9) ProbImputePhase(i,j,e)=float(ImputePhase(i,j,e))
@@ -531,7 +475,7 @@ contains
                 enddo
             enddo
 
-            do i=1,nAnisP
+            do i=1,ped%pedigreeSize-ped%nDummys
                 do e=1,2
                     parId = ped%pedigree(i)%getSireDamNewIDByIndex(e+1)
                     if (ParId==0) then
@@ -557,7 +501,7 @@ contains
                 endif
             enddo
 
-            do i=1,nAnisP
+            do i=1,ped%pedigreeSize-ped%nDummys
                 do j=1,nSnpIterate
                     do k=1,2
                         if (ImputePhase(i,j,k)/=9) ProbImputePhase(i,j,k)=float(ImputePhase(i,j,k))
@@ -571,7 +515,7 @@ contains
             enddo
 
             if (inputParams%SexOpt==1) then
-                do i=1,nAnisP
+                do i=1,ped%pedigreeSize-ped%nDummys
                     if (ped%pedigree(i)%gender==inputParams%hetGameticStatus) then
                         do j=1,nSnpIterate
                             if ((ImputePhase(i,j,1)==9).and.(ImputePhase(i,j,2)/=9)) ImputePhase(i,j,1)=ImputePhase(i,j,2)
@@ -583,7 +527,7 @@ contains
                 enddo
             endif
 
-            do i=1,nAnisP
+            do i=1,ped%pedigreeSize-ped%nDummys
                 do j=1,nSnpIterate
                     if (ProbImputeGenos(i,j)==-9.0) ProbImputeGenos(i,j)=sum(ProbImputePhase(i,j,:))
                     if (ProbImputeGenos(i,j)>1.999) ImputeGenos(i,j)=2
@@ -608,14 +552,14 @@ contains
             if (inputParams%outopt==0) nSnpIterate=inputParams%nsnp
             if (inputParams%outopt==1) nSnpIterate=inputParams%nSnpRaw
 
-            allocate(ProbImputeGenos(0:nAnisP,nSnpIterate))
-            allocate(ProbImputePhase(0:nAnisP,nSnpIterate,2))
-            allocate(TempAlleleFreq(nSnpIterate))
+             if (.not. allocated(ProbImputeGenos)) allocate(ProbImputeGenos(0:ped%pedigreeSize,nSnpIterate))
+            if (.not. allocated(ProbImputePhase)) allocate(ProbImputePhase(0:ped%pedigreeSize,nSnpIterate,2))
+            if (.not. allocated(TempAlleleFreq)) allocate(TempAlleleFreq(nSnpIterate))
 
             TempAlleleFreq=0.0
             do j=1,nSnpIterate
                 Counter=0
-                do i=1,nAnisP
+                do i=1,ped%pedigreeSize-ped%nDummys
                     if (ImputeGenos(i,j)/=9) then
                         TempAlleleFreq(j)=TempAlleleFreq(j)+ImputeGenos(i,j)
                         Counter=Counter+2
@@ -631,14 +575,14 @@ contains
             ProbImputePhase(0,:,1)=TempAlleleFreq(:)
             ProbImputePhase(0,:,2)=TempAlleleFreq(:)
             ProbImputeGenos(0,:)=2*TempAlleleFreq(:)
-            ProbImputeGenos(1:nAnisP,:)=-9.0
-            ProbImputePhase(1:nAnisP,:,:)=-9.0
+            ProbImputeGenos(1:ped%pedigreeSize-ped%nDummys,:)=-9.0
+            ProbImputePhase(1:ped%pedigreeSize-ped%nDummys,:,:)=-9.0
 
             call IterateParentHomoFill
             call PhaseComplement
             call IterateMakeGenotype
 
-            do i=1,nAnisP
+            do i=1,ped%pedigreeSize-ped%nDummys
                 do j=1,nSnpIterate
                     do e=1,2
                         if (ImputePhase(i,j,e)/=9) ProbImputePhase(i,j,e)=float(ImputePhase(i,j,e))
@@ -646,7 +590,7 @@ contains
                 enddo
             enddo
 
-            do i=1,nAnisP
+            do i=1,ped%pedigreeSize-ped%nDummys
                 do e=1,2
                     parID=ped%pedigree(i)%getSireDamNewIDByIndex(e+1)
                     if (ParId==0) then
@@ -662,7 +606,7 @@ contains
                 enddo
             enddo
 
-            do i=1,nAnisP
+            do i=1,ped%pedigreeSize-ped%nDummys
                 do j=1,nSnpIterate
                     do k=1,2
                         if (ImputePhase(i,j,k)/=9) ProbImputePhase(i,j,k)=float(ImputePhase(i,j,k))
@@ -675,7 +619,7 @@ contains
                 enddo
             enddo
 
-            do i=1,nAnisP
+            do i=1,ped%pedigreeSize-ped%nDummys
                 do j=1,nSnpIterate
                     if (ProbImputeGenos(i,j)==-9.0) ProbImputeGenos(i,j)=sum(ProbImputePhase(i,j,:))
                     if (ProbImputeGenos(i,j)>1.999) ImputeGenos(i,j)=2
@@ -703,21 +647,24 @@ contains
     subroutine WriteOutResults
         use Global
 
-        use output
-        use GlobalVariablesHmmMaCH
-        use AlphaImputeInMod
+        use AlphaImputeInputOutputModule
+        use AlphaImputeSpecFileModule
+        use HMMInputOutputModule
 
-        use output
         implicit none
 
         character(len=7) :: cm !use for formatting output - allows for up to 1 million SNPs
         integer :: i,j,l
         integer,allocatable,dimension(:):: WorkTmp
-        double precision :: ImputationQuality(nAnisP,6)
-        double precision, allocatable :: GenosProbs(:,:,:)
+        double precision :: ImputationQuality(ped%pedigreeSize-ped%nDummys,6)
+
+        integer(kind=1),allocatable,dimension (:,:) :: ImputeGenosHMM
+        integer(kind=1),allocatable,dimension (:,:,:) :: ImputePhaseHMM
+
         type(AlphaImputeInput), pointer :: inputParams
         character(len=300) :: TmpId
         integer :: n0, n1, n2
+        integer :: new
 
 
 
@@ -729,26 +676,30 @@ contains
 
         allocate(WorkTmp(inputParams%nSnpRaw))
 
-        if (inputParams%hmmoption==RUN_HMM_NGS) then
-            nAnisP = nAnisG
-        endif
+
 
         write(cm,'(I7)') inputParams%nSnpRaw !for formatting
         cm = adjustl(cm)
 
-        open (unit=33,file="." // DASH// "Results" // DASH // "ImputePhase.txt",status="unknown")
-        open (unit=34,file="." // DASH// "Results" // DASH // "ImputeGenotypes.txt",status="unknown")
-        open (unit=40,file="." // DASH// "Results" // DASH // "ImputePhaseProbabilities.txt",status="unknown")
-        open (unit=41,file="." // DASH// "Results" // DASH // "ImputeGenotypeProbabilities.txt",status="unknown")
-        open (unit=50,file="." // DASH// "Results" // DASH // "ImputationQualityIndividual.txt",status="unknown")
-        open (unit=51,file="." // DASH// "Results" // DASH // "ImputationQualitySnp.txt",status="unknown")
-        open (unit=52,file="." // DASH// "Results" // DASH // "WellPhasedIndividuals.txt",status="unknown")
+        open (unit=33,file="." // DASH// trim(inputparams%resultFolderPath)// DASH // "ImputePhase.txt",status="unknown")
+        open (unit=34,file="." // DASH// trim(inputparams%resultFolderPath) // DASH // "ImputeGenotypes.txt",status="unknown")
 
-        open (unit=53,file="." // DASH// "Results" // DASH // "ImputePhaseHMM.txt",status="unknown")
-        open (unit=54,file="." // DASH// "Results" // DASH // "ImputeGenotypesHMM.txt",status="unknown")
+        open (newunit=new,file="." // DASH// trim(inputparams%resultFolderPath)// DASH // "ImputeGenotypesOrig.txt",status="unknown")
 
-        open (unit=60,file="./Results/GPI.txt",status="unknown")
+        open (unit=40,file="." // DASH// trim(inputparams%resultFolderPath) // DASH // "ImputePhaseProbabilities.txt",status="unknown")
+        open (unit=41,file="." // DASH// trim(inputparams%resultFolderPath)// DASH // "ImputeGenotypeProbabilities.txt",status="unknown")
+        open (unit=50,file="." // DASH// trim(inputparams%resultFolderPath) // DASH // "ImputationQualityIndividual.txt",status="unknown")
+        open (unit=51,file="." // DASH// trim(inputparams%resultFolderPath) // DASH // "ImputationQualitySnp.txt",status="unknown")
+        open (unit=52,file="." // DASH// trim(inputparams%resultFolderPath) // DASH // "WellPhasedIndividuals.txt",status="unknown")
 
+        open (unit=53,file="." // DASH// trim(inputparams%resultFolderPath) // DASH // "ImputePhaseHMM.txt",status="unknown")
+        open (unit=54,file="." // DASH// trim(inputparams%resultFolderPath) // DASH // "ImputeGenotypesHMM.txt",status="unknown")
+
+
+
+        do i=1, ped%pedigreeSize- ped%ndummys
+        write (new,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,ImputeGenos(ped%inputmap(i),:)
+        enddo
 #ifdef DEBUG
         write(0,*) 'DEBUG: output=0 [WriteOutResults]'
 #endif
@@ -757,85 +708,79 @@ contains
 
             if (inputParams%SexOpt==0) then
 
-                call CheckImputationInconsistencies(ImputeGenos, ImputePhase, nAnisP, inputParams%nsnp)
+                call CheckImputationInconsistencies(ImputeGenos, ImputePhase, ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
 
                 open (unit=39, file="IterateGeneProb" // DASH // "IterateGeneProbInput.txt")
-                do i=1,nAnisP
-                    write (39,'(i16,1x,i16,1x,i16,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%getIntegerVectorOfRecodedIdsNoDummy(),ImputeGenos(i,:)
+                do i=1,ped%pedigreeSize-ped%nDummys
+                    write (39,*) ped%pedigree(i)%getIntegerVectorOfRecodedIdsNoDummy(),ImputeGenos(i,:)
                 enddo
                 call flush(39)
                 ! close (39)
 
                 if (inputParams%hmmoption == RUN_HMM_NO) then
                     if (inputParams%bypassgeneprob==0) then
-                        call IterateGeneProbs
+                        if (inputParams%cluster) then
+                            call IterateGeneProbs
+                        else
+                            call IterateGeneProbsNew(GenosProbs)
+                        endif
                     else
                         call IterateInsteadOfGeneProbs
                     endif
                 end if
             else
 
-                call CheckImputationInconsistencies(ImputeGenos, ImputePhase, nAnisP, inputParams%nsnp)
+                call CheckImputationInconsistencies(ImputeGenos, ImputePhase, ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
 
                 call IterateInsteadOfGeneProbs
             endif
 
-            call CheckImputationInconsistencies(ImputeGenos, ImputePhase, nAnisP, inputParams%nsnp)
+            call CheckImputationInconsistencies(ImputeGenos, ImputePhase, ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
 
-            do i=1, nAnisP
-                if (ped%pedigree(i)%isDummy) then
-                    exit
-                endif
-                write (33,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%originalID,ImputePhase(i,:,1)
-                write (33,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%originalID,ImputePhase(i,:,2)
-                write (34,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%originalID,ImputeGenos(i,:)
+            do i=1, ped%pedigreeSize-ped%nDummys
+                write (33,*) ped%pedigree(ped%inputmap(i))%originalID,ImputePhase(ped%inputmap(i),:,1)
+                write (33,*) ped%pedigree(ped%inputmap(i))%originalID,ImputePhase(ped%inputmap(i),:,2)
+                write (34,*) ped%pedigree(ped%inputmap(i))%originalID,ImputeGenos(ped%inputmap(i),:)
             enddo
-
+            ! close(new)
 
             if (inputParams%hmmoption /= RUN_HMM_NO) then
 
-        ! #ifdef DEBUG
-        !         write(0,*) 'DEBUG: Write HMM results [WriteOutResults]'
-        ! #endif
+#ifdef DEBUG
+        write(0,*) 'DEBUG: Write HMM results [WriteOutResults]'
+#endif
 
-                if (allocated(ImputeGenos)) then
-                    deallocate(ImputeGenos)
+                if (.not. allocated(ImputeGenosHMM)) then
+                    allocate(ImputeGenosHMM(0:ped%pedigreeSize,inputParams%nSnpRaw))
                 end if
-                if (allocated(ImputePhase)) then
-                    deallocate(ImputePhase)
+                if (.not. allocated(ImputePhaseHMM)) then
+                    allocate(ImputePhaseHMM(0:ped%pedigreeSize,inputParams%nSnpraw,2))
                 end if
-                if (allocated(ProbImputeGenos)) then
-                    deallocate(ProbImputeGenos)
+                if (.not. allocated(ProbImputeGenos)) then
+                    allocate(ProbImputeGenos(0:ped%pedigreeSize-ped%nDummys,inputParams%nSnpraw))
                 end if
-                if (allocated(ProbImputePhase)) then
-                    deallocate(ProbImputePhase)
+                if (.not. allocated(ProbImputePhase)) then
+                    allocate(ProbImputePhase(0:ped%pedigreeSize-ped%nDummys,inputParams%nSnpraw,2))
                 end if
-                if (allocated(maf)) then
-                    deallocate(maf)
+                if (.not. allocated(maf)) then
+                    allocate(Maf(inputParams%nSnp))           
                 end if
-                allocate(ImputeGenos(0:nAnisG,inputParams%nSnp))
-                allocate(ImputePhase(0:nAnisG,inputParams%nSnp,2))
-                allocate(ProbImputeGenos(0:nAnisP,inputParams%nSnp))
-                allocate(ProbImputePhase(0:nAnisP,inputParams%nSnp,2))
-                allocate(Maf(inputParams%nSnp))
-
-                ImputeGenos = 9
-                ImputePhase = 9
-                ProbImputeGenos(1:nAnisP,:) = 9.0
-                ProbImputePhase(1:nAnisP,:,:) = 9.0
+                
+                ProbImputeGenos(1:ped%pedigreeSize-ped%nDummys,:) = 9.0
+                ProbImputePhase(1:ped%pedigreeSize-ped%nDummys,:,:) = 9.0
 
                 ! Feed Impute and Phase probabilites
                 l=0
                 do j=1,inputParams%nsnp
                         l=l+1
-                        do i=1,nAnisG
-                            ! if (GlobalHmmID(i) > nAnisP ) then
+                        do i=1,ped%nGenotyped
+                            ! if (GlobalHmmID(i) > ped%pedigreeSize-ped%nDummys ) then
                             !     GlobalHmmID(i) = 0
                             !     ! TODO this means animal is a dummy - need to deal with this
                             ! endif
-                            ProbImputeGenos(i,j)   = ProbImputeGenosHmm(i,j)
-                            ProbImputePhase(i,j,1) = ProbImputePhaseHmm(i,j,1)
-                            ProbImputePhase(i,j,2) = ProbImputePhaseHmm(i,j,2)
+                            ProbImputeGenos(ped%genotypeMap(i),j)   = ProbImputeGenosHmm(i,j)
+                            ProbImputePhase(ped%genotypeMap(i),j,1) = ProbImputePhaseHmm(i,j,1)
+                            ProbImputePhase(ped%genotypeMap(i),j,2) = ProbImputePhaseHmm(i,j,2)
                         enddo
                 enddo
 
@@ -843,68 +788,55 @@ contains
                 write(0,*) 'DEBUG: Impute alleles and genotypes based on HMM genotypes probabilities [WriteOutResults]'
 #endif
                 ! Impute the most likely genotypes. (Most frequent genotype)
-                do i=1,nAnisG
+                do i=1,ped%nGenotyped
                     do j=1,inputParams%nSnp
                         n2 = GenosCounts(i,j,2)                           ! Homozygous: 2 case
                         n1 = GenosCounts(i,j,1)                           ! Heterozygous
                         n0 = (inputParams%nRoundsHmm-inputParams%HmmBurnInRound) - n1 - n2        ! Homozygous: 0 case
                         if ((n0>n1).and.(n0>n2)) then
-                            ImputeGenos(i,j)   = 0
-                            ImputePhase(i,j,:) = 0
+                            ImputeGenosHMM(ped%genotypeMap(i),j)   = 0
+                            ImputePhaseHMM(ped%genotypeMap(i),j,:) = 0
                         elseif (n1>n2) then
-                            ImputeGenos(GlobalHmmID(i),j) = 1
-                            if (ProbImputePhaseHmm(i,j,1) > ProbImputePhaseHmm(i,j,2) ) then
-                                ImputePhase(i,j,1) = 1
-                                ImputePhase(i,j,2) = 0
+                            ImputeGenos(ped%genotypeMap(i),j) = 1
+                            if (ProbImputePhaseHmm(ped%genotypeMap(i),j,1) > ProbImputePhaseHmm(ped%genotypeMap(i),j,2) ) then
+                                ImputePhaseHMM(ped%genotypeMap(i),j,1) = 1
+                                ImputePhaseHMM(ped%genotypeMap(i),j,2) = 0
                             else
-                                ImputePhase(i,j,1) = 0
-                                ImputePhase(i,j,2) = 1
+                                ImputePhaseHMM(ped%genotypeMap(i),j,1) = 0
+                                ImputePhaseHMM(ped%genotypeMap(i),j,2) = 1
                             endif
                         else
-                            ImputeGenos(i,j)   = 2
-                            ImputePhase(i,j,:) = 1
+                            ImputeGenosHMM(ped%genotypeMap(i),j)   = 2
+                            ImputePhaseHMM(ped%genotypeMap(i),j,:) = 1
+                            ! TODO this is lowering accuracy
                         endif
                     enddo
                 enddo
 
-                ! call CheckImputationInconsistencies(ImputeGenos, ImputePhase, nAnisG, inputParams%nSnp)
+                ! call CheckImputationInconsistencies(ImputeGenos, ImputePhase, ped%nGenotyped, inputParams%nSnp)
 
                 BLOCK
                     integer :: hmmID
-                    do i=1,nAnisG
-                        ! TODO: Remove this variable with the isssue is really fixed
-                        ! hmmID = GlobalHmmID(i)
-                        hmmID = i
-                        write (53,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(hmmID)%originalID,ImputePhase(i,:,1)
-                        write (53,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(hmmID)%originalID,ImputePhase(i,:,2)
-                        write (54,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(hmmID)%originalID,ImputeGenos(i,:)
-                        write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(hmmID)%originalID,ProbImputePhase(i,:,1)
-                        write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(hmmID)%originalID,ProbImputePhase(i,:,2)
-                        write (41,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(hmmID)%originalID,ProbImputeGenos(i,:)
-                        ! write (60,'(a20,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4)') ped%pedigree(i)%originalID,GPI(i,:)
+                    do i=1,ped%nGenotyped
+                        hmmID = ped%genotypeMap(i)
+                        write (53,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(hmmID)%originalID,ImputePhaseHMM(hmmID,:,1)
+                        write (53,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(hmmID)%originalID,ImputePhaseHMM(hmmID,:,2)
+                        write (54,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(hmmID)%originalID,ImputeGenosHMM(hmmID,:)
+                        write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(hmmID)%originalID,ProbImputePhase(hmmID,:,1)
+                        write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(hmmID)%originalID,ProbImputePhase(hmmID,:,2)
+                        write (41,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(hmmID)%originalID,ProbImputeGenos(hmmID,:)
                     enddo
                 END BLOCK
             else
-                do i=1, nAnisP
+                do i=1, ped%pedigreeSize-ped%nDummys
                     if (ped%pedigree(i)%isDummy) then
                         exit
                     endif
-                    write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(i)%originalID,ProbImputePhase(i,:,1)
-                    write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(i)%originalID,ProbImputePhase(i,:,2)
-                    write (41,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(i)%originalID,ProbImputeGenos(i,:)
-                ! write (60,'(a20,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4)') ped%pedigree(i)%originalID,GPI(i,:)
+                    write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(ped%inputmap(i))%originalID,ProbImputePhase(ped%inputmap(i),:,1)
+                    write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(ped%inputmap(i))%originalID,ProbImputePhase(ped%inputmap(i),:,2)
+                    write (41,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(ped%inputmap(i))%originalID,ProbImputeGenos(ped%inputmap(i),:)
                 enddo
             endif
-
-            if (allocated(GPI)) then
-                do i=1, nAnisP
-                    if (ped%pedigree(i)%isDummy) then
-                        exit
-                    endif
-                    write (60,'(a20,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4)') ped%pedigree(i)%originalID,GPI(i,:)
-                end do
-                deallocate(GPI)
-            end if
 
             if (allocated(Maf)) Then
                 deallocate(Maf)
@@ -914,7 +846,7 @@ contains
             if (inputParams%SexOpt==1) then
                 allocate(Maf(inputParams%nsnp))
                 do j=1,inputParams%nsnp
-                    Maf(j)=sum(ProbImputeGenos(:,j))/(2*nAnisP)
+                    Maf(j)=sum(ProbImputeGenos(:,j))/(2*ped%pedigreeSize-ped%nDummys)
                 enddo
                 open(unit=111,file="." // DASH // "Miscellaneous" // DASH // "MinorAlleleFrequency.txt", status="unknown")
 
@@ -926,7 +858,7 @@ contains
             ImputationQuality(:,1)=sum(2*Maf(:))/inputParams%nsnp
 
             ImputationQuality(:,2)=0.0
-            do i=1, nAnisP
+            do i=1, ped%pedigreeSize-ped%nDummys
                 if (ped%pedigree(i)%isDummy) then
                     exit
                 endif
@@ -943,18 +875,15 @@ contains
             enddo
 
             do j=1,inputParams%nsnp
-                write (51,'(i10,20000f7.2)') j,float(((nAnisP-(ped%nDummys+1))+1)-count(ImputeGenos(ped%nDummys+1:nAnisP,j)==9))/((nAnisP-(ped%nDummys+1))+1)
+                write (51,'(i10,20000f7.2)') j,float(((ped%pedigreeSize-(ped%nDummys+1))+1)-count(ImputeGenos(ped%nDummys+1:ped%pedigreeSize,j)==9))/((ped%pedigreeSize-(ped%nDummys+1))+1)
             enddo
 
-            call CheckImputationInconsistencies(ImputeGenos, ImputePhase, nAnisP, inputParams%nsnp)
+            call CheckImputationInconsistencies(ImputeGenos, ImputePhase, ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
             inputParams%WellPhasedThresh=inputParams%WellPhasedThresh/100
-            do i=1, nAnisP
-                if (ped%pedigree(i)%isDummy) then
-                    exit
-                endif
+            do i=1, ped%pedigreeSize-ped%nDummys
                 if (ImputationQuality(i,5)>=inputParams%WellPhasedThresh) then
-                    write (52,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%originalID,ImputePhase(i,:,1)
-                    write (52,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%originalID,ImputePhase(i,:,2)
+                    write (52,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,ImputePhase(ped%inputmap(i),:,1)
+                    write (52,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,ImputePhase(ped%inputmap(i),:,2)
                 endif
             enddo
 
@@ -964,29 +893,28 @@ contains
             write(0,*) 'DEBUG: Unphase wrong alleles [WriteOutResults]'
 #endif
 
-            call CheckImputationInconsistencies(ImputeGenos, ImputePhase, nAnisP, inputParams%nsnp)
+            call CheckImputationInconsistencies(ImputeGenos, ImputePhase, ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
 
 
-! TODO this might be erronous
             if (inputParams%outopt == 1) then
-                allocate(TmpGenos(0:nAnisP,inputParams%nSnpRaw))
-                allocate(TmpPhase(0:nAnisP,inputParams%nSnpRaw,2))
+                allocate(TmpGenos(0:ped%pedigreeSize-ped%nDummys,inputParams%nSnpRaw))
+                allocate(TmpPhase(0:ped%pedigreeSize-ped%nDummys,inputParams%nSnpRaw,2))
             else
-                allocate(TmpGenos(0:nAnisP,inputParams%nSnp))
-                allocate(TmpPhase(0:nAnisP,inputParams%nSnp,2))
+                allocate(TmpGenos(0:ped%pedigreeSize-ped%nDummys,inputParams%nSnp))
+                allocate(TmpPhase(0:ped%pedigreeSize-ped%nDummys,inputParams%nSnp,2))
             endif
             TmpGenos=9
             TmpPhase=9
 
-            if (inputParams%hmmoption==RUN_HMM_NGS) SnpIncluded=1
-
+            if (inputParams%outopt == 1 .or. inputParams%hmmoption==RUN_HMM_NGS) SnpIncluded(:)=1
             l=0
             do j=1,inputParams%nSnpRaw
+
                 if (SnpIncluded(j)==1) then
                     l=l+1
-                    TmpGenos(:,j)=ImputeGenos(:,l)
-                    TmpPhase(:,j,1)=ImputePhase(:,l,1)
-                    TmpPhase(:,j,2)=ImputePhase(:,l,2)
+                    TmpGenos(:,l)=ImputeGenos(:,j)
+                    TmpPhase(:,l,1)=ImputePhase(:,j,1)
+                    TmpPhase(:,l,2)=ImputePhase(:,j,2)
                 endif
             enddo
 
@@ -994,7 +922,7 @@ contains
                 integer :: tmpIDInt
                 if (inputParams%inteditstat == 1) then
                     open (unit=42,file=trim(inputParams%GenotypeFile),status='old')
-                    do i=1,nAnisG
+                    do i=1,ped%nGenotyped
                         read (42,*) TmpId,WorkTmp(:)
 
                         tmpIDInt = ped%dictionary%getValue(trim(tmpID))
@@ -1013,7 +941,6 @@ contains
                                     endif
                                 endif
                             enddo
-                            exit
                         endif
 
                     enddo
@@ -1021,20 +948,21 @@ contains
                     close(42)
                 end if
             endblock
-            call CheckImputationInconsistencies(TmpGenos, TmpPhase, nAnisP, inputParams%nsnp)
-            do i=1, nAnisP
-                if (ped%pedigree(i)%isDummy) then
-                    exit
-                endif
-                write (33,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%originalID,TmpPhase(i,:,1)
-                write (33,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%originalID,TmpPhase(i,:,2)
-                write (34,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%originalID,TmpGenos(i,:)
+            call CheckImputationInconsistencies(TmpGenos, TmpPhase, ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
+            do i=1, ped%pedigreeSize-ped%nDummys
+                ! TODO these might want to be tmpGenos and tmp hpase
+                write (33,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,TmpPhase(ped%inputmap(i),:,1)
+                write (33,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,TmpPhase(ped%inputmap(i),:,2)
+                write (34,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,tmpGenos(ped%inputmap(i),:)
+                
             enddo
+
+
             if (inputParams%SexOpt==0 .and. inputParams%hmmoption/=RUN_HMM_NGS) then
                 open (unit=39, file="IterateGeneProb" // DASH // "IterateGeneProbInput.txt")
 
-                do i=1,nAnisP
-                    write (39,'(i16,1x,i16,1x,i16,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%getIntegerVectorOfRecodedIdsNoDummy(),TmpGenos(i,:)
+                do i=1,ped%pedigreeSize-ped%nDummys
+                    write (39,'(i16,1x,i16,1x,i16,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%getIntegerVectorOfRecodedIdsNoDummy(),TmpGenos(ped%inputmap(i),:)
                 enddo
                 call flush(39)
                 close(39)
@@ -1042,24 +970,37 @@ contains
 
             !REMOVE THIS WHEN HMM IS FINALISED
             if (inputParams%hmmoption==RUN_HMM_NO) then
-                deallocate(ImputePhase)
-                deallocate(ImputeGenos)
-                allocate(ImputeGenos(0:nAnisP,inputParams%nSnpRaw))
-                allocate(ImputePhase(0:nAnisP,inputParams%nSnpRaw,2))
+              
+                if (allocated(ProbImputeGenos)) then
+                    deallocate(ProbImputeGenos)
+                end if
+                allocate(ProbImputeGenos(0:ped%pedigreeSize,inputParams%nSnpRaw))
+                if (allocated(ProbImputePhase)) then
+                    deallocate(ProbImputePhase)
+                end if
+                allocate(ProbImputePhase(0:ped%pedigreeSize,inputParams%nSnpRaw,2))
+
                 ImputeGenos=TmpGenos
+
+
                 ImputePhase=TmpPhase
                 if (inputParams%SexOpt==0) then
                     if (inputParams%bypassgeneprob==0) then
-                        call IterateGeneProbs
+                         if (inputParams%cluster) then
+                            call IterateGeneProbs
+                        else
+                            call IterateGeneProbsNew(GenosProbs)
+                        endif
                     else
                         call IterateInsteadOfGeneProbs
                     endif
                 endif
-                if (inputParams%SexOpt==1) call IterateInsteadOfGeneProbs
+                if (inputParams%SexOpt==1) then
+                    call IterateInsteadOfGeneProbs
+                endif
             endif
-            !REMOVE THIS
 
-            call CheckImputationInconsistencies(ImputeGenos, ImputePhase, nAnisP, inputParams%nsnp)
+            call CheckImputationInconsistencies(ImputeGenos, ImputePhase, ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
 
             !if (inputParams%hmmoption==RUN_HMM_ONLY.or.inputParams%hmmoption==RUN_HMM_PREPHASE) then
             if (inputParams%hmmoption/=RUN_HMM_NO) then
@@ -1067,43 +1008,39 @@ contains
 #ifdef DEBUG
                 write(0,*) 'DEBUG: Write HMM results [WriteOutResults]'
 #endif
-                ! nSnpIterate=inputParams%nsnp
-                if (allocated(ImputeGenos)) then
-                    deallocate(ImputeGenos)
-                end if
-                allocate(ImputeGenos(0:nAnisG,inputParams%nSnpRaw))
-                if (allocated(ImputePhase)) then
-                    deallocate(ImputePhase)
-                end if
-                allocate(ImputePhase(0:nAnisG,inputParams%nSnpRaw,2))
+
                 if (allocated(ProbImputeGenos)) then
                     deallocate(ProbImputeGenos)
                 end if
-                allocate(ProbImputeGenos(0:nAnisP,inputParams%nSnpRaw))
+                allocate(ProbImputeGenos(0:ped%pedigreeSize,inputParams%nSnpRaw))
                 if (allocated(ProbImputePhase)) then
                     deallocate(ProbImputePhase)
                 end if
-                allocate(ProbImputePhase(0:nAnisP,inputParams%nSnpRaw,2))
+                allocate(ProbImputePhase(0:ped%pedigreeSize,inputParams%nSnpRaw,2))
                 if (allocated(Maf)) then
                     deallocate(Maf)
                 end if
                 allocate(Maf(inputParams%nSnpRaw))
-                ProbImputeGenos(1:nAnisP,:)= 9.0
-                ProbImputePhase(1:nAnisP,:,:)= 9.0
-                ImputeGenos = 9
-                ImputePhase = 9
+
+
+                if (.not. allocated(ImputeGenosHMM)) then
+                    allocate(ImputeGenosHMM(0:ped%pedigreeSize,inputParams%nSnpRaw))
+                end if
+                if (.not. allocated(ImputePhaseHMM)) then
+                    allocate(ImputePhaseHMM(0:ped%pedigreeSize,inputParams%nSnpraw,2))
+                end if
+                ProbImputeGenos(1:ped%pedigreeSize-ped%nDummys,:)= 9.0
+                ProbImputePhase(1:ped%pedigreeSize-ped%nDummys,:,:)= 9.0
+            
 
                 l=0
                 do j=1,inputParams%nsnp
                         l=l+1
-                        do i=1,nAnisG
-                            ! if (GlobalHmmID(i) > nAnisP ) then
-                            !     GlobalHmmID(i) = 0
-                            !     ! TODO this means animal is a dummy - need to deal with this
-                            ! endif
-                            ProbImputeGenos(i,j)   = ProbImputeGenosHmm(i,j)
-                            ProbImputePhase(i,j,1) = ProbImputePhaseHmm(i,j,1)
-                            ProbImputePhase(i,j,2) = ProbImputePhaseHmm(i,j,2)
+                        do i=1,ped%nGenotyped
+
+                            ProbImputeGenos(ped%genotypeMap(i),j)   = ProbImputeGenosHmm(i,j)
+                            ProbImputePhase(ped%genotypeMap(i),j,1) = ProbImputePhaseHmm(i,j,1)
+                            ProbImputePhase(ped%genotypeMap(i),j,2) = ProbImputePhaseHmm(i,j,2)
                         enddo
                 enddo
 
@@ -1111,26 +1048,27 @@ contains
                 write(0,*) 'DEBUG: Impute alleles and genotypes based on HMM genotypes probabilities [WriteOutResults]'
 #endif
                 ! Impute the most likely genotypes. (Most frequent genotype)
-                do i=1,nAnisG
-                    do j=1,inputParams%nSnpRaw
+                do i=1,ped%nGenotyped
+                ! TODO check if this should be nsnp or nsnpraw
+                    do j=1,inputParams%nSnp
                         n2 = GenosCounts(i,j,2)                           ! Homozygous: 2 case
                         n1 = GenosCounts(i,j,1)                           ! Heterozygous
                         n0 = (inputParams%nRoundsHmm-inputParams%HmmBurnInRound) - n1 - n2        ! Homozygous: 0 case
                         if ((n0>n1).and.(n0>n2)) then
-                            ImputeGenos(i,j)   = 0
-                            ImputePhase(i,j,:) = 0
+                            ImputeGenosHMM(ped%genotypeMap(i),j)   = 0
+                            ImputePhaseHMM(ped%genotypeMap(i),j,:) = 0
                         elseif (n1>n2) then
-                            ImputeGenos(i,j) = 1
-                            if (ProbImputePhaseHmm(i,j,1) > ProbImputePhaseHmm(i,j,2) ) then
-                                ImputePhase(i,j,1) = 1
-                                ImputePhase(i,j,2) = 0
+                            ImputeGenosHMM(ped%genotypeMap(i),j) = 1
+                            if (ProbImputePhaseHmm(ped%genotypeMap(i),j,1) > ProbImputePhaseHmm(ped%genotypeMap(i),j,2) ) then
+                                ImputePhaseHMM(ped%genotypeMap(i),j,1) = 1
+                                ImputePhaseHMM(ped%genotypeMap(i),j,2) = 0
                             else
-                                ImputePhase(i,j,1) = 0
-                                ImputePhase(i,j,2) = 1
+                                ImputePhaseHMM(ped%genotypeMap(i),j,1) = 0
+                                ImputePhaseHMM(ped%genotypeMap(i),j,2) = 1
                             endif
                         else
-                            ImputeGenos(i,j)   = 2
-                            ImputePhase(i,j,:) = 1
+                            ImputeGenosHMM(ped%genotypeMap(i),j)   = 2
+                            ImputePhaseHMM(ped%genotypeMap(i),j,:) = 1
                         endif
                     enddo
                 enddo
@@ -1142,48 +1080,36 @@ contains
                 !  TODO remove
                 BLOCK
                     integer :: hmmID
-                    do i=1, nAnisG
+                    do i=1, ped%nGenotyped
                         ! TODO: Remove this variable when this issue is really fixed
-                        ! hmmID = GlobalHmmID(i)
-                        hmmID =i
-                        write (53,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(hmmID)%originalID,ImputePhase(i,:,1)
-                        write (53,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(hmmID)%originalID,ImputePhase(i,:,2)
-                        write (54,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(hmmID)%originalID,ImputeGenos(i,:)
+                        hmmID =ped%genotypeMap(i)
+                        write (53,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(hmmID)%originalID,ImputePhaseHMM(hmmID,:,1)
+                        write (53,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(hmmID)%originalID,ImputePhaseHMM(hmmID,:,2)
+                        write (54,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(hmmID)%originalID,ImputeGenosHMM(hmmID,:)
 
-                        write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(hmmID)%originalID,ProbImputePhase(i,:,1)
-                        write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(hmmID)%originalID,ProbImputePhase(i,:,2)
-                        write (41,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(hmmID)%originalID,ProbImputeGenos(i,:)
+                        write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(hmmID)%originalID,ProbImputePhaseHMM(i,:,1)
+                        write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(hmmID)%originalID,ProbImputePhaseHMM(i,:,2)
+                        write (41,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(hmmID)%originalID,ProbImputeGenosHMM(i,:)
                     enddo
                 END BLOCK
             else
-                do i=1, nAnisP
+                do i=1, ped%pedigreeSize-ped%nDummys
                     if (ped%pedigree(i)%isDummy) then
                         exit
                     endif
-                    write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(i)%originalID,ProbImputePhase(i,:,1)
-                    write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(i)%originalID,ProbImputePhase(i,:,2)
-                    write (41,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(i)%originalID,ProbImputeGenos(i,:)
+                    write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(ped%inputmap(i))%originalID,ProbImputePhase(ped%inputmap(i),:,1)
+                    write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(ped%inputmap(i))%originalID,ProbImputePhase(ped%inputmap(i),:,2)
+                    write (41,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(ped%inputmap(i))%originalID,ProbImputeGenos(ped%inputmap(i),:)
                 enddo
             endif
 
-            if (allocated(GPI)) then
-                do i=1, nAnisP
-                    if (ped%pedigree(i)%isDummy) then
-                        exit
-                    endif
-                    write (60,'(a20,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4,20000f9.4)') ped%pedigree(i)%originalID,GPI(i,:)
-                end do
-                deallocate(GPI)
-            end if
-
             if (inputParams%hmmoption/=RUN_HMM_NO) then
-                ! call WriteProbabilities("./Results/GenotypeProbabilities.txt", GlobalHmmID, ID, nAnisG, inputParams%nsnp)
-                call WriteProbabilities("./Results/GenotypeProbabilities.txt", GlobalHmmID, nAnisG, inputParams%nsnp)
+
+                
+                call WriteProbabilitiesHMM("." // DASH // "GeneProb" // DASH // "GenotypeProbabilities.txt", ped%genotypeMap, ped%nGenotyped, inputParams%nsnp)
             else
                 if (inputParams%bypassgeneprob==0) then
-                    allocate(GenosProbs(nAnisP,nSnpIterate,2))
-                    call ReReadIterateGeneProbs(GenosProbs, .TRUE., nAnisP)
-                    call WriteProbabilities("./Results/GenotypeProbabilities.txt", GenosProbs, ped,nAnisP, inputParams%nsnp)
+                    call WriteProbabilities("." // DASH // trim(inputParams%resultFolderPath) // DASH // "GenotypeProbabilities.txt", GenosProbs, ped,ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
                 endif
             endif
 
@@ -1198,7 +1124,7 @@ contains
                 endif
                 allocate(Maf(inputParams%nSnpRaw))
                 do j=1,inputParams%nSnpRaw
-                    Maf(j)=sum(ProbImputeGenos(:,j))/(2*nAnisP)
+                    Maf(j)=sum(ProbImputeGenos(:,j))/(2*ped%pedigreeSize-ped%nDummys)
                 enddo
                 open(unit=111,file="." // DASH // "Miscellaneous" // DASH // "MinorAlleleFrequency.txt", status="unknown")
 
@@ -1215,7 +1141,7 @@ contains
 
             ImputationQuality(:,1)=sum(2*Maf(:))/inputParams%nSnpRaw
             ImputationQuality(:,2)=0.0
-            do i=1, nAnisP
+            do i=1, ped%pedigreeSize-ped%nDummys
                 if (ped%pedigree(i)%isDummy) then
                     exit
                 endif
@@ -1236,18 +1162,15 @@ contains
 #endif
 
             do j=1,inputParams%nSnpRaw
-                write (51,'(i10,20000f7.2)') j,float(((nAnisP-(ped%nDummys+1))+1)-count(ImputeGenos(ped%nDummys+1:nAnisP,j)==9))/((nAnisP-(ped%nDummys+1))+1)
+                write (51,'(i10,20000f7.2)') j,float(((ped%pedigreeSize-ped%nDummys-(ped%nDummys+1))+1)-count(ImputeGenos(ped%nDummys+1:ped%pedigreeSize-ped%nDummys,j)==9))/((ped%pedigreeSize-ped%nDummys-(ped%nDummys+1))+1)
             enddo
 
-            call CheckImputationInconsistencies(TmpGenos, TmpPhase, nAnisP, inputParams%nsnp)
+            call CheckImputationInconsistencies(TmpGenos, TmpPhase, ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
             inputParams%WellPhasedThresh=inputParams%WellPhasedThresh/100
-            do i=1, nAnisP
-                if (ped%pedigree(i)%isDummy) then
-                    exit
-                endif
+            do i=1, ped%pedigreeSize-ped%nDummys
                 if (ImputationQuality(i,5)>=inputParams%WellPhasedThresh) then
-                    write (52,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%originalID,TmpPhase(i,:,1)
-                    write (52,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%originalID,TmpPhase(i,:,2)
+                    write (52,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,TmpPhase(ped%inputmap(i),:,1)
+                    write (52,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,TmpPhase(ped%inputmap(i),:,2)
                 endif
             enddo
         endif
@@ -1270,9 +1193,9 @@ contains
 
     subroutine ModelRecomb
         use Global
-        use Output, only : ReReadGeneProbs
         use informationModule, only : InsteadOfReReadGeneProb
-        use alphaimputeinmod
+        use AlphaImputeSpecFileModule
+        use AlphaImputeInputOutputModule
         implicit none
 
         integer :: e,i,j,k,l,SuperJ,StartDisFound,EndDisFound,HetEnd,HetStart,RSide,LSide,PatMat,SireDamRL,nSnpFinal,Counter
@@ -1293,11 +1216,13 @@ contains
         write(cm,'(I7)') inputParams%nSnpRaw !for formatting
         cm = adjustl(cm)
 
-        open (unit=42, file="Results" // DASH // "RecombinationInformation.txt")
-        open (unit=43, file="Results" // DASH // "RecombinationInformationNarrow.txt")
-        open (unit=44, file="Results" // DASH // "NumberRecombinations.txt")
-        open (unit=45, file="Results" // DASH // "RecombinationInformationR.txt")
-        open (unit=46, file="Results" // DASH // "RecombinationInformationNarrowR.txt")
+        open (unit=42, file=trim(inputparams%resultFolderPath) // DASH // "RecombinationInformation.txt")
+        open (unit=43, file=trim(inputparams%resultFolderPath) // DASH // "RecombinationInformationNarrow.txt")
+        open (unit=44, file=trim(inputparams%resultFolderPath) // DASH // "NumberRecombinations.txt")
+        open (unit=45, file=trim(inputparams%resultFolderPath) // DASH // "RecombinationInformationR.txt")
+        open (unit=46, file=trim(inputparams%resultFolderPath) // DASH // "RecombinationInformationNarrowR.txt")
+
+            
 
         ! Check whether to consider all the raw snps or only the snps left after the edition procedure
         ! If EditedSnpOut in Spec file
@@ -1310,24 +1235,25 @@ contains
 
         ! Divide haplotypes into chunks of the same length.
         ! Each chunk will be treated separately in different processors
-        Tmp=int(float(inputParams%nsnp)/inputParams%nProcessors)
-        GpIndex(1,1)=1
-        GpIndex(1,2)=Tmp
-        if (inputParams%nProcessors>1) then
-            do i=2,inputParams%nProcessors
-                GpIndex(i,1)=GpIndex(i-1,1)+Tmp
-                GpIndex(i,2)=GpIndex(i-1,2)+Tmp
-            enddo
+        if (inputParams%cluster) then
+            Tmp=int(float(inputParams%nsnp)/inputParams%useProcs)
+            GpIndex(1,1)=1
+            GpIndex(1,2)=Tmp
+            if (inputParams%useProcs>1) then
+                do i=2,inputParams%useProcs
+                    GpIndex(i,1)=GpIndex(i-1,1)+Tmp
+                    GpIndex(i,2)=GpIndex(i-1,2)+Tmp
+                enddo
+            endif
+            GpIndex(inputParams%useProcs,2)=inputParams%nsnp
         endif
-        GpIndex(inputParams%nProcessors,2)=inputParams%nsnp
-
-        allocate(GlobalWorkPhase(0:nAnisP,inputParams%nsnp,2))
-        allocate(WorkPhase(0:nAnisP,nSnpFinal,2))
+        allocate(GlobalWorkPhase(0:ped%pedigreeSize-ped%nDummys,nSnpFinal,2))
+        allocate(WorkPhase(0:ped%pedigreeSize-ped%nDummys,nSnpFinal,2))
         allocate(TempVec(nSnpFinal))
         allocate(LengthVec(nSnpFinal))
         allocate(WorkLeft(nSnpFinal))
         allocate(WorkRight(nSnpFinal))
-        allocate(TempWork(0:nAnisP,nSnpFinal,2))
+        allocate(TempWork(0:ped%pedigreeSize-ped%nDummys,nSnpFinal,2))
         allocate(PatAlleleProb(nSnpFinal,2))
         allocate(MatAlleleProb(nSnpFinal,2))
         allocate(GeneProbWork(nSnpFinal,4))
@@ -1339,7 +1265,11 @@ contains
         WorkPhase=9
         if (inputParams%SexOpt==0) then
             if (inputParams%bypassgeneprob==0) then
-                call ReReadGeneProbs
+                if (inputParams%cluster) then
+                    call readGeneProbsCluster(GlobalWorkPhase,ped,GpIndex, inputParams,GeneProbThresh)
+                else
+                    call ReReadGeneProbs(GlobalWorkPhase,ped,"." // DASH // trim(inputParams%resultFolderPath) // DASH // "GenotypeProbabilities.txt", inputParams%nsnp,GeneProbThresh)
+                endif
             else
                 call InsteadOfReReadGeneProb
             endif
@@ -1356,7 +1286,7 @@ contains
             endif
         enddo
 
-        do i=1,nAnisP
+        do i=1,ped%pedigreeSize-ped%nDummys
             HetEnd=-1
             HetStart=-1
             WorkRight(:)=9
@@ -1372,9 +1302,14 @@ contains
                 SireDamRL=e+1
                 CountLeftSwitch=0
                 CountRightSwitch=0
-                pedID=ped%pedigree(i)%getSireDamNewIDByIndex(SireDamRL)
+
+                pedID=ped%pedigree(i)%getSireDamNewIDByIndexNoDummy(e+1)
+                ! means parent is a dummy or no parent
+                if (pedId == 0) then
+                    cycle
+                endif
                 if ((inputParams%SexOpt==1).and.(ped%pedigree(PedId)%gender==inputParams%hetGameticStatus)) cycle
-                if ((PedId>0).and.((float(count(ImputePhase(PedId,:,:)==9))/(2*nSnpFinal))<0.30)) then          !(RecIdHDIndex(PedId)==1)
+                if (((float(count(ImputePhase(PedId,:,:)==9))/(2*nSnpFinal))<0.30)) then          !(RecIdHDIndex(PedId)==1)
                     WorkRight=9
                     RSide=9
                     do j=1,nSnpFinal
@@ -1555,8 +1490,7 @@ contains
                 write (44,'(a20,20000i20)') ped%pedigree(i)%originalID,nRec
                 write (42,'(a20,20000i20)') ped%pedigree(i)%originalID,nRec,StR(1:nRec)
                 write (42,'(a20,20000i20)') ped%pedigree(i)%originalID,nRec,EnR(1:nRec)
-                !@todo: Comment system call to remove these files in subroutine 'RemoveFiles'
-                !       if decided to populate file 43 and 46
+                !
                 !           write (43,'(a20,20000i20)') ped%pedigree(i)%originalID,nRec,StRNarrow(1:nRec)
                 !           write (43,'(a20,20000i20)') ped%pedigree(i)%originalID,nRec,EnRNarrow(1:nRec)
                 do j=1,nRec
@@ -1569,23 +1503,26 @@ contains
 
         enddo
 
-        open (unit=33,file="Results" // DASH // "ImputePhase.txt",status="unknown")
-        open (unit=34,file="Results" // DASH // "ImputeGenotypes.txt",status="unknown")
-        open (unit=40,file="Results" // DASH // "ImputePhaseProbabilities.txt",status="unknown")
-        open (unit=41,file="Results" // DASH // "ImputeGenotypeProbabilities.txt",status="unknown")
-
-        do i=1, nAnisP
-            if (ped%pedigree(i)%isDummy) then
-                exit
-            endif
-            write (33,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%originalID,ImputePhase(i,:,1)
-            write (33,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%originalID,ImputePhase(i,:,2)
-            write (34,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%originalID,ImputeGenos(i,:)
-            write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(i)%originalID,ProbImputePhase(i,:,1)
-            write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(i)%originalID,ProbImputePhase(i,:,2)
-            write (41,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(i)%originalID,ProbImputeGenos(i,:)
-        enddo
-
+        open (unit=33,file=trim(inputparams%resultFolderPath) // DASH // "ImputePhase.txt",status="unknown")
+        open (unit=34,file=trim(inputparams%resultFolderPath) // DASH // "ImputeGenotypes.txt",status="unknown")
+        open (unit=40,file=trim(inputparams%resultFolderPath) // DASH // "ImputePhaseProbabilities.txt",status="unknown")
+        open (unit=41,file=trim(inputparams%resultFolderPath) // DASH // "ImputeGenotypeProbabilities.txt",status="unknown")
+        block
+            integer :: tmpID
+            do i=1, ped%pedigreeSize - ped%nDummys
+                if (ped%pedigree(i)%isDummy) then
+                    exit
+                endif
+                !outputs in order read in
+                tmpId = ped%inputMap(i)
+                write (33,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(tmpId)%originalID,ImputePhase(tmpId,:,1)
+                write (33,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(tmpId)%originalID,ImputePhase(tmpId,:,2)
+                write (34,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(tmpId)%originalID,ImputeGenos(tmpId,:)
+                write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(tmpId)%originalID,ProbImputePhase(tmpId,:,1)
+                write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(tmpId)%originalID,ProbImputePhase(tmpId,:,2)
+                write (41,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(tmpId)%originalID,ProbImputeGenos(tmpId,:)
+            enddo
+        end block
         print*, " "
         print*, " ","Imputation by detection of recombination events completed"
 
@@ -1595,10 +1532,56 @@ contains
 
     subroutine IterateGeneProbPhase
         use Global
-        use alphaimputeinmod
+        use AlphaImputeSpecFileModule
         implicit none
 
-        integer :: h,i,j,dum,StSnp,EnSnp,counter
+        integer :: i, fileUnit,j
+        type(AlphaImputeInput), pointer :: inputParams
+
+        inputParams => defaultInput
+
+      
+
+        if (inputParams%restartOption==4) then
+
+            if (allocated(Maf)) then
+                deallocate(maf)
+            endif
+            allocate(Maf(nSnpIterate))
+
+            open (newunit=fileUnit,file="Tmp2345678.txt",status="old")
+            do i=1,ped%nGenotyped
+                read (fileUnit,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ImputePhase(ped%genotypeMap(i),:,1)
+                read (fileUnit,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ImputePhase(ped%genotypeMap(i),:,2)
+                read (fileUnit,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ImputeGenos(ped%genotypeMap(i),:)
+            enddo
+            close (fileUnit)
+        endif
+
+        open(newunit=fileUnit,file="." // DASH // "Miscellaneous" // DASH // "MinorAlleleFrequency.txt", status="unknown")
+        do j=1,nSnpIterate
+            write (fileUnit,*) Maf(j)
+        enddo
+
+        close(fileUnit)
+
+
+        ! TODO this is called twice...from iterate geneprobnew
+        call IterateMakeGenotype
+
+        ImputePhase(0,:,:)=9
+        ImputeGenos(0,:)=9
+
+    end subroutine IterateGeneProbPhase
+
+    !#############################################################################################################################################################################################################################
+
+    subroutine IterateGeneProbPhaseCluster
+        use Global
+        use AlphaImputeSpecFileModule
+        implicit none
+
+        integer :: h,i,j,dum,StSnp,EnSnp,counter,fileUnit,geneprobfile,mafFile
         real :: PatAlleleProb(nSnpIterate,2),MatAlleleProb(nSnpIterate,2),HetProb(nSnpIterate),GeneProbWork(nSnpIterate,4)
         character(len=300) :: filout
         type(AlphaImputeInput), pointer :: inputParams
@@ -1609,95 +1592,89 @@ contains
 
 
         if (inputParams%restartOption==4) then
-            open (unit=209,file="Tmp2345678.txt",status="old")
-            do i=1,nAnisP
-                read (209,*) ImputePhase(i,:,1)
-                read (209,*) ImputePhase(i,:,2)
-                read (209,*) ImputeGenos(i,:)
+            open (unit=fileUnit,file="Tmp2345678.txt",status="old")
+            do i=1,ped%nGenotyped
+                read (fileUnit,*) ImputePhase(ped%genotypeMap(i),:,1)
+                read (fileUnit,*) ImputePhase(ped%genotypeMap(i),:,2)
+                read (fileUnit,*) ImputeGenos(ped%genotypeMap(i),:)
             enddo
-            close (209)
+            close (fileUnit)
         endif
 
         counter=0
-        do h=1,inputParams%nprocessors
-#ifndef _WIN32
-            write (filout,'("./IterateGeneProb/GeneProb"i0,"/GeneProbs.txt")')h         !here
-            open (unit=110,file=trim(filout),status="unknown")
-            write (filout,'("./IterateGeneProb/GeneProb"i0,"/MinorAlleleFrequency.txt")')h          !here
-            open (unit=111,file=trim(filout),status="unknown")
-#else
-            write (filout,'(".\IterateGeneProb\GeneProb"i0,"\GeneProbs.txt")')h         !here
-            open (unit=110,file=trim(filout),status="unknown")
-            write (filout,'(".\IterateGeneProb\GeneProb"i0,"\MinorAlleleFrequency.txt")')h          !here
-            open (unit=111,file=trim(filout),status="unknown")
+        
+        do h=1,inputParams%useProcs
+#ifdef _WIN32
+                    write (filout,'(".\IterateGeneProb\GeneProb"i0,"\GeneProbs.txt")')h         !here
+                    open (newunit=geneprobfile,file=trim(filout),status="unknown")
+                    write (filout,'(".\IterateGeneProb\GeneProb"i0,"\MinorAlleleFrequency.txt")')h          !here
+                    open (newunit=mafFile,file=trim(filout),status="unknown")
+#else 
+                    write (filout,'("./IterateGeneProb/GeneProb"i0,"/GeneProbs.txt")')h         !here
+                    open (newunit=geneprobfile,file=trim(filout),status="unknown")
+                    write (filout,'("./IterateGeneProb/GeneProb"i0,"/MinorAlleleFrequency.txt")')h          !here
+                    open (newunit=mafFile,file=trim(filout),status="unknown")
 #endif
 
-            write (filout,'("./IterateGeneProb/GeneProb"i0,"/GPI.txt")')h
-            open (unit=222,file=filout,status="unknown")
+                
 
-            StSnp=GpIndex(h,1)
-            EnSnp=GpIndex(h,2)
-            do i=1,nAnisP
-                read (222,*) dum, GPI(i,StSnp:EnSnp)
+                StSnp=GpIndex(h,1)
+                EnSnp=GpIndex(h,2)
+                do i=1,ped%pedigreeSize- ped%nDummys
+                    do j=1,4
+                        read (geneprobfile,*) dum,GeneProbWork(StSnp:EnSnp,j)
+                    enddo
+                    PatAlleleProb(StSnp:EnSnp,1)=GeneProbWork(StSnp:EnSnp,1)&
+                        +GeneProbWork(StSnp:EnSnp,2)
+                    PatAlleleProb(StSnp:EnSnp,2)=GeneProbWork(StSnp:EnSnp,3)&
+                        +GeneProbWork(StSnp:EnSnp,4)
+                    MatAlleleProb(StSnp:EnSnp,1)=GeneProbWork(StSnp:EnSnp,1)&
+                        +GeneProbWork(StSnp:EnSnp,3)
+                    MatAlleleProb(StSnp:EnSnp,2)=GeneProbWork(StSnp:EnSnp,2)&
+                        +GeneProbWork(StSnp:EnSnp,4)
 
-                do j=1,4
-                    read (110,*) dum,GeneProbWork(StSnp:EnSnp,j)
+                    HetProb(StSnp:EnSnp)=GeneProbWork(StSnp:EnSnp,2)+GeneProbWork(StSnp:EnSnp,3)
+
+                    do j=StSnp,EnSnp
+                        if ((PatAlleleProb(j,1)>=GeneProbThresh).and.(ImputePhase(i,j,1)==9)) ImputePhase(i,j,1)=0
+                        if ((PatAlleleProb(j,2)>=GeneProbThresh).and.(ImputePhase(i,j,1)==9)) ImputePhase(i,j,1)=1
+                        if ((MatAlleleProb(j,1)>=GeneProbThresh).and.(ImputePhase(i,j,2)==9)) ImputePhase(i,j,2)=0
+                        if ((MatAlleleProb(j,2)>=GeneProbThresh).and.(ImputePhase(i,j,2)==9)) ImputePhase(i,j,2)=1
+                        if (ImputePhase(i,j,1)==9) then
+                            ProbImputePhase(i,j,1)=GeneProbWork(j,3)+GeneProbWork(j,4)
+                        else
+                            ProbImputePhase(i,j,1)=float(ImputePhase(i,j,1))
+                        endif
+                        if (ImputePhase(i,j,2)==9) then
+                            ProbImputePhase(i,j,2)=GeneProbWork(j,2)+GeneProbWork(j,4)
+                        else
+                            ProbImputePhase(i,j,2)=float(ImputePhase(i,j,2))
+                        endif
+                        if (HetProb(j)>=GeneProbThresh) ProbImputeGenos(i,j)=1
+                    enddo
+                    ProbImputeGenos(i,StSnp:EnSnp)=ProbImputePhase(i,StSnp:EnSnp,1)+ProbImputePhase(i,StSnp:EnSnp,2)
                 enddo
-                PatAlleleProb(StSnp:EnSnp,1)=GeneProbWork(StSnp:EnSnp,1)&
-                    +GeneProbWork(StSnp:EnSnp,2)
-                PatAlleleProb(StSnp:EnSnp,2)=GeneProbWork(StSnp:EnSnp,3)&
-                    +GeneProbWork(StSnp:EnSnp,4)
-                MatAlleleProb(StSnp:EnSnp,1)=GeneProbWork(StSnp:EnSnp,1)&
-                    +GeneProbWork(StSnp:EnSnp,3)
-                MatAlleleProb(StSnp:EnSnp,2)=GeneProbWork(StSnp:EnSnp,2)&
-                    +GeneProbWork(StSnp:EnSnp,4)
-
-                HetProb(StSnp:EnSnp)=GeneProbWork(StSnp:EnSnp,2)+GeneProbWork(StSnp:EnSnp,3)
 
                 do j=StSnp,EnSnp
-                    if ((PatAlleleProb(j,1)>=GeneProbThresh).and.(ImputePhase(i,j,1)==9)) ImputePhase(i,j,1)=0
-                    if ((PatAlleleProb(j,2)>=GeneProbThresh).and.(ImputePhase(i,j,1)==9)) ImputePhase(i,j,1)=1
-                    if ((MatAlleleProb(j,1)>=GeneProbThresh).and.(ImputePhase(i,j,2)==9)) ImputePhase(i,j,2)=0
-                    if ((MatAlleleProb(j,2)>=GeneProbThresh).and.(ImputePhase(i,j,2)==9)) ImputePhase(i,j,2)=1
-                    if (ImputePhase(i,j,1)==9) then
-                        ProbImputePhase(i,j,1)=GeneProbWork(j,3)+GeneProbWork(j,4)
-                    else
-                        ProbImputePhase(i,j,1)=float(ImputePhase(i,j,1))
-                    endif
-                    if (ImputePhase(i,j,2)==9) then
-                        ProbImputePhase(i,j,2)=GeneProbWork(j,2)+GeneProbWork(j,4)
-                    else
-                        ProbImputePhase(i,j,2)=float(ImputePhase(i,j,2))
-                    endif
-                    if (HetProb(j)>=GeneProbThresh) ProbImputeGenos(i,j)=1
+                    read (mafFile,*) Maf(j)
                 enddo
-                ProbImputeGenos(i,StSnp:EnSnp)=ProbImputePhase(i,StSnp:EnSnp,1)+ProbImputePhase(i,StSnp:EnSnp,2)
+
+                close(geneprobfile)
+                close(mafFile)
             enddo
 
-            do j=StSnp,EnSnp
-                read (111,*) Maf(j)
+            open(newunit=mafFile,file="." // DASH // "Miscellaneous" // "MinorAlleleFrequency.txt", status="unknown")
+
+            do j=1,nSnpIterate
+                write (mafFile,*) j,Maf(j)
             enddo
+            close(mafFile)
+            call IterateMakeGenotype
 
-            close(110)
-            close(111)
-            close(222)
-        enddo
+            ImputePhase(0,:,:)=9
+            ImputeGenos(0,:)=9
 
-        open(unit=111,file="." // DASH // "Miscellaneous" // "MinorAlleleFrequency.txt", status="unknown")
-
-
-        do j=1,nSnpIterate
-            write (111,*) j,Maf(j)
-        enddo
-        close(111)
-
-
-        call IterateMakeGenotype
-
-        ImputePhase(0,:,:)=9
-        ImputeGenos(0,:)=9
-
-    end subroutine IterateGeneProbPhase
+        end subroutine IterateGeneProbPhaseCluster
     !#############################################################################################################################################################################################################################
 
     subroutine IterateMakeGenotype
@@ -1706,7 +1683,7 @@ contains
 
         integer :: i,j
 
-        do i=1,nAnisP
+        do i=1,ped%pedigreeSize-ped%nDummys
             do j=1,nSnpIterate
                 if (ImputeGenos(i,j)==9) then
                     if ((ImputePhase(i,j,1)/=9).and.(ImputePhase(i,j,2)/=9)) ImputeGenos(i,j)=sum(ImputePhase(i,j,:))
@@ -1727,7 +1704,7 @@ contains
 
         integer :: i,j
 
-        do i=1,nAnisP
+        do i=1,ped%pedigreeSize-ped%nDummys
             do j=1,nSnpIterate
                 if (ImputeGenos(i,j)/=9) then
                     if ((ImputePhase(i,j,1)/=9).and.(ImputePhase(i,j,2)==9)) ImputePhase(i,j,2)=ImputeGenos(i,j)-ImputePhase(i,j,1)
@@ -1745,7 +1722,7 @@ contains
 
     subroutine IterateParentHomoFill
         use Global
-        use alphaimputeinmod
+        use AlphaImputeSpecFileModule
         implicit none
 
         integer :: e,i,j,PedLoc, id
@@ -1754,7 +1731,7 @@ contains
         inputParams => defaultInput
 
         if (inputParams%SexOpt==0) then
-            do i=1,nAnisP
+            do i=1,ped%pedigreeSize-ped%nDummys
                 do e=1,2
                     PedLoc=e+1
                     do j=1,nSnpIterate
@@ -1767,7 +1744,7 @@ contains
                 enddo
             enddo
         else
-            do i=1,nAnisP
+            do i=1,ped%pedigreeSize-ped%nDummys
                 if (ped%pedigree(i)%gender==inputParams%HomGameticStatus) then
                     do e=1,2
                         id = ped%pedigree(i)%getSireDamNewIDByIndex(e+1)
@@ -1799,7 +1776,7 @@ contains
     subroutine InsteadOfGeneProb
         ! Phase haplotypes whenever there is enough information from the parents (homozygous case)
         use Global
-        use AlphaImputeInMod
+        use AlphaImputeSpecFileModule
         implicit none
 
         integer :: e,i,j,ParId
@@ -1807,79 +1784,94 @@ contains
 
         inputParams => defaultInput
         if (inputParams%SexOpt==1) then                                                     ! Sex chromosome
-            allocate(GlobalWorkPhase(0:nAnisP,inputParams%nsnp,2))
-            allocate(ImputeGenos(0:nAnisP,inputParams%nsnp))
-            allocate(ImputePhase(0:nAnisP,inputParams%nsnp,2))
+            ! allocate(GlobalWorkPhase(0:ped%pedigreeSize-ped%nDummys,inputParams%nsnpRaw,2))
+            ! allocate(ImputeGenos(0:ped%pedigreeSize-ped%nDummys,inputParams%nsnpRaw))
+            ! allocate(ImputePhase(0:ped%pedigreeSize-ped%nDummys,inputParams%nsnpRaw,2))
 
-            Genos(0,:)=9
             GlobalWorkPhase=9
-            do i=1,nAnisP
+            do i=1,ped%pedigreeSize-ped%nDummys
                 do j=1,inputParams%nsnp                                                     ! Phase in the homozygous case
-                    if (Genos(i,j)==0) GlobalWorkPhase(i,j,:)=0
-                    if (Genos(i,j)==2) GlobalWorkPhase(i,j,:)=1
+
+                    if (ped%pedigree(i)%individualGenotype%getGenotype(j)==0) then
+                        GlobalWorkPhase(i,j,:)=0
+                    else if (ped%pedigree(i)%individualGenotype%getGenotype(j)==2) then
+                        GlobalWorkPhase(i,j,:)=1
+                    endif
                 enddo
                 if (ped%pedigree(i)%gender/=inputParams%hetGameticStatus) then                        ! Am I homogametic?
                     do e=1,2                                                    ! Phase a single haplotype whenever my parents are homozygous
                         ParId=ped%pedigree(i)%getSireDamNewIDByIndex(e+1)
                         do j=1,inputParams%nsnp
-                            if (Genos(ParId,j)==0) GlobalWorkPhase(i,j,e)=0
-                            if (Genos(ParId,j)==2) GlobalWorkPhase(i,j,e)=1
+                            if (ped%pedigree(parId)%individualGenotype%getGenotype(j)==0) then
+                                GlobalWorkPhase(i,j,e)=0
+
+                            else if (ped%pedigree(parId)%individualGenotype%getGenotype(j)==2) then
+                                GlobalWorkPhase(i,j,e)=1
+                            endif
                         enddo
                     enddo
                 else                                                            ! Am I heterogametic?
                     ParId=ped%pedigree(i)%getSireDamNewIDByIndex(inputParams%HomGameticStatus+1)
                     do j=1,inputParams%nsnp                                                 ! Phase the two haplotypes whenever my homogametic parent is homozygous
-                        if (Genos(ParId,j)==0) GlobalWorkPhase(i,j,:)=0
-                        if (Genos(ParId,j)==2) GlobalWorkPhase(i,j,:)=1
+                        if (ped%pedigree(parId)%individualGenotype%getGenotype(j)==0) then
+                            GlobalWorkPhase(i,j,:)=0
+                        else if (ped%pedigree(parId)%individualGenotype%getGenotype(j)==2) then
+                            GlobalWorkPhase(i,j,:)=1
+                        endif
                     enddo
                 endif
             enddo
 
             GlobalWorkPhase(0,:,:)=9
-            ImputeGenos=9
-            ImputePhase=9
-            ImputeGenos(:,:)=Genos(:,:)
+
+            ImputeGenos(:,:)=ped%getGenotypesAsArray()
             ImputePhase(:,:,:)=GlobalWorkPhase(:,:,:)
 
-            allocate(GlobalTmpCountInf(nAnisP,6))
+            allocate(GlobalTmpCountInf(ped%pedigreeSize-ped%nDummys,6))
             GlobalTmpCountInf(:,:)=0
 
         else                                                                    ! Other chromosome
-            allocate(GlobalWorkPhase(0:nAnisP,inputParams%nsnp,2))
-            allocate(ImputeGenos(0:nAnisP,inputParams%nsnp))
-            allocate(ImputePhase(0:nAnisP,inputParams%nsnp,2))
+            ! allocate(GlobalWorkPhase(0:ped%pedigreeSize-ped%nDummys,inputParams%nsnp,2))
+            ! allocate(ImputeGenos(0:ped%pedigreeSize-ped%nDummys,inputParams%nsnpRaw))
+            ! allocate(ImputePhase(0:ped%pedigreeSize-ped%nDummys,inputParams%nsnpRaw,2))
 
-            Genos(0,:)=9
             GlobalWorkPhase=9
-            do i=1,nAnisP
+            do i=1,ped%pedigreeSize-ped%nDummys
                 do j=1,inputParams%nsnp                                                     ! Phase in the homozygous case
-                    if (Genos(i,j)==0) GlobalWorkPhase(i,j,:)=0
-                    if (Genos(i,j)==2) GlobalWorkPhase(i,j,:)=1
+                    if (ped%pedigree(i)%individualGenotype%getGenotype(j)==0) then
+                        GlobalWorkPhase(i,j,:)=0
+                    else if (ped%pedigree(i)%individualGenotype%getGenotype(j)==2) then
+                        GlobalWorkPhase(i,j,:)=1
+                    endif
                 enddo
                 if (associated(ped%pedigree(i)%sirePointer)) then
                     if (ped%pedigree(i)%sirePointer%isDummy) exit
                     ParId=ped%pedigree(i)%sirePointer%id
 
                     do j=1,inputParams%nsnp                                                     ! Phase if my father is homozygous
-                        if (Genos(ParId,j)==0) GlobalWorkPhase(i,j,1)=0
-                        if (Genos(ParId,j)==2) GlobalWorkPhase(i,j,1)=1
+                        if (ped%pedigree(ParId)%individualGenotype%getGenotype(j)==0) then
+                            GlobalWorkPhase(i,j,1)=0
+                        else if (ped%pedigree(ParId)%individualGenotype%getGenotype(j)==2) then
+                            GlobalWorkPhase(i,j,1)=1
+                        endif
                     enddo
                 endif
                 if (associated(ped%pedigree(i)%damPointer)) then
                     if (ped%pedigree(i)%damPointer%isDummy) exit
                     ParId=ped%pedigree(i)%damPointer%id
                     do j=1,inputParams%nsnp                                                     ! Phase if my mother is homozygous
-                        if (Genos(ParId,j)==0) GlobalWorkPhase(i,j,2)=0
-                        if (Genos(ParId,j)==2) GlobalWorkPhase(i,j,2)=1
+                        if (ped%pedigree(ParId)%individualGenotype%getGenotype(j)==0) then
+                            GlobalWorkPhase(i,j,2)=0
+                        else if (ped%pedigree(ParId)%individualGenotype%getGenotype(j)==2) then
+                            GlobalWorkPhase(i,j,2)=1
+                        endif
                     enddo
                 endif
 
             enddo
 
             GlobalWorkPhase(0,:,:)=9
-            ImputeGenos=9
-            ImputePhase=9
-            ImputeGenos(:,:)=Genos(:,:)
+            ImputeGenos(:,:)=ped%getGenotypesAsArray()
             ImputePhase(:,:,:)=GlobalWorkPhase(:,:,:)
 
         endif
@@ -1887,59 +1879,32 @@ contains
     end subroutine InsteadOfGeneProb
 
     !######################################################################################################################################################################################
-    subroutine RemoveFiles
-        use Global
-        use AlphaImputeInMod
-        implicit none
 
-        type(AlphaImputeInput), pointer :: inputParams
 
-        inputParams => defaultInput
 
-        if (inputParams%restartOption > OPT_RESTART_IMPUTATION) then
-            call system(RM // " Tmp2345678.txt")
-        end if
-
-        if (inputParams%HMMOption == RUN_HMM_NO) then
-            call system(RM // " Results/ImputePhaseHMM.txt")
-            call system(RM // " Results/ImputeGenotypesHMM.txt")
-        end if
-
-        !@todo: Comment this two lines if this files are populated in
-        !       subroutine ModelRecomb
-        call system(RM // " RecombinationInformationNarrow.txt")
-        call system(RM // " RecombinationInformationNarrowR.txt")
-
-    end subroutine RemoveFiles
 
     !#############################################################################################################################################################################################################################
 
     subroutine MakeFiles
         use Global
 
-        use alphaimputeinmod
+        use AlphaImputeSpecFileModule
         implicit none
 
         integer :: i
         integer,dimension(:), allocatable :: TempCore,TempCplusT
         integer :: Tmp
-        character(len=7) :: cm
-        character(len=300) :: filout,FileCheck
-        logical :: FileExists
+        character(len=300) ::filout
         type(AlphaImputeInput), pointer :: inputParams
 
 
         inputParams => defaultInput
 
-        allocate(TempCore(inputParams%nPhaseInternal))
-        allocate(TempCplusT(inputParams%nPhaseInternal))
+        allocate(TempCore(inputParams%nPhaseExternal))
+        allocate(TempCplusT(inputParams%nPhaseExternal))
 
-        allocate(GpIndex(inputParams%nprocessors,2))
+        allocate(GpIndex(inputParams%useProcs,2))
 
-        ! WARNING: This code is not necessary
-        write(cm,'(I7)') inputParams%nSnpRaw !for formatting
-        cm = adjustl(cm)
-        ! end WARNING
 
         do i=1,inputParams%nPhaseExternal
             TempCore(i)=inputParams%CoreLengths(i)
@@ -1957,70 +1922,35 @@ contains
         open(unit=105,file="." // DASH // "InputFiles" // DASH // "AlphaPhaseInputGenotypes.txt", status="unknown")
 
 
-        do i=1,nAnisP
-            write (104,'(i16,1x,i16,1x,i16,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%getIntegerVectorOfRecodedIdsNoDummy(),Genos(i,:)
-            if (Setter(i)==1) write (105,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%originalID,Genos(i,:)
+        do i=1,ped%pedigreeSize-ped%nDummys
+            write (104,'(i16,1x,i16,1x,i16,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%getIntegerVectorOfRecodedIdsNoDummy(), ped%pedigree(i)%individualGenotype%toIntegerArray(inputParams%nSnp)
+            if (Setter(i)==1) write (105,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(i)%originalID,ped%pedigree(i)%individualGenotype%toIntegerArray()
         enddo
         call flush(104)
         call flush(105)
         close(104)
         close(105)
 
-        CountRawGenos=count(Genos(:,:)/=9)
+        CountRawGenos=ped%getNumGenotypesMissing()
 
         do i=1,nObsDataRaw
-            write (103,'(4a20)') Ped%pedigree(i)%originalID,Ped%pedigree(i)%sireID,Ped%pedigree(i)%damID
+            write (103,*) Ped%pedigree(i)%originalID,Ped%pedigree(i)%sireID,Ped%pedigree(i)%damID
         enddo
         call flush(103)
         close(103)
 
-
-        !ANDREAS AND JOHN CHANGE ON FRIDAY - POSSIBLY REMOVE
-        ! TODO: IT SHOULD BE REMOVED OR CHANGE SUBROUTINE'S NAME AT LEAST!
         if (inputParams%SexOpt==1) then                 ! Sex chromosome
             call InsteadOfGeneProb          ! Calculate Genotype Probabilities
         else                                ! Not sex chromosome
             if (inputParams%bypassgeneprob==1 .OR. inputParams%hmmoption == RUN_HMM_ONLY) then
                 call InsteadOfGeneProb
-            else
-                deallocate(Genos)
             endif
         endif
 
-        ! Check whether AlphaPhase is present
-#ifndef _WIN32
-        write (FileCheck,'("AlphaPhase")')
-#else
-        write (FileCheck,'("AlphaPhase.exe")')
-#endif
-        inquire(file=trim(FileCheck),exist=FileExists)
-        if (FileExists .eqv. .true.) then
-            AlphaPhasePresent=1
-        else
-            AlphaPhasePresent=0
-            print*, " "
-            print*, " ","AlphaPhase not present and copied, version in the bin directory used"
-            ! WARNING: What if there is any version of this software in the bin either?
-        endif
 
-        ! Check whether GeneProbForAlphaImpute is present
-#ifndef _WIN32
-        write (FileCheck,'("GeneProbForAlphaImpute")')
-#else
-        write (FileCheck,'("GeneProbForAlphaImpute.exe")')
-#endif
-        inquire(file=trim(FileCheck),exist=FileExists)
-        if (FileExists .eqv. .true.) then
-            GeneProbPresent=1
-        else
-            GeneProbPresent=0
-            print*, " "
-            print*, " ","GeneProb not present and copied, version in the bin directory used"
-            ! WARNING: What if there is any version of this software in the bin either?
-        endif
 
         ! Create AlphaPhaseSpec file
-        do i=1,inputParams%nPhaseInternal           ! Phasing is done in parallel
+        do i=1,inputParams%nPhaseExternal           ! Phasing is done in parallel
 #ifndef _WIN32
             if((inputParams%ManagePhaseOn1Off0==0).and.(inputParams%NoPhasing==1)) then
                 write (filout,'(a,"/Phase"i0,"/AlphaPhaseSpec.txt")')trim(inputParams%PhasePath), i
@@ -2091,19 +2021,21 @@ contains
 
         enddo
 
-        Tmp=int(float(inputParams%nsnp)/inputParams%nprocessors)
+
+        !end createalphaphasespec
+
+        Tmp=int(float(inputParams%nsnp)/inputParams%useProcs)
         GpIndex(1,1)=1
         GpIndex(1,2)=Tmp
-        if (inputParams%nprocessors>1) then
-            do i=2,inputParams%nprocessors
+        if (inputParams%useProcs>1) then
+            do i=2,inputParams%useProcs
                 GpIndex(i,1)=GpIndex(i-1,1)+Tmp
                 GpIndex(i,2)=GpIndex(i-1,2)+Tmp
             enddo
         endif
-        GpIndex(inputParams%nprocessors,2)=inputParams%nsnp
-
-        ! Create GeneProbSpec file
-        do i=1,inputParams%nprocessors
+        GpIndex(inputParams%useProcs,2)=inputParams%nsnp
+      ! Create GeneProbSpec file
+        do i=1,inputParams%useProcs
 #ifndef _WIN32
             write (filout,'("./GeneProb/GeneProb"i0,"/GeneProbSpec.txt")')i
 #else
@@ -2111,22 +2043,22 @@ contains
 #endif
 
             open (unit=108,file=trim(filout),status='unknown')
-            write (108,*) "nAnis        ,",nAnisP
+            write (108,*) "nAnis        ,",ped%pedigreeSize-ped%nDummys
             write (108,*) "nsnp     ,",inputParams%nsnp
 #ifndef _WIN32
-            write (108,*) "InputFilePath    ,",'"../../InputFiles/RecodedGeneProbInput.txt"'
+            write (108,*) "InputFilePath    ,",'../../InputFiles/RecodedGeneProbInput.txt'
 #else
-            write (108,*) "InputFilePath    ,",'"..\..\InputFiles\RecodedGeneProbInput.txt"'
+            write (108,*) "InputFilePath    ,",'..\..\InputFiles\RecodedGeneProbInput.txt'
 #endif
-            write (108,*) "OutputFilePath   ,",'"GeneProbs.txt"'
+            write (108,*) "OutputFilePath   ,",'GeneProbs.txt'
             write (108,*) "StartSnp     ,",GpIndex(i,1)
             write (108,*) "EndSnp       ,",GpIndex(i,2)
+            write (108,*) "cores       ,",1
             call flush(108)
             close(108)
 
             write (filout,'("GeneProb"i0)')i
-            ! if (GeneProbPresent==1) call system ("cp GeneProbForAlphaImpute GeneProb/" // filout)
-            if (GeneProbPresent==1) call system (COPY // " GeneProbForAlphaImpute" // EXE // " GeneProb" // DASH // filout // NULL)
+            if (GeneProbPresent==1) call system (COPY // " geneProb" // EXE // " GeneProb" // DASH // filout // NULL)
         enddo
 
         if (inputParams%PreProcess==.true.) then
@@ -2150,7 +2082,7 @@ contains
 
         use Global
 
-        use alphaimputeinmod
+        use AlphaImputeSpecFileModule
         use ISO_Fortran_Env
         implicit none
 
@@ -2160,14 +2092,14 @@ contains
 
         inputParams => defaultInput
         open(newunit=UOutputs, file="." // DASH // "Miscellaneous" // DASH // "SnpCallRateByAnimalByChip.txt",status='unknown')
-        allocate(animChip(nAnisP))
+        allocate(animChip(ped%pedigreeSize-ped%nDummys))
         animChip(:)=0
 
-        allocate(printed(nAnisP))
+        allocate(printed(ped%pedigreeSize-ped%nDummys))
         printed=.FALSE.
 
-        do i=1,nAnisP
-            CountMiss=count(TempGenos(i,:)==9)
+        do i=1,ped%pedigreeSize-ped%nDummys
+            CountMiss=ped%pedigree(i)%individualGenotype%numMissing()
             do j=1,inputParams%MultiHD
                 if ( (CountMiss-(inputParams%nsnp-inputParams%nSnpByChip(j))) < (1.0-inputParams%PercGenoForHD)*inputParams%nSnpByChip(j)&
                     .and. (inputParams%nsnp-CountMiss)<inputParams%nSnpByChip(j)&
@@ -2191,7 +2123,7 @@ contains
     !#############################################################################################################################################################################################################################
     subroutine InternalEdit
         use Global
-        use alphaimputeinmod
+        use AlphaImputeSpecFileModule
         implicit none
 
         integer :: i,j,k,CountMiss,CountHD,nSnpR,dum
@@ -2206,7 +2138,7 @@ contains
         allocate(Counter(inputParams%nsnp))
         allocate(SnpIncluded(inputParams%nsnp))
 
-        allocate(Setter(0:nAnisP))
+        allocate(Setter(0:ped%pedigreeSize-ped%nDummys))
 
         SnpIncluded(:)=0
         if ((inputParams%managephaseon1off0==0).and.(inputParams%NoPhasing==1)) then
@@ -2217,56 +2149,54 @@ contains
             enddo
         endif
 
-        if (inputParams%NoPhasing==0) SnpIncluded(:)=1
-
+        if (inputParams%outopt==1 .or. inputParams%NoPhasing) then
+            SnpIncluded(:)=1
+        endif
         ! I user do not specify any file with HD individuals
         if (inputParams%UserDefinedHD==0) then
             Setter(0)=0
-            Setter(1:nAnisP)=1
-            RecIdHDIndex(0)=0
-            RecIdHDIndex(1:nAnisP)=1
-            do i=1,nAnisP
-                CountMiss=count(TempGenos(i,:)==9)
+            Setter(1:ped%pedigreeSize-ped%nDummys)=1
+            do i=1,ped%pedigreeSize-ped%nDummys
+                CountMiss=ped%pedigree(i)%individualGenotype%numMissing()
                 if (inputParams%MultiHD/=0) then
                     ! Disregard animals at LD or those HD animals with a number of markers missing
                     if (animChip(i)==0) then
                         Setter(i)=0
-                        RecIdHDIndex(i)=0
                     endif
                 else
                     if ((float(CountMiss)/inputParams%nsnp)>(1.0-inputParams%PercGenoForHD)) then
                         Setter(i)=0
-                        RecIdHDIndex(i)=0
+                        if (.not. ped%pedigree(i)%genotyped) then
+                            ! If animal is not genotyped, but enough info has been imputed, set it as genotyped
+                            call ped%setAnimalAsGenotyped(i)
+                        endif
                     endif
                 endif
             enddo
             CountHD=count(Setter(:)==1)
         else                                ! User has specified HD individuals
             Setter(0)=0
-            Setter(1:nAnisP)=0
-            RecIdHDIndex(0)=0
-            RecIdHDIndex(1:nAnisP)=0
+            Setter(1:ped%pedigreeSize-ped%nDummys)=0
 
             CountHD=0
             do
-                read (46,*,iostat=k) dumC
+                read (inputParams%AnimalFileUnit,*,iostat=k) dumC
                 CountHD=CountHD+1
                 if (k/=0) then
                     CountHD=CountHD-1
                     exit
                 endif
             enddo
-            rewind(46)
+            rewind(inputParams%AnimalFileUnit)
 
             block
                 integer :: tmpID
                 do k=1,CountHD
-                    read (46,*) dumC
+                    read (inputParams%AnimalFileUnit,*) dumC
 
                     tmpID = ped%dictionary%getValue(dumC)
                     if (tmpID /= DICT_NULL) then
                         Setter(tmpID)=1
-                        RecIdHDIndex(tmpID)=1
                         exit
                     endif
                 enddo
@@ -2276,16 +2206,14 @@ contains
             print*, " ",CountHD," valid indiviudals in the user specified AlphaPhase file"
         endif
 
-        open (unit=102,file="." // DASH // "Miscellaneous" // DASH // "EditingSnpSummary.txt",status="unknown")
-
         if (inputParams%managephaseon1off0==1) then
             TempFreq(:)=0.0
             Counter(:)=0
             SnpSummary=0.0
             do j=1,inputParams%nsnp
-                do i=1, nAnisP
-                    if (TempGenos(i,j)/=9) then
-                        TempFreq(j)=TempFreq(j)+float(TempGenos(i,j))
+                do i=1, ped%pedigreeSize-ped%nDummys
+                    if (.not. ped%pedigree(i)%individualGenotype%isMissing(j)) then
+                        TempFreq(j)=TempFreq(j)+float(ped%pedigree(i)%individualGenotype%getGenotype(j))
                         Counter(j)=Counter(j)+2
                     else
                         if (Setter(i) == 1) then
@@ -2299,13 +2227,6 @@ contains
 
         if (inputParams%MultiHD/=0 .or. inputParams%IntEditStat==0) then
             nSnpR=inputParams%nsnp
-            ! TODO tidy this up - should not need deallocate here
-            if (allocated(genos)) then
-                deallocate(genos)
-            endif
-            allocate(Genos(0:nAnisP,inputParams%nsnp))
-            Genos=TempGenos
-            deallocate(TempGenos)
             if (inputParams%managephaseon1off0==1) SnpIncluded(:)=1
         else
             if (inputParams%managephaseon1off0==1) then
@@ -2318,60 +2239,37 @@ contains
                 nSnpR=count(SnpIncluded(:)==1)
             endif
             if (nSnpR==inputParams%nsnp) then
-                if (.not. allocated(Genos)) then
-                    allocate(Genos(0:nAnisP,inputParams%nsnp))
-                endif
-                Genos=TempGenos
-                deallocate(TempGenos)
                 SnpIncluded(:)=1
             else
-                ! TODO this should not need to be done
-                if (allocated(genos)) then
-                    deallocate(genos)
-                endif
-                allocate(Genos(0:nAnisP,nSnpR))
-                Genos(0,:)=9
                 if (inputParams%managephaseon1off0==1) then
                     k=0
                     do j=1,inputParams%nsnp
                         if ((SnpSummary(j)<inputParams%PercSnpMiss).and.((TempFreq(j)>0.00000001).and.(TempFreq(j)<0.9999999))) then
                             k=k+1
-                            Genos(:,k)=TempGenos(:,j)
                             SnpIncluded(j)=1
                         endif
                     enddo
-                    deallocate(TempGenos)
-                    inputParams%nsnp=nSnpR
-                else
-                    k=0
-                    do j=1,inputParams%nsnp
-                        if (SnpIncluded(j)==1) then
-                            k=k+1
-                            Genos(:,k)=TempGenos(:,j)
-                        endif
-                    enddo
-                    deallocate(TempGenos)
                     inputParams%nsnp=nSnpR
                 endif
             endif
+           
             if (inputParams%UserDefinedHD==0) then
-                Setter(1:nAnisP)=1
-                RecIdHDIndex(1:nAnisP)=1
-                do i=1,nAnisP
-                    CountMiss=count(Genos(i,:)==9)
+                 Setter = 0
+                ! Setter(1:ped%pedigreeSize-ped%nDummys)=0
+                do i=1,ped%nGenotyped
+                    setter(ped%genotypeMap(i)) =1
+                    CountMiss=ped%pedigree(ped%genotypeMap(i))%individualGenotype%numMissing()
                     if ((float(CountMiss)/inputParams%nsnp)>(1.0-inputParams%SecondPercGenoForHD)) then
-                        Setter(i)=0
-                        RecIdHDIndex(i)=0
+                        Setter(ped%genotypeMap(i))=0
                     endif
                 enddo
                 CountHD=count(Setter(:)==1)
             else
-                do i=1,nAnisP
-                    if (Setter(i)==1) then
-                        CountMiss=count(Genos(i,:)==9)
+                do i=1,ped%nGenotyped
+                    if (Setter(ped%genotypeMap(i))==1) then
+                        CountMiss=ped%pedigree(ped%genotypeMap(i))%individualGenotype%numMissing()
                         if ((float(CountMiss)/inputParams%nsnp)>(1.0-inputParams%SecondPercGenoForHD)) then
-                            Setter(i)=0
-                            RecIdHDIndex(i)=0
+                            Setter(ped%genotypeMap(i))=0
                         endif
                     endif
                 enddo
@@ -2379,21 +2277,21 @@ contains
             endif
         endif
 
-        do j=1,inputParams%nSnpRaw
-            write (102,*) j,SnpSummary(j),SnpIncluded(j)        !'(i,1x,f5.3,1x,i)'
-        enddo
-        close(102)
+        open (unit=102,file="." // DASH // "Miscellaneous" // DASH // "EditingSnpSummary.txt",status="unknown")
 
         if ((inputParams%ManagePhaseOn1Off0==0).and.(inputParams%NoPhasing==1)) then
             FileName = trim(inputParams%PhasePath) // DASH // "EditingSnpSummary.txt"
         else
             FileName = "." // DASH // "Phasing" // DASH // "EditingSnpSummary.txt"
         end if
-
         open (unit=112,file=FileName,status="unknown")
+
+
         do j=1,inputParams%nSnpRaw
+            write (102,*) j,SnpSummary(j),SnpIncluded(j)        !'(i,1x,f5.3,1x,i)'
             write (112,*) j,SnpSummary(j),SnpIncluded(j)        !'(i,1x,f5.3,1x,i)'
         enddo
+        close(102)
         close(112)
 
         print*, " "
@@ -2401,6 +2299,16 @@ contains
         print*, " ",CountHD," indiviudals passed to AlphaPhase"
         print*, " ",inputParams%nsnp," snp remain after editing"
 
+        ! TODO clean this whole subroutine
+
+
+        ! we add animals to hd list here
+        do i=1, ped%nGenotyped
+        ! TODO change to ngenotyped
+            if (setter(ped%GenotypeMap(i)) == 1) then
+                call ped%setAnimalAsHD(ped%GenotypeMap(i))
+            endif
+        enddo
         deallocate(SnpSummary)
         deallocate(TempFreq)
         deallocate(Counter)
@@ -2411,11 +2319,12 @@ contains
     subroutine FillInBasedOnOffspring
         ! Genotype SNPs based on the genetic information of my offsprings
         use Global
-        use alphaimputeinmod
+        use AlphaImputeSpecFileModule
         implicit none
 
         integer :: i,j,k
         integer, allocatable, dimension(:) :: count0,count1,count2
+        integer :: tmpVal
         type(AlphaImputeInput), pointer :: inputParams
         type(individual) ,pointer :: tmpOff
         inputParams => defaultInput
@@ -2423,8 +2332,7 @@ contains
         allocate(Count0(inputParams%nsnp))
         allocate(Count1(inputParams%nsnp))
         allocate(Count2(inputParams%nsnp))
-
-        do i=1,nAnisP ! These are parents
+        do i=1,ped%pedigreeSize-ped%nDummys ! These are parents
             ! This three variables will count the different number of genotypes of the offsprings
             Count0=0
             Count1=0
@@ -2433,10 +2341,11 @@ contains
                 tmpOff => ped%pedigree(i)%offsprings(j)%p
                 if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==inputParams%hetGameticStatus).and.(tmpOff%gender==inputParams%hetGameticStatus)) cycle
                 do k=1,inputParams%nsnp
-                    if (TempGenos(i,k)==9) then ! If my parent is not genotyped
-                        if (TempGenos(tmpOff%id,k)==0) Count0(k)=Count0(k)+1    ! Number of offspring genotype as 0
-                        if (TempGenos(tmpOff%id,k)==1) Count1(k)=Count1(k)+1    ! Number of offspring genotype as 1
-                        if (TempGenos(tmpOff%id,k)==2) Count2(k)=Count2(k)+1    ! Number of offspring genotype as 2
+                    if (ped%pedigree(i)%individualGenotype%isMissing(k)) then ! If my parent is not genotyped
+                        tmpVal = tmpOff%individualGenotype%getGenotype(k)
+                        if (tmpVal==0) Count0(k)=Count0(k)+1    ! Number of offspring genotype as 0
+                        if (tmpVal==1) Count1(k)=Count1(k)+1    ! Number of offspring genotype as 1
+                        if (tmpVal==2) Count2(k)=Count2(k)+1    ! Number of offspring genotype as 2
                     endif
                 enddo
 
@@ -2444,10 +2353,10 @@ contains
 
             do k=1,inputParams%nsnp
                 if ((Count0(k)+Count1(k)+Count2(k))>OffspringFillMin) then
-                    if (Count0(k)==0) TempGenos(i,k)=2                       ! This is the most likely thing, but it might be not true
-                    if (Count2(k)==0) TempGenos(i,k)=0                       ! This is the most likely thing, but it might be not true
+                    if (Count0(k)==0) call ped%pedigree(i)%individualGenotype%setGenotype(k,2)                       ! This is the most likely thing, but it might be not true
+                    if (Count2(k)==0) call ped%pedigree(i)%individualGenotype%setGenotype(k,0)                       ! This is the most likely thing, but it might be not true
                     if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==inputParams%hetGameticStatus)) cycle
-                    if ((Count0(k)>2).and.(Count2(k)>2)) TempGenos(i,k)=1    ! This is the most likely thing, but it might be not true
+                    if ((Count0(k)>2).and.(Count2(k)>2)) call ped%pedigree(i)%individualGenotype%setGenotype(k,1)    ! This is the most likely thing, but it might be not true
                 endif
             enddo
         enddo
@@ -2459,35 +2368,37 @@ contains
     subroutine FillInSnp
         ! Genotype SNPs based on the pedigree information
         use Global
-        use AlphaImputeInMod
+        use AlphaImputeSpecFileModule
         implicit none
 
         integer :: i,j,k,TurnOn
         type(AlphaImputeInput), pointer :: inputParams
         integer :: tmpParentId
+        type(individual), pointer :: tmpMother, tmpFather, tmpAnim
         inputParams => defaultInput
 
-        do i=1,nAnisP
+        do i=1,ped%pedigreeSize-ped%nDummys
             do k=2,3
                 TurnOn=1
-                tmpParentId = ped%pedigree(i)%getSireDamNewIDByIndex(k)
+                tmpParentId = ped%pedigree(i)%getSireDamNewIDByIndexNoDummy(k)
+                ! tmpAnim => ped%pedigree(i)%getSireDamObjectByIndex(k)
+
                 ! if the proband is heterogametic, and
                 ! considering the heterogametic parent, then avoid!!
                 if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==inputParams%hetGameticStatus).and. ((k-1)==inputParams%hetGameticStatus)) TurnOn=0
-                ! TODO check value of k here
                 if (tmpParentId /= 0) then
-                    if (ped%pedigree(tmpParentId)%isDummy) cycle
+                    tmpAnim => ped%pedigree(tmpParentId)
                     ! if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==inputParams%hetGameticStatus).and. (pedigree%(i)%parent(k-1)%gender==inputParams%hetGameticStatus)) TurnOn=0
                     ! Homogametic individuals and the homogametic parent of a heterogametic individual
                     if (TurnOn==1) then
                         do j=1,inputParams%nsnp
-                            if ((TempGenos(i,j)==0).and.(TempGenos(tmpParentId,j)==2)) then
-                                TempGenos(i,j)=9
-                                TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(k),j)=9
+                            if ((ped%pedigree(i)%individualGenotype%getGenotype(j)==0).and.(ped%pedigree(tmpParentId)%individualGenotype%getGenotype(j)==2)) then
+                                call ped%pedigree(i)%individualGenotype%setGenotype(j,9)
+                                call tmpAnim%individualGenotype%setGenotype(j,9)
                             endif
-                            if ((TempGenos(i,j)==2).and.(TempGenos(tmpParentId,j)==0)) then
-                                TempGenos(i,j)=9
-                                TempGenos(tmpParentId,j)=9
+                            if ((ped%pedigree(i)%individualGenotype%getGenotype(j)==2).and.(ped%pedigree(tmpParentId)%individualGenotype%getGenotype(j)==0)) then
+                                call ped%pedigree(i)%individualGenotype%setGenotype(j,9)
+                                call tmpAnim%individualGenotype%setGenotype(j,9)
                             endif
                         enddo
                     endif
@@ -2495,31 +2406,70 @@ contains
             enddo
         enddo
 
+
+
         ! WARNING: This can be refactored
-        do i=1,nAnisP
+        do i=1,ped%pedigreeSize-ped%nDummys
+
+         if(.not. ped%pedigree(i)%Founder) then
+                ! tmpFather =>ped%pedigree(i)%getSireDamObjectByIndex(2)
+                ! tmpMother =>ped%pedigree(i)%getSireDamObjectByIndex(3)
+
+                tmpFather =>ped%pedigree(ped%pedigree(i)%getSireDamNewIDByIndex(2))
+                tmpMother =>ped%pedigree(ped%pedigree(i)%getSireDamNewIDByIndex(3))
+
             do j=1,inputParams%nsnp
-                if (TempGenos(i,j)==9 .and. .not. ped%pedigree(i)%hasDummyParent()) then
-                    if ((TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(2),j)==0).and.(TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(3),j)==0)) then
-                        TempGenos(i,j)=0
-                    else if ((TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(2),j)==2).and.(TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(3),j)==2)) then
-                        TempGenos(i,j)=2
-                    endif
-                    if (inputParams%SexOpt==1) then
-                        if (ped%pedigree(i)%gender/=inputParams%hetGameticStatus) then
-                            if ((TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(2),j)==0).and.(TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(3),j)==2)) TempGenos(i,j)=1
-                            if ((TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(2),j)==2).and.(TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(3),j)==0)) TempGenos(i,j)=1
-                        else
-                            ! HomGameticSatus(1 or 2) +1 = sire (2) or dam (3)
-                            if (TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(inputParams%HomGameticStatus+1),j)==0) TempGenos(i,j)=0
-                            if (TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(inputParams%HomGameticStatus+1),j)==2) TempGenos(i,j)=2
+
+                    
+                    if (ped%pedigree(i)%individualGenotype%isMissing(j)) then
+                        ! if (trim(ped%pedigree(i)%originalId) == "3899" .and.  j ==5) then
+                        !     print *, "DEBUG1:",ped%pedigree(i)%individualGenotype%getGenotype(j)
+                        ! endif 
+                        ! if (trim(tmpMother%originalId) == "3899" .and.  j ==5) then
+                        !     print *, "as parent DEBUG1",tmpMother%individualGenotype%getGenotype(j)
+                        ! endif 
+                        if ((tmpFather%individualGenotype%getGenotype(j)==0).and.(tmpMother%individualGenotype%getGenotype(j)==0)) then
+                            ! print *,"id: ",ped%pedigree(i)%originalId," snp:",j, " father ", tmpFather%originalId, " mother ",tmpMother%originalId, " newGenos ", 0
+                            call ped%pedigree(i)%individualGenotype%setGenotype(j,0)
+
+                      
+                        else if ((tmpFather%individualGenotype%getGenotype(j)==2).and.(tmpMother%individualGenotype%getGenotype(j)==2)) then
+                            ! print *,"id: ",ped%pedigree(i)%originalId," snp:",j," father ", tmpFather%originalId, " mother ",tmpMother%originalId, " newGenos ", 2
+                            call ped%pedigree(i)%individualGenotype%setGenotype(j,2)
                         endif
-                    else
-                        if ((TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(2),j)==0).and.(TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(3),j)==2)) TempGenos(i,j)=1
-                        if ((TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(2),j)==2).and.(TempGenos(ped%pedigree(i)%getSireDamNewIDByIndex(3),j)==0)) TempGenos(i,j)=1
+
+                        if (inputParams%SexOpt==1) then
+                            if (ped%pedigree(i)%gender/=inputParams%hetGameticStatus) then
+                                if ((tmpFather%individualGenotype%getGenotype(j)==0).and.((tmpMother%individualGenotype%getGenotype(j)==2))) call ped%pedigree(i)%individualGenotype%setGenotype(j,1)
+                                if ((tmpFather%individualGenotype%getGenotype(j)==2).and.((tmpMother%individualGenotype%getGenotype(j)==0))) call ped%pedigree(i)%individualGenotype%setGenotype(j,1)
+                            else
+                                ! HomGameticSatus(1 or 2) +1 = sire (2) or dam (3)
+                                if (inputParams%HomGameticStatus == 1) then
+                                    if (tmpFather%individualGenotype%getGenotype(j)==0) call ped%pedigree(i)%individualGenotype%setGenotype(j,0)
+                                    if (tmpFather%individualGenotype%getGenotype(j)==2) call ped%pedigree(i)%individualGenotype%setGenotype(j,2)
+                                else if (inputParams%HomGameticStatus == 2) then 
+                                    if (tmpMother%individualGenotype%getGenotype(j)==0) call ped%pedigree(i)%individualGenotype%setGenotype(j,0)
+                                    if (tmpMother%individualGenotype%getGenotype(j)==2) call ped%pedigree(i)%individualGenotype%setGenotype(j,2)
+                                endif
+                            endif
+                        else
+                            if ((tmpFather%individualGenotype%getGenotype(j)==0).and.(tmpMother%individualGenotype%getGenotype(j)==2)) Then
+                                call ped%pedigree(i)%individualGenotype%setGenotype(j,1)
+                                ! print *,"id: ",ped%pedigree(i)%originalId," snp:",j," father ", tmpFather%originalId, " mother ",tmpMother%originalId, " newGenos ", 1
+                            else if ((tmpFather%individualGenotype%getGenotype(j)==2).and.(tmpMother%individualGenotype%getGenotype(j)==0)) Then
+                                call ped%pedigree(i)%individualGenotype%setGenotype(j,1)
+                                ! print *,"id: ",ped%pedigree(i)%originalId," snp:",j," father ", tmpFather%originalId, " mother ",tmpMother%originalId, " newGenos ", 1
+
+                            endif 
+                        endif
                     endif
-                endif
-            enddo
+                enddo
+            endif
         enddo
+
+        
+
+        
 
     end subroutine FillInSnp
 
@@ -2531,15 +2481,15 @@ contains
         ! Set the vector baseline that specify whether an animal
         ! has no parents or its parents have been pruned
 
-        use alphaimputeinmod
-        use Global
+        use AlphaImputeSpecFileModule
+        use Global, only: ped, DisagreeThreshold
 
         implicit none
 
         integer :: e,i,j,CountBothGeno,CountDisagree,CountChanges,IndId,ParId,ParPos
         integer :: TurnOn
         type(AlphaImputeInput), pointer :: inputParams
-        integer :: tmpID, dumId
+        integer :: dumId
         integer :: nHomoParent, nBothHomo
 
         inputParams => defaultInput
@@ -2550,12 +2500,9 @@ contains
         nBothHomo = 0
         do e=1,2                    ! Do whatever this does, first on males and then on females
             ParPos=e+1              ! Index in the Genotype and Pedigree matrices for sires and dams
-            do i=1,nAnisRawPedigree
-                IndId=ped%genotypeDictionary%getValue(ped%pedigree(i)%originalID)          ! My Id
-                if (IndID == DICT_NULL) then
-                    IndId = 0
-                endif
-                ParId=ped%getSireDamGenotypeIDByIndex(ped%pedigree(i),e+1)       ! Paternal Id,
+            do i=1,ped%pedigreeSize
+                IndId=ped%pedigree(i)%id           ! My Id
+                ParId=ped%pedigree(i)%getSireDamNewIDByIndex(e+1)       ! Paternal Id,
                 TurnOn=1
                 ! GenderRaw: Says whether the proband is a male or a female
                 ! If there are sex cromosome information, and
@@ -2565,55 +2512,62 @@ contains
                 if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==inputParams%hetGameticStatus).and.((ParPos-1)==inputParams%hetGameticStatus)) TurnOn=0
 
                 ! Consider the Homogametic probands and the heterogametic proband with homogametic parent
-                if ((IndId/=0).and.(ParId/=0).and.(TurnOn==1)) then
-                    CountBothGeno=0
-                    CountDisagree=0
-                    nHomoParent = 0
-                    nBothHomo = 0
+                if (parId /= 0 ) then
+                    if ((ped%pedigree(IndId)%genotyped.and. ped%pedigree(parId)%genotyped).and.(TurnOn==1)) then
+                        CountBothGeno=0
+                        CountDisagree=0
+                        nHomoParent = 0
+                        nBothHomo = 0
 
-                    ! Look for mendelenian errors
-                    do j=1,inputParams%nsnp
-                        if ((Genos(IndId,j)/=9).and.(Genos(ParId,j)/=9)) then
-                            CountBothGeno=CountBothGeno+1
-                            if (Genos(ParID,j)/=1) then
-                                nHomoParent = nHomoParent+1
-                                if ( Genos(IndID,j)/=1) then
-                                    nBothHomo =  nBothHomo + 1
-                                end if
-                            end if
-                            if ((Genos(IndId,j)==0).and.(Genos(ParId,j)==2)) CountDisagree=CountDisagree+1
-                            if ((Genos(IndId,j)==2).and.(Genos(ParId,j)==0)) CountDisagree=CountDisagree+1
-                        endif
-                    enddo
-                    if ((float(CountDisagree)/CountBothGeno)>DisagreeThreshold) then ! Mendelenian error
-                        write (101,'(2a20,4I,3f5.3)') &
-                            Ped%pedigree(i)%originalID, Ped%pedigree(i)%getSireDamByIndex(ParPos), CountDisagree, CountBothGeno, nHomoParent, nBothHomo, &
-                            float(CountDisagree)/CountBothGeno, float(CountDisagree)/nHomoParent, float(CountDisagree)/nBothHomo
-                        CountChanges=CountChanges+1
-                        if (parPos == 2) then
-                            call ped%pedigree(i)%sirePointer%removeOffspring(ped%pedigree(i))
-                            call ped%createDummyAnimalAtEndOfPedigree(dumId, i)
-                            ! ped%pedigree(i)%sireID = '0'
-                        else if (parPos == 3) then
-                            call ped%pedigree(i)%damPointer%removeOffspring(ped%pedigree(i))
-                            call ped%createDummyAnimalAtEndOfPedigree(dumId, i)
-                            ! ped%pedigree(i)%damPointer => null()
-                            ! ped%pedigree(i)%damId = '0'
-                        endif
-                    else
-                        ! Remove genotype of proband and parent
+                        ! Look for mendelenian errors
                         do j=1,inputParams%nsnp
-                            if ((Genos(IndId,j)/=9).and.(Genos(ParId,j)/=9)) then
-                                if ((Genos(IndId,j)==0).and.(Genos(ParId,j)==2)) then
-                                    Genos(IndId,j)=9
-                                    Genos(ParId,j)=9
-                                endif
-                                if ((Genos(IndId,j)==2).and.(Genos(ParId,j)==0)) then
-                                    Genos(IndId,j)=9
-                                    Genos(ParId,j)=9
+
+                            ! TODO can probably do the following better with new genotype class
+                            if ((ped%pedigree(IndId)%individualGenotype%getGenotype(j)/=9).and.(ped%pedigree(parId)%individualGenotype%getGenotype(j)/=9)) then
+                                CountBothGeno=CountBothGeno+1
+                                if (ped%pedigree(parId)%individualGenotype%getGenotype(j)/=1) then
+                                    nHomoParent = nHomoParent+1
+                                    if ( ped%pedigree(IndId)%individualGenotype%getGenotype(j)/=1) then
+                                        nBothHomo =  nBothHomo + 1
+                                    end if
+                                end if
+                                if ((ped%pedigree(IndId)%individualGenotype%getGenotype(j)==0).and.(ped%pedigree(parId)%individualGenotype%getGenotype(j)==2)) then
+                                    CountDisagree=CountDisagree+1
+                                else if ((ped%pedigree(IndId)%individualGenotype%getGenotype(j)==2).and.(ped%pedigree(parId)%individualGenotype%getGenotype(j)==0)) then
+                                    CountDisagree=CountDisagree+1
                                 endif
                             endif
                         enddo
+                        if ((float(CountDisagree)/CountBothGeno)>DisagreeThreshold) then ! Mendelenian error
+                            write (101,'(2a20,4I,3f5.3)') &
+                                Ped%pedigree(i)%originalID, Ped%pedigree(i)%getSireDamByIndex(ParPos), CountDisagree, CountBothGeno, nHomoParent, nBothHomo, &
+                                float(CountDisagree)/CountBothGeno, float(CountDisagree)/nHomoParent, float(CountDisagree)/nBothHomo
+                            CountChanges=CountChanges+1
+                            if (parPos == 2) then
+                                call ped%pedigree(i)%sirePointer%removeOffspring(ped%pedigree(i))
+                                call ped%createDummyAnimalAtEndOfPedigree(dumId, i)
+                                ! ped%pedigree(i)%sireID = '0'
+                            else if (parPos == 3) then
+                                call ped%pedigree(i)%damPointer%removeOffspring(ped%pedigree(i))
+                                call ped%createDummyAnimalAtEndOfPedigree(dumId, i)
+                                ! ped%pedigree(i)%damPointer => null()
+                                ! ped%pedigree(i)%damId = '0'
+                            endif
+                        else
+                            ! Remove genotype of proband and parent
+                            do j=1,inputParams%nsnp
+                                if ((ped%pedigree(IndId)%individualGenotype%getGenotype(j)/=9).and.(ped%pedigree(parId)%individualGenotype%getGenotype(j)/=9)) then
+                                    if ((ped%pedigree(IndId)%individualGenotype%getGenotype(j)==0).and.(ped%pedigree(parId)%individualGenotype%getGenotype(j)==2)) then
+                                        call ped%pedigree(IndId)%individualGenotype%setGenotype(j,9)
+                                        call ped%pedigree(parId)%individualGenotype%setGenotype(j,9)
+                                    endif
+                                    if ((ped%pedigree(IndId)%individualGenotype%getGenotype(j)==2).and.(ped%pedigree(parId)%individualGenotype%getGenotype(j)==0)) then
+                                        call ped%pedigree(IndId)%individualGenotype%setGenotype(j,9)
+                                        call ped%pedigree(parId)%individualGenotype%setGenotype(j,9)
+                                    endif
+                                endif
+                            enddo
+                        endif
                     endif
                 endif
             enddo
@@ -2624,131 +2578,27 @@ contains
 
         ! Sort sires and dams, and look for mistakes (bisexuality,...).
 
-        nAnisP = nAnisRawPedigree
-        allocate(RecIdHDIndex(0:nAnisP))
-
-        RecIdHDIndex=0
 
 
         call ped%outputSortedPedigreeInAlphaImputeFormat("." // DASH // "Miscellaneous" // DASH // "InternalDataRecoding.txt")
+
+
         call ped%sortPedigreeAndOverwrite()
-        if (inputParams%SexOpt==1) then
-            do j=1,nAnisInGenderFile
-                tmpId = ped%dictionary%getValue(genderId(j))
-                if (tmpID /= dict_null) then
-                    ped%pedigree(tmpId)%gender=GenderRaw(j)
-                    TurnOn=0
-                endif
-            enddo
-        endif
 
-        allocate(TempGenos(0:ped%pedigreeSize,inputParams%nsnp))
-
-        TempGenos=9
-        do i=1,nAnisG
-            tmpId = ped%dictionary%getValue(GenotypeId(i))
-            if (tmpId /= dict_null) then
-                TempGenos(tmpId,:)=Genos(i,:)
-                if (count(TempGenos(tmpId,:)/=9)>0) ped%pedigree(tmpId)%genotyped=.true.
-            endif
-        enddo
-        ! do i=1,nAnisG
-        ! print *, TempGenos
 
     end subroutine CheckParentage
-    !#############################################################################################################################################################################################################################
-
-    subroutine MakeDirectories(HMM)
-        use global
-        use GlobalVariablesHmmMaCH
-        use alphaimputeinmod
-
-        implicit none
-
-        integer, intent(in) :: HMM
-        integer :: i
-        character(len=300) :: FolderName
-        type(AlphaImputeInput), pointer :: inputParams
-
-        inputParams => defaultInput
-
-        if (HMM == RUN_HMM_NGS) then
-            ! call rmdir("Results")
-            ! call rmdir("Miscellaneous")
-            call system(RMDIR // " Results")
-            call system(RMDIR // " Miscellaneous")
-            ! call system("mkdir Results")
-            ! call system("mkdir Miscellaneous")
-            call system(MD // " Results")
-            call system(MD // " Miscellaneous")
-
-        else
-            print*, ""
-            call system(RMDIR // " Miscellaneous")
-            call system(RMDIR // " Phasing")
-            call system(RMDIR // " Results")
-            call system(RMDIR // " InputFiles")
-            call system(RMDIR // " GeneProb")
-            call system(RMDIR // " IterateGeneProb")
-
-            call system(MD // " Phasing")
-            call system(MD // " Miscellaneous")
-            call system(MD // " Results")
-            call system(MD // " InputFiles")
-            call system(MD // " GeneProb")
-            call system(MD // " IterateGeneProb")
-
-            do i=1,inputParams%nprocessors
-                write (FolderName,'("GeneProb"i0)')i
-                ! call system ("mkdir GeneProb/" // FolderName)       !here
-                call system(MD // " GeneProb" // DASH // FolderName)
-            enddo
-            do i=1,inputParams%nPhaseInternal
-                write (FolderName,'("Phase"i0)')i
-                ! call system ("mkdir Phasing/" // FolderName)
-                call system(MD // " Phasing" // DASH // FolderName)
-            enddo
-            do i=1,inputParams%nprocessors
-                write (FolderName,'("GeneProb"i0)')i            !here
-                ! call system ("mkdir IterateGeneProb/" // FolderName)    !here
-                call system(MD // " IterateGeneProb" // DASH // FolderName)
-            enddo
-        endif
-
-
-    end subroutine MakeDirectories
-
-    !#############################################################################################################################################################################################################################
-
-    subroutine rmdir(tmpdir)
-
-        character(len=*) :: tmpdir
-
-        open(unit=1000,file=".rmdirsh",status="unknown")
-        write(1000,*) "if [ -d "// trim(tmpdir) //" ]"
-        write(1000,*) "then rm -r " // trim(tmpdir)
-        write(1000,*) "fi"
-        close(1000)
-
-        call system("chmod a+x .rmdirsh")
-        call system("./.rmdirsh")
-        call system("rm .rmdirsh")
-
-    end subroutine rmdir
-
-    !#############################################################################################################################################################################################################################
-
 
 
     !#############################################################################################################################################################################################################################
 
     subroutine FinalChecker
+    ! TODO rewrite
         use Global
 
-        use Utils
+        
         use alphahouseMod, only : countLines
         use alphastatmod, only : pearsn, moment
-        use alphaimputeinmod
+        use AlphaImputeSpecFileModule
         implicit none
 
         integer :: h,i,j,k,l,nAnisTest,CountCatTest(6),tmpIDInt
@@ -2768,18 +2618,12 @@ contains
 
         allocate(Work(inputParams%nSnpRaw))
         allocate(WorkTmp(inputParams%nSnpRaw))
-        allocate(GenoStratIndex(nAnisP))
+        allocate(GenoStratIndex(ped%pedigreeSize-ped%nDummys))
 
         FileName=trim(inputParams%TrueGenotypeFile)
         ! call CountLines(FileName,nAnisTest)
         nAnisTest = CountLines(FileName)
 
-        ! if (WindowsLinux==1) then
-        !      call system("rmdir /s /q TestAlphaImpute")
-        ! else
-        !     call rmdir("TestAlphaImpute")
-        ! endif
-        ! call system("mkdir TestAlphaImpute")
 
         call system(RMDIR // " TestAlphaImpute")
         call system(MD // " TestAlphaImpute")
@@ -2805,13 +2649,13 @@ contains
         Names(6)="Other Relatives Genotyped"
 
         if (allocated(GlobalTmpCountInf)==.FALSE.) then
-            allocate(GlobalTmpCountInf(nAnisP,6))
+            allocate(GlobalTmpCountInf(ped%pedigreeSize-ped%nDummys,6))
             GlobalTmpCountInf(:,:)=0
         endif
 
-        allocate(FinalSetter(0:nAnisP))
+        allocate(FinalSetter(0:ped%pedigreeSize-ped%nDummys))
         FinalSetter=0
-        do i=1,nAnisG
+        do i=1,ped%nGenotyped
             read (36,*) dumC,WorkTmp(:)
             Counter=0
             do j=1,inputParams%nSnpRaw
@@ -2856,7 +2700,7 @@ contains
 
             RecTestId(:)=-99
             do i=1,nAnisTest
-                do j=1,nAnisP
+                do j=1,ped%pedigreeSize-ped%nDummys
                     if (trim(TrueGenosId(i))==trim((ped%pedigree(j)%originalID))) then
                         RecTestId(i)=j
                         TestAnimInformativeness(i,:)=GlobalTmpCountInf(j,1:6)
@@ -2866,7 +2710,7 @@ contains
             enddo
             if (count(RecTestId(:)==-99)>0) print*, "Error - There seems to be unidentifiablecount ",count(RecTestId(:)==-99)," individuals in the test file"
 
-            do i=1,nAnisG
+            do i=1,ped%nGenotyped
                 read (36,*) dumC,WorkTmp(:)
                 do j=1,nAnisTest
                     if (trim(TrueGenosId(j))==dumC) then
@@ -2883,7 +2727,7 @@ contains
             enddo
 
             GenoStratIndex(:)=0
-            do i=1,nAnisP
+            do i=1,ped%pedigreeSize-ped%nDummys
                 if (FinalSetter(i)/=1) then
                     GenoStratIndex(i)=6
                     if (FinalSetter(ped%pedigree(i)%getSireDamNewIDByIndex(3))==1) then
@@ -3032,7 +2876,7 @@ contains
                     ,"   ",SumPat(i),SumMat(i),AveCategoryInformativeness(i,:),CountCatTest(i),trim(Names(i))
             enddo
 
-            do i=1, nAnisP
+            do i=1, ped%pedigreeSize-ped%nDummys
                 if (ped%pedigree(i)%isDummy) then
                     exit
                 endif
@@ -3067,24 +2911,21 @@ contains
             allocate(CorrelationPerAnimal(nAnisTest))
             allocate(TmpVarPerGrp(nAnisTest))
 
-            do i=1,nAnisTest
-                read (35,*) TrueGenosId(i),TrueGenos(i,:)
-            enddo
 
             RecTestId(:)=-99
             do i=1,nAnisTest
-                do j=1,nAnisP
-                    ! print *, i,j, TrueGenosId(i), ped%pedigree(j)%originalID
-                    if (trim(TrueGenosId(i))==trim((ped%pedigree(j)%originalID))) then
-                        RecTestId(i)=j
-                        TestAnimInformativeness(i,:)=GlobalTmpCountInf(j,1:6)
-                        exit
-                    endif
-                enddo
-            enddo
-            if (count(RecTestId(:)==-99)>0) print*, "Error - There seems to be unidentifiablecount ",count(RecTestId(:)==-99)," individuals in the test file"
+                read (35,*) TrueGenosId(i),TrueGenos(i,:)
+                tmpIDInt = ped%dictionary%getValue(TrueGenosId(i))
 
-            do i=1,nAnisG
+                if (tmpIDInt /= DICT_NULL) then
+                    RecTestId(i)=tmpIDInt
+                    testAnimInformativeness(i,:)=GlobalTmpCountInf(tmpIDInt,1:6)
+                endif
+            enddo
+
+            if (any(RecTestId(:)==-99)) print*, "Error - There seems to be unidentifiablecount ",count(RecTestId(:)==-99)," individuals in the test file"
+
+            do i=1,ped%nGenotyped
                 read (36,*) dumC,WorkTmp(:)
                 do j=1,nAnisTest
                     if (trim(TrueGenosId(j))==dumC) then
@@ -3094,7 +2935,7 @@ contains
                 enddo
             enddo
             GenoStratIndex(:)=0
-            do i=1,nAnisP
+            do i=1,ped%pedigreeSize-ped%nDummys
                 if (FinalSetter(i)/=1) then
                     GenoStratIndex(i)=6
                     if (FinalSetter(ped%pedigree(i)%getSireDamNewIDByIndex(3))==1) then
@@ -3241,7 +3082,7 @@ contains
                     ,"   ",SumPat(i),SumMat(i),AveCategoryInformativeness(i,:),CountCatTest(i),trim(Names(i))
             enddo
 
-            do i=1, nAnisP
+            do i=1, ped%pedigreeSize-ped%nDummys
                 if (ped%pedigree(i)%isDummy) then
                     exit
                 endif
@@ -3274,7 +3115,7 @@ contains
     subroutine Cleaner
         use Global
 
-        use alphaimputeinmod
+        use AlphaImputeSpecFileModule
         implicit none
 
         type(AlphaImputeInput), pointer :: inputParams
@@ -3297,7 +3138,7 @@ contains
     subroutine READINJUNK
 
         use Global
-        use alphaimputeinmod
+        use AlphaImputeSpecFileModule
 
         type(AlphaImputeInput), pointer :: inputParams
         integer :: i,dum,j
@@ -3305,12 +3146,12 @@ contains
         inputParams => defaultInput
 
         open (3001,file="fort.2008",status="old")
-        do i=1,nAnisP
+        do i=1,ped%pedigreeSize-ped%nDummys
             read (3001,*) dum,ImputePhase(i,:,1)
             read (3001,*) dum,ImputePhase(i,:,2)
         enddo
 
-        do i=1,nAnisP
+        do i=1,ped%pedigreeSize-ped%nDummys
             do j=1,inputParams%nsnp
                 if ((ImputePhase(i,j,1)/=9).and.(ImputePhase(i,j,2)/=9)) then
                     if (ImputeGenos(i,j)==9) ImputeGenos(i,j)=ImputePhase(i,j,1)+ImputePhase(i,j,2)
@@ -3320,128 +3161,12 @@ contains
 
     end subroutine READINJUNK
 
-    !#############################################################################################################################################################################################################################
-
-    ! SUBROUTINE ClusterIndivByChip(nClusters,ClusterMemberIndv,Centroid)
-    SUBROUTINE ClusterIndivByChip(nClusters)
-        use Global
-        use alphaimputeinmod
-        ! use GlobalClustering
-        implicit none
-
-        type(AlphaImputeInput), pointer :: inputParams
-        integer, intent(IN) :: nClusters              ! Number of different SNP chips
-        ! integer, intent(OUT) :: ClusterMemberIndv(:), Centroid(:)
-
-        integer, allocatable :: res(:)             ! The output
-        integer :: k                               ! The number of unique elements
-        integer :: i, j
-
-        ! integer :: nChips=3, SurrCounter, nClusters, dist, nIterations, NewCluster
-        integer :: SurrCounter,dist,nIterations,NewCluster
-        integer, allocatable :: ClusterMember(:), nSurrPerCluster(:)!, Centroid(:), ClusterMemberIndv(:)
-        logical :: moved
-
-
-        inputParams => defaultInput
-        allocate(res(nAnisG))
-        k = 1
-        res(1) = nSnpsAnimal(1)
-
-        outer: do i=2,size(nSnpsAnimal)
-            do j=1,k
-                if (res(j) == nSnpsAnimal(i)) then
-                    ! Found a match so start looking again
-                    cycle outer
-                end if
-            end do
-            ! No match found so add it to the output
-            k = k + 1
-            res(k) = nSnpsAnimal(i)
-        end do outer
-        ! write(*,advance='no',fmt='(a,i0,a)') 'Unique list has ',k,' elements: '
-        ! write(*,*) res(1:k)
-
-        ! nClusters=nChips
-        SurrCounter=k
-        allocate(ClusterMember(SurrCounter))
-        allocate(ClusterMemberIndv(nAnisG))
-        allocate(centroid(nClusters))
-        allocate(nSurrPerCluster(nClusters))
-
-        ! First clusterization fixing centroids equally distant. Recalculation of centroids
-        Centroid=0
-        nSurrPerCluster=0
-
-        do j=1,nClusters
-            Centroid(j)=((j*inputParams%nsnp/nClusters)+((j-1)*inputParams%nsnp/nClusters))/2
-        enddo
-
-        nIterations=0
-        moved=.TRUE.
-        ClusterMember=0
-        do while (moved==.TRUE. .and. nIterations<=100)
-            nIterations=nIterations+1
-            moved=.FALSE.
-
-            do i=1,SurrCounter
-                ! print *, ClusterMember(i)
-                dist=inputParams%nsnp
-                do j=1,nClusters
-                    if(abs(res(i)-Centroid(j))<dist) then
-                        dist=abs(res(i)-Centroid(j))
-                        NewCluster=j
-                    endif
-                enddo
-                if (NewCluster/=ClusterMember(i)) then
-                    moved=.TRUE.
-                    ClusterMember(i)=NewCluster
-                endif
-            enddo
-            nSurrPerCluster=0
-            Centroid=0
-            do i=1,SurrCounter
-                do j=1,nClusters
-                    if (ClusterMember(i)==j) then
-                        Centroid(j)=Centroid(j)+res(i)
-                        nSurrPerCluster(j)=nSurrPerCluster(j)+1
-                    endif
-                enddo
-            enddo
-            do j=1,nClusters
-                if (nSurrPerCluster(j)/=0) Centroid(j)=Centroid(j)/nSurrPerCluster(j)
-            enddo
-        enddo
-
-        ! Assign individuals to clusters
-        NewCluster=0
-        dist=0
-        print *, size(ClusterMemberIndv)
-        ClusterMemberIndv=0
-
-        ! open (unit=2222,file='nSnpsAnimalCluster.txt',status='unknown')
-        do i=1,nAnisG
-            dist=inputParams%nsnp
-            do j=1,nClusters
-                if(abs(nSnpsAnimal(i)-Centroid(j))<dist) then
-                    dist=abs(nSnpsAnimal(i)-Centroid(j))
-                    NewCluster=j
-                endif
-            enddo
-            if (NewCluster/=ClusterMemberIndv(i)) then
-                ClusterMemberIndv(i)=NewCluster
-            endif
-            ! write(2222,*) i, ClusterMemberIndv(i), Centroid(ClusterMemberIndv(i))
-        enddo
-        ! close(2222)
-
-    end SUBROUTINE ClusterIndivByChip
 
     !#############################################################################################################################################################################################################################
     SUBROUTINE SnpCallRate()
         use Global
 
-        use alphaimputeinmod
+        use AlphaImputeSpecFileModule
         use ISO_Fortran_Env
 
         implicit none
@@ -3454,9 +3179,9 @@ contains
 
         open(newunit=UOutputs, file="." // DASH // "Miscellaneous" // DASH // "SnpCallRateByAnimal.txt",status='unknown')
 
-        do i=1,nAnisG
-            CountMiss=count(Genos(i,:)==9)
-            write(UOutputs,'(a20,6f5.1)') GenotypeId(i), (inputParams%nsnp-CountMiss)*100/real(inputParams%nsnp)
+        do i=1,ped%nGenotyped
+            countMiss = ped%pedigree(ped%genotypeMap(i))%individualGenotype%numMissing()
+            write(UOutputs,'(a20,6f5.1)') ped%pedigree(ped%genotypeMap(i))%originalID, (inputParams%nsnp-CountMiss)*100/real(inputParams%nsnp)
         end do
         close(UOutputs)
 
@@ -3471,23 +3196,19 @@ contains
         integer(kind=1), dimension (:,:,:), intent(inout) :: ImpPhase
 
         integer :: i, j, k
+        integer :: allele, genotype
 
         do j = 1, m
             do i = 1, n
                 do k = 1, 2
-                    if (ImpPhase(i, j, k) < 0) then
+                    allele = ImpPhase(i, j, k)
+                    if (allele/=0 .and. allele/=1 .and. allele/=9) then
                         ImpPhase(i, j, k) = 9
-                        ! ImpGenos(i, j) = 9
-                    end if
-                    if (ImpPhase(i, j, k) > 1) then
-                        ImpPhase(i, j, k) = 9
-                        ! ImpGenos(i, j) = 9
                     end if
                 enddo
-                if (ImpGenos(i, j) < 0) then
-                    ImpGenos(i, j) = 9
-                end if
-                if (ImpGenos(i, j) > 2) then
+                genotype = ImpGenos(i, j)
+                if (genotype/=0 .and. genotype/=1 .and. &
+                    genotype/=2 .and. genotype/=9) then
                     ImpGenos(i, j) = 9
                 end if
             enddo
@@ -3540,9 +3261,9 @@ contains
         use iso_fortran_env
         implicit none
 
-        real(kind=real64) :: etime          ! Declare the type of etime()
-        real(kind=real64) :: elapsed(2)     ! For receiving user and system time
-        real(kind=real64) :: total,Minutes,Hours,Seconds
+        real :: etime          ! Declare the type of etime()
+        real :: elapsed(2)     ! For receiving user and system time
+        real :: total,Minutes,Hours,Seconds
 
         print *, ""
         print *, ""
@@ -3562,299 +3283,7 @@ contains
         open (unit=32,file="." // DASH // "Miscellaneous" // DASH // "Timer.txt",status="unknown")
 
         write(32,'(A27,A7,I3,A9,I3,A9,F6.2)') "Time Elapsed","Hours", INT(Hours),"Minutes",INT(Minutes),"Seconds",Seconds
-
+        close(32)
     end subroutine PrintTimerTitles
 
 end module AlphaImputeModule
-
-
-
-
-!######################################################################
-
-program AlphaImpute
-    ! The program is intended to be run numerous times
-    ! The first time AlphaImpute is run in order to calculate Genotype probabilities (GenoProb)
-    ! The second time, it is run to phase the individuals
-    ! Finally, AlphaImpute should be run to impute genotypes.
-    ! RestartOptions handle this situation, so:
-    !   * inputParams%restartOption=0 => Passes through the whole process: GenoProb, Phasing and Imputing
-    !   * inputParams%restartOption=1 => Makes only GenoProbReadInParameterFile
-    !   * inputParams%restartOption=2 => Makes GenoProb and Phasing
-    !   * inputParams%restartOption=3 => Makes only Imputation. This implies AlphaImpute has to be run
-    !                           already in order to get GenoProb done or Genotype Probabilities
-    !                           Genotype Probabilities have to be edited by hand
-    !   * inputParams%restartOption=4 =>
-    use Global
-    use AlphaImputeModule
-    use informationModule
-    use GlobalVariablesHmmMaCH
-    use Output
-    use AlphaImputeInMod
-    use Imputation
-    use InputMod
-    implicit none
-
-    integer :: markers
-    double precision, allocatable :: GenosProbs(:,:,:)
-    character(len=4096) :: cmd, SpecFile
-
-
-    inputParams => defaultInput
-    if (Command_Argument_Count() > 0) then
-        call get_command_argument(1,cmd)
-        if (cmd(1:2) .eq. "-v") then
-            call PrintVersion
-            call exit(0)
-        end if
-    end if
-
-    if (Command_Argument_Count() > 0) then
-        call Get_Command_Argument(1,SpecFile)
-    else
-        specfile="AlphaImputeSpec.txt"
-    end if
-
-
-    call Titles
-
-    ! use default input, TODO this can be changed
-    allocate(defaultInput)
-    call defaultInput%ReadInParameterFile(SpecFile)
-
-    inputParams => defaultInput
-
-    if (inputParams%hmmoption /= RUN_HMM_NGS) then
-        if (inputParams%restartOption<OPT_RESTART_PHASING) call MakeDirectories(RUN_HMM_NULL)
-
-        !call cpu_time(start)
-        call CountInData
-        !call cpu_time(finish)
-        !print '("Time ReadInData= ",f6.3," seconds.")',finish-start
-
-        !call cpu_time(start)
-        call ReadInData
-        !call cpu_time(finish)
-        !print '("Time ReadInData= ",f6.3," seconds.")',finish-start
-
-        !call cpu_time(start)
-        call SnpCallRate
-        !call cpu_time(finish)
-        !print '("Time SnpCallRate= ",f6.3," seconds.")',finish-start
-
-        !call cpu_time(start)
-        call CheckParentage
-        !call cpu_time(finish)
-        !print '("Time CheckParentage= ",f6.3," seconds.")',finish-start
-
-        if (inputParams%MultiHD/=0) call ClassifyAnimByChips
-
-        !call cpu_time(start)
-        call FillInSnp
-        !call cpu_time(finish)
-        !print '("Time FillInSnp= ",f6.3," seconds.")',finish-start
-
-        !call cpu_time(start)
-        call FillInBasedOnOffspring
-        !call cpu_time(finish)
-        !print '("Time FillInBasedOnOffspring= ",f6.3," seconds.")',finish-start
-
-        !call cpu_time(start)
-        call InternalEdit
-        !call cpu_time(finish)
-        !print '("Time InternalEdit= ",f6.3," seconds.")',finish-start
-
-        !call cpu_time(start)
-        call MakeFiles
-        !call cpu_time(finish)
-        !print '("Time MakeFiles= ",f6.3," seconds.")',finish-start
-
-    else
-
-        call MakeDirectories(RUN_HMM_NGS)
-        call CountInData
-        call ReadInData
-        call SnpCallRate
-        allocate(Reads(nAnisG,inputParams%nsnp))
-        allocate(ImputeGenos(0:nAnisG,inputParams%nsnp))
-        allocate(ImputePhase(0:nAnisG,inputParams%nsnp,2))
-        allocate(SnpIncluded(inputParams%nsnp))
-        call CheckParentage
-        call ReadSeq(inputParams%GenotypeFileUnit)
-    endif
-
-    if (inputParams%hmmoption == RUN_HMM_NGS) then
-
-#ifdef DEBUG
-        write(0,*) 'DEBUG: HMM NGS'
-#endif
-        call MaCHController(inputParams%hmmoption)
-        call FromHMM2ImputePhase
-        call WriteOutResults
-
-    else if (inputParams%hmmoption==RUN_HMM_ONLY) then
-
-#ifdef DEBUG
-        write(0,*) 'DEBUG: HMM only'
-#endif
-
-        print*, ""
-        print*, "Bypass calculation of probabilities and phasing"
-
-    else
-        write(6,*) " "
-        write(6,*) " ","Data editing completed"
-
-        if (inputParams%SexOpt==0) then
-            select case (inputParams%bypassgeneprob)
-            !        if (inputParams%bypassgeneprob==0) then
-        case (0)
-
-#ifdef DEBUG
-            write(0,*) 'DEBUG: Calculate Genotype Probabilites'
-#endif
-
-            if (inputParams%restartOption== OPT_RESTART_ALL .or. inputParams%restartOption== OPT_RESTART_GENEPROB) Then
-
-#ifndef _WIN32
-#if CLUSTER==2
-                write(6,*) ""
-                write(6,*) "Restart option 1 stops program before Geneprobs jobs have been submitted"
-                stop
-#else
-                call GeneProbManagement
-#endif
-#else
-                !call cpu_time(start)
-                call GeneProbManagementWindows
-
-                !call cpu_time(finish)
-                !print '("Time GeneProbManagementWindows= ",f6.3," seconds.")',finish-start
-
-#endif
-
-            endif
-
-            markers = inputParams%nsnp
-            if (inputParams%outopt==1) then
-                markers = inputParams%nSnpRaw
-            end if
-            allocate(GenosProbs(ped%nDummys + nAnisP, markers, 2))
-            call ReReadIterateGeneProbs(GenosProbs, .FALSE., nAnisP)
-            call WriteProbabilities("./Results/GenotypeProbabilities.txt", GenosProbs, ped,nAnisP, inputParams%nsnp)
-            deallocate(GenosProbs)
-
-            if (inputParams%restartOption==OPT_RESTART_GENEPROB) then
-#if CLUSTER==1
-                write(6,*) "Restart option 1 stops program before Geneprobs jobs have finished"
-#elif CLUSTER==0
-                write(6,*) "Restart option 1 stops program after Geneprobs jobs have finished"
-#endif
-                stop
-            endif
-            write(6,*) " "
-            write(6,*) " ","Genotype probabilities calculated"
-            !        endif
-        case (2)
-            markers = inputParams%nsnp
-            if (inputParams%outopt==1) then
-                markers = inputParams%nSnpRaw
-            end if
-            allocate(GenosProbs(ped%nDummys+ nAnisP, markers, 2))
-            call ReReadIterateGeneProbs(GenosProbs, .FALSE., nAnisP)
-            call WriteProbabilities("./Results/GenotypeProbabilities.txt", GenosProbs, ped,nAnisP, inputParams%nsnp)
-            deallocate(GenosProbs)
-            write(6,*) "Restart option 1 stops program after genotype probabilities have been outputted"
-            stop
-        end select
-    endif
-
-
-
-    if (inputParams%managephaseon1off0==1) then
-
-#ifdef DEBUG
-        write(0,*) 'DEBUG: Phase haplotypes with AlphaPhase'
-#endif
-
-        if (inputParams%restartOption<OPT_RESTART_IMPUTATION) Then
-#ifndef _WIN32
-#if CLUSTER==2
-            write(6,*) ""
-            write(6,*) "Restart option 1 stops program before Phasing has been managed"
-            stop
-#else
-            call PhasingManagement
-#endif
-#else
-            !call cpu_time(start)
-            call PhasingManagementWindows
-            !call cpu_time(finish)
-            !print '("Time PhasingManagementWindows= ",f6.3," seconds.")',finish-start
-#endif
-        endif
-
-        if (inputParams%restartOption==OPT_RESTART_PHASING) then
-#if CLUSTER==1
-            write(6,*) "Restart option 2 stops program before Phasing has finished"
-#elif CLUSTER==0
-            write(6,*) "Restart option 2 stops program after Phasing has been managed"
-#endif
-            stop
-        endif
-    endif
-
-    ! print*, " "
-    ! print*, " ","Phasing completed"
-
-    ! This is not necessary, already output in subroutine PhasingManagement
-    if ((inputParams%restartOption/=OPT_RESTART_ALL).and.(inputParams%restartOption<OPT_RESTART_IMPUTATION)) then
-        write(6,*) "Restart option 2 stops program after Phasing has been managed"
-        stop
-    endif
-endif
-
-if (inputParams%hmmoption/=RUN_HMM_NGS) then
-    ! If we only want to phase data, then skip all the imputation steps
-    if (inputParams%PhaseTheDataOnly==0) Then
-        !call cpu_time(start)
-        call ImputationManagement
-        !call cpu_time(finish)
-        !print '("Time ImputationManagement= ",f6.3," seconds.")',finish-start
-
-#ifdef DEBUG
-        write(0,*) 'DEBUG: Write results'
-#endif
-
-        call WriteOutResults
-
-#ifdef DEBUG
-        write(0,*) 'DEBUG: Model Recombination'
-#endif
-
-        ! WARNING: Skip the modelling the recombination because it interferes with HMM propabilites
-        ! TODO:
-        if (inputParams%hmmoption==RUN_HMM_NO) call ModelRecomb
-
-#ifdef DEBUG
-        write(0,*) 'DEBUG: Final Checker'
-#endif
-
-        if (inputParams%TrueGenos1None0==1) then
-            !call cpu_time(start)
-            call FinalChecker
-            !call cpu_time(finish)
-            !print '("Time FinalChecker= ",f6.3," seconds.")',finish-start
-        endif
-        ! call Cleaner
-    endif
-endif
-!call cpu_time(start)
-call PrintTimerTitles
-!call cpu_time(finish)
-!print '("Time call PrintTimerTitles= ",f6.3," seconds.")',finish-start
-
-call RemoveFiles()
-
-end program AlphaImpute
-

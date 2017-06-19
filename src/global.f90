@@ -14,7 +14,6 @@ module PARAMETERS
     integer, parameter :: RUN_HMM_NGS=5
 
     integer, parameter :: MAX_READS_COUNT=100 ! Maximum number of reads for reference and alternative alleles
-
     integer,parameter :: TestVersion=0      !If 1 then this is a development version with intermediate checking, if 0 it is not
 
     logical,parameter :: PicVersion=.FALSE. !If 1 then this is a PIC version with suitability for their system, if 0 it is not
@@ -31,27 +30,27 @@ end module PARAMETERS
 
 module Global
     use PARAMETERS
+    use iso_fortran_env
     use PedigreeModule
+    use AlphaPhaseResultsModule
     implicit none
 
 
 
-    integer :: nAnisG,nAnisRawPedigree,nAnisP
     integer :: CountRawGenos,nAnisInGenderFile
     integer :: MaxLeftRightSwitch,MinSpan
     integer :: nObsDataRaw,UseGP
     integer :: nSnpIterate,AlphaPhasePresent,GeneProbPresent
     integer :: nSnpChips
 
-    integer,allocatable,dimension (:,:) :: Reads,ReferAllele,AlterAllele
-    integer(kind=1),allocatable,dimension (:) :: SnpIncluded,RecIdHDIndex,GenderRaw
-    integer(kind=1),allocatable,dimension (:,:) :: Genos,TempGenos,TmpGenos,MSTermInfo
-    integer(kind=1),allocatable,dimension (:,:) :: ImputeGenos,SireDam
+    integer(kind=1),allocatable,dimension (:) :: SnpIncluded,GenderRaw
+    integer(kind=1),allocatable,dimension (:,:) :: TmpGenos,MSTermInfo
+    integer(kind=1),allocatable,dimension (:,:) :: ImputeGenos
     integer(kind=1),allocatable,dimension (:,:,:) :: ImputePhase,TmpPhase,GlobalWorkPhase
     integer,allocatable :: Setter(:),GpIndex(:,:),GlobalTmpCountInf(:,:)
     integer,allocatable :: GlobalHmmID(:)
-    real,allocatable,dimension (:) :: Maf
-    real,allocatable,dimension (:,:) :: ProbImputeGenos, GPI
+    real(kind=real64),allocatable,dimension (:) :: Maf
+    real,allocatable,dimension (:,:) :: ProbImputeGenos
     real,allocatable,dimension (:,:,:) :: ProbImputePhase
 
     character*(lengan),allocatable :: GenotypeId(:),GenderId(:)
@@ -60,7 +59,23 @@ module Global
     integer, allocatable :: animChip(:)
     type(PedigreeHolder) :: ped !TODO move out of global
 
-    real(kind=4),allocatable :: xnumrelmatHold(:)
+    real(kind=real32),allocatable :: xnumrelmatHold(:)
     integer :: NRMmem, shell, shellmax, shellWarning
+
+    type(AlphaPhaseResultsContainer) :: apResults
+    double precision, allocatable :: GenosProbs(:,:,:) !< output of geneprob
+
+
+
+
+    ! HMM OUTPUT STUFF
+
+        real,allocatable,dimension (:,:) :: ProbImputeGenosHmm
+        real,allocatable,dimension (:,:,:) :: ProbImputePhaseHmm
+        integer, allocatable :: GenosCounts(:,:,:)
+        integer :: GlobalRoundHmm
+        integer(kind=1),allocatable,dimension(:,:,:) :: FullH !< full phase and imputation information from HMM (nanis, snps, haps[2])
+
+
 end module Global
 

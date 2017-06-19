@@ -36,8 +36,8 @@ contains
     subroutine Checker
         use Global
 
-        use Utils
-        use alphaimputeinmod
+        
+        use AlphaImputeSpecFileModule
         use alphahouseMod, only :countLines
         implicit none
 
@@ -57,7 +57,7 @@ contains
 
         allocate(Work(inputParams%nSnpRaw))
         allocate(WorkTmp(inputParams%nSnpRaw))
-        allocate(GenoStratIndex(nAnisP))
+        allocate(GenoStratIndex(ped%pedigreeSize))
 
 
         FileName=trim(inputParams%TrueGenotypeFile)
@@ -85,9 +85,9 @@ contains
         Names(5)="Dam Genotyped"
         Names(6)="Other Relatives Genotyped"
 
-        allocate(FinalSetter(0:nAnisP))
+        allocate(FinalSetter(0:ped%pedigreeSize))
         FinalSetter=0
-        do i=1,nAnisG
+        do i=1,ped%nGenotyped
             read (36,*) dumC,WorkTmp(:)
             Counter=0
             do j=1,inputParams%nSnpRaw
@@ -135,7 +135,7 @@ contains
 
                     endif
                 enddo
-                do i=1,nAnisG
+                do i=1,ped%nGenotyped
                     read (36,*) dumC,WorkTmp(:)
                     do j=1,nAnisTest
                         ! TODO this check can likely be avoided
@@ -154,7 +154,7 @@ contains
 
             endblock
             GenoStratIndex(:)=0
-            do i=1,nAnisP
+            do i=1,ped%pedigreeSize
                 if (FinalSetter(i)/=1) then
                     GenoStratIndex(i)=6
                     if (FinalSetter(ped%pedigree(i)%getSireDamNewIDByIndex(3))==1) then
@@ -253,7 +253,7 @@ contains
                     ,"   ",SumPat(i),SumMat(i),CountCatTest(i),trim(Names(i))
             enddo
 
-            do i=1, nAnisP
+            do i=1, ped%pedigreeSize
                 if (ped%pedigree(i)%isDummy) then
                     EXIT
                 endif
@@ -273,7 +273,7 @@ contains
             enddo
 
             do i=1,nAnisTest
-                do j=1,nAnisP
+                do j=1,ped%pedigreeSize
                     if (trim(TrueGenosId(i))==trim((ped%pedigree(j)%originalID))) then
                         RecTestId(i)=j
                         exit
@@ -281,7 +281,7 @@ contains
                 enddo
             enddo
 
-            do i=1,nAnisG
+            do i=1,ped%nGenotyped
                 read (36,*) dumC,WorkTmp(:)
                 do j=1,nAnisTest
                     if (trim(TrueGenosId(j))==dumC) then
@@ -291,7 +291,7 @@ contains
                 enddo
             enddo
             GenoStratIndex(:)=0
-            do i=1,nAnisP
+            do i=1,ped%pedigreeSize
                 if (FinalSetter(i)/=1) then
                     GenoStratIndex(i)=6
                     if (FinalSetter(ped%pedigree(i)%getSireDamNewIDByIndex(3))==1) then
@@ -391,7 +391,7 @@ contains
                     ,"   ",SumPat(i),SumMat(i),CountCatTest(i),trim(Names(i))
             enddo
 
-            do i=1, nAnisP
+            do i=1, ped%pedigreeSize
                 if (ped%pedigree(i)%isDummy) then
                     exit
                 endif
@@ -418,7 +418,7 @@ contains
 
     subroutine CurrentYield
         use Global
-        use alphaimputeinmod
+        use AlphaImputeSpecFileModule
         implicit none
 
         integer :: CountPatAl,CountMatAl,CountGeno
@@ -430,11 +430,11 @@ contains
         CountMatAl=count(ImputePhase(:,:,2)==9)
         CountGeno=count(ImputeGenos(:,:)/=9)
 
-        PropPatAl=100*(float(CountPatAl)/(nAnisP*inputParams%nsnp))
-        PropMatAl=100*(float(CountMatAl)/(nAnisP*inputParams%nsnp))
+        PropPatAl=100*(float(CountPatAl)/(ped%pedigreeSize*inputParams%nsnp))
+        PropMatAl=100*(float(CountMatAl)/(ped%pedigreeSize*inputParams%nsnp))
 
-        NotKnownStart=(nAnisP*inputParams%nsnp)-CountRawGenos
-        NotKnownEnd=(nAnisP*inputParams%nsnp)-CountGeno
+        NotKnownStart=(ped%pedigreeSize*inputParams%nsnp)-CountRawGenos
+        NotKnownEnd=(ped%pedigreeSize*inputParams%nsnp)-CountGeno
         PropGeno=100*((NotKnownStart-NotKnownEnd)/NotKnownStart)
 
         print*, " "
@@ -448,9 +448,8 @@ contains
     subroutine FromHMM2ImputePhase
         ! Impute alleles from HMM dosage probabilities
         use Global
-        use GlobalVariablesHmmMaCH
 
-        use AlphaImputeInMod
+        use AlphaImputeSpecFileModule
 
         implicit none
 
@@ -459,15 +458,15 @@ contains
 
         inputParams => defaultInput
 
-        do i=1,nAnisG
+        do i=1,ped%nGenotyped
             do j=1,inputParams%nsnp
                 do k=1,2
                     if (FullH(i,j,k)<0.001.and.FullH(i,j,k)>=0.0) Then
-                        ImputePhase(i,j,k)=0
+                        ImputePhase(ped%genotypeMap(i),j,k)=0
                     elseif (FullH(i,j,k)>0.999.and.FullH(i,j,k)<=1.0) then
-                        ImputePhase(i,j,k)=1
+                        ImputePhase(ped%genotypeMap(i),j,k)=1
                     else
-                        ImputePhase(i,j,k)=9
+                        ImputePhase(ped%genotypeMap(i),j,k)=9
                     endif
                 enddo
             enddo
@@ -481,19 +480,22 @@ contains
         ! Phase alleles in the SEX CHROMOSOME whenever it is possible (homozygous case).
         ! Phasing information is store in the variable GlobalWorkPhase
         use Global
-        use AlphaImputeInMod
+        use AlphaImputeSpecFileModule
         implicit none
 
         type(AlphaImputeInput), pointer :: inputParams
         integer :: e,i,j,ParId
+        integer, dimension(:,:) , allocatable :: Genos !  Temp variable
+
+
+        genos = ped%getGenotypesAsArray()
 
         inputParams => defaultInput
         if (defaultInput%SexOpt==1) then                                         ! Sex chromosome
             deallocate(GlobalWorkPhase)
-            allocate(GlobalWorkPhase(0:nAnisP,inputParams%nsnp,2))
-            Genos(0,:)=9                                                        ! Erase any possible information about the phantom parents
+            allocate(GlobalWorkPhase(0:ped%pedigreeSize-ped%nDummys,inputParams%nsnp,2))
             GlobalWorkPhase=9
-            do i=1,nAnisP
+            do i=1,ped%pedigreeSize
                 do j=1,inputParams%nsnp                                                     ! Phase alleles in the homozygous case
                     if (Genos(i,j)==0) GlobalWorkPhase(i,j,:)=0
                     if (Genos(i,j)==2) GlobalWorkPhase(i,j,:)=1

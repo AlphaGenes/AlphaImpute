@@ -2,9 +2,9 @@
 ! The Roslin Institute, The University of Edinburgh - AlphaGenes Group
 !-----------------------------------------------------------------------------------------------------------------------
 !
-! MODULE: AlphaImputeInMod
+! MODULE: AlphaImputeSpecFileModule
 !
-!> @file        AlphaImputeInMod.f90
+!> @file        AlphaImputeSpecFileModule.f90
 !
 ! DESCRIPTION:
 !> @brief       Module holding input parameters
@@ -26,12 +26,13 @@
 
 
 
-module AlphaImputeInMod
+module AlphaImputeSpecFileModule
     use iso_fortran_env
 
     type AlphaImputeInput
         ! box 1
         character(len=300):: PedigreeFile = "Pedigree.txt",GenotypeFile="Genotypes.txt",TrueGenotypeFile="TrueGenotypes.txt",GenderFile="None",InbredAnimalsFile="None", HapListFile="None"
+        character(len=300) :: resultFolderPath
         integer(kind=1) :: TrueGenos1None0
         logical :: PlinkFormat, VCFFormat
 
@@ -55,8 +56,8 @@ module AlphaImputeInMod
         real(kind=real32) :: GenotypeErrorPhase
         logical :: largeDatasets
         integer(kind=int32) :: PhaseSubsetSize, PhaseNIterations
-        integer(kind=int32) :: nProcessors,nProcessGeneProb,nProcessAlphaPhase
-
+        character(len=20) :: iterateMethod
+        integer :: minoverlaphaplotype
         ! box 6
         integer(kind=int32) :: InternalIterations
         integer(kind=1) :: ConservativeHapLibImputation
@@ -65,10 +66,12 @@ module AlphaImputeInMod
         ! box 7
         ! idum is seed
         integer(kind=int32) :: idum
-        integer(kind=int32) :: nHapInSubH,useProcs,nRoundsHmm,HmmBurnInRound
-        real(kind=real32) :: phasedThreshold,imputedThreshold
+        integer(kind=int32) :: nHapInSubH,nRoundsHmm,HmmBurnInRound
+        real(kind=real32) :: make ,imputedThreshold
         logical :: HapList=.FALSE.
         integer(kind=1) :: HMMOption
+        real(kind=real32) :: phasedThreshold                   !< threshold of phase information accept
+
 
         ! box 8
 
@@ -80,7 +83,11 @@ module AlphaImputeInMod
         integer :: AnimalFileUnit, prePhasedFileUnit, pedigreeFileUnit,genotypeFileUnit,GenderFileUnit,HapListUnit
 
         ! other
-        integer(kind=int32) :: nSnpRaw,nAgreeImputeHDLib,nAgreeParentPhaseElim,nAgreeGrandParentPhaseElim,nAgreePhaseElim,nAgreeInternalHapLibElim
+        integer(kind=int32) :: nSnpRaw,nAgreeInternalHapLibElim
+        integer(kind=int32) :: useProcs
+        logical :: cluster
+
+        
     contains
         procedure :: ReadInParameterFile
     end type AlphaImputeInput
@@ -106,19 +113,25 @@ contains
     subroutine ReadInParameterFile(this,SpecFile)
         use AlphaHouseMod, only: parseToFirstWhitespace,splitLineIntoTwoParts,toLower
         use PARAMETERS
+        use omp_lib
 
+        class(AlphaImputeInput), intent(inout),target :: this
         integer :: unit,IOStatus,MultipleHDpanels,i
         character(len=*), intent(in) :: SpecFile
-    class(AlphaImputeInput), optional, intent(inout),target :: this
 
         character(len=300) :: first, line
         character(len=:), allocatable::tag
         character(len=300),dimension(:),allocatable :: second
 
         this%MultiHD = 0
-
+        this%minoverlaphaplotype = 0
+        this%cluster = .false.
+        this%iterateMethod = "Off"
+        this%PhaseNIterations = 1
+        this%resultFolderPath = "Results"
         open(newunit=unit, file=SpecFile, action="read", status="old")
         IOStatus = 0
+        
         READFILE: do while (IOStatus==0)
             read(unit,"(A)", IOStat=IOStatus)  line
             if (len_trim(line)==0) then
@@ -280,7 +293,7 @@ contains
             case("numberphasingruns")
                 this%noPhasing = 1
 
-                if (ToLower(trim(second(1))) == "phasedone") then
+                if (ToLower(trim(second(1))) == "phasedone") then  !phasedone,path,nphaseruns
                     if (size(second) /=3) then
                         goto 4051
                     endif
@@ -291,7 +304,8 @@ contains
                     allocate(character(len(second(2))) :: this%phasePath)
 
                     this%phasePath = second(2)
-                    read(second(3),*) this%nPhaseInternal
+                    read(second(3),*) this%nPhaseExternal
+                    this%nPhaseInternal = this%nPhaseExternal*2
                 else if(ToLower(trim(second(1))) == "nophase") then
                     this%noPhasing = 1
                     this%managephaseon1off0 = 0
@@ -333,6 +347,11 @@ contains
                 endif
                 do i=1,size(second)
                     read(second(i), *) this%CoreAndTailLengths(i)
+                    if (this%CoreAndTailLengths(i) > this%nsnp) then
+
+                        write(error_unit, *) "Error: core and Tail lengths is given a number than largest number of snps specified in nsnps"
+                        stop 40523
+                    endif
                 enddo
 
             case("corelengths")
@@ -366,17 +385,44 @@ contains
                 endif
 
             case("numberofprocessorsavailable")
-                read(second(1),*) this%nProcessors
+                read(second(1),*) this%useProcs
+                write(error_unit,*) "WARNING: numberofprocessorsavailable is legacy and will be removed in future versions. Please use option ParallelProcessors instead"
+                if (this%useProcs > OMP_get_num_procs()) then
+                    write(error_unit,*) "WARNING - more processors than are available are specified under numberofprocessorsavailable"
+                    write(error_unit,*) this%useProcs, " specified, ", OMP_get_num_procs(), " available."
+                endif
 
             case("largedatasets")
                 if (ToLower(trim(second(1)))== "yes") then
                     this%largedatasets=.true.
                     read(second(2),*) this%PhaseSubsetSize
                     read(second(3),*) this%PhaseNIterations
+                    if (size(second) < 4 ) then
+                        this%iterateMethod  = "RandomOrder"
+                    else 
+                        if (ToLower(trim(second(4)))== "off") then
+                            this%iterateMethod  = "Off"
+                        else if (ToLower(trim(second(4)))== "randomorder") then
+                            this%iterateMethod  = "RandomOrder"
+                        else if (ToLower(trim(second(4)))== "inputorder") then
+                            this%iterateMethod  = "InputOrder"
+                        else
+                            this%iterateMethod= "Off"
+
+                        endif
+                    endif
+
                 else
                     this%largedatasets=.false.
 
                 endif
+            
+            case("minoverlaphaplotype")
+                read(second(1),*) this%minoverlaphaplotype
+                if (this%minoverlaphaplotype < 0) then
+                    write(error_unit,*) "ERROR: Min minoverlap haplotype size is set incorrectly!"
+                endif
+
 
                 ! box 6
             case("internaliterations")
@@ -419,8 +465,7 @@ contains
                 read(second(1), *) this%HmmBurnInRound
             case("rounds")
                 read(second(1), *)this%nRoundsHMM
-            case("parallelprocessors")
-                read(second(1), *) this%useProcs
+            
             case("seed")
                 read(second(1), *)this%idum
 
@@ -448,10 +493,10 @@ contains
 
             !  box 8
             case("preprocessdataonly")
-                if (second(1)=="No") then
+                if (ToLower(second(1))=="no") then
                     this%PreProcess=.FALSE.
                 else
-                    if (second(1)=="Yes") then
+                    if (ToLower(second(1))=="yes") then
                         this%PreProcess=.TRUE.
                     else
                         write(error_unit,*) "Stop - Preprocess of data option incorrectly specified"
@@ -473,7 +518,7 @@ contains
 
             case("userdefinedalphaphaseanimalsfile")
                 this%UserDefinedHD=0
-                if (second(1)/="None") then
+                if (tolower(trim(second(1)))/="none") then
                     this%UserDefinedHD=1
                     open (newunit=this%AnimalFileUnit,file=trim(second(1)),status="old")
                 endif
@@ -487,11 +532,11 @@ contains
                     open (newunit=this%prePhasedFileUnit,file=trim(second(1)),status="old")
                 endif
             case("bypassgeneprob")
-                if (trim(second(1))=="No") then
+                if (trim(tolower(second(1)))=="no") then
                     this%BypassGeneProb=0
-                else if (trim(second(1))=="Yes") then
+                else if (trim(tolower(second(1)))=="yes") then
                     this%BypassGeneProb=1
-                else if (trim(second(1))=="Probabilities") then
+                else if (trim(tolower(second(1)))=="probabilities") then
                     this%bypassgeneprob=2
                 else
                     write(error_unit,*) "bypassgeneprob not correctly specified"
@@ -499,50 +544,48 @@ contains
                 endif
             case("restartoption")
                 read(second(1),*) this%restartOption
-
+            case("cluster")
+               if(ToLower(trim(second(1))) == "no") then
+                    this%cluster = .false.
+                else if (ToLower(trim(second(1))) == "yes") then
+                    this%cluster = .true.
+                endif
+            case("parallelprocessors")
+                read(second(1), *) this%useProcs
+                if (this%useProcs > OMP_get_num_procs()) then
+                    write(error_unit,*) "WARNING - more processors than are available are specified under parallelprocessors"
+                    write(error_unit,*) this%useProcs, " set vs ",OMP_get_num_procs()," available"
+                endif
+            case("resultfolderpath")
+                read(second(1), *) this%resultFolderPath                
             case default
                 write(*,"(A,A)") trim(tag), " is not valid for the AlphaImpute Spec File."
                 cycle
             end select
         end if
     end do READFILE
-
+    deallocate(tag)
     open (newUnit=this%pedigreeFileUnit,file=trim(this%PedigreeFile),status="old")
     open (newUnit=this%genotypeFileUnit,file=trim(this%GenotypeFile),status="old")
     if (this%SexOpt==1) open (newUnit=this%genderFileUnit,file=trim(this%GenderFile),status="old")
 
-    this%nProcessAlphaPhase=this%nProcessors-this%nProcessGeneProb ! Never used!
-
     ! Set parameters for parallelisation
     if (this%nPhaseInternal==2) then
-        this%nAgreeImputeHDLib=1
-        this%nAgreeParentPhaseElim=1
-        this%nAgreePhaseElim=1
         this%nAgreeInternalHapLibElim=1
     endif
     if (this%nPhaseInternal==4) then
-        this%nAgreeImputeHDLib=2
-        this%nAgreeParentPhaseElim=2
-        this%nAgreePhaseElim=2
         this%nAgreeInternalHapLibElim=2
     endif
     if (this%nPhaseInternal==6) then
-        this%nAgreeImputeHDLib=3
-        this%nAgreeParentPhaseElim=3
-        this%nAgreePhaseElim=3
         this%nAgreeInternalHapLibElim=3
     endif
     if (this%nPhaseInternal>6) then
-        this%nAgreeImputeHDLib=4
-        this%nAgreeParentPhaseElim=4
-        this%nAgreeGrandParentPhaseElim=4
-        this%nAgreePhaseElim=4
         this%nAgreeInternalHapLibElim=4
     endif
 
     this%nSnpRaw = this%nsnp
-
-    !$  CALL OMP_SET_NUM_THREADS(this%nProcessors)
+    
+    !$  CALL OMP_SET_NUM_THREADS(this%useProcs)
 end subroutine ReadInParameterFile
 
-end module AlphaImputeInMod
+end module AlphaImputeSpecFileModule
