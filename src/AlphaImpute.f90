@@ -1904,12 +1904,12 @@ contains
 
         inputParams => defaultInput
 
-        allocate(TempCore(inputParams%nPhaseExternal))
-        allocate(TempCplusT(inputParams%nPhaseExternal))
+        allocate(TempCore(inputParams%nPhaseInternal))
+        allocate(TempCplusT(inputParams%nPhaseInternal))
 
         allocate(GpIndex(inputParams%useProcs,2))
 
-
+        print *,"DEBUG1", inputParams%nPhaseExternal
         do i=1,inputParams%nPhaseExternal
             TempCore(i)=inputParams%CoreLengths(i)
             TempCore(i+inputParams%nPhaseExternal)=inputParams%CoreLengths(i)
