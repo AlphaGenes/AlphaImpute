@@ -151,7 +151,7 @@ program AlphaImpute
             inputParamsHMM%HapList = inputParams%HapList
 
             res = ped%getGenotypesAsArray
-            call AlphaImputeHMMRunner(inputParamsHMM, res, ImputePhase, ped, ProbImputeGenosHmm, ProbImputePhaseHmm, GenosCounts, FullH)
+            call AlphaImputeHMMRunner(inputParamsHMM, res, ped, ProbImputeGenosHmm, ProbImputePhaseHmm, GenosCounts, FullH)
 
 
         end block

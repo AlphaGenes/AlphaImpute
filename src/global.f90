@@ -37,34 +37,25 @@ module Global
 
 
 
-    integer :: CountRawGenos,nAnisInGenderFile
+    integer :: CountRawGenos
     integer :: MaxLeftRightSwitch,MinSpan
-    integer :: nObsDataRaw,UseGP
     integer :: nSnpIterate,AlphaPhasePresent,GeneProbPresent
-    integer :: nSnpChips
 
-    integer(kind=1),allocatable,dimension (:) :: SnpIncluded,GenderRaw
-    integer(kind=1),allocatable,dimension (:,:) :: TmpGenos,MSTermInfo
-    integer(kind=1),allocatable,dimension (:,:,:) :: TmpPhase,GlobalWorkPhase
+    integer(kind=1),allocatable,dimension (:) :: SnpIncluded
+    integer(kind=1),allocatable,dimension (:,:) :: MSTermInfo
+    integer(kind=1),allocatable,dimension (:,:,:) :: GlobalWorkPhase
     integer,allocatable :: Setter(:),GpIndex(:,:),GlobalTmpCountInf(:,:)
-    integer,allocatable :: GlobalHmmID(:)
     real(kind=real64),allocatable,dimension (:) :: Maf
     real,allocatable,dimension (:,:) :: ProbImputeGenos
     real,allocatable,dimension (:,:,:) :: ProbImputePhase
 
-    character*(lengan),allocatable :: GenotypeId(:),GenderId(:)
+    ! character*(lengan),allocatable :: GenotypeId(:),GenderId(:)
 
-    integer, allocatable :: nSnpsAnimal(:), Centroid(:), ClusterMemberIndv(:)
     integer, allocatable :: animChip(:)
     type(PedigreeHolder) :: ped !TODO move out of global
 
-    real(kind=real32),allocatable :: xnumrelmatHold(:)
-    integer :: NRMmem, shell, shellmax, shellWarning
-
     type(AlphaPhaseResultsContainer) :: apResults
     double precision, allocatable :: GenosProbs(:,:,:) !< output of geneprob
-
-
 
 
     ! HMM OUTPUT STUFF

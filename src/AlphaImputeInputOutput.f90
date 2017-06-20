@@ -292,8 +292,11 @@ contains
                     if (SnpIncluded(j)==1) then ! Check if this SNP has to be considered (may be it has been removed during the edition step)
                         h=h+1
                         ! Impute phase only if this locus is phased (in the PrePhased file)
-                        if ((WorkPhase(j,1)==0).or.(WorkPhase(j,1)==1)) ImputePhase(tmpID,h,1)=WorkPhase(j,1)
-                        if ((WorkPhase(j,2)==0).or.(WorkPhase(j,2)==1)) ImputePhase(tmpID,h,2)=WorkPhase(j,2)
+                        if ((WorkPhase(j,1)==0).or.(WorkPhase(j,1)==1)) then
+                            call ped%pedigree(tmpId)%individualPhase(1)%setPhase(h,WorkPhase(j,1))
+                        else if ((WorkPhase(j,2)==0).or.(WorkPhase(j,2)==1)) then
+                            call ped%pedigree(tmpId)%individualPhase(2)%setPhase(h,WorkPhase(j,2))
+                        endif
                     endif
                 enddo
                 CountPrePhased=CountPrePhased+1
