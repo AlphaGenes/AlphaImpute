@@ -138,9 +138,9 @@ contains
         if (inputParams%restartOption==OPT_RESTART_IMPUTATION) then
                 open (unit=109,file="Tmp2345678.txt",status="unknown")
                 do i=1,ped%nGenotyped
-                    write (109,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(pedgenotypeMap(i))%individalPhase(1)%haplotypeToIntegerArray()
-                    write (109,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(pedgenotypeMap(i))%individalPhase(2)%haplotypeToIntegerArray()
-                    write (109,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(pedgenotypeMap(i))%individualGenotype%toIntegerArray()
+                    write (109,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%genotypeMap(i))%individualPhase(1)%toIntegerArray()
+                    write (109,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%genotypeMap(i))%individualPhase(2)%toIntegerArray()
+                    write (109,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%genotypeMap(i))%individualGenotype%toIntegerArray()
                 enddo
                 close (109)
                 write(*,*) "Restart option 3 stops program before Iterate Geneprob jobs have been finished"
@@ -159,13 +159,13 @@ contains
                 do k=1,2
                        block                          
                        integer(kind=1) :: phase                         
-                       phase = ped%pedigree(i)%individalPhase(k)%getPhase(j)                         
+                       phase = ped%pedigree(i)%individualPhase(k)%getPhase(j)                         
                        if (phase/=9) ProbImputePhase(i,j,k)=float(phase)                     
                        end block
                 enddo
                 block
                 integer(kind=1) :: geno
-                geno = ped%pedigree(i)%individalgenotype%getGenotype(j)    
+                geno = ped%pedigree(i)%individualGenotype%getGenotype(j)    
                 if (geno/=9) then
                     ProbImputeGenos(i,j)=float(geno)
                 else
@@ -297,8 +297,8 @@ contains
             if (inputParams%restartOption==OPT_RESTART_IMPUTATION) then
                 open (unit=109,file="Tmp2345678.txt",status="unknown")
                 do i=1,ped%nGenotyped
-                    write (109,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)')  ped%pedigree(ped%genotypemap(i))%individalPhase(1)%haplotypeToIntegerArray()
-                    write (109,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)')  ped%pedigree(ped%genotypemap(i))%individalPhase(2)%haplotypeToIntegerArray()
+                    write (109,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)')  ped%pedigree(ped%genotypemap(i))%individualPhase(1)%toIntegerArray()
+                    write (109,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)')  ped%pedigree(ped%genotypemap(i))%individualPhase(2)%toIntegerArray()
                     write (109,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)')  ped%pedigree(ped%genotypeMap(i))%individualGenotype%toIntegerArray()
                 enddo
                 close (109)
@@ -320,7 +320,7 @@ contains
                 do k=1,2
                     block 
                         integer(kind=1) :: phase
-                        phase = ped%pedigree(i)%individalPhase(k)%getPhase(j)
+                        phase = ped%pedigree(i)%individualPhase(k)%getPhase(j)
                         if (phase/=9) ProbImputePhase(i,j,k)=float(phase)
                     end block
                 enddo
@@ -330,7 +330,7 @@ contains
                     geno = ped%pedigree(i)%individualGenotype%getGenotype(j)
                 if (geno/=9) then
                     ProbImputeGenos(i,j)=float(geno)
-/                else
+                else
                     ProbImputeGenos(i,j)=sum(ProbImputePhase(i,j,:))
                 endif
                 end block
@@ -435,6 +435,7 @@ contains
     subroutine IterateInsteadOfGeneProbs
         use Global
         use Imputation
+        use ConstantModule
         use AlphaImputeSpecFileModule
         implicit none
 
@@ -458,7 +459,7 @@ contains
                 Counter=0
                 do i=1,ped%pedigreeSize-ped%nDummys
                     genos = ped%pedigree(i)%individualGenotype%getGenotype(j)
-                    if (genos=MISSINGGENOTYPECODE) then
+                    if (genos==MISSINGGENOTYPECODE) then
                         TempAlleleFreq(j)=TempAlleleFreq(j)+genos
                         Counter=Counter+2
                     endif
@@ -485,7 +486,7 @@ contains
                     do e=1,2
                           block                          
                            integer(kind=1) :: phase                         
-                           phase = ped%pedigree(i)%individalPhase(e)%getPhase(j)                         
+                           phase = ped%pedigree(i)%individualPhase(e)%getPhase(j)                         
                            if (phase/=9) ProbImputePhase(i,j,e)=float(phase)                     
                            end block
                     enddo
@@ -499,7 +500,7 @@ contains
                         do j=1,nSnpIterate
                             block                          
                                 integer(kind=1) :: phase                         
-                                phase = ped%pedigree(i)%individalPhase(e)%getPhase(j)  
+                                phase = ped%pedigree(i)%individualPhase(e)%getPhase(j)  
                                 if (phase==9) ProbImputePhase(i,j,e)=TempAlleleFreq(j)
                             end block
                         enddo
@@ -508,7 +509,7 @@ contains
                         do j=1,nSnpIterate
                             block                          
                                 integer(kind=1) :: phase                         
-                                phase = ped%pedigree(i)%individalPhase(e)%getPhase(j)  
+                                phase = ped%pedigree(i)%individualPhase(e)%getPhase(j)  
                                 if (phase==9) then
                                     ProbImputePhase(i,j,e)=(sum(ProbImputePhase(ParId,j,:))/2)
                                 endif
@@ -532,7 +533,7 @@ contains
                     do k=1,2
                            block                          
                            integer(kind=1) :: phase                         
-                           phase = ped%pedigree(i)%individalPhase(k)%getPhase(j)                         
+                           phase = ped%pedigree(i)%individualPhase(k)%getPhase(j)                         
                            if (phase/=9) ProbImputePhase(i,j,k)=float(phase)                     
                            end block
                     enddo
@@ -544,6 +545,7 @@ contains
                     else
                         ProbImputeGenos(i,j)=sum(ProbImputePhase(i,j,:))
                     endif
+                    end block
                 enddo
             enddo
 
@@ -564,9 +566,9 @@ contains
             do i=1,ped%pedigreeSize-ped%nDummys
                 do j=1,nSnpIterate
                     if (ProbImputeGenos(i,j)==-9.0) ProbImputeGenos(i,j)=sum(ProbImputePhase(i,j,:))
-                    if (ProbImputeGenos(i,j)>1.999)  ped%pedigree(i)%individualGenotype%setGenotype(j,2)
-                    if (ProbImputeGenos(i,j)<0.0001) ped%pedigree(i)%individualGenotype%setGenotype(j,0)
-                    if ((ProbImputeGenos(i,j)>0.999).and.(ProbImputeGenos(i,j)<1.00001)) ped%pedigree(i)%individualGenotype%setGenotype(j,1)
+                    if (ProbImputeGenos(i,j)>1.999)  call ped%pedigree(i)%individualGenotype%setGenotype(j,2)
+                    if (ProbImputeGenos(i,j)<0.0001) call ped%pedigree(i)%individualGenotype%setGenotype(j,0)
+                    if ((ProbImputeGenos(i,j)>0.999).and.(ProbImputeGenos(i,j)<1.00001)) call ped%pedigree(i)%individualGenotype%setGenotype(j,1)
                 enddo
             enddo
 
@@ -641,10 +643,11 @@ contains
                             
                             phase = ped%pedigree(i)%individualPhase(e)%getPhase(j)
                             if (phase==9) ProbImputePhase(i,j,e)=TempAlleleFreq(j)
+                            end block
                         enddo
                     endif
                     do j=1,nSnpIterate
-                        if (ped%pedigree(i)%individualPhase(e)%getPhase(j)=9) then
+                        if (ped%pedigree(i)%individualPhase(e)%isMissing(j)) then
                             ProbImputePhase(i,j,e)=(sum(ProbImputePhase(ParId,j,:))/2)
                         endif
                     enddo
@@ -656,7 +659,7 @@ contains
                     do k=1,2
                         block
                         integer(kind=1) :: phase
-                        phase = ped%pedigree(i)%individalPhase(k)%getPhase(j)                         
+                        phase = ped%pedigree(i)%individualPhase(k)%getPhase(j)                         
                         if (phase/=9) ProbImputePhase(i,j,k)=float(phase)                     
                         end block
                     enddo
@@ -665,20 +668,21 @@ contains
                         integer(kind=1) :: geno
 
                         geno = ped%pedigree(i)%individualGenotype%getGenotype(j)
-                    if (geno/=9) then
-                        ProbImputeGenos(i,j)=float(geno)
-                    else
-                        ProbImputeGenos(i,j)=sum(ProbImputePhase(i,j,:))
-                    endif
+                        if (geno/=9) then
+                            ProbImputeGenos(i,j)=float(geno)
+                        else
+                            ProbImputeGenos(i,j)=sum(ProbImputePhase(i,j,:))
+                        endif
+                    end block
                 enddo
             enddo
 
             do i=1,ped%pedigreeSize-ped%nDummys
                 do j=1,nSnpIterate
                     if (ProbImputeGenos(i,j)==-9.0) ProbImputeGenos(i,j)=sum(ProbImputePhase(i,j,:))
-                    if (ProbImputeGenos(i,j)>1.999) ped%pedigree(i)%individualGenotype%setGenotype(j,2)
-                    if (ProbImputeGenos(i,j)<0.0001) ped%pedigree(i)%individualGenotype%setGenotype(j,0)
-                    if ((ProbImputeGenos(i,j)>0.999).and.(ProbImputeGenos(i,j)<1.00001)) ped%pedigree(i)%individualGenotype%setGenotype(j,1)
+                    if (ProbImputeGenos(i,j)>1.999) call ped%pedigree(i)%individualGenotype%setGenotype(j,2)
+                    if (ProbImputeGenos(i,j)<0.0001) call ped%pedigree(i)%individualGenotype%setGenotype(j,0)
+                    if ((ProbImputeGenos(i,j)>0.999).and.(ProbImputeGenos(i,j)<1.00001)) call ped%pedigree(i)%individualGenotype%setGenotype(j,1)
                 enddo
             enddo
 
@@ -711,6 +715,9 @@ contains
 
         integer(kind=1),allocatable,dimension (:,:) :: ImputeGenosHMM
         integer(kind=1),allocatable,dimension (:,:,:) :: ImputePhaseHMM
+
+        integer(kind=1),allocatable,dimension (:,:) :: tmpGenos
+        integer(kind=1),allocatable,dimension (:,:,:) :: tmpPhase
 
         type(AlphaImputeInput), pointer :: inputParams
         character(len=300) :: TmpId
@@ -843,8 +850,9 @@ contains
                             ImputePhaseHMM(ped%genotypeMap(i),j,:) = 0
                         elseif (n1>n2) then
                             ! TODO check if this should be hmm rather than anything else 
-                            ped%pedigree(ped%genotypeMap(i))%individualGenotype%setGenotype(j,1)
-                            ! ImputeGenosHMM(ped%genotypeMap(i),j)   = 1
+                            ! call ped%pedigree(ped%genotypeMap(i))%individualGenotype%setGenotype(j,1)
+
+                            ImputeGenosHMM(ped%genotypeMap(i),j)   = 1
                             if (ProbImputePhaseHmm(ped%genotypeMap(i),j,1) > ProbImputePhaseHmm(ped%genotypeMap(i),j,2) ) then
                                 ImputePhaseHMM(ped%genotypeMap(i),j,1) = 1
                                 ImputePhaseHMM(ped%genotypeMap(i),j,2) = 0
@@ -955,7 +963,7 @@ contains
 
                 if (SnpIncluded(j)==1) then
                     l=l+1
-                    TmpGenos(:,l)=ped%getAllGenotypesAtPosition(j)
+                    TmpGenos(:,l)=ped%getAllGenotypesAtPositionWithUngenotypedAnimals(j)
                     TmpPhase(:,l,1)=ped%getPhaseAtPositionUngenotypedAnimals(j,1)
                     TmpPhase(:,l,2)=ped%getPhaseAtPositionUngenotypedAnimals(j,2)
                 endif
@@ -990,7 +998,7 @@ contains
 
                     close(42)
                 end if
-            endblock
+            end block
             do i=1, ped%pedigreeSize-ped%nDummys
                 ! TODO these might want to be tmpGenos and tmp hpase
                 write (33,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,TmpPhase(ped%inputmap(i),:,1)
@@ -1187,10 +1195,10 @@ contains
                     ImputationQuality(i,2)=ImputationQuality(i,2)+abs(ProbImputeGenos(i,j)-((Maf(j)**4)+(4*(Maf(j)**2)*((1.0-Maf(j))**2))+(1.0-Maf(j)**4)))
                 enddo
                 ImputationQuality(i,2)=ImputationQuality(i,2)/inputParams%nSnpRaw
-                ImputationQuality(i,3)=float(inputParams%nSnpRaw-ped%pedigree(i)%individualPhase(1)%numberMissing))/inputParams%nSnpRaw
-                ImputationQuality(i,4)=float(inputParams%nSnpRaw-ped%pedigree(i)%individualPhase(2)%numberMissing)/inputParams%nSnpRaw
+                ImputationQuality(i,3)=float(inputParams%nSnpRaw-ped%pedigree(i)%individualPhase(1)%numberMissing())/inputParams%nSnpRaw
+                ImputationQuality(i,4)=float(inputParams%nSnpRaw-ped%pedigree(i)%individualPhase(2)%numberMissing())/inputParams%nSnpRaw
                 ImputationQuality(i,5)=(ImputationQuality(i,3)+ImputationQuality(i,4))/2
-                ImputationQuality(i,6)=float(inputParams%nSnpRaw-ped%pedigree(i)%individualGenotype%numMissing)/inputParams%nSnpRaw
+                ImputationQuality(i,6)=float(inputParams%nSnpRaw-ped%pedigree(i)%individualGenotype%numMissing())/inputParams%nSnpRaw
                 write (50,'(a20,20000f7.2)') ped%pedigree(i)%originalID,ImputationQuality(i,:)
             enddo
 
@@ -1199,7 +1207,7 @@ contains
 #endif
 
             do j=1,inputParams%nSnpRaw
-                write (51,'(i10,20000f7.2)') j,float(((ped%pedigreeSize-ped%nDummys-(ped%nDummys+1))+1)-ped%countMissingGenotypesNoDummys() /((ped%pedigreeSize-ped%nDummys-(ped%nDummys+1))+1)
+                write (51,'(i10,20000f7.2)') j,float((((ped%pedigreeSize-ped%nDummys-(ped%nDummys+1))+1)-ped%countMissingGenotypesNoDummys()) /((ped%pedigreeSize-ped%nDummys-(ped%nDummys+1))+1))
             enddo
 
             inputParams%WellPhasedThresh=inputParams%WellPhasedThresh/100
@@ -1353,7 +1361,7 @@ contains
                         phase(2)  = ped%pedigree(pedId)%individualPhase(2)%getPhase(j)
                         if ((phase(1)/=phase(2)).and.(phase(1)/=9).and.(phase(2)/=9))  then
                             HetStart=j
-                            tmpPhase = ped%pedigree(i)%individualPhase(PatMat)%getPosition(HetStart)
+                            tmpPhase = ped%pedigree(i)%individualPhase(PatMat)%getPhase(HetStart)
                             if (tmpPhase==phase(1)) then
                                 WorkRight(HetStart)=1
                                 RSide=1
@@ -1370,7 +1378,7 @@ contains
                         do j=HetStart+1,nSnpFinal
                             phase(1) = ped%pedigree(pedId)%individualPhase(RSide)%getPhase(j)
                             tmpPhase = ped%pedigree(i)%individualPhase(patMat)%getPhase(j)
-                            if (tmpPhase /= phase(1)).and.(phase(1)/=9).and.(tmpPhase=9)) then
+                            if ((tmpPhase /= phase(1)).and.(phase(1)/=9).and.(tmpPhase==9)) then
                                 RSide=abs((RSide-1)-1)+1
                                 CountRightSwitch=CountRightSwitch+1
                             endif
@@ -1382,7 +1390,7 @@ contains
                     do j=nSnpFinal,1,-1
                         phase(1) = ped%pedigree(pedId)%individualPhase(1)%getPhase(j)
                         phase(2) = ped%pedigree(pedId)%individualPhase(2)%getPhase(j)
-                        if ((phase(1)/=phase(2)).and.(phase(1)/=9).and.(phase(2)=9))  then
+                        if ((phase(1)/=phase(2)).and.(phase(1)/=9).and.(phase(2)==9))  then
                             HetEnd=j
                             tmpPhase = ped%pedigree(i)%individualPhase(patMat)%getPhase(HetEnd)
                             if (tmpPhase==phase(1)) then
@@ -1402,7 +1410,7 @@ contains
 
                             phase(1) = ped%pedigree(i)%individualPhase(patMat)%getPhase(j)
                             phase(2) = ped%pedigree(pedId)%individualPhase(LSide)%getPhase(j)
-                            if (phase(1)/=phase(2)).and.(phase(2)/=9).and.(phase(1)/=9)) then
+                            if (phase(1)/=phase(2) .and.(phase(2)/=9).and.(phase(1)/=9)) then
                                 LSide=abs((LSide-1)-1)+1
                                 CountLeftSwitch=CountLeftSwitch+1
                             endif
@@ -1526,16 +1534,17 @@ contains
 
                                 phase1 = ped%pedigree(PedId)%individualPhase(1)%getPhase(j)
                                 phase2 = ped%pedigree(PedId)%individualPhase(2)%getPhase(j)
-                                if ([phase1 ]/= phase2) then
-                                    if (phase1=9).and.(phase2/=9)) then
-                                        ped%pedigree(i)%individualPhase(e)%setPhase(j,9)
-                                        ped%pedigree(i)%individualGenotype%setGenotype(j,9)
+                                if (phase1/= phase2) then
+                                    if ((phase1==9).and.(phase2/=9)) then
+                                        call ped%pedigree(i)%individualPhase(e)%setPhase(j,9)
+                                        call ped%pedigree(i)%individualGenotype%setGenotype(j,9)
                                         ProbImputePhase(i,j,e)&
                                             =((1.0-(LengthVec(j)*Counter))*ped%pedigree(pedid)%individualPhase(gamA)%getPhase(j)&
-                                            +(LengthVec(j)*Counter*ped%pedigree(pedid)%individualPhase(gamB)%getPhase(j)
+                                            +(LengthVec(j)*Counter*ped%pedigree(pedid)%individualPhase(gamB)%getPhase(j)))
                                         ProbImputeGenos(i,j)=ProbImputePhase(i,j,1)+ProbImputePhase(i,j,2)
                                     endif
                                 endif
+                                end block
                             endif
                         endif
                     enddo
@@ -1552,9 +1561,11 @@ contains
                 enddo
 
             enddo
-            WorkPhase(i,:,:)=ped%getPhaseAsArray()
+            
 
         enddo
+
+        WorkPhase=ped%getPhaseAsArray()
 
         open (unit=33,file=trim(inputparams%resultFolderPath) // DASH // "ImputePhase.txt",status="unknown")
         open (unit=34,file=trim(inputparams%resultFolderPath) // DASH // "ImputeGenotypes.txt",status="unknown")
@@ -1590,11 +1601,14 @@ contains
 
         integer :: i, fileUnit,j
         type(AlphaImputeInput), pointer :: inputParams
+        integer(kind=1),dimension(:,:),allocatable :: tmpPhase
+        integer(kind=1),dimension(:),allocatable :: tmpGeno
 
         inputParams => defaultInput
 
-      
-
+        
+        allocate(tmpPhase(inputParams%nsnp, 2))
+        allocate(tmpGeno(inputParams%nsnp))
         if (inputParams%restartOption==4) then
 
             if (allocated(Maf)) then
@@ -1604,9 +1618,13 @@ contains
 
             open (newunit=fileUnit,file="Tmp2345678.txt",status="old")
             do i=1,ped%nGenotyped
-                read (fileUnit,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%genotypemap(i))%individalPhase(1)%haplotypeToIntegerArray()
-                read (fileUnit,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%genotypemap(i))%individalPhase(2)%haplotypeToIntegerArray()
-                read (fileUnit,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%genotypemap(i))%individualGenotype%toIntegerArray()
+                read (fileUnit,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') j,tmpPhase(:,1)
+                read (fileUnit,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') j,tmpPhase(:,2)
+                read (fileUnit,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') j,tmpGeno(:)
+
+                ped%pedigree(ped%genotypemap(i))%individualPhase(1) = newHaplotypeInt(tmpPhase(:,1))
+                ped%pedigree(ped%genotypemap(i))%individualPhase(2) = newHaplotypeInt(tmpPhase(:,2))
+                ped%pedigree(ped%genotypemap(i))%IndividualGenotype = newGenotypeInt(tmpGeno) 
             enddo
             close (fileUnit)
         endif
@@ -1618,7 +1636,8 @@ contains
 
         close(fileUnit)
 
-
+        deallocate(tmpPhase)
+        deallocate(tmpGeno)
         ! TODO this is called twice...from iterate geneprobnew
         call IterateMakeGenotype
 
@@ -1632,7 +1651,8 @@ contains
         use AlphaImputeSpecFileModule
         implicit none
 
-        integer :: h,i,j,dum,StSnp,EnSnp,counter,fileUnit,geneprobfile,mafFile, tmpG(nSnpIterate), tmpPhase(nSnpIterate,2)
+        integer :: h,i,j,dum,StSnp,EnSnp,counter,fileUnit,geneprobfile,mafFile
+        integer(kind=1) :: tmpG(nSnpIterate), tmpPhase(nSnpIterate,2)
         real :: PatAlleleProb(nSnpIterate,2),MatAlleleProb(nSnpIterate,2),HetProb(nSnpIterate),GeneProbWork(nSnpIterate,4)
         character(len=300) :: filout
         type(AlphaImputeInput), pointer :: inputParams
@@ -1651,7 +1671,7 @@ contains
 
                 ped%pedigree(ped%genotypemap(i))%individualPhase(1) = newHaplotypeInt(tmpPhase(:,1))
                 ped%pedigree(ped%genotypemap(i))%individualPhase(2) = newHaplotypeInt(tmpPhase(:,2))
-                ped%pedigree(ped%genotypemap(i))%individualgenotype() = newGenotypeInt(tmpG)
+                ped%pedigree(ped%genotypemap(i))%individualgenotype = newGenotypeInt(tmpG)
             enddo
             close (fileUnit)
         endif
@@ -1696,7 +1716,7 @@ contains
                         phase1 = ped%pedigree(i)%individualPhase(1)%getPhase(j)
                         phase2 = ped%pedigree(i)%individualPhase(2)%getPhase(j)
                         
-                        if ((PatAlleleProb(j,1)>=GeneProbThresh).and.(==9)) then
+                        if ((PatAlleleProb(j,1)>=GeneProbThresh).and.(phase1==9)) then
                             call ped%pedigree(i)%individualPhase(1)%setPhase(j,0)
                         else if ((PatAlleleProb(j,2)>=GeneProbThresh).and.(phase1==9)) then
                             call ped%pedigree(i)%individualPhase(1)%setPhase(j,1)
@@ -1714,7 +1734,7 @@ contains
                             ProbImputePhase(i,j,1)=float(phase)
                         endif
                         phase = ped%pedigree(i)%individualPhase(2)%getPhase(j)
-                        if (phase=9) then
+                        if (phase==9) then
                             ProbImputePhase(i,j,2)=GeneProbWork(j,2)+GeneProbWork(j,4)
                         else
                             ProbImputePhase(i,j,2)=float(phase)
@@ -1750,10 +1770,10 @@ contains
         use Global
         implicit none
 
-        integer :: i,j
+        integer :: i
 
         do i=1,ped%pedigreeSize-ped%nDummys
-            ped%pedigree(i)%individualGenotype%setFromHaplotypesIfMissing(ped%pedigree(i)%individualPhase(1),ped%pedigree(i)%individualPhase(2))
+            call ped%pedigree(i)%individualGenotype%setFromHaplotypesIfMissing(ped%pedigree(i)%individualPhase(1),ped%pedigree(i)%individualPhase(2))
         enddo
 
 
@@ -1772,14 +1792,14 @@ contains
 
         do i=1,ped%pedigreeSize-ped%nDummys
 
-            comp2 = ped%pedigree(i)%individualGenotype%complement(ped%pedigree(i)%individalPhase(1))
-            comp1 = ped%pedigree(i)%individualGenotype%complement(ped%pedigree(i)%individalPhase(2))
+            comp2 = ped%pedigree(i)%individualGenotype%complement(ped%pedigree(i)%individualPhase(1))
+            comp1 = ped%pedigree(i)%individualGenotype%complement(ped%pedigree(i)%individualPhase(2))
 
-            ped%pedigree(i)%individalPhase(1))%setFromOtherIfMissing(comp1)
-            ped%pedigree(i)%individalPhase(2))%setFromOtherIfMissing(comp2)
+            call ped%pedigree(i)%individualPhase(1)%setFromOtherIfMissing(comp1)
+            call ped%pedigree(i)%individualPhase(2)%setFromOtherIfMissing(comp2)
 
-            call ped%pedigree(i)%individalPhase(1)%setErrorToMissing()
-            call ped%pedigree(i)%individalPhase(2)%setErrorToMissing()
+            call ped%pedigree(i)%individualPhase(1)%setErrorToMissing()
+            call ped%pedigree(i)%individualPhase(2)%setErrorToMissing()
         enddo
 
 
@@ -1792,7 +1812,7 @@ contains
         use AlphaImputeSpecFileModule
         implicit none
 
-        integer :: e,i,j,PedLoc, id
+        integer :: e,i,PedLoc, id
         type(AlphaImputeInput), pointer :: inputParams
         type(genotype) :: tmpGeno
         inputParams => defaultInput
@@ -1879,7 +1899,7 @@ contains
             GlobalWorkPhase(0,:,:)=9
 
             ! todo  -feel this can be optimised- do we need to do this?            
-            ped%setPhaseFromArray(GlobalWorkPhase)
+            call ped%setPhaseFromArray(GlobalWorkPhase)
 
             allocate(GlobalTmpCountInf(ped%pedigreeSize-ped%nDummys,6))
             GlobalTmpCountInf(:,:)=0

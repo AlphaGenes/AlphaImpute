@@ -261,7 +261,7 @@ contains
         use AlphaImputeSpecFileModule
 
         integer :: h,j,k,nAnisPrePhased,CountPrePhased,tmpID
-        integer, allocatable,dimension(:,:) :: WorkPhase
+        integer(kind=1), allocatable,dimension(:,:) :: WorkPhase
         character(len=300) :: dumC
         type(AlphaImputeInput), pointer :: inputParams
 

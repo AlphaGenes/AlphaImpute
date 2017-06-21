@@ -20,7 +20,7 @@ module PARAMETERS
 
     integer,parameter :: SleepParameter=1!00
 
-    integer,parameter :: lengan=20,MissingGenotypeCode=9,OffspringFillMin=10
+    integer,parameter :: lengan=20,OffspringFillMin=10
     integer,parameter :: ImputeFromHDLibraryCountThresh=1,ImputeFromHDPhaseThresh=1
     integer,parameter :: ImputeFromParentCountThresh=1,ImputeFromGrandParentCountThresh=1
     real,parameter :: DisagreeThreshold=0.05,GeneProbThresh=0.99

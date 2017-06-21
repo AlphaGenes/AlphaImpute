@@ -150,8 +150,8 @@ program AlphaImpute
             inputParamsHMM%phasedThreshold = inputParams%phasedThreshold
             inputParamsHMM%HapList = inputParams%HapList
 
-            res = ped%getGenotypesAsArray
-            call AlphaImputeHMMRunner(inputParamsHMM, res, ped, ProbImputeGenosHmm, ProbImputePhaseHmm, GenosCounts, FullH)
+            res = ped%getGenotypesAsArray()
+            call AlphaImputeHMMRunner(inputParamsHMM, ped, ProbImputeGenosHmm, ProbImputePhaseHmm, GenosCounts, FullH)
 
 
         end block
