@@ -28,6 +28,7 @@
 
 module AlphaImputeSpecFileModule
     use iso_fortran_env
+    use ConstantModule
 
     type AlphaImputeInput
         ! box 1
@@ -37,7 +38,7 @@ module AlphaImputeSpecFileModule
         logical :: PlinkFormat, VCFFormat
 
         ! box 2
-        integer(kind=1) :: SexOpt,HetGameticStatus,HomGameticStatus
+        integer(kind=1) :: SexOpt,HetGameticStatus, HomGameticStatus
 
         ! box 3
         integer(kind=int32) :: nSnp,MultiHD
@@ -140,7 +141,7 @@ contains
 
             call splitLineIntoTwoParts(trim(line), first, second)
             tag = parseToFirstWhitespace(first)
-            if (first(1:1)=="=" .or. len(trim(line))==0) then
+            if (first(1:1)=="=" .or. first(1:1) == DEFAULTCOMMENT .or. len(trim(line))==0) then
                 cycle
             else
                 select case(trim(tag))
