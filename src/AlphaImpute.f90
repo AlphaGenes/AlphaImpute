@@ -970,12 +970,16 @@ contains
             enddo
 
             block
-                integer :: tmpIDInt
+                integer :: tmpIDInt,f
                 if (inputParams%inteditstat == 1) then
                     open (unit=42,file=trim(inputParams%GenotypeFile),status='old')
-                    do i=1,ped%nGenotyped
-                        read (42,*) TmpId,WorkTmp(:)
+                    do
+                        read (42,*, iostat=f) TmpId,WorkTmp(:)
 
+                        if (f /= 0) then
+                            exit
+                        endif
+                        
                         tmpIDInt = ped%dictionary%getValue(trim(tmpID))
 
                         if (tmpIDInt /= DICT_NULL) then
@@ -1971,12 +1975,12 @@ contains
 
         inputParams => defaultInput
 
-        allocate(TempCore(inputParams%nPhaseExternal))
-        allocate(TempCplusT(inputParams%nPhaseExternal))
+        allocate(TempCore(inputParams%nPhaseInternal))
+        allocate(TempCplusT(inputParams%nPhaseInternal))
 
         allocate(GpIndex(inputParams%useProcs,2))
 
-
+        print *,"DEBUG1", inputParams%nPhaseExternal
         do i=1,inputParams%nPhaseExternal
             TempCore(i)=inputParams%CoreLengths(i)
             TempCore(i+inputParams%nPhaseExternal)=inputParams%CoreLengths(i)
