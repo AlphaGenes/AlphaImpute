@@ -646,9 +646,9 @@ do f=1,2
             hapLib = newHaplotypeLibrary(nsnps=CoreLength, storeSize=500, stepSize=500)
 
 
-            !$OMP PARALLEL DO &
-            !$OMP DEFAULT(SHARED) &
-            !$OMP PRIVATE(i,e,CompPhase,id,tmpHap)
+            !$!OMP PARALLEL DO &
+            !$!OMP DEFAULT(SHARED) &
+            !$!OMP PRIVATE(i,e,CompPhase,id,tmpHap)
             do i=1,ped%pedigreesize-ped%ndummys
                 do e=1,2
                     ! WARNING: If GeneProbPhase has been executed, that is, if not considering the Sex Chromosome, then MSTermInfo={0,1}.
@@ -666,18 +666,21 @@ do f=1,2
                     ! NOTE: Since there is code in order to populate the Haplotype Library in
                     !       in AlphaPhase, it can be convenient to create a share procedure in
                     !       AlphaHouse
+                    !$!OMP CRITICAL
                     if (CompPhase==1) then
- 
+                            
                             id = hapLib%hasHap(tmphap)
                             if (id == 0) then 
                              ! If haplotype is not in the library, then
                              ! a new haplotype has been found, then populate the library
+                                
                                 id = hapLib%addHap(tmphap)
                             endif
-                      endif
+                    endif
+                      !$!OMP END CRITICAL
                 enddo
             enddo
-            !$OMP END PARALLEL DO
+            !$!OMP END PARALLEL DO
 
             ! WARNING: This code does not match the corresponding code of the subroutine ImputeFromHDLibrary
             !          In ImputeFromHDLibrary, there are two steps, counting agreements and impute
@@ -686,7 +689,7 @@ do f=1,2
 
             !$OMP PARALLEL DO &
             !$OMP DEFAULT(SHARED) &
-            !$OMP PRIVATE(i,j,e,tmpHap,BanBoth,matches,workHap,Ban,workGeno,phase,AnimalOn)
+            !$OMP FIRSTPRIVATE(i,j,e,tmpHap,BanBoth,matches,workHap,Ban,workGeno,phase,AnimalOn)
             do i=1,ped%pedigreesize-ped%ndummys            
                 BanBoth=0
                 do e=1,2
@@ -751,6 +754,7 @@ do f=1,2
                 enddo
             enddo  
             !$OMP END PARALLEL DO
+
             ! Prepare the core for the next cycle
             CoreStart=CoreStart+LoopIndex(l,2)
             CoreEnd=CoreEnd+LoopIndex(l,2)
@@ -821,7 +825,7 @@ end subroutine InternalHapLibImputationOld
                 integer :: e,g,i,j,GamA,GamB,PosHDInd
                 integer :: StartSnp,EndSnp,Gam1,Gam2,AnimalOn(ped%pedigreeSize,2)
                 integer(kind=1),allocatable,dimension (:,:,:,:) :: Temp
-                integer :: unknownFreeIterator, TempCount
+                integer :: unknownFreeIterator
                 integer(kind=1) :: tmpHDPhase
 
                 type(haplotype) :: tmpPhase(2)
