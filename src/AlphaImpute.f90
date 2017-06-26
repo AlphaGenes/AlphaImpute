@@ -1034,6 +1034,7 @@ contains
                 end if
                 allocate(ProbImputePhase(0:ped%pedigreeSize,inputParams%nSnpRaw,2))
 
+                print *,"DEBUG",ped%pedigreeSize
                 call ped%setGenotypeFromArray(tmpGenos)
                 call ped%setPhaseFromArray(TmpPhase)
                 if (inputParams%SexOpt==0) then
@@ -1826,6 +1827,9 @@ contains
                 do e=1,2
                     PedLoc=e+1
                     id = ped%pedigree(i)%getSireDamNewIDByIndex(pedLoc)
+                    if (id == 0) then
+                        cycle
+                    endif
                     tmpGeno = newGenotypeHap(ped%pedigree(id)%IndividualPhase(1),ped%pedigree(id)%individualPhase(2))
                     call tmpGeno%setHaplotypeFromGenotypeIfMissing(ped%pedigree(i)%individualPhase(e)) 
                 enddo
@@ -1835,12 +1839,17 @@ contains
                 if (ped%pedigree(i)%gender==inputParams%HomGameticStatus) then
                     do e=1,2
                         id = ped%pedigree(i)%getSireDamNewIDByIndex(e+1)
+                        if (id == 0) then
+                            cycle
+                        endif
                         tmpGeno = newGenotypeHap(ped%pedigree(id)%IndividualPhase(1),ped%pedigree(id)%individualPhase(2))
                         call tmpGeno%setHaplotypeFromGenotypeIfMissing(ped%pedigree(i)%individualPhase(e)) 
                     enddo
                 else
                     id = ped%pedigree(i)%getSireDamNewIDByIndex(inputParams%HomGameticStatus+1)
-                     id = ped%pedigree(i)%getSireDamNewIDByIndex(pedLoc)
+                     if (id == 0) then
+                        cycle
+                    endif
                     tmpGeno = newGenotypeHap(ped%pedigree(id)%IndividualPhase(1),ped%pedigree(id)%individualPhase(2))
                     call tmpGeno%setHaplotypeFromGenotypeIfMissing(ped%pedigree(i)%individualPhase(1)) 
                     call tmpGeno%setHaplotypeFromGenotypeIfMissing(ped%pedigree(i)%individualPhase(2))                

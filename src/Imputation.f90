@@ -56,7 +56,6 @@ CONTAINS
 
 
 
-        print *," in imputation"
 
         ! WARNING: Need to disuss this part of code with John. Nonsense going on here!
 
@@ -163,16 +162,24 @@ write(0,*) 'DEBUG: Mach Finished'
                             print*, " "
                             print*, " ","Imputation of base animals completed"
 
+
+                            call ped%WriteoutPhase("Results/" //"beforeLoops")
+
                             do loop=1,inputParams%InternalIterations
                                 print*, " "
                                 print*, "Performing imputation loop",loop
 
                                 call PhaseElimination                   ! Major Sub-Step 5 (Hickey et al., 2012; Appendix A)
                                 
+
+                                    call ped%WriteoutPhase("Results/" //"afterPhase")
+
                                 if (inputParams%sexopt==1) then
                                     call EnsureHetGametic
                                 end if
                                 call GeneralFillIn
+
+                                    call ped%WriteoutPhase("Results/" //"afterGeneral")
 
                                 print*, " "
                                 print*, " ","Parent of origin assigmnent of high density haplotypes completed"
@@ -237,9 +244,9 @@ write(0,*) 'DEBUG: Mach Finished'
                                 print*, " "
                                 CALL DATE_AND_TIME(time=timeOut)
                                 print*, " ","Internal haplotype library imputation completed at: ", timeOut
-                                                      
-                             enddo
 
+                                call ped%WriteoutPhase("Results/" //"endLoop")       
+                             enddo
 
                             call ManageWorkLeftRight
 
@@ -275,6 +282,8 @@ write(0,*) 'DEBUG: Mach Finished'
                         deallocate(GlobalWorkPhase)
                     endif
                 endif
+
+                print *, "DEBUG: END IMPUTATION LOOPS"
 
 
             END SUBROUTINE ImputationManagement
@@ -648,7 +657,8 @@ do f=1,2
 
             !$!OMP PARALLEL DO &
             !$!OMP DEFAULT(SHARED) &
-            !$!OMP PRIVATE(i,e,CompPhase,id,tmpHap)
+            !$!OMP PRIVATE(i,e,tmphap) &
+            !$!OMP FIRSTPRIVATE(compPhase)
             do i=1,ped%pedigreesize-ped%ndummys
                 do e=1,2
                     ! WARNING: If GeneProbPhase has been executed, that is, if not considering the Sex Chromosome, then MSTermInfo={0,1}.
@@ -668,7 +678,6 @@ do f=1,2
                     !       AlphaHouse
                     !$!OMP CRITICAL
                     if (CompPhase==1) then
-                            
                             id = hapLib%hasHap(tmphap)
                             if (id == 0) then 
                              ! If haplotype is not in the library, then
@@ -689,7 +698,8 @@ do f=1,2
 
             !$OMP PARALLEL DO &
             !$OMP DEFAULT(SHARED) &
-            !$OMP FIRSTPRIVATE(i,j,e,tmpHap,BanBoth,matches,workHap,Ban,workGeno,phase,AnimalOn)
+            !$OMP PRIVATE(i,j,e,BanBoth,matches,Ban,workGeno,phase,tmpHap) &
+            !$OMP FIRSTPRIVATE(workHap)
             do i=1,ped%pedigreesize-ped%ndummys            
                 BanBoth=0
                 do e=1,2
@@ -938,8 +948,6 @@ end subroutine InternalHapLibImputationOld
 
                     enddo
                 enddo
-
-                print *,"SECOND DO:"
 
                 do e=1,2
                     do j=1,inputParams%nsnp
@@ -1653,9 +1661,13 @@ end subroutine InternalHapLibImputationOld
                 implicit none
 
                 call ParentHomoFill                     ! Minor sub-step 1. Parent Homozygous fill in
+                print *,"DEBUG3"
                 call PhaseComplement                    ! Minor sub-step 2. Phase Complement
+                print *,"DEBUG4"
                 call ImputeParentByProgenyComplement    ! Minor sub-step 3. Impute Parents from Progeny Complement
+                print *,"DEBUG5"
                 call MakeGenotype                       ! Minor sub-step 4. Make Genotype
+                print *,"DEBUG6"
                 ! if (TestVersion==1) call CurrentYield
                 ! if (TestVersion==1) call Checker
 
@@ -1795,6 +1807,7 @@ end subroutine InternalHapLibImputationOld
                         ! Sex chromosome
                         if (inputParams%sexopt==1) then
                             do k=1,inputParams%nsnp
+                            print *,"debug45"
                                 phase1 = ped%pedigree(i)%individualPhase(1)%getPhase(k)
                                 phase2 = ped%pedigree(i)%individualPhase(2)%getPhase(k)
                                 ! Mat gamete missing -> fill if offspring suggest heterozygous
@@ -1843,7 +1856,7 @@ end subroutine InternalHapLibImputationOld
                                     do l=1,ped%pedigree(i)%nOffs
 
                                         tmpChild => ped%pedigree(i)%offsprings(l)%p
-                                        childPhase = ped%pedigree(tmpChild%id)%individualPhase(sireDam)%getPhase(k)
+                                        childPhase = tmpChild%individualPhase(sireDam)%getPhase(k)
                                         ! This is the only difference with the inputParams%sexopt=0 code below. Duplicating
                                         ! the code can be avoided by including the IF statement here instead than
                                         ! outside the SNPs loop.
@@ -1914,12 +1927,13 @@ end subroutine InternalHapLibImputationOld
                                     if (phase2==0) Count0=1
                                     do l=1,ped%pedigree(i)%nOffs
                                         tmpChild => ped%pedigree(i)%offsprings(l)%p
-                                        childPhase = ped%pedigree(tmpChild%id)%individualPhase(sireDam)%getPhase(k)
+                                        
                                         if (tmpChild%sirePointer == ped%pedigree(i)) then
                                             sireDam = 1
                                         else
                                             sireDam = 2
                                         endif
+                                        childPhase = ped%pedigree(tmpChild%id)%individualPhase(sireDam)%getPhase(k)
 
                                         if (childPhase==0) Count0=Count0+1
                                         if (childPhase==1) Count1=Count1+1
@@ -2129,6 +2143,8 @@ end subroutine InternalHapLibImputationOld
                 inputParams => defaultInput
                 MaxLeftRightSwitch=4; MinSpan=200
                 call WorkLeftRight
+
+
                 if (inputParams%sexopt==1) then
                     call EnsureHetGametic
                 end if
@@ -2702,6 +2718,8 @@ end subroutine InternalHapLibImputationOld
                             TempVec=9
                             LengthVec=0.0
                             StartJ=1
+
+
                             do j=StartJ,inputParams%nsnp
                                 ! Initalize variables StartDis and EndDis
                                 ! StartDis is the first allele where different directions differ
@@ -2784,7 +2802,7 @@ end subroutine InternalHapLibImputationOld
                         
                             end block
 
-                            GlobalWorkPhase= ped%getPhaseAsArray()
+
 
                             !$$$$$$$$$$$$$$$$$$$
 
