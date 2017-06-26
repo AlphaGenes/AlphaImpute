@@ -997,7 +997,7 @@ do f=1,2
 
                     ! If haplotype is partially phased  
 
-                    if (.not. tmpHap%allMissingOrError() .and. .not. tmpHap%allPresent()) then
+                    if (.not. tmpHap%allMissingOrError() .and. .not. tmpHap%fullyPhased()) then
                         ! Identify matching haplotypes in library]
                         ! THIS SHOULD PROBABLY USE A NEW FUNCTION IN HAPLIB (match) THAT DOESN'T TEST ERRORS BUT FOR NOW...
                         matches = hapLib%matchWithError(tmpHap,0)
@@ -1558,7 +1558,7 @@ end subroutine InternalHapLibImputationOld
                                      if (.not. tmpHap%allMissingOrError()) then
                                         ! TODO - this can probably be removed - and this should be made a logical
                                         PatMatDone(e) = .true.
-                                        if (.not. tmpHap%allPresent()) then
+                                        if (.not. tmpHap%fullyPhased()) then
                                                                                
                                             matches = apResults%results(h)%libraries(g)%matchWithError(tmpHap,ImputeFromHDLibraryCountThresh)
 
