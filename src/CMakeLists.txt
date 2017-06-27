@@ -2,9 +2,9 @@ SET(ALPHAIMPUTE_src
             AlphaImputeSpecFileModule.f90
             global.f90
             AlphaImputeInputOutput.f90
-            informationModule.f90    
             Imputation.f90
             AlphaImpute.f90
+            HeuristicGeneprob.f90
             main.f90
 
 )

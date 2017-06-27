@@ -734,7 +734,7 @@ contains
 
         allocate(WorkTmp(inputParams%nSnpRaw))
 
-
+        call ped%writeOutGenotypes("Results/" //"writeOutREsultsGeno")      
 
         write(cm,'(I7)') inputParams%nSnpRaw !for formatting
         cm = adjustl(cm)
@@ -1034,7 +1034,6 @@ contains
                 end if
                 allocate(ProbImputePhase(0:ped%pedigreeSize,inputParams%nSnpRaw,2))
 
-                print *,"DEBUG",ped%pedigreeSize
                 call ped%setGenotypeFromArray(tmpGenos)
                 call ped%setPhaseFromArray(TmpPhase)
                 if (inputParams%SexOpt==0) then
@@ -1989,7 +1988,6 @@ contains
 
         allocate(GpIndex(inputParams%useProcs,2))
 
-        print *,"DEBUG1", inputParams%nPhaseExternal
         do i=1,inputParams%nPhaseExternal
             TempCore(i)=inputParams%CoreLengths(i)
             TempCore(i+inputParams%nPhaseExternal)=inputParams%CoreLengths(i)
