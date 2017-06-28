@@ -734,7 +734,7 @@ contains
 
         allocate(WorkTmp(inputParams%nSnpRaw))
 
-        call ped%writeOutGenotypes("Results/" //"writeOutREsultsGeno")      
+          
 
         write(cm,'(I7)') inputParams%nSnpRaw !for formatting
         cm = adjustl(cm)
@@ -794,6 +794,8 @@ contains
                 write (33,*) ped%pedigree(ped%inputmap(i))%originalID,ped%pedigree(ped%inputmap(i))%individualPhase(2)%toIntegerArray()
                 write (34,*) ped%pedigree(ped%inputmap(i))%originalID,ped%pedigree(ped%inputmap(i))%individualGenotype%toIntegerArray()
             enddo
+
+
             ! close(new)
 
             if (inputParams%hmmoption /= RUN_HMM_NO) then
@@ -809,10 +811,10 @@ contains
                     allocate(ImputePhaseHMM(0:ped%pedigreeSize,inputParams%nSnpraw,2))
                 end if
                 if (.not. allocated(ProbImputeGenos)) then
-                    allocate(ProbImputeGenos(0:ped%pedigreeSize-ped%nDummys,inputParams%nSnpraw))
+                    allocate(ProbImputeGenos(0:ped%pedigreeSize,inputParams%nSnpraw))
                 end if
                 if (.not. allocated(ProbImputePhase)) then
-                    allocate(ProbImputePhase(0:ped%pedigreeSize-ped%nDummys,inputParams%nSnpraw,2))
+                    allocate(ProbImputePhase(0:ped%pedigreeSize,inputParams%nSnpraw,2))
                 end if
                 if (.not. allocated(maf)) then
                     allocate(Maf(inputParams%nSnp))           
@@ -948,11 +950,11 @@ contains
 
 
             if (inputParams%outopt == 1) then
-                allocate(TmpGenos(0:ped%pedigreeSize-ped%nDummys,inputParams%nSnpRaw))
-                allocate(TmpPhase(0:ped%pedigreeSize-ped%nDummys,inputParams%nSnpRaw,2))
+                allocate(TmpGenos(ped%pedigreeSize,inputParams%nSnpRaw))
+                allocate(TmpPhase(ped%pedigreeSize,inputParams%nSnpRaw,2))
             else
-                allocate(TmpGenos(0:ped%pedigreeSize-ped%nDummys,inputParams%nSnp))
-                allocate(TmpPhase(0:ped%pedigreeSize-ped%nDummys,inputParams%nSnp,2))
+                allocate(TmpGenos(ped%pedigreeSize,inputParams%nSnp))
+                allocate(TmpPhase(ped%pedigreeSize,inputParams%nSnp,2))
             endif
             TmpGenos=9
             TmpPhase=9
@@ -961,6 +963,7 @@ contains
             l=0
             do j=1,inputParams%nSnpRaw
 
+
                 if (SnpIncluded(j)==1) then
                     l=l+1
                     TmpGenos(:,l)=ped%getAllGenotypesAtPositionWithUngenotypedAnimals(j)
@@ -968,6 +971,17 @@ contains
                     TmpPhase(:,l,2)=ped%getPhaseAtPositionUngenotypedAnimals(j,2)
                 endif
             enddo
+
+            block
+                integer :: unit
+                open(newunit=unit, file="Results/test", status="unknown")
+                do i=1, ped%pedigreeSize-ped%nDummys
+                    write (unit,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,tmpGenos(ped%inputmap(i),:)
+                    
+                enddo
+                close(unit)
+
+            end block
 
             block
                 integer :: tmpIDInt,f
@@ -1003,8 +1017,10 @@ contains
                     close(42)
                 end if
             end block
+
+            
+
             do i=1, ped%pedigreeSize-ped%nDummys
-                ! TODO these might want to be tmpGenos and tmp hpase
                 write (33,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,TmpPhase(ped%inputmap(i),:,1)
                 write (33,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,TmpPhase(ped%inputmap(i),:,2)
                 write (34,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,tmpGenos(ped%inputmap(i),:)
@@ -1295,13 +1311,13 @@ contains
             endif
             GpIndex(inputParams%useProcs,2)=inputParams%nsnp
         endif
-        allocate(GlobalWorkPhase(0:ped%pedigreeSize-ped%nDummys,nSnpFinal,2))
-        allocate(WorkPhase(0:ped%pedigreeSize-ped%nDummys,nSnpFinal,2))
+        allocate(GlobalWorkPhase(0:ped%pedigreeSize,nSnpFinal,2))
+        allocate(WorkPhase(0:ped%pedigreeSize,nSnpFinal,2))
         allocate(TempVec(nSnpFinal))
         allocate(LengthVec(nSnpFinal))
         allocate(WorkLeft(nSnpFinal))
         allocate(WorkRight(nSnpFinal))
-        allocate(TempWork(0:ped%pedigreeSize-ped%nDummys,nSnpFinal,2))
+        allocate(TempWork(0:ped%pedigreeSize,nSnpFinal,2))
         allocate(PatAlleleProb(nSnpFinal,2))
         allocate(MatAlleleProb(nSnpFinal,2))
         allocate(GeneProbWork(nSnpFinal,4))
@@ -1575,6 +1591,9 @@ contains
         open (unit=34,file=trim(inputparams%resultFolderPath) // DASH // "ImputeGenotypes.txt",status="unknown")
         open (unit=40,file=trim(inputparams%resultFolderPath) // DASH // "ImputePhaseProbabilities.txt",status="unknown")
         open (unit=41,file=trim(inputparams%resultFolderPath) // DASH // "ImputeGenotypeProbabilities.txt",status="unknown")
+
+
+        call ped%writeOutGenotypes((inputparams%resultFolderPath) // DASH // "ModelRecomb.txt")
         block
             integer :: tmpID
             do i=1, ped%pedigreeSize - ped%nDummys

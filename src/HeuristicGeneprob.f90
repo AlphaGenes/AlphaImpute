@@ -110,4 +110,34 @@ module HeuristicGeneprobModule
 
     end subroutine HeuristicGeneprob
 
-end module HeuristicGeneprobModule
+
+
+    subroutine outputGenosProbs(filename,GenosProbs, ped, nsnp )
+
+        use PedigreeModule
+
+        character(len=*), intent(in) :: filename
+
+        real, dimension(:,:,:), allocatable, intent(in) :: genosProbs
+        integer, intent(in) :: nsnp
+
+        type(PedigreeHolder),intent(in) :: ped
+        character(:), allocatable :: rowfmt
+
+        integer :: i,j,unit
+
+        open(newunit=unit, file=filename)
+        WRITE(rowfmt,'(A,I9,A)') '(a,',nsnp+10,'f10.4)'
+        do i=1, ped%pedigreeSize
+
+            do j=1, nsnp                    
+                write(unit,rowfmt) ped%pedigree(i)%originalID, genosProbs(i,j,1)
+                write(unit,rowfmt) ped%pedigree(i)%originalID, genosProbs(i,j,2)
+            enddo
+
+        enddo
+
+        close(unit)
+
+    end subroutine outputGenosProbs
+end module HeuristicGeneprobModule 

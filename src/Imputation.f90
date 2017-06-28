@@ -56,6 +56,9 @@ CONTAINS
 
 
 
+        call ped%writeOutGenotypes("Results/" //"startimpMan")    
+
+
 
         ! WARNING: Need to disuss this part of code with John. Nonsense going on here!
 
@@ -128,7 +131,7 @@ write(0,*) 'DEBUG: Mach Finished'
             if (inputParams%NoPhasing==1) then
                 ! Major sub-step 2 as explained in Hickey et al. (2012; Appendix A)
                 call BaseAnimalFillIn
-
+                 call ped%writeOutGenotypes("Results/" //"afterbase1")  
                     ! Impute phase whenever a pre-phase file exists
                     if (inputParams%PrePhased==1) call ReadInPrePhasedData
 
@@ -137,6 +140,11 @@ write(0,*) 'DEBUG: Mach Finished'
 
                     ! General imputation procedures
                     call GeneralFillInInit
+
+                    call ped%writeOutGenotypes("Results/" //"aftergeneral1")  
+
+
+
                         if (inputParams%HMMOption==RUN_HMM_PREPHASE) Then
                             block
                                 use AlphaHmmInMod
@@ -191,6 +199,8 @@ write(0,*) 'DEBUG: Mach Finished'
                                     call EnsureHetGametic
                                 end if
 
+                                 call ped%WriteoutPhase("Results/" //"after4")
+
 
                                 call GeneralFillIn
                                 call RestrictedWorkLeftRight            ! Major Sub-Step 8 (Hickey et al., 2012; Appendix A)
@@ -198,6 +208,9 @@ write(0,*) 'DEBUG: Mach Finished'
                                     call EnsureHetGametic
                                 end if
                                 call GeneralFillIn
+
+                                 call ped%WriteoutPhase("Results/" //"after81")
+
                                 print*, " "
                                 CALL DATE_AND_TIME(time=timeOut)
                                 print*, " ","Imputation from high-density parents completed at: ",trim(timeOut)
@@ -207,13 +220,20 @@ write(0,*) 'DEBUG: Mach Finished'
                                 if (inputParams%sexopt==1) then
                                     call EnsureHetGametic
                                 end if
+
+                                 call ped%WriteoutPhase("Results/" //"after3")
+
                                 call GeneralFillIn
                                 call RestrictedWorkLeftRight            ! Major Sub-Step 8 (Hickey et al., 2012; Appendix A)
+                                call ped%WriteoutPhase("Results/" //"after82")
                                 if (inputParams%sexopt==1) then
                                     call EnsureHetGametic
                                 end if
                                 call GeneralFillIn
                                 CALL DATE_AND_TIME(time=timeOut)
+
+                                 
+
                                 print*, " "
                                 print*, " ","Haplotype library imputation completed at: ",trim(timeOut)
 
@@ -223,13 +243,20 @@ write(0,*) 'DEBUG: Mach Finished'
                                     call EnsureHetGametic
                                 end if
                                 call GeneralFillIn
+
+                                 call ped%WriteoutPhase("Results/" //"after7")
+
+
                                 call RestrictedWorkLeftRight            ! Major Sub-Step 8 (Hickey et al., 2012; Appendix A)
+                                                                 call ped%WriteoutPhase("Results/" //"after83")
                                 if (inputParams%sexopt==1) then
                                     call EnsureHetGametic
                                 end if
                                 call GeneralFillIn
                                 print*, " "
                                 CALL DATE_AND_TIME(time=timeOut)
+
+
                                 print*, " ","Internal imputation from parents haplotype completed at: ",timeOut
 
                                 call InternalHapLibImputationOLD           ! Major Sub-Step 6 (Hickey et al., 2012; Appendix A)
@@ -240,10 +267,17 @@ write(0,*) 'DEBUG: Mach Finished'
                                 if (inputParams%sexopt==1) then
                                     call EnsureHetGametic
                                 end if
+
+
+                                 call ped%WriteoutPhase("Results/" //"after6")
+
                                 call RestrictedWorkLeftRight            ! Major Sub-Step 8 (Hickey et al., 2012; Appendix A)
                                 call GeneralFillIn
                                 print*, " "
                                 CALL DATE_AND_TIME(time=timeOut)
+                                
+                                 call ped%WriteoutPhase("Results/" //"after84")
+
                                 print*, " ","Internal haplotype library imputation completed at: ", timeOut
 
                                 call ped%WriteoutPhase("Results/" //"endLoop")    
@@ -285,6 +319,7 @@ write(0,*) 'DEBUG: Mach Finished'
                     endif
                 endif
 
+                call ped%writeOutGenotypes("Results/" //"endimp")    
             END SUBROUTINE ImputationManagement
 
             subroutine InternalParentPhaseElim
@@ -1671,6 +1706,7 @@ end subroutine InternalHapLibImputationOld
 
 
 
+
             subroutine GeneralFillInInit
                 ! This function implements the four Minor sub-steps explained in Hickey et al. (2012; Appendix A)
                 use Global
@@ -1678,14 +1714,22 @@ end subroutine InternalHapLibImputationOld
                 implicit none
 
                 call ParentHomoFill                     ! Minor sub-step 1. Parent Homozygous fill in
+                
+
+                    call ped%writeOutGenotypes("Results/" //"afters1")
                 call PhaseComplement                    ! Minor sub-step 2. Phase Complement
+                    call ped%writeOutGenotypes("Results/" //"afters2")
                 call ImputeParentByProgenyComplement    ! Minor sub-step 3. Impute Parents from Progeny Complement
+                    call ped%writeOutGenotypes("Results/" //"afters3")
                 call MakeGenotype                       ! Minor sub-step 4. Make Genotype
+                    call ped%writeOutGenotypes("Results/" //"afters4")
                 ! if (TestVersion==1) call CurrentYield
                 ! if (TestVersion==1) call Checker
 
 
             end subroutine GeneralFillInInit
+
+
             !#############################################################################################################################################################################################################################
 
             SUBROUTINE EnsureHetGametic
@@ -1717,10 +1761,23 @@ end subroutine InternalHapLibImputationOld
                 use AlphaImputeSpecFileModule
 
                 implicit none
-                integer :: i
+                integer :: i, j
+
+                integer :: phase1,phase2
 
                 do i=1,ped%pedigreeSize-ped%nDummys
-                    call ped%pedigree(i)%IndividualGenotype%setFromHaplotypesIfMissing(ped%pedigree(i)%individualPhase(1),ped%pedigree(i)%individualPhase(2))
+
+                    do j=1, inputParams%nsnpRaw
+                    ! call ped%pedigree(i)%IndividualGenotype%setFromHaplotypesIfMissing(ped%pedigree(i)%individualPhase(1),ped%pedigree(i)%individualPhase(2))
+
+                        if (ped%pedigree(i)%individualGenotype%isMissing(j)) then
+                            phase1 = ped%pedigree(i)%individualPhase(1)%getPhase(j)
+                            phase2 = ped%pedigree(i)%individualPhase(2)%getPhase(j)
+                            if (phase1 /= 9 .and. phase2 /= 9) then
+                                call ped%pedigree(i)%individualGenotype%setGenotype(j,(phase1 + phase2))
+                            endif
+                        endif
+                    enddo
                 enddo 
 
 
