@@ -1121,11 +1121,9 @@ end subroutine InternalHapLibImputationOld
 
                                             if (apResults%results(h)%cores(g)%phase(PosHDInd,1)%mismatches(tmpHap) >= ImputeFromParentCountThresh) then
                                                 gamA=0
-                                                print *,"call1"
                                             endif
                                             if (apResults%results(h)%cores(g)%phase(PosHDInd,2)%mismatches(tmpHap) >= ImputeFromParentCountThresh) then
                                                 GamB=0
-                                                print *,"call2"
                                             endif
                                             ! NOTE: [..."and the candidate haplotypes for each individual's gametes are restricted
                                             !       to the two haplotypes that have been identified for each of its parents..."]
@@ -1804,18 +1802,18 @@ end subroutine InternalHapLibImputationOld
                 integer :: phase1,phase2
 
                 do i=1,ped%pedigreeSize-ped%nDummys
+                    call ped%pedigree(i)%IndividualGenotype%setFromHaplotypesIfMissing(ped%pedigree(i)%individualPhase(1),ped%pedigree(i)%individualPhase(2))
 
-                    do j=1, inputParams%nsnpRaw
-                    ! call ped%pedigree(i)%IndividualGenotype%setFromHaplotypesIfMissing(ped%pedigree(i)%individualPhase(1),ped%pedigree(i)%individualPhase(2))
+                    ! do j=1, inputParams%nsnpRaw
 
-                        if (ped%pedigree(i)%individualGenotype%isMissing(j)) then
-                            phase1 = ped%pedigree(i)%individualPhase(1)%getPhase(j)
-                            phase2 = ped%pedigree(i)%individualPhase(2)%getPhase(j)
-                            if (phase1 /= 9 .and. phase2 /= 9) then
-                                call ped%pedigree(i)%individualGenotype%setGenotype(j,(phase1 + phase2))
-                            endif
-                        endif
-                    enddo
+                    !     if (ped%pedigree(i)%individualGenotype%isMissing(j)) then
+                    !         phase1 = ped%pedigree(i)%individualPhase(1)%getPhase(j)
+                    !         phase2 = ped%pedigree(i)%individualPhase(2)%getPhase(j)
+                    !         if (phase1 /= 9 .and. phase2 /= 9) then
+                    !             call ped%pedigree(i)%individualGenotype%setGenotype(j,(phase1 + phase2))
+                    !         endif
+                    !     endif
+                    ! enddo
                 enddo 
 
 
