@@ -192,6 +192,19 @@ program AlphaImpute
                         print *, "writing probabilities"
                         call WriteProbabilitiesFull("." // DASH // "GeneProb" // DASH // "GenotypeProbabilities.txt", GenosProbs, ped,ped%pedigreeSize-ped%nDummys)
                         call WriteProbabilities("." // DASH // trim(inputParams%resultFolderPath) // DASH // "GenotypeProbabilities.txt", GenosProbs, ped,ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
+                    
+                    
+                    
+                        ! TODO debug code for new vs old geneprob here
+
+
+                        block
+                            use HeuristicGeneprobModule
+                        call HeuristicGeneprob(inputParams,ped)
+                        call outputGenotypesTestNew("newGeneprob.txt", ped, inputParams%nsnp)
+                    
+                        call outputGenotypesTest("oldGeneprob.txt",GenosProbs, ped, inputParams%nsnp )
+                        end block
                     endif
 
                     if (inputParams%restartOption==OPT_RESTART_GENEPROB) then

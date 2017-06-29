@@ -132,6 +132,8 @@ contains
             ! No writes should be made to pedigree, so this can be shared. GenosProbs and MAF need to be combined
             call runGeneProbAlphaImpute(StartSnp, endsnp, ped, GenosProbs, MAF)
 
+
+
         ! enddo
 
 

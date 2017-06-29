@@ -4,6 +4,7 @@ SET(ALPHAIMPUTE_src
             AlphaImputeInputOutput.f90
             informationModule.f90    
             Imputation.f90
+            HeuristicGeneprob.f90
             AlphaImpute.f90
             main.f90
 
