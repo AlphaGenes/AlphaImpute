@@ -1031,7 +1031,10 @@ end subroutine InternalHapLibImputationOld
                 integer :: StartSnp,EndSnp,AnimalOn(ped%pedigreeSize,2)
                 integer(kind=1),allocatable,dimension (:,:,:,:) :: Temp
 
-                integer :: tempCount, tmpPhase
+                integer :: tmpPhase
+                integer :: counter 
+
+                counter = 1
 
 
                 inputParams => defaultInput
@@ -1057,9 +1060,9 @@ end subroutine InternalHapLibImputationOld
                             type(individual) ,pointer :: parent
                             type(Haplotype) :: tmpHap
 
-                            !$OMP PARALLEL DO &
-                            !$OMP DEFAULT(SHARED) &
-                            !$OMP PRIVATE(i,j,e,PedId,PosHDInd,GamA,GamB,parent,tmpHap,TempCount,tmpPhase)
+                            !$!OMP PARALLEL DO &
+                            !$!OMP DEFAULT(SHARED) &
+                            !$!OMP PRIVATE(i,j,e,PedId,PosHDInd,GamA,GamB,parent,tmpHap,TempCount,tmpPhase)
                             do i=1,ped%pedigreeSize- ped%nDummys
 
                                 do e=1,2
@@ -1077,17 +1080,52 @@ end subroutine InternalHapLibImputationOld
                                         ! We look for possible gametes within the haplotypes identified to each of the individual's parents constructed during the phasing step
                                         posHdInd = ped%hdDictionary%getValue(parent%originalId)
                                         tmpHap = ped%pedigree(i)%individualPhase(e)%subset(startsnp,endSnp)
+
+
+                                        ! block
+                                        !     use BitUtilities
+                                        !     integer :: unit1, unit2
+                                        !     integer(kind=1), dimension(:), allocatable :: tmp
+                                        !     character(len=300) :: t
+                                        !     write(t,*) counter
+                                        !     counter = counter + 1
+
+
+
+
+
+
+
+                                        !     if (counter ==  30000) then
+                                        !         open(newunit= unit1,file="junk/new", status="unknown")
+                                        !         open(newunit= unit2,file="junk/old", status="unknown")
+
+
+                                                
+                                                
+                                        !         write(unit1, '(200i3)') bitToIntegerArray(apResults%results(h)%cores(g)%phase(PosHDInd,1)%phase)
+                                        !         write(unit1, '(200i3)') bitToIntegerArray(apResults%results(h)%cores(g)%phase(PosHDInd,1)%missing)
+                                        !         write(unit2, '(200i3)') bitToIntegerArray(tmpHap%phase)
+                                        !         write(unit2, '(200i3)') bitToIntegerArray(tmpHap%missing)
+
+                                        !         close(unit2)
+                                        !         close(unit1)
+                                        !         stop
+                                        !     endif
+                                        ! end block
+
                                         ! If there is one allele phased at least
                                         if ((.not. tmpHap%fullyPhased()).and.(PosHDInd>0)) then
                                             GamA=1
                                             GamB=1
-                                            TempCount=0
 
                                             if (apResults%results(h)%cores(g)%phase(PosHDInd,1)%mismatches(tmpHap) >= ImputeFromParentCountThresh) then
                                                 gamA=0
+                                                print *,"call1"
                                             endif
                                             if (apResults%results(h)%cores(g)%phase(PosHDInd,2)%mismatches(tmpHap) >= ImputeFromParentCountThresh) then
                                                 GamB=0
+                                                print *,"call2"
                                             endif
                                             ! NOTE: [..."and the candidate haplotypes for each individual's gametes are restricted
                                             !       to the two haplotypes that have been identified for each of its parents..."]
@@ -1136,7 +1174,7 @@ end subroutine InternalHapLibImputationOld
                                     endif
                                 enddo
                             enddo
-                            !$OMP END PARALLEL DO
+                            !$!OMP END PARALLEL DO
                         end block
                     enddo
                 enddo
