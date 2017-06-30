@@ -1969,13 +1969,17 @@ end subroutine InternalHapLibImputationOld
                 ! This function implements the four Minor sub-steps explained in Hickey et al. (2012; Appendix A)
                 use Global
                 use informationModule
+                use HeuristicGeneprobModule
 
                 implicit none
 
+                inputParams => defaultInput
+                
                 call ParentHomoFill                     ! Minor sub-step 1. Parent Homozygous fill in
                 call PhaseComplement                    ! Minor sub-step 2. Phase Complement
                 call ImputeParentByProgenyComplement    ! Minor sub-step 3. Impute Parents from Progeny Complement
                 call MakeGenotype                       ! Minor sub-step 4. Make Genotype
+                call HeuristicGeneprob(inputparams, ped)
                 ! if (TestVersion==1) call CurrentYield
                 ! if (TestVersion==1) call Checker
 
@@ -1990,13 +1994,17 @@ end subroutine InternalHapLibImputationOld
                 ! This function implements the four Minor sub-steps explained in Hickey et al. (2012; Appendix A)
                 use Global
                 use informationModule
-
+                use HeuristicGeneprobModule
+                
                 implicit none
+
+                inputParams => defaultInput
 
                 call ParentHomoFill                     ! Minor sub-step 1. Parent Homozygous fill in
                 call PhaseComplement                    ! Minor sub-step 2. Phase Complement
                 call ImputeParentByProgenyComplement    ! Minor sub-step 3. Impute Parents from Progeny Complement
                 call MakeGenotype                       ! Minor sub-step 4. Make Genotype
+                call HeuristicGeneprob(inputparams, ped)
                 ! if (TestVersion==1) call CurrentYield
                 ! if (TestVersion==1) call Checker
 

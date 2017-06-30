@@ -1,9 +1,11 @@
 module HeuristicGeneprobModule
+
+    use iso_fortran_env
     implicit none
     contains
 
 
-   subroutine HeuristicGeneprob(inputParams, ped,GenosProbs)
+   subroutine HeuristicGeneprob(inputParams, ped)
 
         use PedigreeModule
         use AlphaImputeSpecFileModule
@@ -20,7 +22,7 @@ module HeuristicGeneprobModule
 
         integer :: maxVal,maxPos, max2Val, max2Pos
 
-        real, dimension(:,:,:), allocatable, intent(out) :: genosProbs !< array for each animal, 0,1,2
+        real(kind=real64), dimension(:,:,:), allocatable :: genosProbs !< array for each animal, 0,1,2
         real, dimension(0:2, 0:2) :: heuristicTrace
         logical :: sire
         
