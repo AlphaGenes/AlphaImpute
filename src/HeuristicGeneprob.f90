@@ -3,7 +3,7 @@ module HeuristicGeneprobModule
     contains
 
 
-   subroutine HeuristicGeneprob(inputParams, ped)
+   subroutine HeuristicGeneprob(inputParams, ped,GenosProbs)
 
         use PedigreeModule
         use AlphaImputeSpecFileModule
@@ -20,7 +20,7 @@ module HeuristicGeneprobModule
 
         integer :: maxVal,maxPos, max2Val, max2Pos
 
-        real, dimension(:,:,:), allocatable :: genosProbs !< array for each animal, 0,1,2
+        real, dimension(:,:,:), allocatable, intent(out) :: genosProbs !< array for each animal, 0,1,2
         real, dimension(0:2, 0:2) :: heuristicTrace
         logical :: sire
         
@@ -33,8 +33,9 @@ module HeuristicGeneprobModule
         heuristicTrace(:, 2) = [loge, log5, log1]
 
 
-        allocate(GenosProbs(ped%pedigreeSize,inputParams%nsnp, 0:2))
-
+        if (.not. allocated(GenosProbs)) then
+            allocate(GenosProbs(ped%pedigreeSize,inputParams%nsnp, 0:2))
+        endif
         do i=1, ped%pedigreeSize
             ind => ped%pedigree(i)
             if (ind%Genotyped) cycle

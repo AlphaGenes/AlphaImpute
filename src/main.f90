@@ -188,7 +188,7 @@ program AlphaImpute
 #endif                           
                         endif
                         print *, "Calling geneprob"
-                        call runGeneProbAlphaImpute(1, inputParams%nsnp, ped, GenosProbs, MAF)
+                        call runGeneProbAlphaImpute(1, inputParams%nsnp, ped, GenosProbs, MAF, inputParams%useProcs)
                         print *, "writing probabilities"
                         call WriteProbabilitiesFull("." // DASH // "GeneProb" // DASH // "GenotypeProbabilities.txt", GenosProbs, ped,ped%pedigreeSize-ped%nDummys)
                         call WriteProbabilities("." // DASH // trim(inputParams%resultFolderPath) // DASH // "GenotypeProbabilities.txt", GenosProbs, ped,ped%pedigreeSize-ped%nDummys, inputParams%nsnp)

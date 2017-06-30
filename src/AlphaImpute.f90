@@ -130,7 +130,7 @@ contains
             startSnp = 1
             endsnp = inputParams%nSnp
             ! No writes should be made to pedigree, so this can be shared. GenosProbs and MAF need to be combined
-            call runGeneProbAlphaImpute(StartSnp, endsnp, ped, GenosProbs, MAF)
+            call runGeneProbAlphaImpute(StartSnp, endsnp, ped, GenosProbs, MAF,inputParams%useProcs)
 
 
 
