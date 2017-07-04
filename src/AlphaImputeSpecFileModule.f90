@@ -87,6 +87,7 @@ module AlphaImputeSpecFileModule
         integer(kind=int32) :: useProcs
         logical :: cluster
 
+        logical :: useFerdosi
         
     contains
         procedure :: ReadInParameterFile
@@ -123,6 +124,8 @@ contains
         character(len=:), allocatable::tag
         character(len=300),dimension(:),allocatable :: second
 
+
+        this%useFerdosi = .true.
         this%MultiHD = 0
         this%minoverlaphaplotype = 0
         this%cluster = .false.
