@@ -286,6 +286,8 @@ write(0,*) 'DEBUG: Mach Finished'
 
                             call ManageWorkLeftRight
 
+                            call ped%writeOutGenotypes("Results/" //"endLoopGeno2") 
+
                         endif
 
 
@@ -2715,7 +2717,7 @@ end subroutine InternalHapLibImputationOld
                                     ! If this allele has different phased as the current haplotype, then
                                     ! Change haplotype and increase the number of recombinations of this haplotype
                                     if ((tmpPhase/=phase(1)).and.&
-                                        ((phase(1)==9).and.(tmpPhase/=9))) then
+                                        ((phase(1)/=9).and.(tmpPhase/=9))) then
                                         RSide=abs((RSide-1)-1)+1
                                         CountRightSwitch=CountRightSwitch+1
                                     endif
