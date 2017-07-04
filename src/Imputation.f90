@@ -476,7 +476,7 @@ write(0,*) 'DEBUG: Mach Finished'
 
                                                         integer(kind=1) :: parentPhase
 
-                                                        parentPhase = parent%individualPhase(1)%getPhase(j)
+                                                        parentPhase = parent%individualPhase(2)%getPhase(j)
 
                                                         if (parentPhase==0) then
                                                             Temp(i,j,e,1)=Temp(i,j,e,1)+1
@@ -912,10 +912,10 @@ end subroutine InternalHapLibImputationOld
                                             GamA=1
                                             GamB=1
 
-                                            if (tmpPhase(e)%mismatches(apResults%results(unknownFreeIterator)%cores(g)%phase(i,1)) /= 0) then
+                                            if (tmpPhase(e)%numPresentNotMatched(apResults%results(unknownFreeIterator)%cores(g)%phase(i,1)) /= 0) then
                                                 gamA = 0
                                             endif
-                                            if (tmpPhase(e)%mismatches(apResults%results(unknownFreeIterator)%cores(g)%phase(i,2)) /= 0) then
+                                            if (tmpPhase(e)%numPresentNotMatched(apResults%results(unknownFreeIterator)%cores(g)%phase(i,2)) /= 0) then
                                                 gamB = 0
                                             endif
 
@@ -1046,8 +1046,6 @@ end subroutine InternalHapLibImputationOld
 
                 do h=1,apResults%nResults
 
-
-
                     ! Get phase information
 
                     do g=1,size(apResults%results(h)%cores)
@@ -1081,49 +1079,17 @@ end subroutine InternalHapLibImputationOld
                                         posHdInd = ped%hdDictionary%getValue(parent%originalId)
                                         tmpHap = ped%pedigree(i)%individualPhase(e)%subset(startsnp,endSnp)
 
-
-                                        ! block
-                                        !     use BitUtilities
-                                        !     integer :: unit1, unit2
-                                        !     integer(kind=1), dimension(:), allocatable :: tmp
-                                        !     character(len=300) :: t
-                                        !     write(t,*) counter
-                                        !     counter = counter + 1
-
-
-
-
-
-
-
-                                        !     if (counter ==  30000) then
-                                        !         open(newunit= unit1,file="junk/new", status="unknown")
-                                        !         open(newunit= unit2,file="junk/old", status="unknown")
-
-
-                                                
-                                                
-                                        !         write(unit1, '(200i3)') bitToIntegerArray(apResults%results(h)%cores(g)%phase(PosHDInd,1)%phase)
-                                        !         write(unit1, '(200i3)') bitToIntegerArray(apResults%results(h)%cores(g)%phase(PosHDInd,1)%missing)
-                                        !         write(unit2, '(200i3)') bitToIntegerArray(tmpHap%phase)
-                                        !         write(unit2, '(200i3)') bitToIntegerArray(tmpHap%missing)
-
-                                        !         close(unit2)
-                                        !         close(unit1)
-                                        !         stop
-                                        !     endif
-                                        ! end block
-
                                         ! If there is one allele phased at least
                                         if ((.not. tmpHap%fullyPhased()).and.(PosHDInd>0)) then
                                             GamA=1
                                             GamB=1
 
-                                            if (apResults%results(h)%cores(g)%phase(PosHDInd,1)%mismatches(tmpHap) >= ImputeFromParentCountThresh) then
+                                            if (tmpHap%numPresentNotMatched(apResults%results(h)%cores(g)%phase(PosHDInd,1)) >= ImputeFromParentCountThresh) then
                                                 gamA=0
                                             endif
-                                            if (apResults%results(h)%cores(g)%phase(PosHDInd,2)%mismatches(tmpHap) >= ImputeFromParentCountThresh) then
-                                                GamB=0
+
+                                            if (tmpHap%numPresentNotMatched(apResults%results(h)%cores(g)%phase(PosHDInd,2)) >= ImputeFromParentCountThresh) then
+                                                gamB=0
                                             endif
                                             ! NOTE: [..."and the candidate haplotypes for each individual's gametes are restricted
                                             !       to the two haplotypes that have been identified for each of its parents..."]
@@ -1157,7 +1123,7 @@ end subroutine InternalHapLibImputationOld
                                                 do j=StartSnp,EndSnp
                                                     ! Count the number of alleles coded with 0 and 1
                                                     if ( ped%pedigree(i)%individualPhase(e)%ismissing(j)) then
-                                                        tmpPhase = apResults%results(h)%cores(g)%phase(PosHDInd,1)%getPhase(j-startSnp+1)
+                                                        tmpPhase = apResults%results(h)%cores(g)%phase(PosHDInd,2)%getPhase(j-startSnp+1)
                                                         if(tmpPhase==0) then
                                                             !$OMP ATOMIC
                                                             Temp(i,j,e,1)=Temp(i,j,e,1)+1
@@ -1224,6 +1190,7 @@ end subroutine InternalHapLibImputationOld
                     
                 enddo
                 deallocate(Temp)
+
 
             END SUBROUTINE ParentPhaseElimination
 
@@ -1802,18 +1769,18 @@ end subroutine InternalHapLibImputationOld
                 integer :: phase1,phase2
 
                 do i=1,ped%pedigreeSize-ped%nDummys
-                    call ped%pedigree(i)%IndividualGenotype%setFromHaplotypesIfMissing(ped%pedigree(i)%individualPhase(1),ped%pedigree(i)%individualPhase(2))
+                    ! call ped%pedigree(i)%IndividualGenotype%setFromHaplotypesIfMissing(ped%pedigree(i)%individualPhase(1),ped%pedigree(i)%individualPhase(2))
 
-                    ! do j=1, inputParams%nsnpRaw
+                    do j=1, inputParams%nsnpRaw
 
-                    !     if (ped%pedigree(i)%individualGenotype%isMissing(j)) then
-                    !         phase1 = ped%pedigree(i)%individualPhase(1)%getPhase(j)
-                    !         phase2 = ped%pedigree(i)%individualPhase(2)%getPhase(j)
-                    !         if (phase1 /= 9 .and. phase2 /= 9) then
-                    !             call ped%pedigree(i)%individualGenotype%setGenotype(j,(phase1 + phase2))
-                    !         endif
-                    !     endif
-                    ! enddo
+                        if (ped%pedigree(i)%individualGenotype%isMissing(j)) then
+                            phase1 = ped%pedigree(i)%individualPhase(1)%getPhase(j)
+                            phase2 = ped%pedigree(i)%individualPhase(2)%getPhase(j)
+                            if (phase1 /= 9 .and. phase2 /= 9) then
+                                call ped%pedigree(i)%individualGenotype%setGenotype(j,(phase1 + phase2))
+                            endif
+                        endif
+                    enddo
                 enddo 
 
 
@@ -2356,7 +2323,7 @@ end subroutine InternalHapLibImputationOld
                 real,allocatable,dimension(:) :: LengthVec
                 type(AlphaImputeInput), pointer :: inputParams
                 integer(kind=1) :: phase(2),tmpPhase
-
+                integer :: tmpGender
 
                 inputParams => defaultInput
 
@@ -2376,23 +2343,21 @@ end subroutine InternalHapLibImputationOld
                         SireDamRL=e+1
                         CountLeftSwitch=0
                         CountRightSwitch=0
-                        block
-                            integer :: tmpGender
-                            PedId=ped%pedigree(i)%getSireDamNewIDByIndex(SireDamRL)
+                        
+                        PedId=ped%pedigree(i)%getSireDamNewIDByIndex(SireDamRL)
 
 
 
-                            if (PedId /= 0) then
-                                tmpGender = ped%pedigree(PedId)%gender
-                                ! if (ped%pedigree(pedId)%isDummy) then
-                                !     cycle
-                                ! endif
-                            else
-                                cycle
-                            endif
-                            ! Skip if, in the case of sex chromosome, me and my parent are heterogametic
-                            if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==inputParams%hetGameticStatus).and.(tmpGender==inputParams%hetGameticStatus)) cycle
-                        endblock
+                        if (PedId /= 0) then
+                            tmpGender = ped%pedigree(PedId)%gender
+                            ! if (ped%pedigree(pedId)%isDummy) then
+                            !     cycle
+                            ! endif
+                        else
+                            cycle
+                        endif
+                        ! Skip if, in the case of sex chromosome, me and my parent are heterogametic
+                        if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==inputParams%hetGameticStatus).and.(tmpGender==inputParams%hetGameticStatus)) cycle
                         !! SCAN HAPLOTYPE IN TWO DIRECTIONS: L->R AND R->L
                         ! If not a base animal and the number of unphased alleles is lower than a threshold
                         ! WARNING: WHAT IS THIS THRESHOLD?
@@ -2571,6 +2536,9 @@ end subroutine InternalHapLibImputationOld
                                 endif
                             enddo
                             !$$$$$$$$$$$$$$$$$$$
+
+                             GlobalWorkPhase(i,:,1)= ped%pedigree(i)%individualPhase(1)%toIntegerArray()
+                             GlobalWorkPhase(i,:,2)= ped%pedigree(i)%individualPhase(2)%toIntegerArray()
 
                             !! IMPUTE PHASE WHETHER IT IS POSSIBLE
                             ! WARNING: From Hickey et al. 2012 (Appendix A):
@@ -2890,6 +2858,8 @@ end subroutine InternalHapLibImputationOld
                             end block
 
 
+                             GlobalWorkPhase(i,:,1)= ped%pedigree(i)%individualPhase(1)%toIntegerArray()
+                             GlobalWorkPhase(i,:,2)= ped%pedigree(i)%individualPhase(2)%toIntegerArray()
 
                             !$$$$$$$$$$$$$$$$$$$
 
