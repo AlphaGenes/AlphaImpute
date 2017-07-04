@@ -1970,6 +1970,7 @@ end subroutine InternalHapLibImputationOld
                 use Global
                 use informationModule
                 use HeuristicGeneprobModule
+                use ModuleRunFerdosi
 
                 implicit none
 
@@ -1980,6 +1981,13 @@ end subroutine InternalHapLibImputationOld
                 call ImputeParentByProgenyComplement    ! Minor sub-step 3. Impute Parents from Progeny Complement
                 call MakeGenotype                       ! Minor sub-step 4. Make Genotype
                 call HeuristicGeneprob(inputparams, ped)
+
+
+                if (inputParams%useFerdosi) then
+
+                    call doFerdosi(ped)
+                endif
+
                 ! if (TestVersion==1) call CurrentYield
                 ! if (TestVersion==1) call Checker
 

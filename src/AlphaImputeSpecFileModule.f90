@@ -87,6 +87,7 @@ module AlphaImputeSpecFileModule
         integer(kind=int32) :: useProcs
         logical :: cluster
 
+        logical :: useFerdosi
         
     contains
         procedure :: ReadInParameterFile
@@ -123,6 +124,8 @@ contains
         character(len=:), allocatable::tag
         character(len=300),dimension(:),allocatable :: second
 
+
+        this%useFerdosi = .true.
         this%MultiHD = 0
         this%minoverlaphaplotype = 0
         this%cluster = .false.
@@ -561,6 +564,14 @@ contains
             case default
                 write(*,"(A,A)") trim(tag), " is not valid for the AlphaImpute Spec File."
                 cycle
+
+            case("useferdosi")
+               if(ToLower(trim(second(1))) == "no") then
+                    this%useFerdosi = .false.
+                else if (ToLower(trim(second(1))) == "yes") then
+                    this%useFerdosi = .true.
+                endif
+                
             end select
         end if
     end do READFILE

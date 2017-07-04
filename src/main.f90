@@ -53,6 +53,8 @@ program AlphaImpute
     use AlphaImputeSpecFileModule
     use Imputation
     use GeneProbModule
+    use ModuleRunFerdosi
+
     use AlphaPhaseResultsModule    
     implicit none
 
@@ -221,6 +223,13 @@ program AlphaImpute
                     print *, "ERROR: BYPASS GENEPROB SET INCORRECTLY"
                     stop 1
             end select
+        endif
+
+
+
+        if (inputParams%useFerdosi) then
+
+            call doFerdosi(ped)
         endif
 
 
