@@ -564,6 +564,14 @@ contains
             case default
                 write(*,"(A,A)") trim(tag), " is not valid for the AlphaImpute Spec File."
                 cycle
+
+            case("useferdosi")
+               if(ToLower(trim(second(1))) == "no") then
+                    this%useFerdosi = .false.
+                else if (ToLower(trim(second(1))) == "yes") then
+                    this%useFerdosi = .true.
+                endif
+                
             end select
         end if
     end do READFILE
