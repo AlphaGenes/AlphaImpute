@@ -3,6 +3,7 @@ SET(ALPHAIMPUTE_src
             global.f90
             AlphaImputeInputOutput.f90
             Imputation.f90
+            HeuristicGeneprob.f90
             AlphaImpute.f90
             HeuristicGeneprob.f90
             main.f90
@@ -30,6 +31,7 @@ if (ALPHAIMPUTEEXE)
     #TARGET_LINK_LIBRARIES(${ALPHAIMPUTEEXE} ${AMLPLIB})
     TARGET_LINK_LIBRARIES(${ALPHAIMPUTEEXE} ${APLIB})
     TARGET_LINK_LIBRARIES(${ALPHAIMPUTEEXE} ${AHMMLIB})
+    TARGET_LINK_LIBRARIES(${ALPHAIMPUTEEXE} ${FERLIB})
 endif()
 
 # if (HMMLIB)

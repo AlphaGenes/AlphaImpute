@@ -120,17 +120,12 @@ contains
         if (inputParams%outopt==0) nSnp=inputParams%nsnp
         if (inputParams%outopt==1) nSnp=inputParams%nSnpRaw
 
-
-        ! This will be MPI jobs in future, as right now parallelization is run using openMP inside Geneprob itself
-        ! TODO add tihs in
-        ! do i=1,inputParams%useProcs
-            ! startsnp = GpIndex(i,1)
-            ! endsnp = GpIndex(i,2)
-
             startSnp = 1
             endsnp = inputParams%nSnp
             ! No writes should be made to pedigree, so this can be shared. GenosProbs and MAF need to be combined
-            call runGeneProbAlphaImpute(StartSnp, endsnp, ped, GenosProbs, MAF)
+            call runGeneProbAlphaImpute(StartSnp, endsnp, ped, GenosProbs, MAF,inputParams%useProcs)
+
+
 
         ! enddo
 
@@ -459,7 +454,7 @@ contains
                 Counter=0
                 do i=1,ped%pedigreeSize-ped%nDummys
                     genos = ped%pedigree(i)%individualGenotype%getGenotype(j)
-                    if (genos==MISSINGGENOTYPECODE) then
+                    if (genos/=MISSINGGENOTYPECODE) then
                         TempAlleleFreq(j)=TempAlleleFreq(j)+genos
                         Counter=Counter+2
                     endif
@@ -501,7 +496,7 @@ contains
                             block                          
                                 integer(kind=1) :: phase                         
                                 phase = ped%pedigree(i)%individualPhase(e)%getPhase(j)  
-                                if (phase==9) ProbImputePhase(i,j,e)=TempAlleleFreq(j)
+                                if (phase==9 .and. TempAlleleFreq(j)/=9) ProbImputePhase(i,j,e)=TempAlleleFreq(j)
                             end block
                         enddo
                     endif
@@ -569,6 +564,7 @@ contains
                     if (ProbImputeGenos(i,j)>1.999)  call ped%pedigree(i)%individualGenotype%setGenotype(j,2)
                     if (ProbImputeGenos(i,j)<0.0001) call ped%pedigree(i)%individualGenotype%setGenotype(j,0)
                     if ((ProbImputeGenos(i,j)>0.999).and.(ProbImputeGenos(i,j)<1.00001)) call ped%pedigree(i)%individualGenotype%setGenotype(j,1)
+                    
                 enddo
             enddo
 
@@ -828,10 +824,6 @@ contains
                 do j=1,inputParams%nsnp
                         l=l+1
                         do i=1,ped%nGenotyped
-                            ! if (GlobalHmmID(i) > ped%pedigreeSize-ped%nDummys ) then
-                            !     GlobalHmmID(i) = 0
-                            !     ! TODO this means animal is a dummy - need to deal with this
-                            ! endif
                             ProbImputeGenos(ped%genotypeMap(i),j)   = ProbImputeGenosHmm(i,j)
                             ProbImputePhase(ped%genotypeMap(i),j,1) = ProbImputePhaseHmm(i,j,1)
                             ProbImputePhase(ped%genotypeMap(i),j,2) = ProbImputePhaseHmm(i,j,2)
@@ -851,7 +843,6 @@ contains
                             ImputeGenosHMM(ped%genotypeMap(i),j)   = 0
                             ImputePhaseHMM(ped%genotypeMap(i),j,:) = 0
                         elseif (n1>n2) then
-                            ! TODO check if this should be hmm rather than anything else 
                             ! call ped%pedigree(ped%genotypeMap(i))%individualGenotype%setGenotype(j,1)
 
                             ImputeGenosHMM(ped%genotypeMap(i),j)   = 1
@@ -865,7 +856,6 @@ contains
                         else
                             ImputeGenosHMM(ped%genotypeMap(i),j)   = 2
                             ImputePhaseHMM(ped%genotypeMap(i),j,:) = 1
-                            ! TODO this is lowering accuracy
                         endif
                     enddo
                 enddo
@@ -1146,7 +1136,6 @@ contains
                 BLOCK
                     integer :: hmmID
                     do i=1, ped%nGenotyped
-                        ! TODO: Remove this variable when this issue is really fixed
                         hmmID =ped%genotypeMap(i)
                         write (53,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(hmmID)%originalID,ImputePhaseHMM(hmmID,:,1)
                         write (53,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(hmmID)%originalID,ImputePhaseHMM(hmmID,:,2)
@@ -1398,7 +1387,7 @@ contains
                         do j=HetStart+1,nSnpFinal
                             phase(1) = ped%pedigree(pedId)%individualPhase(RSide)%getPhase(j)
                             tmpPhase = ped%pedigree(i)%individualPhase(patMat)%getPhase(j)
-                            if ((tmpPhase /= phase(1)).and.(phase(1)/=9).and.(tmpPhase==9)) then
+                            if ((tmpPhase /= phase(1)).and.(phase(1)/=9).and.(tmpPhase/=9)) then
                                 RSide=abs((RSide-1)-1)+1
                                 CountRightSwitch=CountRightSwitch+1
                             endif
@@ -1410,7 +1399,7 @@ contains
                     do j=nSnpFinal,1,-1
                         phase(1) = ped%pedigree(pedId)%individualPhase(1)%getPhase(j)
                         phase(2) = ped%pedigree(pedId)%individualPhase(2)%getPhase(j)
-                        if ((phase(1)/=phase(2)).and.(phase(1)/=9).and.(phase(2)==9))  then
+                        if ((phase(1)/=phase(2)).and.(phase(1)/=9).and.(phase(2)/=9))  then
                             HetEnd=j
                             tmpPhase = ped%pedigree(i)%individualPhase(patMat)%getPhase(HetEnd)
                             if (tmpPhase==phase(1)) then
@@ -1555,7 +1544,7 @@ contains
                                 phase1 = ped%pedigree(PedId)%individualPhase(1)%getPhase(j)
                                 phase2 = ped%pedigree(PedId)%individualPhase(2)%getPhase(j)
                                 if (phase1/= phase2) then
-                                    if ((phase1==9).and.(phase2/=9)) then
+                                    if ((phase1/=9).and.(phase2/=9)) then
                                         call ped%pedigree(i)%individualPhase(e)%setPhase(j,9)
                                         call ped%pedigree(i)%individualGenotype%setGenotype(j,9)
                                         ProbImputePhase(i,j,e)&
@@ -1572,12 +1561,8 @@ contains
                 write (44,'(a20,20000i20)') ped%pedigree(i)%originalID,nRec
                 write (42,'(a20,20000i20)') ped%pedigree(i)%originalID,nRec,StR(1:nRec)
                 write (42,'(a20,20000i20)') ped%pedigree(i)%originalID,nRec,EnR(1:nRec)
-                !
-                !           write (43,'(a20,20000i20)') ped%pedigree(i)%originalID,nRec,StRNarrow(1:nRec)
-                !           write (43,'(a20,20000i20)') ped%pedigree(i)%originalID,nRec,EnRNarrow(1:nRec)
                 do j=1,nRec
                     write (45,'(a20,20000i20)') ped%pedigree(i)%originalID,e,StR(j),EnR(j)
-                    !               write (46,'(a20,20000i20)') ped%pedigree(i)%originalID,e,StRNarrow(j),EnRNarrow(j)
                 enddo
 
             enddo
@@ -1593,7 +1578,7 @@ contains
         open (unit=41,file=trim(inputparams%resultFolderPath) // DASH // "ImputeGenotypeProbabilities.txt",status="unknown")
 
 
-        call ped%writeOutGenotypes((inputparams%resultFolderPath) // DASH // "ModelRecomb.txt")
+        call ped%writeOutGenotypes(trim(inputparams%resultFolderPath) // DASH // "ModelRecomb.txt")
         block
             integer :: tmpID
             do i=1, ped%pedigreeSize - ped%nDummys
@@ -2399,7 +2384,6 @@ contains
 
         ! we add animals to hd list here
         do i=1, ped%nGenotyped
-        ! TODO change to ngenotyped
             if (setter(ped%GenotypeMap(i)) == 1) then
                 call ped%setAnimalAsHD(ped%GenotypeMap(i))
             endif

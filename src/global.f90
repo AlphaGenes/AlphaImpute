@@ -55,7 +55,7 @@ module Global
     type(PedigreeHolder) :: ped !TODO move out of global
 
     type(AlphaPhaseResultsContainer) :: apResults
-    double precision, allocatable :: GenosProbs(:,:,:) !< output of geneprob
+    real(kind=real64), allocatable :: GenosProbs(:,:,:) !< output of geneprob
 
 
     ! HMM OUTPUT STUFF

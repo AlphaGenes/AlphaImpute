@@ -52,6 +52,8 @@ program AlphaImpute
     use AlphaImputeSpecFileModule
     use Imputation
     use GeneProbModule
+    use ModuleRunFerdosi
+
     use AlphaPhaseResultsModule    
     implicit none
 
@@ -186,15 +188,15 @@ program AlphaImpute
 #endif                           
                         endif
                         print *, "Calling geneprob"
-                        call runGeneProbAlphaImpute(1, inputParams%nsnp, ped, GenosProbs, MAF)
+                        call runGeneProbAlphaImpute(1, inputParams%nsnp, ped, GenosProbs, MAF, inputParams%useProcs)
                         print *, "writing probabilities"
                         call WriteProbabilitiesFull("." // DASH // "GeneProb" // DASH // "GenotypeProbabilities.txt", GenosProbs, ped,ped%pedigreeSize-ped%nDummys)
                         call WriteProbabilities("." // DASH // trim(inputParams%resultFolderPath) // DASH // "GenotypeProbabilities.txt", GenosProbs, ped,ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
+                    
                     endif
 
                     if (inputParams%restartOption==OPT_RESTART_GENEPROB) then
                         call ped%writeOutGenotypes("." // DASH // "GeneProb" // DASH // "IndividualGenotypes.txt")
-                        call WriteProbabilitiesFull("." // DASH // "GeneProb" // DASH // "GenotypeProbabilities.txt", GenosProbs, ped,ped%pedigreeSize-ped%nDummys)
                         write(6,*) "Restart option 1 stops program after Geneprobs jobs have finished"
                         stop
                     endif
@@ -210,7 +212,6 @@ program AlphaImpute
                         write(6,*) "Warning - BYPASSGENEPROB has been given yes. Thus these options are incompatible."
                         stop
                     endif
-                    ! TODO check this 
                 case (2)
 
                     write(6,*) "Restart option 1 stops program after genotype probabilities have been outputted"
@@ -219,6 +220,13 @@ program AlphaImpute
                     print *, "ERROR: BYPASS GENEPROB SET INCORRECTLY"
                     stop 1
             end select
+        endif
+
+
+
+        if (inputParams%useFerdosi) then
+
+            call doFerdosi(ped)
         endif
 
 

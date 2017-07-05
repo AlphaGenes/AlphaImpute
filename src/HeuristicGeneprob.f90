@@ -1,4 +1,6 @@
 module HeuristicGeneprobModule
+
+    use iso_fortran_env
     implicit none
     contains
 
@@ -9,7 +11,7 @@ module HeuristicGeneprobModule
         use AlphaImputeSpecFileModule
 
         type(AlphaImputeInput) :: inputParams
-        type(PedigreeHolder), pointer :: ped
+        type(PedigreeHolder) :: ped
         real :: log5, loge, log1
         type(individual), pointer :: ind, off
         integer :: i, j, h
@@ -20,7 +22,7 @@ module HeuristicGeneprobModule
 
         integer :: maxVal,maxPos, max2Val, max2Pos
 
-        real, dimension(:,:,:), allocatable :: genosProbs !< array for each animal, 0,1,2
+        real(kind=real64), dimension(:,:,:), allocatable :: genosProbs !< array for each animal, 0,1,2
         real, dimension(0:2, 0:2) :: heuristicTrace
         logical :: sire
         
@@ -33,8 +35,9 @@ module HeuristicGeneprobModule
         heuristicTrace(:, 2) = [loge, log5, log1]
 
 
-        allocate(GenosProbs(ped%pedigreeSize,inputParams%nsnp, 0:2))
-
+        if (.not. allocated(GenosProbs)) then
+            allocate(GenosProbs(ped%pedigreeSize,inputParams%nsnp, 0:2))
+        endif
         do i=1, ped%pedigreeSize
             ind => ped%pedigree(i)
             if (ind%Genotyped) cycle
@@ -140,4 +143,30 @@ module HeuristicGeneprobModule
         close(unit)
 
     end subroutine outputGenosProbs
+
+
+
+          subroutine outputGenotypesTestNew(filename, ped, nsnps )
+
+          use PedigreeModule
+         character(len=*), intent(in) :: filename
+
+        integer, intent(in) :: nsnps
+
+        integer :: consensusFile,i
+
+        type(PedigreeHolder),intent(in) :: ped
+        character(len=300) :: rowfmt
+
+        open(newunit=consensusFile, file=filename, status="unknown")
+        WRITE(rowfmt,'(A,I9,A)') '(a,',nSnps+10,'I2)'
+        do i = 1, ped%pedigreeSize
+            
+            write(consensusFile, rowfmt) ped%pedigree(i)%originalID,ped%pedigree(i)%individualGenotype%toIntegerArray()
+        enddo
+
+
+        end subroutine outputGenotypesTestNew 
+
+
 end module HeuristicGeneprobModule 

@@ -28,6 +28,7 @@ SET(GPLIB geneprob)
 SET(APLIB alphaphase)
 SET(AMLPLIB alphamlp)
 SET(AHMMLIB alphahmm)
+SET(FERLIB ferdosi)
 # Define some directories
 SET(SRC ${CMAKE_SOURCE_DIR}/src)
 SET(OBJ ${CMAKE_SOURCE_DIR}/objs)
@@ -81,6 +82,7 @@ SET(SRCGP ./geneprob/src/)
 SET(SRCAP ./alphaphase/src/)
 SET(SRCAMLP ./alphamlp/src/)
 SET(SRCAHMM ./alphahmm/src/)
+SET(SRCFER ./ferdosi/src/)
 # Have the .mod files placed in the OBJ folder
 SET(CMAKE_Fortran_MODULE_DIRECTORY ${OBJ})
 
@@ -89,6 +91,7 @@ ADD_SUBDIRECTORY(${SRCAH} ${OBJ}/AH)
 ADD_SUBDIRECTORY(${SRCGP} ${OBJ}/GP)
 ADD_SUBDIRECTORY(${SRCAP} ${OBJ}/AP)
 ADD_SUBDIRECTORY(${SRCAHMM} ${OBJ}/AHMM)
+ADD_SUBDIRECTORY(${SRCFER} ${OBJ}/FER)
 #ADD_SUBDIRECTORY(${SRCAMLP} ${OBJ}/AMLP)
 
 # TODO add tests to correct location
