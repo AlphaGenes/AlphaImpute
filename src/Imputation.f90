@@ -527,7 +527,7 @@ integer(kind=1),allocatable,dimension (:,:,:,:) :: Temp
 
 type(HaplotypeLibrary) :: hapLib
 
-type(Haplotype), dimension(2) :: workHap
+type(Haplotype), dimension(:),allocatable :: workHap
 type(Haplotype) :: tmpHap
 type(Genotype) :: workGeno
 integer, dimension(:),allocatable :: matches
@@ -683,6 +683,7 @@ do f=1,2
             !$OMP FIRSTPRIVATE(workHap)
             do i=1,ped%pedigreesize-ped%ndummys            
                 BanBoth=0
+                allocate(workHap(2))
                 do e=1,2
                     tmpHap = ped%pedigree(i)%individualPhase(e)%subset(coreStart,coreEnd)
 
@@ -743,13 +744,14 @@ do f=1,2
                         enddo
                     endif
                 enddo
+                 deallocate(workHap)
             enddo  
             !$OMP END PARALLEL DO
 
             ! Prepare the core for the next cycle
             CoreStart=CoreStart+LoopIndex(l,2)
             CoreEnd=CoreEnd+LoopIndex(l,2)
-            call hapLib%destroyHaplotypeLibrary()
+            ! call hapLib%destroyHaplotypeLibrary()
             if ((f==2).and.(g==nCore)) exit
         enddo
     
@@ -1004,7 +1006,7 @@ end subroutine InternalHapLibImputationOld
                         block
                             use individualModule
                             type(individual) ,pointer :: parent
-                            type(Haplotype) :: tmpHap
+                            type(Haplotype), allocatable :: tmpHap
 
                             !$OMP PARALLEL DO &
                             !$OMP DEFAULT(SHARED) &
@@ -1062,6 +1064,8 @@ end subroutine InternalHapLibImputationOld
                                                         endif
                                                     endif
                                                 enddo
+                                                
+                                                
                                             endif
 
                                             ! e is the individual's maternal haplotype
@@ -1083,6 +1087,7 @@ end subroutine InternalHapLibImputationOld
                                                 enddo
                                             endif
                                         endif
+                                        deallocate(tmpHap)
                                     endif
                                 enddo
                             enddo
@@ -1094,8 +1099,6 @@ end subroutine InternalHapLibImputationOld
 
                 do i=1,ped%pedigreeSize- ped%nDummys
                     do e=1,2
-                    
-                        
                             if (AnimalOn(i,e)==1) then
                                 if ((inputParams%sexopt==0).or.(ped%pedigree(i)%gender==inputParams%HomGameticStatus)) then
                                     do j=1,inputParams%nsnp
@@ -1175,8 +1178,8 @@ end subroutine InternalHapLibImputationOld
                 integer :: phase
 
                 type(Haplotype), dimension(:),allocatable :: workHap
-                type(Haplotype) :: tmpHap
-                type(Genotype) :: workGeno
+                type(Haplotype), allocatable :: tmpHap
+                type(Genotype), allocatable :: workGeno
                 integer, dimension(:),allocatable :: matches
 
                 inputParams => defaultInput
@@ -1245,7 +1248,9 @@ end subroutine InternalHapLibImputationOld
                                                 ! Count the occurrences in phasing of alleles across candidate haplotypes
                                                 WorkHap(e) = apResults%results(h)%libraries(g)%getConsensusHap(matches)
                                             endif
+                                            deallocate(matches)
                                         endif
+                                        deallocate(tmpHap)
                                     endif
                             enddo
 
@@ -1263,6 +1268,7 @@ end subroutine InternalHapLibImputationOld
                                     if (.not. workGeno%compatibleHaplotypes(workHap(1),workHap(2), 0)) then
                                         Ban=0
                                     endif
+                                    deallocate(workGeno)
                                 endif
 
                                 ! Count the number of occurrences a phase is impute in a particular
@@ -1626,10 +1632,13 @@ end subroutine InternalHapLibImputationOld
                 integer :: i
                 inputParams => defaultInput
 
+                !$OMP PARALLEL DO &
+                !$OMP PRIVATE(i)
                 do i=1, ped%pedigreeSize
                     call ped%pedigree(i)%individualGenotype%setHaplotypeFromGenotype(ped%pedigree(i)%individualPhase(1))
                     call ped%pedigree(i)%individualGenotype%setHaplotypeFromGenotype(ped%pedigree(i)%individualPhase(2))
                 enddo
+                !$OMP END PARALLEL DO
 
             end subroutine InitialiseArrays
 
@@ -1699,12 +1708,15 @@ end subroutine InternalHapLibImputationOld
 
                 inputParams => defaultInput
 
+                        !$OMP PARALLEL DO &
+                !$OMP PRIVATE(i)
                     do i=1,ped%pedigreeSize- ped%nDummys
                         if (ped%pedigree(i)%gender==inputParams%HetGameticStatus) then
                             call ped%pedigree(i)%individualPhase(1)%setFromOtherIfMissing(ped%pedigree(i)%individualPhase(2))
                             call ped%pedigree(i)%individualPhase(2)%setFromOtherIfMissing(ped%pedigree(i)%individualPhase(1))
                         endif
                     enddo
+                    !$OMP END PARALLEL DO
                 
 
             END SUBROUTINE EnsureHetGametic
@@ -1722,20 +1734,12 @@ end subroutine InternalHapLibImputationOld
 
                 integer :: phase1,phase2
 
+                  !$OMP PARALLEL DO &
+                !$OMP PRIVATE(i)
                 do i=1,ped%pedigreeSize-ped%nDummys
                     call ped%pedigree(i)%IndividualGenotype%setFromHaplotypesIfMissing(ped%pedigree(i)%individualPhase(1),ped%pedigree(i)%individualPhase(2))
-
-                    ! do j=1, inputParams%nsnpRaw
-
-                    !     if (ped%pedigree(i)%individualGenotype%isMissing(j)) then
-                    !         phase1 = ped%pedigree(i)%individualPhase(1)%getPhase(j)
-                    !         phase2 = ped%pedigree(i)%individualPhase(2)%getPhase(j)
-                    !         if (phase1 /= 9 .and. phase2 /= 9) then
-                    !             call ped%pedigree(i)%individualGenotype%setGenotype(j,(phase1 + phase2))
-                    !         endif
-                    !     endif
-                    ! enddo
                 enddo 
+                !$OMP END PARALLEL DO
 
 
             END SUBROUTINE MakeGenotype
@@ -1749,15 +1753,27 @@ end subroutine InternalHapLibImputationOld
                 implicit none
 
                 integer :: i
-                type(haplotype) :: comp1, comp2
+                type (haplotype),allocatable :: comp1, comp2
 
+                !$OMP PARALLEL DO &
+                !$OMP PRIVATE(comp1,comp2,i)
                 do i=1,ped%pedigreeSize- ped%nDummys  
-                    comp2 = ped%pedigree(i)%individualGenotype%complement(ped%pedigree(i)%individualPhase(1))
-                    comp1 = ped%pedigree(i)%individualGenotype%complement(ped%pedigree(i)%individualPhase(2))
 
                     call ped%pedigree(i)%individualPhase(1)%setErrorToMissing()
                     call ped%pedigree(i)%individualPhase(2)%setErrorToMissing()
+                    comp2 = ped%pedigree(i)%individualGenotype%complement(ped%pedigree(i)%individualPhase(1))
+                    comp1 = ped%pedigree(i)%individualGenotype%complement(ped%pedigree(i)%individualPhase(2))
+
+                    call comp1%setErrorToMissing()
+                    call comp2%setErrorToMissing()
+
+                    call ped%pedigree(i)%individualPhase(1)%setFromOtherIfMissing(comp2)
+                    call ped%pedigree(i)%individualPhase(1)%setFromOtherIfMissing(comp1)
+                    
+                    deallocate(comp1)
+                    deallocate(comp2)
                 enddo
+                !$OMP END PARALLEL DO
 
             end subroutine PhaseComplement
 
@@ -1810,7 +1826,7 @@ end subroutine InternalHapLibImputationOld
                 integer(kind=1) :: phase1,phase2, childphase
                 inputParams => defaultInput
                 ! TODO maybe change this to pedigreeSIze? 
-                do i=1,ped%pedigreeSize- ped%nDummys
+                do i=1,ped%pedigreeSize
                     if (ped%pedigree(i)%nOffs /= 0) then       ! check that animal i,j is a sire or a dam
 
                         ! Sex chromosome
@@ -2312,9 +2328,6 @@ end subroutine InternalHapLibImputationOld
 
                         if (PedId /= 0) then
                             tmpGender = ped%pedigree(PedId)%gender
-                            ! if (ped%pedigree(pedId)%isDummy) then
-                            !     cycle
-                            ! endif
                         else
                             cycle
                         endif
@@ -2947,6 +2960,9 @@ end subroutine InternalHapLibImputationOld
             deallocate(GlobalWorkPhase)
             allocate(GlobalWorkPhase(0:ped%pedigreeSize-ped%nDummys,inputParams%nsnp,2))
             GlobalWorkPhase=9
+
+            !$OMP PARALLEL DO &
+            !$OMP PRIVATE(i,j,ParId,e)
             do i=1,ped%pedigreeSize
                 do j=1,inputParams%nsnp                                                     ! Phase alleles in the homozygous case
                     if (Genos(i,j)==0) GlobalWorkPhase(i,j,:)=0
@@ -2968,6 +2984,7 @@ end subroutine InternalHapLibImputationOld
                     enddo
                 endif
             enddo
+            !$OMP END PARALLEL DO
             GlobalWorkPhase(0,:,:)=9
         else                                ! Nothing is done in other chromosomes
             !! WARNING: This should be some copied, pasted and erased stuff

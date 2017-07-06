@@ -92,12 +92,28 @@ module AlphaImputeSpecFileModule
         
     contains
         procedure :: ReadInParameterFile
+        final :: destroyAlphaImputeInput
     end type AlphaImputeInput
 
     type(AlphaImputeInput),target, allocatable :: defaultInput
 
 contains
 
+
+    subroutine destroyAlphaImputeInput(in)
+
+    type(AlphaImputeInput), intent(inout) :: in
+
+    if (allocated(in%PhasePath)) then
+        deallocate(in%PhasePath)
+    endif
+
+    if (allocated(in%coreLengths)) then
+        deallocate(in%CoreAndTailLengths)
+        deallocate(in%CoreLengths)
+    endif
+
+    end subroutine destroyAlphaImputeInput
     !---------------------------------------------------------------------------
     ! DESCRIPTION:
     !> @brief      Constructor for AlphaImputeInput object
@@ -122,7 +138,7 @@ contains
         character(len=*), intent(in) :: SpecFile
 
         character(len=300) :: first, line
-        character(len=:), allocatable::tag
+        character(len=:), allocatable::tag, tmptag
         character(len=300),dimension(:),allocatable :: second
 
 
@@ -144,10 +160,11 @@ contains
 
             call splitLineIntoTwoParts(trim(line), first, second)
             tag = parseToFirstWhitespace(first)
+            tmptag = trim(tag)
             if (first(1:1)=="=" .or. first(1:1) == DEFAULTCOMMENT .or. len(trim(line))==0) then
                 cycle
             else
-                select case(trim(tag))
+                select case(tmptag)
 
                 ! box 1 inputs
             case("pedigreefile")
@@ -577,6 +594,7 @@ contains
         end if
     end do READFILE
     deallocate(tag)
+    deallocate(tmptag)
     open (newUnit=this%pedigreeFileUnit,file=trim(this%PedigreeFile),status="old")
     open (newUnit=this%genotypeFileUnit,file=trim(this%GenotypeFile),status="old")
     if (this%SexOpt==1) open (newUnit=this%genderFileUnit,file=trim(this%GenderFile),status="old")
