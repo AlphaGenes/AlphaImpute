@@ -525,11 +525,11 @@ integer :: LoopStart,OffSet
 integer,allocatable,dimension (:,:) :: LoopIndex
 integer(kind=1),allocatable,dimension (:,:,:,:) :: Temp
 
-type(HaplotypeLibrary) :: hapLib
+type(HaplotypeLibrary),allocatable :: hapLib
 
 type(Haplotype), dimension(:),allocatable :: workHap
-type(Haplotype) :: tmpHap
-type(Genotype) :: workGeno
+type(Haplotype), allocatable :: tmpHap
+type(Genotype), allocatable :: workGeno
 integer, dimension(:),allocatable :: matches
 integer :: id
 integer :: phase
@@ -668,6 +668,7 @@ do f=1,2
                             endif
                     endif
                       !$OMP END CRITICAL
+                    deallocate(tmpHap)
                 enddo
             enddo
             !$OMP END PARALLEL DO
@@ -708,7 +709,10 @@ do f=1,2
 
                             workHap(e) = haplib%getConsensusHap(matches)
                         endif
+
+                        deallocate(matches)
                     endif
+                    deallocate(tmpHap)
                 enddo
 
                 ! Has any haplotype been previously banned/phased?
@@ -723,8 +727,10 @@ do f=1,2
                     if (.not. workGeno%compatibleHaplotypes(workHap(1),workHap(2), 0)) then
                         Ban=0
                     endif
-                endif
 
+                    deallocate(workGeno)
+                endif
+                
                 ! Count the number of occurrences a particular phase is impute in a particular
                 ! allele across the cores and across the internal phasing steps
                 ! This implies occurrences across all the haplotype libraries of the different internal phasing steps
@@ -744,18 +750,19 @@ do f=1,2
                         enddo
                     endif
                 enddo
-                 deallocate(workHap)
+                deallocate(workHap)                
+                
             enddo  
             !$OMP END PARALLEL DO
 
             ! Prepare the core for the next cycle
             CoreStart=CoreStart+LoopIndex(l,2)
             CoreEnd=CoreEnd+LoopIndex(l,2)
+            deallocate(haplib)
             ! call hapLib%destroyHaplotypeLibrary()
             if ((f==2).and.(g==nCore)) exit
         enddo
     
-        
     enddo
 enddo
 
