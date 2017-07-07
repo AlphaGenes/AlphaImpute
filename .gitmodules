@@ -19,3 +19,6 @@
 [submodule "ferdosi"]
 	path = ferdosi
 	url = https://bitbucket.org/hickeyjohnteam/ferdosi.git
+[submodule "alphaimpute-docs"]
+	path = alphaimpute-docs
+	url = https://bitbucket.org/hickeyjohnteam/alphaimpute-docs.git
