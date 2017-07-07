@@ -142,7 +142,7 @@ contains
         character(len=300),dimension(:),allocatable :: second
 
 
-        this%useFerdosi = .true.
+        this%useFerdosi = .false.
         this%MultiHD = 0
         this%minoverlaphaplotype = 0
         this%cluster = .false.
