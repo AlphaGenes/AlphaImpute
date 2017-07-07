@@ -6,6 +6,9 @@ module PARAMETERS
     integer, parameter :: OPT_RESTART_PHASING=2
     integer, parameter :: OPT_RESTART_IMPUTATION=3
 
+    ! TODO - add output so that final step can be run seperately
+    integer, parameter :: OPT_RESTART_RECOMB=4
+
     integer, parameter :: RUN_HMM_NULL=0
     integer, parameter :: RUN_HMM_NO=1
     integer, parameter :: RUN_HMM_YES=2
