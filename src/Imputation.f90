@@ -287,7 +287,7 @@ write(0,*) 'DEBUG: Mach Finished'
                 ! This subroutine corresponds to Major sub-step 7 from Hickey et al., 2012 (Appendix A)
                 use, intrinsic :: ISO_Fortran_Env
                 use individualModule
-
+                use HaplotypeModule, only : haplotype
                 implicit none
 
                 integer :: m,e,g,i,j,nCore,nGlobalLoop,CoreLength,CoreStart,CoreEnd
