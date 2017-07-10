@@ -87,30 +87,19 @@ program AlphaImpute
     if (inputParams%hmmoption /= RUN_HMM_NGS) then
         if (inputParams%restartOption<OPT_RESTART_PHASING) call MakeDirectories(RUN_HMM_NULL)
 
-
-
         call ReadInData
-       
         ! call InitialiseArrays
         !call cpu_time(start)
         call SnpCallRate
-
-
         call CheckParentage
-
-
-
         if (inputParams%MultiHD/=0) then 
             call ClassifyAnimByChips
-
         endif
         
         call FillInSnp
 
-
         call FillInBasedOnOffspring
         call InternalEdit
-
 
         if (inputparams%cluster) then
             call MakeFiles
@@ -208,8 +197,8 @@ program AlphaImpute
                     write(6,*) " "
                     write(6,*) " ","Genotype probabilities bypassed."
                     if (inputParams%restartOption==OPT_RESTART_GENEPROB) then
-                        write(6,*) "Restart option 1 stops program after Geneprobs jobs have finished"
-                        write(6,*) "Warning - BYPASSGENEPROB has been given yes. Thus these options are incompatible."
+                        write(6,*) "Restart option 1 stops program after Geneprobs jobs have been bypassed"
+                        ! write(6,*) "Warning - BYPASSGENEPROB has been given yes. Thus these options are incompatible."
                         stop
                     endif
                 case (2)
