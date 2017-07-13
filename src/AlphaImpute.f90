@@ -76,8 +76,10 @@ contains
 
         write(6,*) " "
         write(6,*) " ", "Running AlphaPhase"
-       !$OMP parallel DO schedule(dynamic) &
-       !$OMP FIRSTPRIVATE(params)
+       !$!OMP parallel DO schedule(dynamic) &
+       !$!OMP default(shared)
+       !$!OMP FIRSTPRIVATE(params) &
+       !$!OMP PRIVATE(coreIndexes, i)
         do i= 1, nCoreLengths*2
             coreIndexes = i
 
@@ -92,10 +94,10 @@ contains
             params%useSurrsN = 10
            
 
-            results%results(i) = phaseAndCreateLibraries(ped, params, quiet=.true.)
+            results%results(i) = phaseAndCreateLibraries(ped, params, quiet=.false.)
         enddo
 
-        !$omp end parallel do
+        !$!omp end parallel do
         write(6,*) " ", "Finished Running AlphaPhase"
 
 
