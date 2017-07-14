@@ -20,11 +20,9 @@ INCLUDE(${CMAKE_MODULE_PATH}/setVersion.cmake)
 add_definitions(-DCLUSTER=${CLUSTER})
 # Define the executable name
 SET(ALPHAIMPUTEEXE AlphaImpute)
-SET(GENEPROBEXE GeneProbForAlphaImpute)
 MESSAGE("Prog name ${ALPHAIMPUTEEXE}")
 # Define the library name
 SET(AHLIB alphahouse)
-SET(GPLIB geneprob)
 SET(APLIB alphaphase)
 SET(AMLPLIB alphamlp)
 SET(AHMMLIB alphahmm)
@@ -78,7 +76,6 @@ endif(${USE_HDF5})
 # are to your liking.
 INCLUDE(${CMAKE_MODULE_PATH}/SetFortranFlags.cmake)
 SET(SRCAH ./alphahouse/src/)
-SET(SRCGP ./geneprob/src/)
 SET(SRCAP ./alphaphase/src/)
 SET(SRCAMLP ./alphamlp/src/)
 SET(SRCAHMM ./alphahmm/src/)
@@ -88,7 +85,6 @@ SET(CMAKE_Fortran_MODULE_DIRECTORY ${OBJ})
 
 
 ADD_SUBDIRECTORY(${SRCAH} ${OBJ}/AH)
-ADD_SUBDIRECTORY(${SRCGP} ${OBJ}/GP)
 ADD_SUBDIRECTORY(${SRCAP} ${OBJ}/AP)
 ADD_SUBDIRECTORY(${SRCAHMM} ${OBJ}/AHMM)
 ADD_SUBDIRECTORY(${SRCFER} ${OBJ}/FER)

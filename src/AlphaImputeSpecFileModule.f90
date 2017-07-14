@@ -79,7 +79,7 @@ module AlphaImputeSpecFileModule
         logical :: PreProcess
         integer(kind=1) :: PhaseTheDataOnly
 
-        integer(kind=1) :: UserDefinedHD,PrePhased,BypassGeneProb,RestartOption
+        integer(kind=1) :: UserDefinedHD,PrePhased,RestartOption
 
         integer :: AnimalFileUnit, prePhasedFileUnit, pedigreeFileUnit,genotypeFileUnit,GenderFileUnit,HapListUnit
 
@@ -553,24 +553,11 @@ contains
                     open (newunit=this%prePhasedFileUnit,file=trim(second(1)),status="old")
                 endif
             case("bypassgeneprob")
-                if (trim(tolower(second(1)))=="no") then
-                    this%BypassGeneProb=0
-                else if (trim(tolower(second(1)))=="yes") then
-                    this%BypassGeneProb=1
-                else if (trim(tolower(second(1)))=="probabilities") then
-                    this%bypassgeneprob=2
-                else
-                    write(error_unit,*) "bypassgeneprob not correctly specified"
-                    stop
-                endif
+                write(error_unit,*) "The Geneprob has been moved to legacy and is no longer in use"
             case("restartoption")
                 read(second(1),*) this%restartOption
             case("cluster")
-               if(ToLower(trim(second(1))) == "no") then
-                    this%cluster = .false.
-                else if (ToLower(trim(second(1))) == "yes") then
-                    this%cluster = .true.
-                endif
+               write(error_unit,*) "The cluster option will be reimplemented at a later date. Please use openmp"
             case("parallelprocessors")
                 read(second(1), *) this%useProcs
                 if (this%useProcs > OMP_get_num_procs()) then

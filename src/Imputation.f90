@@ -46,8 +46,8 @@ CONTAINS
 
     SUBROUTINE ImputationManagement
         use omp_lib
-        use AlphaImputeInputOutputModule, only : ReadInPrePhasedData, ReReadGeneProbs,readgeneprobscluster
-        use AlphaPhaseResultsModule
+        use AlphaImputeInputOutputModule, only : ReadInPrePhasedData
+        use AlphaPhaseResultsModule 
 
         integer :: loop
         character(len=150) :: timeOut
@@ -98,15 +98,6 @@ write(0,*) 'DEBUG: Mach Finished'
         else
 
             if (inputParams%sexopt==0) then    
-                if (inputParams%BypassGeneProb==0) then
-
-
-                    if (inputParams%cluster) then
-                        call readGeneProbsCluster(GlobalWorkPhase,ped,GpIndex, inputParams,GeneProbThresh)
-                    else   
-                        call ReReadGeneProbs(globalworkphase, ped,"./Results/GenotypeProbabilities.txt", inputParams%nsnp,GeneProbThresh)
-                    endif
-                endif
                 ! Get Genotype information
                 call GeneProbPhase          ! Recover and store information about which and how many alleles/SNPs have been genotyped/phased
             else
@@ -1806,9 +1797,6 @@ end subroutine InternalHapLibImputationOld
                 integer :: e,i,ParId
                 type(Genotype) :: tmpGeno
 
-
-                integer :: tmp,j
-
                 inputParams => defaultInput
                 do i=1,ped%pedigreeSize- ped%nDummys
                     if (inputParams%sexopt==0 .or. (inputParams%sexopt==1 .and. ped%pedigree(i)%gender/=inputParams%HetGameticStatus) ) then     ! If individual is homogametic
@@ -2027,58 +2015,14 @@ end subroutine InternalHapLibImputationOld
                 use Global
                 ! TODOphase this all needs redone
                 use AlphaImputeSpecFileModule
-                use AlphaImputeInputOutputModule, only: readProbabilitiesFull, readProbabilitiesFullCluster
 
                 implicit none
 
-                integer :: i,j,k,m,StSnp,EnSnp
-                real :: PatAlleleProb(inputParams%nsnp,2),MatAlleleProb(inputParams%nsnp,2),HetProb(inputParams%nsnp)
+                integer :: i,j,k,m
                 integer :: Informativeness(inputParams%nsnp,6),TmpInfor(inputParams%nsnp,6),GrandPar
                 integer :: phase1, phase2 
                 integer :: tmpID 
                 inputParams => defaultInput
-
-
-                if (inputParams%BypassGeneProb==0) then
-                    ! Get information from GeneProb
-
-
-                    if (inputParams%restartOption /= OPT_RESTART_ALL) then
-                        if (inputParams%cluster) then
-                            call readProbabilitiesFullCluster(GenosProbs,ped%pedigreeSize-ped%nDummys, inputParams%nsnp, inputParams, GpIndex)
-                        else
-                            call readProbabilitiesFull("./GeneProb/GenotypeProbabilities.txt",GenosProbs,ped%pedigreeSize-ped%nDummys, inputParams%nsnp)
-                        endif
-                    endif 
-                    StSnp=1
-                    EnSnp=inputParams%nSnp
-
-                    do i=1,ped%pedigreeSize- ped%nDummys
-
-                        PatAlleleProb(StSnp:EnSnp,2)=GenosProbs(i,StSnp:EnSnp,3)+GenosProbs(i,StSnp:EnSnp,4)
-                        MatAlleleProb(StSnp:EnSnp,1)=GenosProbs(i,StSnp:EnSnp,1)+GenosProbs(i,StSnp:EnSnp,3)
-                        MatAlleleProb(StSnp:EnSnp,2)=GenosProbs(i,StSnp:EnSnp,2)+GenosProbs(i,StSnp:EnSnp,4)
-
-                        ! Probability of heterozygosity
-                        HetProb(StSnp:EnSnp)=GenosProbs(i,StSnp:EnSnp,2)+GenosProbs(i,StSnp:EnSnp,3)
-
-                        do j=StSnp,EnSnp
-                            if (PatAlleleProb(j,1)>=GeneProbThresh) then
-                                call ped%pedigree(i)%individualPhase(1)%setPhase(j,0)
-                            else if (PatAlleleProb(j,2)>=GeneProbThresh) then
-                                call ped%pedigree(i)%individualPhase(1)%setPhase(j,1)
-                            endif
-
-                            if (MatAlleleProb(j,1)>=GeneProbThresh) then
-                                call ped%pedigree(i)%individualPhase(2)%setPhase(j,0)
-                            else if (MatAlleleProb(j,2)>=GeneProbThresh) then 
-                                call ped%pedigree(i)%individualPhase(2)%setPhase(j,1)
-                            endif
-
-                            if (HetProb(j)>=GeneProbThresh) call ped%pedigree(i)%individualGenotype%setGenotype(j,1)
-                        enddo
-                    enddo
-                endif
 
 
                 open(unit=102,file="." // DASH // "Miscellaneous" // "IndividualSnpInformativeness.txt", status="unknown")

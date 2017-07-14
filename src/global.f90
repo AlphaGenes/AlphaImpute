@@ -2,12 +2,11 @@
 module PARAMETERS
     ! TODO params only used in read in params, but where to put them? 
     integer, parameter :: OPT_RESTART_ALL=0
-    integer, parameter :: OPT_RESTART_GENEPROB=1
-    integer, parameter :: OPT_RESTART_PHASING=2
-    integer, parameter :: OPT_RESTART_IMPUTATION=3
+    integer, parameter :: OPT_RESTART_PHASING=1
+    integer, parameter :: OPT_RESTART_IMPUTATION=2
 
     ! TODO - add output so that final step can be run seperately
-    integer, parameter :: OPT_RESTART_RECOMB=4
+    integer, parameter :: OPT_RESTART_RECOMB=3
 
     integer, parameter :: RUN_HMM_NULL=0
     integer, parameter :: RUN_HMM_NO=1
@@ -47,7 +46,7 @@ module Global
     integer(kind=1),allocatable,dimension (:) :: SnpIncluded
     integer(kind=1),allocatable,dimension (:,:) :: MSTermInfo
     integer(kind=1),allocatable,dimension (:,:,:) :: GlobalWorkPhase
-    integer,allocatable :: Setter(:),GpIndex(:,:),GlobalTmpCountInf(:,:)
+    integer,allocatable :: Setter(:),GlobalTmpCountInf(:,:)
     real(kind=real64),allocatable,dimension (:) :: Maf
     real,allocatable,dimension (:,:) :: ProbImputeGenos
     real,allocatable,dimension (:,:,:) :: ProbImputePhase
