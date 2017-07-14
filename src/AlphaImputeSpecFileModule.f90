@@ -545,7 +545,7 @@ contains
                 endif
 
             case("prephasedfile")
-                if (toLower(trim(second(1)))=="None") then
+                if (toLower(trim(second(1)))=="none") then
                     this%PrePhased=0
                 else
                     this%PrePhased=1
@@ -556,6 +556,7 @@ contains
                 write(error_unit,*) "The Geneprob has been moved to legacy and is no longer in use"
             case("restartoption")
                 read(second(1),*) this%restartOption
+
             case("cluster")
                if (toLower(trim(second(1)))=="no") then
                     this%cluster=.false.
