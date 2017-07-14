@@ -165,26 +165,21 @@ program AlphaImpute
 
 
         if (inputParams%restartOption<OPT_RESTART_IMPUTATION) Then
-            call PhasingManagementNew(APResults)
+            
+            if (inputParams%cluster) then
+#ifdef MPIACTIVE
+                call phasingManagementCluster
+#else
+                write(error_unit,*) "WARNING: CLUSTER HAS BEEN SPECIFIED BUT MPI NOT ENABLED. Falling back on OpenMP version"
+                call PhasingManagementNew(APResults)
+#endif
+            else
+                call PhasingManagementNew(APResults)
+            endif
 
         endif
 
-        if (inputParams%restartOption==OPT_RESTART_PHASING) then
-            block
-                use OutputParametersModule
-                use InputOutput
-                integer :: i
-                type(OutputParameters) :: oParams
-                oParams = newOutputParametersImpute()
-                do i=1, apResults%nResults
-                    write(oParams%outputDirectory,'("."a"Phasing",a,"Phase"i0)') DASH,DASH, i
-                    call writeAlphaPhaseResults(APResults%results(i), ped, oParams)
-
-                enddo
-                write(6,*) "Restart option 1 stops program after Phasing has been managed"
-                stop
-            end block
-        endif
+    
     endif
 
 

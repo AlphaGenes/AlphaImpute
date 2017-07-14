@@ -47,7 +47,7 @@ module AlphaImputeModule
         use AlphaPhaseParametersModule
         use AlphaPhaseFunctions
         use AlphaPhaseResultsModule
-        use Global, only : ped
+        use Global, only : ped, OPT_RESTART_PHASING
         use inputoutput, only : MakeDirectories
         implicit none
 
@@ -100,10 +100,101 @@ module AlphaImputeModule
         write(6,*) " ", "Finished Running AlphaPhase"
 
 
+        if (inputParams%restartOption==OPT_RESTART_PHASING) then
+            block
+                use OutputParametersModule
+                use InputOutput
+                integer :: i
+                type(OutputParameters) :: oParams
+                oParams = newOutputParametersImpute()
+                do i=1, results%nResults
+                    write(oParams%outputDirectory,'("."a"Phasing",a,"Phase"i0)') DASH,DASH, i
+                    call writeAlphaPhaseResults(results%results(i), ped, oParams)
+
+                enddo
+                write(6,*) "Restart option 1 stops program after Phasing has been managed"
+                stop
+            end block
+        endif
+
     end subroutine PhasingManagementNew
 
 
 
+
+#ifdef MPIACTIVE
+    subroutine phasingManagementCluster
+
+        use AlphaImputeSpecFileModule
+        use AlphaPhaseParametersModule
+        use AlphaPhaseFunctions
+        use AlphaPhaseResultsModule
+        use Global, only : ped, OPT_RESTART_PHASING
+        use inputoutput, only : MakeDirectories
+        use OutputParametersModule
+        use InputOutput
+        use MPIUtilities
+
+        implicit none
+
+        integer :: totalToDo            
+        type(AlphaImputeInput), pointer :: inputParams
+        type(AlphaPhaseParameters) :: params
+        integer :: nCoreLengths,i, coreIndexes
+        type(OutputParameters) :: oParams
+        
+        inputParams=> defaultInput
+        nCoreLengths = size(inputParams%CoreAndTailLengths)
+        results%nResults = nCoreLengths*2
+
+        params = newParameters()
+        params%iterateType = inputParams%iterateMethod
+        params%iterateNumber = inputParams%PhaseSubsetSize
+        params%numIter = inputParams%PhaseNIterations
+        params%minOverlap = inputparams%minoverlaphaplotype
+        params%percGenoHaploDisagree = inputparams%GenotypeErrorPhase*0.01
+        params%Offset = .true.
+        oParams = newOutputParametersImpute()
+        
+        if (inputparams%minoverlaphaplotype /= 0) then
+            params%percMinPresent = 0
+        endif
+
+        call startMPI
+
+        totalToDo = (nCoreLengths*2)/mpiSize
+
+        if (totalToDo <1) then
+            if (mpiRank < nCoreLengths*2) return
+        endif
+        write(6,*) " "
+        write(6,*) " ", "Running AlphaPhase"
+            
+        ! TODO can omp this loop
+        do i=1,totalToDo
+
+                index = mpiRank*i
+             if (i > nCoreLengths) Then
+                params%offset = .false.
+                coreIndexes = index - nCoreLengths
+            endif
+            
+            params%CoreAndTailLength = inputParams%CoreAndTailLengths(coreIndexes)
+            params%jump = inputParams%CoreLengths(coreIndexes)
+            params%numsurrdisagree = 1
+            params%useSurrsN = 10
+            result = phaseAndCreateLibraries(ped, params, quiet=.true., updatePedigree=.false.)
+
+                            
+            write(oParams%outputDirectory,'("."a"Phasing",a,"Phase"i0)') DASH,DASH, index
+            call writeAlphaPhaseResults(result, ped, oParams)
+        enddo
+
+
+        call endMPI
+    end subroutine phasingManagementCluster
+
+#endif
 !#############################################################################################################################################################################################################################
 
 subroutine IterateInsteadOfGeneProbs

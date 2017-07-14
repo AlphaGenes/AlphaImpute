@@ -526,10 +526,10 @@ contains
                 endif
 
             case("phasingonly")
-                if (second(1)=="No") then
+                if (toLower(trim(second(1)))=="no") then
                     this%PhaseTheDataOnly=0
                 else
-                    if (second(1)=="Yes") then
+                    if (toLower(trim(second(1)))=="yes") then
                         this%PhaseTheDataOnly=1
                     else
                         write(error_unit,*) "Stop - Phasing only option incorrectly specified"
@@ -545,7 +545,7 @@ contains
                 endif
 
             case("prephasedfile")
-                if (second(1)=="None") then
+                if (toLower(trim(second(1)))=="None") then
                     this%PrePhased=0
                 else
                     this%PrePhased=1
@@ -557,7 +557,15 @@ contains
             case("restartoption")
                 read(second(1),*) this%restartOption
             case("cluster")
-               write(error_unit,*) "The cluster option will be reimplemented at a later date. Please use openmp"
+               if (toLower(trim(second(1)))=="no") then
+                    this%cluster=.false.
+                else
+                    if (toLower(trim(second(1)))=="yes") then
+                        this%cluster=.true.
+                    else
+                        write(error_unit,*) "Error: Cluster incorrectly specified, please use yes or no"
+                    endif
+                endif
             case("parallelprocessors")
                 read(second(1), *) this%useProcs
                 if (this%useProcs > OMP_get_num_procs()) then
