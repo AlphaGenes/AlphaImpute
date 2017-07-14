@@ -1729,24 +1729,8 @@ end subroutine InternalHapLibImputationOld
                   !$OMP PARALLEL DO &
                 !$OMP PRIVATE(i)
                 do i=1,ped%pedigreeSize-ped%nDummys
-                    ! call ped%pedigree(i)%individualPhase(1)%setErrorToMissing()
-                    ! call ped%pedigree(i)%individualPhase(2)%setErrorToMissing()
-                    call ped%pedigree(i)%IndividualGenotype%setFromHaplotypesIfMissing(ped%pedigree(i)%individualPhase(1),ped%pedigree(i)%individualPhase(2))
-                    
-                    ! do j=1,inputParams%nsnp         
-                    !     if (ped%pedigree(i)%individualGenotype%getGenotype(j) == 9) then
-                    !         phase1 = ped%pedigree(i)%individualPhase(1)%getPhase(j)
-                    !         phase2 = ped%pedigree(i)%individualPhase(2)%getPhase(j)
-                    !         if ((phase1/=9).and.(phase2/=9)) then
-                    !             t =phase1+phase2
-                    !             call ped%pedigree(i)%individualGenotype%setGenotype(j,t)
-                    !         end if
-                    !     endif
-                    ! enddo
+                    call ped%pedigree(i)%IndividualGenotype%setFromHaplotypesIfMissing(ped%pedigree(i)%individualPhase(1),ped%pedigree(i)%individualPhase(2))    
                 enddo 
-
-
-
                 !$OMP END PARALLEL DO
 
 

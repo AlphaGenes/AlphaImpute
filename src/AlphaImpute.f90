@@ -81,7 +81,7 @@ module AlphaImputeModule
         !$OMP parallel do &
         !$OMP default(shared) &
         !$OMP FIRSTPRIVATE(params) &
-        !$OMP PRIVATE(coreIndexes, i, temp)
+        !$OMP PRIVATE(coreIndexes, i)
         do i= 1,nCoreLengths*2
             coreIndexes = i
 
@@ -89,20 +89,14 @@ module AlphaImputeModule
                 params%offset = .false.
                 coreIndexes = i - nCoreLengths
             endif
-
             
-            temp = ped%copyPedigree()
             params%CoreAndTailLength = inputParams%CoreAndTailLengths(coreIndexes)
             params%jump = inputParams%CoreLengths(coreIndexes)
             params%numsurrdisagree = 1
             params%useSurrsN = 10
+            results%results(i) = phaseAndCreateLibraries(ped, params, quiet=.true., updatePedigree=.false.)
 
-
-            results%results(i) = phaseAndCreateLibraries(temp, params, quiet=.true.)
-
-            call temp%destroyPedigree()
         enddo
-
         !$omp end parallel do
         write(6,*) " ", "Finished Running AlphaPhase"
 
@@ -160,7 +154,7 @@ subroutine IterateInsteadOfGeneProbs
 
         call IterateParentHomoFill
         call PhaseComplement
-        call IterateMakeGenotype
+        call MakeGenotype
 
         do i=1,ped%pedigreeSize-ped%nDummys
             do j=1,nSnpIterate
@@ -300,7 +294,7 @@ else
 
     call IterateParentHomoFill
     call PhaseComplement
-    call IterateMakeGenotype
+    call MakeGenotype
 
     do i=1,ped%pedigreeSize-ped%nDummys
         do j=1,nSnpIterate
@@ -1210,6 +1204,7 @@ end subroutine ModelRecomb
 subroutine IterateGeneProbPhase
     use Global
     use AlphaImputeSpecFileModule
+    use Imputation, only : MakeGenotype
     implicit none
 
     integer :: i, fileUnit,j
@@ -1252,51 +1247,10 @@ subroutine IterateGeneProbPhase
     deallocate(tmpPhase)
     deallocate(tmpGeno)
     ! TODO this is called twice...from iterate geneprobnew
-    call IterateMakeGenotype
+    call MakeGenotype
 
 
 end subroutine IterateGeneProbPhase
-
-!#############################################################################################################################################################################################################################
-
-subroutine IterateMakeGenotype
-    use Global
-    implicit none
-
-    integer :: i
-
-    do i=1,ped%pedigreeSize-ped%nDummys
-        call ped%pedigree(i)%individualGenotype%setFromHaplotypesIfMissing(ped%pedigree(i)%individualPhase(1),ped%pedigree(i)%individualPhase(2))
-    enddo
-
-
-end subroutine IterateMakeGenotype
-
-!#############################################################################################################################################################################################################################
-
-subroutine IteratePhaseComplement
-    use Global
-    implicit none
-
-    integer :: i
-    type(haplotype) :: comp1, comp2
-
-
-
-    do i=1,ped%pedigreeSize-ped%nDummys
-
-        comp2 = ped%pedigree(i)%individualGenotype%complement(ped%pedigree(i)%individualPhase(1))
-        comp1 = ped%pedigree(i)%individualGenotype%complement(ped%pedigree(i)%individualPhase(2))
-
-        call ped%pedigree(i)%individualPhase(1)%setFromOtherIfMissing(comp1)
-        call ped%pedigree(i)%individualPhase(2)%setFromOtherIfMissing(comp2)
-
-        call ped%pedigree(i)%individualPhase(1)%setErrorToMissing()
-        call ped%pedigree(i)%individualPhase(2)%setErrorToMissing()
-    enddo
-
-
-end subroutine IteratePhaseComplement
 
 !#############################################################################################################################################################################################################################
 
@@ -1801,19 +1755,9 @@ subroutine FillInSnp
 
 
             if (ped%pedigree(i)%individualGenotype%isMissing(j)) then
-                ! if (trim(ped%pedigree(i)%originalId) == "3899" .and.  j ==5) then
-                !     print *, "DEBUG1:",ped%pedigree(i)%individualGenotype%getGenotype(j)
-                ! endif 
-                ! if (trim(tmpMother%originalId) == "3899" .and.  j ==5) then
-                !     print *, "as parent DEBUG1",tmpMother%individualGenotype%getGenotype(j)
-                ! endif 
                 if ((tmpFather%individualGenotype%getGenotype(j)==0).and.(tmpMother%individualGenotype%getGenotype(j)==0)) then
-                    ! print *,"id: ",ped%pedigree(i)%originalId," snp:",j, " father ", tmpFather%originalId, " mother ",tmpMother%originalId, " newGenos ", 0
                     call ped%pedigree(i)%individualGenotype%setGenotype(j,0)
-
-
                 else if ((tmpFather%individualGenotype%getGenotype(j)==2).and.(tmpMother%individualGenotype%getGenotype(j)==2)) then
-                    ! print *,"id: ",ped%pedigree(i)%originalId," snp:",j," father ", tmpFather%originalId, " mother ",tmpMother%originalId, " newGenos ", 2
                     call ped%pedigree(i)%individualGenotype%setGenotype(j,2)
                 endif
 
@@ -1834,11 +1778,8 @@ subroutine FillInSnp
                 else
                     if ((tmpFather%individualGenotype%getGenotype(j)==0).and.(tmpMother%individualGenotype%getGenotype(j)==2)) Then
                         call ped%pedigree(i)%individualGenotype%setGenotype(j,1)
-                        ! print *,"id: ",ped%pedigree(i)%originalId," snp:",j," father ", tmpFather%originalId, " mother ",tmpMother%originalId, " newGenos ", 1
                     else if ((tmpFather%individualGenotype%getGenotype(j)==2).and.(tmpMother%individualGenotype%getGenotype(j)==0)) Then
                         call ped%pedigree(i)%individualGenotype%setGenotype(j,1)
-                        ! print *,"id: ",ped%pedigree(i)%originalId," snp:",j," father ", tmpFather%originalId, " mother ",tmpMother%originalId, " newGenos ", 1
-
                     endif 
                 endif
             endif
