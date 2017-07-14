@@ -1209,7 +1209,8 @@ end subroutine InternalHapLibImputationOld
                                 ! Else, if Sex Chromosome, then MSTermInfo is 0 always
                                 ! So, if a Conservative imputation of haplotypes is selected, this DO statement will do nothing
                                 if ((inputParams%ConservativeHapLibImputation==1).and.(MSTermInfo(i,e)==0)) cycle
-                                    tmpHap = ped%pedigree(i)%individualPhase(e)%subset(startSnp,endSnp)
+                                
+                                tmpHap = ped%pedigree(i)%individualPhase(e)%subset(startSnp,endSnp)
                                     !  If haplotype is partially phased
                                      if (.not. tmpHap%allMissingOrError()) then
                                         PatMatDone(e) = .true.
@@ -1232,8 +1233,9 @@ end subroutine InternalHapLibImputationOld
                                             endif
                                             deallocate(matches)
                                         endif
-                                        deallocate(tmpHap)
+
                                     endif
+                                deallocate(tmpHap)
                             enddo
 
                             ! If one of the haplotypes is partially phased

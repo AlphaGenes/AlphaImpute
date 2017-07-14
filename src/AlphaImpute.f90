@@ -55,7 +55,6 @@ module AlphaImputeModule
         type(AlphaPhaseParameters) :: params
         type(AlphaPhaseResultsContainer), intent(out) :: results
         integer :: nCoreLengths,i, coreIndexes
-        type(pedigreeHolder) :: temp
         
         inputParams=> defaultInput
         nCoreLengths = size(inputParams%CoreAndTailLengths)
@@ -877,7 +876,7 @@ subroutine ModelRecomb
 
     integer :: e,i,j,k,l,SuperJ,StartDisFound,EndDisFound,HetEnd,HetStart,RSide,LSide,PatMat,SireDamRL,nSnpFinal,Counter
     integer :: StartDisPrev,EndDisPrev,RecombOnOff
-    integer :: GamA,GamB,Tmp,StartDisOld,StartDisTmp
+    integer :: GamA,GamB,StartDisOld,StartDisTmp
     integer :: CountRightSwitch,CountLeftSwitch,PedId,StartDis,EndDis,StartJ,nRec
     integer(kind=1),allocatable,dimension(:,:,:) :: WorkPhase,TempWork
     integer,allocatable,dimension(:) :: WorkLeft,WorkRight,TempVec,StR,EnR,StRNarrow,EnRNarrow

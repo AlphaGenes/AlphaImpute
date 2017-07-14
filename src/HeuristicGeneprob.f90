@@ -20,7 +20,7 @@ module HeuristicGeneprobModule
         integer :: e !< if ind is childs sire (1) or dam (2)
         integer :: p !< offspring phase
 
-        integer :: maxVal,maxPos, max2Val, max2Pos
+        integer :: maxVal,maxPos, max2Val
 
         real(kind=real64), dimension(:,:,:), allocatable :: genosProbs !< array for each animal, 0,1,2
         real, dimension(0:2, 0:2) :: heuristicTrace
