@@ -106,8 +106,13 @@ write(0,*) 'DEBUG: Mach Finished'
             endif
 
             if (inputParams%NoPhasing==1) then
+
+                call makeGenotype
+                call ped%writeOutGenotypes("init")
                 ! Major sub-step 2 as explained in Hickey et al. (2012; Appendix A)
                 call BaseAnimalFillIn
+                       call makeGenotype
+                call ped%writeOutGenotypes("afterbase")
                     ! Impute phase whenever a pre-phase file exists
                     if (inputParams%PrePhased==1) call ReadInPrePhasedData
 
@@ -116,6 +121,9 @@ write(0,*) 'DEBUG: Mach Finished'
 
                     ! General imputation procedures
                     call GeneralFillInInit
+
+                      call makeGenotype
+                call ped%writeOutGenotypes("aftergen1")
                         if (inputParams%HMMOption==RUN_HMM_PREPHASE) Then
                             block
                                 use AlphaHmmInMod
@@ -141,7 +149,13 @@ write(0,*) 'DEBUG: Mach Finished'
                                 print*, " "
                                 print*, "Performing imputation loop",loop
 
-                                call PhaseElimination                   ! Major Sub-Step 5 (Hickey et al., 2012; Appendix A)                         
+                                call PhaseElimination                   ! Major Sub-Step 5 (Hickey et al., 2012; Appendix A)  
+
+
+                                call makeGenotype
+                                call ped%writeOutGenotypes("after5")
+
+
                                 if (inputParams%sexopt==1) then
                                     call EnsureHetGametic
                                 end if
@@ -151,12 +165,20 @@ write(0,*) 'DEBUG: Mach Finished'
                                 print*, " ","Parent of origin assigmnent of high density haplotypes completed"
                                 
                                 call ParentPhaseElimination             ! Major Sub-Step 4 (Hickey et al., 2012; Appendix A)
+
+
+                                call makeGenotype
+                                call ped%writeOutGenotypes("after4")
+
                                 if (inputParams%sexopt==1) then
                                     call EnsureHetGametic
                                 end if
 
                                 call GeneralFillIn
                                 call RestrictedWorkLeftRight            ! Major Sub-Step 8 (Hickey et al., 2012; Appendix A)
+                                call makeGenotype
+                                call ped%writeOutGenotypes("after81")
+
                                 if (inputParams%sexopt==1) then
                                     call EnsureHetGametic
                                 end if
@@ -167,6 +189,8 @@ write(0,*) 'DEBUG: Mach Finished'
                                 print*, " ","Imputation from high-density parents completed at: ",trim(timeOut)
 
                                 call ImputeFromHDLibrary                ! Major Sub-Step 3 (Hickey et al., 2012; Appendix A)
+                                call makeGenotype
+                call ped%writeOutGenotypes("after3")
 
                                 if (inputParams%sexopt==1) then
                                     call EnsureHetGametic
@@ -174,6 +198,8 @@ write(0,*) 'DEBUG: Mach Finished'
 
                                 call GeneralFillIn
                                 call RestrictedWorkLeftRight            ! Major Sub-Step 8 (Hickey et al., 2012; Appendix A)
+                                call makeGenotype
+                call ped%writeOutGenotypes("after82")
                                 if (inputParams%sexopt==1) then
                                     call EnsureHetGametic
                                 end if
@@ -183,12 +209,17 @@ write(0,*) 'DEBUG: Mach Finished'
                                 print*, " ","Haplotype library imputation completed at: ",trim(timeOut)
 
                                 call InternalParentPhaseElim            ! Major Sub-Step 7 (Hickey et al., 2012; Appendix A)
+                                call makeGenotype
+                call ped%writeOutGenotypes("after7")
                                 if (inputParams%sexopt==1) then
                                     call EnsureHetGametic
                                 end if
                                 call GeneralFillIn
 
                                 call RestrictedWorkLeftRight            ! Major Sub-Step 8 (Hickey et al., 2012; Appendix A)
+                                call makeGenotype
+                                call ped%writeOutGenotypes("after83")
+                                
                                 if (inputParams%sexopt==1) then
                                     call EnsureHetGametic
                                 end if
