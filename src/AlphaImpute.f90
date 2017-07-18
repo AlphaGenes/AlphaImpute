@@ -1587,10 +1587,10 @@ subroutine InternalEdit
             else
                 if ((float(CountMiss)/inputParams%nsnp)>(1.0-inputParams%PercGenoForHD)) then
                     Setter(i)=0
-                    if (.not. ped%pedigree(i)%genotyped) then
-                        ! If animal is not genotyped, but enough info has been imputed, set it as genotyped
-                        call ped%setAnimalAsGenotyped(i)
-                    endif
+                    ! if (.not. ped%pedigree(i)%genotyped) then
+                    !     ! If animal is not genotyped, but enough info has been imputed, set it as genotyped
+                    !     call ped%setAnimalAsGenotyped(i)
+                    ! endif
                 endif
             endif
         enddo
@@ -1929,7 +1929,6 @@ subroutine CheckParentage
                     ! Look for mendelenian errors
                     do j=1,inputParams%nsnp
 
-                        ! TODO can probably do the following better with new genotype class
                         if ((ped%pedigree(IndId)%individualGenotype%getGenotype(j)/=9).and.(ped%pedigree(parId)%individualGenotype%getGenotype(j)/=9)) then
                             CountBothGeno=CountBothGeno+1
                             if (ped%pedigree(parId)%individualGenotype%getGenotype(j)/=1) then
