@@ -77,7 +77,7 @@ module AlphaImputeModule
         write(6,*) " "
         write(6,*) " ", "Running AlphaPhase"
             
-        !$OMP parallel do &
+        !$OMP parallel do schedule(dynamic)&
         !$OMP default(shared) &
         !$OMP FIRSTPRIVATE(params) &
         !$OMP PRIVATE(coreIndexes, i)
