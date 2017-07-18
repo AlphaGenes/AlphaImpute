@@ -49,12 +49,14 @@ module AlphaImputeModule
         use AlphaPhaseResultsModule
         use Global, only : ped, OPT_RESTART_PHASING
         use inputoutput, only : MakeDirectories
+        use OutputParametersModule
         implicit none
 
         type(AlphaImputeInput), pointer :: inputParams
         type(AlphaPhaseParameters) :: params
         type(AlphaPhaseResultsContainer), intent(out) :: results
         integer :: nCoreLengths,i, coreIndexes
+        type(OutputParameters) :: oParams
         
         inputParams=> defaultInput
         nCoreLengths = size(inputParams%CoreAndTailLengths)
@@ -74,13 +76,15 @@ module AlphaImputeModule
         endif
         call omp_set_nested(.true.)
 
+        
+
         write(6,*) " "
         write(6,*) " ", "Running AlphaPhase"
-            
+        
         !$OMP parallel do schedule(dynamic)&
         !$OMP default(shared) &
         !$OMP FIRSTPRIVATE(params) &
-        !$OMP PRIVATE(coreIndexes, i)
+        !$OMP PRIVATE(coreIndexes, i,oParams)
         do i= 1,nCoreLengths*2
             coreIndexes = i
 
@@ -94,6 +98,11 @@ module AlphaImputeModule
             params%numsurrdisagree = 1
             params%useSurrsN = 10
             results%results(i) = phaseAndCreateLibraries(ped, params, quiet=.true., updatePedigree=.false.)
+            if (inputParams%restartOption==OPT_RESTART_PHASING) then
+                oParams = newOutputParametersImpute()
+                write(oParams%outputDirectory,'("."a"Phasing",a,"Phase"i0)') DASH,DASH, i
+                call writeAlphaPhaseResults(results%results(i), ped, oParams)
+            endif
 
         enddo
         !$omp end parallel do
@@ -101,20 +110,8 @@ module AlphaImputeModule
 
 
         if (inputParams%restartOption==OPT_RESTART_PHASING) then
-            block
-                use OutputParametersModule
-                use InputOutput
-                integer :: i
-                type(OutputParameters) :: oParams
-                oParams = newOutputParametersImpute()
-                do i=1, results%nResults
-                    write(oParams%outputDirectory,'("."a"Phasing",a,"Phase"i0)') DASH,DASH, i
-                    call writeAlphaPhaseResults(results%results(i), ped, oParams)
-
-                enddo
-                write(6,*) "Restart option 1 stops program after Phasing has been managed"
-                stop
-            end block
+            write(6,*) "Restart option 1 stops program after Phasing has been managed"
+            stop
         endif
 
     end subroutine PhasingManagementNew
