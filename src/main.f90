@@ -233,14 +233,14 @@ if (inputParams%hmmoption/=RUN_HMM_NGS) then
 #endif
 
         if (inputParams%TrueGenos1None0==1) then
-            ! block 
-            !     use informationModule
+            block 
+                use informationModule
 
 
-            !     print *, "Yield", checkYield(ped)
-            !     print *,"ACC ped:",calculateaccuracyPerAnimal(ped,inputParams%TrueGenotypeFile, "perAnimal.txt")
-            !     print *,"ACC Snp:",calculateaccuracyPerAnimal(ped,inputParams%TrueGenotypeFile, "perSnp.txt")
-            ! end block
+                print *, "Yield", checkYield(ped)
+                print *,"ACC ped:",calculateaccuracyPerAnimal(ped,inputParams%TrueGenotypeFile, "perAnimal.txt")
+                print *,"ACC Snp:",calculateaccuracyPerAnimal(ped,inputParams%TrueGenotypeFile, "perSnp.txt")
+            end block
 
         endif
     endif
