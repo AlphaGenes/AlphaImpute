@@ -1547,7 +1547,7 @@ subroutine InternalEdit
     use AlphaImputeSpecFileModule
     implicit none
 
-    integer :: i,j,k,CountMiss,CountHD,nSnpR,dum
+    integer :: i,j,k,CountMiss,CountHD,nSnpR,dum, phaseUnit
     real, allocatable, dimension(:) :: SnpSummary, TempFreq,Counter
     character (len=300) :: dumC,FileName
     type(AlphaImputeInput), pointer :: inputParams
@@ -1564,10 +1564,11 @@ subroutine InternalEdit
     SnpIncluded(:)=0
     if ((inputParams%managephaseon1off0==0).and.(inputParams%NoPhasing==1)) then
         FileName = trim(inputParams%phasePath) // DASH // "EditingSnpSummary.txt"
-        open(unit=111,file=trim(FileName),status="old")
+        open(newunit=phaseUnit,file=trim(FileName),status="old")
         do i=1,inputParams%nsnp
-            read (111,*) dum,SnpSummary(i),SnpIncluded(i)
+            read (phaseUnit,*) dum,SnpSummary(i),SnpIncluded(i)
         enddo
+        close(phaseUnit)
     endif
 
     if (inputParams%outopt==1 .or. inputParams%NoPhasing) then
@@ -1587,10 +1588,6 @@ subroutine InternalEdit
             else
                 if ((float(CountMiss)/inputParams%nsnp)>(1.0-inputParams%PercGenoForHD)) then
                     Setter(i)=0
-                    ! if (.not. ped%pedigree(i)%genotyped) then
-                    !     ! If animal is not genotyped, but enough info has been imputed, set it as genotyped
-                    !     call ped%setAnimalAsGenotyped(i)
-                    ! endif
                 endif
             endif
         enddo
@@ -1614,7 +1611,6 @@ subroutine InternalEdit
             integer :: tmpID
             do k=1,CountHD
                 read (inputParams%AnimalFileUnit,*) dumC
-
                 tmpID = ped%dictionary%getValue(dumC)
                 if (tmpID /= DICT_NULL) then
                     Setter(tmpID)=1
@@ -1664,19 +1660,33 @@ subroutine InternalEdit
         else
             if (inputParams%managephaseon1off0==1) then
                 k=0
-                do j=1,inputParams%nsnp
-                    if ((SnpSummary(j)<inputParams%PercSnpMiss).and.((TempFreq(j)>0.00000001).and.(TempFreq(j)<0.9999999))) then
-                        k=k+1
-                        SnpIncluded(j)=1
-                    endif
-                enddo
+
+                ! Remove snps from individuals
+                block 
+                    integer(kind=1),dimension(:),allocatable :: old, temp
+
+                    
+                    allocate(temp(nSNpR))
+                    do i=1, ped%pedigreeSize
+                        old = ped%pedigree(i)%individualGenotype%toIntegerArray()
+                        do j=1,inputParams%nsnp
+                            if ((SnpSummary(j)<inputParams%PercSnpMiss).and.((TempFreq(j)>0.00000001).and.(TempFreq(j)<0.9999999))) then
+                                k=k+1
+                                SnpIncluded(j)=1
+                                temp(k) = old(j)
+                            endif
+                        enddo
+                        ped%pedigree(i)%individualGenotype = newGenotypeInt(temp)
+                    enddo 
+                    deallocate(temp)
+
+                end block
                 inputParams%nsnp=nSnpR
             endif
         endif
 
         if (inputParams%UserDefinedHD==0) then
            Setter = 0
-           ! Setter(1:ped%pedigreeSize-ped%nDummys)=0
            do i=1,ped%nGenotyped
             setter(ped%genotypeMap(i)) =1
             CountMiss=ped%pedigree(ped%genotypeMap(i))%individualGenotype%numMissing()

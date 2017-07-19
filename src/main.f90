@@ -84,7 +84,7 @@ program AlphaImpute
 
 
     if (inputParams%hmmoption /= RUN_HMM_NGS) then
-        if (inputParams%restartOption<OPT_RESTART_PHASING) call MakeDirectories(RUN_HMM_NULL)
+        if (inputParams%restartOption<OPT_RESTART_IMPUTATION) call MakeDirectories(RUN_HMM_NULL)
 
         call ReadInData
         ! call InitialiseArrays
@@ -233,8 +233,14 @@ if (inputParams%hmmoption/=RUN_HMM_NGS) then
 #endif
 
         if (inputParams%TrueGenos1None0==1) then
-            ! call FinalChecker
-            ! TODO remimplement final checker
+            ! block 
+            !     use informationModule
+
+
+            !     print *, "Yield", checkYield(ped)
+            !     print *,"ACC ped:",calculateaccuracyPerAnimal(ped,inputParams%TrueGenotypeFile, "perAnimal.txt")
+            !     print *,"ACC Snp:",calculateaccuracyPerAnimal(ped,inputParams%TrueGenotypeFile, "perSnp.txt")
+            ! end block
 
         endif
     endif
