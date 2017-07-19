@@ -1597,20 +1597,17 @@ subroutine InternalEdit
         Setter(1:ped%pedigreeSize-ped%nDummys)=0
 
         CountHD=0
-        do
-            read (inputParams%AnimalFileUnit,*,iostat=k) dumC
-            CountHD=CountHD+1
-            if (k/=0) then
-                CountHD=CountHD-1
-                exit
-            endif
-        enddo
-        rewind(inputParams%AnimalFileUnit)
-
         block
             integer :: tmpID
-            do k=1,CountHD
-                read (inputParams%AnimalFileUnit,*) dumC
+            do
+                read (inputParams%AnimalFileUnit,*, iostat=k) dumC
+                 
+                CountHD=CountHD+1
+                if (k/=0) then
+                    CountHD=CountHD-1
+                    exit
+                endif
+
                 tmpID = ped%dictionary%getValue(dumC)
                 if (tmpID /= DICT_NULL) then
                     Setter(tmpID)=1
@@ -1727,7 +1724,6 @@ do j=1,inputParams%nSnpRaw
 enddo
 close(102)
 close(112)
-
 print*, " "
 print*, " "
 print*, " ",CountHD," indiviudals passed to AlphaPhase"
