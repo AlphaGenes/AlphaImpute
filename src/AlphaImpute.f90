@@ -1652,22 +1652,25 @@ subroutine InternalEdit
             do j=1,inputParams%nsnp
                 if ((SnpSummary(j)<inputParams%PercSnpMiss).and.((TempFreq(j)>0.00000001).and.(TempFreq(j)<0.9999999))) nSnpR=nSnpR+1
             enddo
+
         else
             nSnpR=count(SnpIncluded(:)==1)
         endif
+
+
         if (nSnpR==inputParams%nsnp) then
             SnpIncluded(:)=1
         else
             if (inputParams%managephaseon1off0==1) then
-                k=0
+                
 
                 ! Remove snps from individuals
                 block 
                     integer(kind=1),dimension(:),allocatable :: old, temp
 
-                    
-                    allocate(temp(nSNpR))
+                    allocate(temp(nSNpR+1))
                     do i=1, ped%pedigreeSize
+                        k=0
                         old = ped%pedigree(i)%individualGenotype%toIntegerArray()
                         do j=1,inputParams%nsnp
                             if ((SnpSummary(j)<inputParams%PercSnpMiss).and.((TempFreq(j)>0.00000001).and.(TempFreq(j)<0.9999999))) then
