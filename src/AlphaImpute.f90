@@ -1668,7 +1668,7 @@ subroutine InternalEdit
                 block 
                     integer(kind=1),dimension(:),allocatable :: old, temp
 
-                    allocate(temp(nSNpR+1))
+                    allocate(temp(nSNpR))
                     do i=1, ped%pedigreeSize
                         k=0
                         old = ped%pedigree(i)%individualGenotype%toIntegerArray()
