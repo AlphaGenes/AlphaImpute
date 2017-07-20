@@ -699,22 +699,11 @@ subroutine WriteOutResults
 
             if (SnpIncluded(j)==1) then
                 l=l+1
-                TmpGenos(:,l)=ped%getAllGenotypesAtPositionWithUngenotypedAnimals(j)
-                TmpPhase(:,l,1)=ped%getPhaseAtPositionUngenotypedAnimals(j,1)
-                TmpPhase(:,l,2)=ped%getPhaseAtPositionUngenotypedAnimals(j,2)
+                TmpGenos(:,j)=ped%getAllGenotypesAtPositionWithUngenotypedAnimals(l)
+                TmpPhase(:,j,1)=ped%getPhaseAtPositionUngenotypedAnimals(l,1)
+                TmpPhase(:,j,2)=ped%getPhaseAtPositionUngenotypedAnimals(l,2)
             endif
         enddo
-
-        block
-            integer :: unit
-            open(newunit=unit, file="Results/test", status="unknown")
-            do i=1, ped%pedigreeSize-ped%nDummys
-                write (unit,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,tmpGenos(ped%inputmap(i),:)
-
-            enddo
-            close(unit)
-
-        end block
 
         block
             integer :: tmpIDInt,f
