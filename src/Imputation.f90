@@ -110,7 +110,9 @@ write(0,*) 'DEBUG: Mach Finished'
                 ! call makeGenotype
                 ! call ped%writeOutGenotypes("init")
                 ! Major sub-step 2 as explained in Hickey et al. (2012; Appendix A)
-                call BaseAnimalFillIn
+                if (inputparams%noPhasing == 1) then
+                    call BaseAnimalFillIn
+                endif
                 !        call makeGenotype
                 ! call ped%writeOutGenotypes("afterbase")
                     ! Impute phase whenever a pre-phase file exists
@@ -149,8 +151,10 @@ write(0,*) 'DEBUG: Mach Finished'
                                 print*, " "
                                 print*, "Performing imputation loop",loop
 
-                                call PhaseElimination                   ! Major Sub-Step 5 (Hickey et al., 2012; Appendix A)  
 
+                                if (inputParams%noPhasing == 1) then
+                                    call PhaseElimination                   ! Major Sub-Step 5 (Hickey et al., 2012; Appendix A)  
+                                endif
 
                                 ! call makeGenotype
                                 ! call ped%writeOutGenotypes("after5")
@@ -164,8 +168,9 @@ write(0,*) 'DEBUG: Mach Finished'
                                 print*, " "
                                 print*, " ","Parent of origin assigmnent of high density haplotypes completed"
                                 
-                                call ParentPhaseElimination             ! Major Sub-Step 4 (Hickey et al., 2012; Appendix A)
-
+                                if (inputParams%noPhasing == 1) then
+                                    call ParentPhaseElimination             ! Major Sub-Step 4 (Hickey et al., 2012; Appendix A)
+                                endif
 
                                 ! call makeGenotype
                                 ! call ped%writeOutGenotypes("after4")

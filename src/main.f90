@@ -178,8 +178,6 @@ program AlphaImpute
             endif
 
         endif
-
-    
     endif
 
 
@@ -191,6 +189,10 @@ if (inputParams%hmmoption/=RUN_HMM_NGS) then
         if (inputParams%restartOption> OPT_RESTART_PHASING) Then
             print *,"Reading in Phasing information"
             ! Read back in geneprob data
+
+            if (inputParams%managephaseon1off0==1) then
+                inputParams%phasePath = "." // DASH //"Phasing"
+            endif
             block 
 
                 use OutputParametersModule
@@ -199,10 +201,10 @@ if (inputParams%hmmoption/=RUN_HMM_NGS) then
                 integer :: i
                 type(OutputParameters) :: oParams
                 oParams = newOutputParametersImpute()
-                ApResults%nResults = size(inputParams%CoreLengths)*2
+                ApResults%nResults = inputparams%nPhaseInternal
                 allocate(ApResults%results(ApResults%nResults))
                 do i=1, ApResults%nResults
-                     write(oParams%outputDirectory,'("."a"Phasing",a,"Phase"i0)') DASH,DASH, i
+                    write(oParams%outputDirectory,'(a,a,a,"Phase"i0)') trim(inputParams%phasePath),DASH,DASH, i
                     call readAlphaPhaseResults(ApResults%results(i), oParams, ped)
                 enddo
             end block

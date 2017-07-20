@@ -1513,7 +1513,7 @@ subroutine InternalEdit
         close(phaseUnit)
     endif
 
-    if (inputParams%outopt==1 .or. inputParams%NoPhasing) then
+    if (inputParams%outopt==1 .or. inputParams%NoPhasing==1) then
         do i=1,inputParams%nsnp
             SnpIncluded(i)=i
         enddo

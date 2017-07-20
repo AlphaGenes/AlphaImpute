@@ -235,6 +235,12 @@ contains
                 endif
 
                 ! box 3 inputs
+            case("nsnp")
+                read(second(1),*) this%nsnp
+                if (this%nsnp>240000) then
+                    print*, "Contact John Hickey if you want to do more than 240,000 SNP"
+                    stop 3001
+                endif
 
             case("numbersnp")
                 read(second(1),*) this%nsnp
@@ -326,10 +332,10 @@ contains
                     allocate(character(len(second(2))) :: this%phasePath)
 
                     this%phasePath = second(2)
-                    read(second(3),*) this%nPhaseExternal
-                    this%nPhaseInternal = this%nPhaseExternal*2
+                    read(second(3),*) this%nPhaseInternal
+                    this%nPhaseExternal = this%nPhaseInternal/2
                 else if(ToLower(trim(second(1))) == "nophase") then
-                    this%noPhasing = 1
+                    this%noPhasing = 0
                     this%managephaseon1off0 = 0
                 else
                     this%managephaseon1off0 = 1
@@ -343,7 +349,7 @@ contains
                         stop 40512
                     endif
                 endif
-                
+
                     this%nPhaseInternal = 2*this%nPhaseExternal
                     if (allocated(this%CoreAndTailLengths)) then
                         deallocate(this%CoreAndTailLengths)
@@ -364,15 +370,12 @@ contains
                     write(error_unit,*) "Error: numberofphasingruns is not defined. Please define this before CoreAndTailLengths and CoreLengths"
                     stop 40521
                 endif
-                if (size(second) /= this%nPhaseExternal) then
-                    write(error_unit,*) "Error: numberofphasingruns is set to a different number of parameters than what is specified here. \n Please set this to the same number of parameters that are given for CoreAndTailLengths and CoreLengths"
-                    stop 40522
-                endif
                 do i=1,size(second)
                     read(second(i), *) this%CoreAndTailLengths(i)
                     if (this%CoreAndTailLengths(i) > this%nsnp) then
 
                         write(error_unit, *) "Error: core and Tail lengths is given a number than largest number of snps specified in nsnps"
+                        write(error_unit, *) this%CoreAndTailLengths(i) ," vs ", this%nsnp
                         stop 40523
                     endif
                 enddo
