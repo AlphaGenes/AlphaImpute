@@ -2058,7 +2058,7 @@ end subroutine InternalHapLibImputationOld
 
                     ! Check whether my parents and grandparents are heterozygous
                     do m=1,inputParams%nsnpRaw
-                        if (SnpIncluded(m)==1) then                     ! Whether to consider this SNP
+                        if (SnpIncluded(m)/=0) then                     ! Whether to consider this SNP
                             j=j+1                                       ! Number of SNPs included so far
 
                             if (ped%pedigree(i)%individualGenotype%getgenotype(j)==1) then               ! If heterozygous

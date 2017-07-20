@@ -43,7 +43,7 @@ module Global
     integer :: MaxLeftRightSwitch,MinSpan
     integer :: nSnpIterate,AlphaPhasePresent,GeneProbPresent
 
-    integer(kind=1),allocatable,dimension (:) :: SnpIncluded
+    integer(kind=int32),allocatable,dimension (:) :: SnpIncluded !< value is the position in included snp list
     integer(kind=1),allocatable,dimension (:,:) :: MSTermInfo
     integer(kind=1),allocatable,dimension (:,:,:) :: GlobalWorkPhase
     integer,allocatable :: Setter(:),GlobalTmpCountInf(:,:)

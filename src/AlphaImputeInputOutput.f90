@@ -174,7 +174,7 @@ contains
             if (tmpID /= DICT_NULL) then   ! Check if any animal in the file agrees with the animals in the pedigree
                 h=0
                 do j=1,inputParams%nSnpRaw
-                    if (SnpIncluded(j)==1) then ! Check if this SNP has to be considered (may be it has been removed during the edition step)
+                    if (SnpIncluded(j)/=0) then ! Check if this SNP has to be considered (may be it has been removed during the edition step)
                         h=h+1
                         ! Impute phase only if this locus is phased (in the PrePhased file)
                         if ((WorkPhase(j,1)==0).or.(WorkPhase(j,1)==1)) then

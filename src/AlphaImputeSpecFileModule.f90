@@ -145,6 +145,7 @@ contains
         this%useFerdosi = .false.
         this%MultiHD = 0
         this%minoverlaphaplotype = 0
+        this%PreProcess = .false.
         this%cluster = .false.
         this%iterateMethod = "Off"
         this%PhaseNIterations = 1
@@ -341,7 +342,8 @@ contains
                         write(error_unit,*) "Error: Too few phasing runs requested. The minimum this program supports is 2, 10 is reccomended."
                         stop 40512
                     endif
-
+                endif
+                
                     this%nPhaseInternal = 2*this%nPhaseExternal
                     if (allocated(this%CoreAndTailLengths)) then
                         deallocate(this%CoreAndTailLengths)
@@ -352,7 +354,7 @@ contains
                     allocate(this%CoreAndTailLengths(this%nPhaseExternal))
                     allocate(this%CoreLengths(this%nPhaseExternal))
 
-                endif
+                
                 cycle
                 4051 write(error_unit,*) "NumberPhasingRuns has been set incorrectly"
                 stop 4051

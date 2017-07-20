@@ -217,15 +217,18 @@ subroutine IterateInsteadOfGeneProbs
         if (.not. allocated(TempAlleleFreq)) allocate(TempAlleleFreq(nSnpIterate))
 
         TempAlleleFreq=0.0
-        do j=1,nSnpIterate
+
+        do j=1,size(SnpIncluded)
             Counter=0
             do i=1,ped%pedigreeSize-ped%nDummys
-                genos = ped%pedigree(i)%individualGenotype%getGenotype(j)
+                
+                genos = ped%pedigree(i)%individualGenotype%getGenotype(SnpIncluded(j))
                 if (genos/=MISSINGGENOTYPECODE) then
                     TempAlleleFreq(j)=TempAlleleFreq(j)+genos
                     Counter=Counter+2
                 endif
-            enddo
+            
+                enddo
             if (Counter/=0) then
                 TempAlleleFreq(j)=TempAlleleFreq(j)/Counter
             else
@@ -245,13 +248,13 @@ subroutine IterateInsteadOfGeneProbs
 
         do i=1,ped%pedigreeSize-ped%nDummys
             do j=1,nSnpIterate
-                do e=1,2
-                  block                          
-                     integer(kind=1) :: phase                         
-                     phase = ped%pedigree(i)%individualPhase(e)%getPhase(j)                         
-                     if (phase/=9) ProbImputePhase(i,j,e)=float(phase)                     
-                 end block
-             enddo
+                    do e=1,2
+                      block                          
+                         integer(kind=1) :: phase                         
+                         phase = ped%pedigree(i)%individualPhase(e)%getPhase(SnpIncluded(j))                         
+                         if (phase/=9) ProbImputePhase(i,j,e)=float(phase)                     
+                     end block
+                    enddo
          enddo
      enddo
 
@@ -260,18 +263,18 @@ subroutine IterateInsteadOfGeneProbs
             parId = ped%pedigree(i)%getSireDamNewIDByIndex(e+1)
             if (ParId==0) then
                 do j=1,nSnpIterate
-                    block                          
-                        integer(kind=1) :: phase                         
-                        phase = ped%pedigree(i)%individualPhase(e)%getPhase(j)  
-                        if (phase==9 .and. TempAlleleFreq(j)/=9) ProbImputePhase(i,j,e)=TempAlleleFreq(j)
-                    end block
+                        block                          
+                            integer(kind=1) :: phase                         
+                            phase = ped%pedigree(i)%individualPhase(e)%getPhase(SnpIncluded(j))  
+                            if (phase==9 .and. TempAlleleFreq(j)/=9) ProbImputePhase(i,j,e)=TempAlleleFreq(j)
+                        end block
                 enddo
             endif
             if (ped%pedigree(i)%gender==inputParams%HomGameticStatus) then
                 do j=1,nSnpIterate
                     block                          
                         integer(kind=1) :: phase                         
-                        phase = ped%pedigree(i)%individualPhase(e)%getPhase(j)  
+                        phase = ped%pedigree(i)%individualPhase(e)%getPhase(SnpIncluded(j))  
                         if (phase==9) then
                             ProbImputePhase(i,j,e)=(sum(ProbImputePhase(ParId,j,:))/2)
                         endif
@@ -283,7 +286,7 @@ subroutine IterateInsteadOfGeneProbs
             ParId=ped%pedigree(i)%getSireDamNewIDByIndex(inputParams%hetGameticStatus+1)
             do j=1,nSnpIterate
 
-                if (ped%pedigree(i)%individualPhase(1)%getPhase(j)==9) then
+                if (ped%pedigree(i)%individualPhase(1)%getPhase(SnpIncluded(j))==9) then
                     ProbImputePhase(i,j,:)=(sum(ProbImputePhase(ParId,j,:))/2)
                 endif
             enddo
@@ -295,13 +298,13 @@ subroutine IterateInsteadOfGeneProbs
             do k=1,2
              block                          
                  integer(kind=1) :: phase                         
-                 phase = ped%pedigree(i)%individualPhase(k)%getPhase(j)                         
+                 phase = ped%pedigree(i)%individualPhase(k)%getPhase(SnpIncluded(j))                         
                  if (phase/=9) ProbImputePhase(i,j,k)=float(phase)                     
              end block
          enddo
          block                          
             integer(kind=1) :: genos                         
-            genos = ped%pedigree(i)%individualGenotype%getGenotype(j)  
+            genos = ped%pedigree(i)%individualGenotype%getGenotype(SnpIncluded(j))  
             if (genos/=9) then
                 ProbImputeGenos(i,j)=float(genos)
             else
@@ -328,9 +331,9 @@ endif
 do i=1,ped%pedigreeSize-ped%nDummys
     do j=1,nSnpIterate
         if (ProbImputeGenos(i,j)==-9.0) ProbImputeGenos(i,j)=sum(ProbImputePhase(i,j,:))
-        if (ProbImputeGenos(i,j)>1.999)  call ped%pedigree(i)%individualGenotype%setGenotype(j,2)
-        if (ProbImputeGenos(i,j)<0.0001) call ped%pedigree(i)%individualGenotype%setGenotype(j,0)
-        if ((ProbImputeGenos(i,j)>0.999).and.(ProbImputeGenos(i,j)<1.00001)) call ped%pedigree(i)%individualGenotype%setGenotype(j,1)
+        if (ProbImputeGenos(i,j)>1.999)  call ped%pedigree(i)%individualGenotype%setGenotype(SnpIncluded(j),2)
+        if (ProbImputeGenos(i,j)<0.0001) call ped%pedigree(i)%individualGenotype%setGenotype(SnpIncluded(j),0)
+        if ((ProbImputeGenos(i,j)>0.999).and.(ProbImputeGenos(i,j)<1.00001)) call ped%pedigree(i)%individualGenotype%setGenotype(SnpIncluded(j),1)
 
     enddo
 enddo
@@ -692,12 +695,14 @@ subroutine WriteOutResults
         TmpGenos=9
         TmpPhase=9
 
-        if (inputParams%outopt == 1 .or. inputParams%hmmoption==RUN_HMM_NGS) SnpIncluded(:)=1
+        if (inputParams%outopt == 1 .or. inputParams%hmmoption==RUN_HMM_NGS) then
+             do i=1,inputParams%nsnp
+                SnpIncluded(i)=i
+            enddo
+        endif 
         l=0
         do j=1,inputParams%nSnpRaw
-
-
-            if (SnpIncluded(j)==1) then
+            if (SnpIncluded(j)/=0) then
                 l=l+1
                 TmpGenos(:,j)=ped%getAllGenotypesAtPositionWithUngenotypedAnimals(l)
                 TmpPhase(:,j,1)=ped%getPhaseAtPositionUngenotypedAnimals(l,1)
@@ -1007,7 +1012,7 @@ subroutine ModelRecomb
     l=0
     do j=1,nSnpFinal
 
-        if (SnpIncluded(j)==1) then
+        if (SnpIncluded(j)/=0) then
             l=l+1
             WorkPhase(:,j,1)=GlobalWorkPhase(:,l,1)
             WorkPhase(:,j,2)=GlobalWorkPhase(:,l,2)
@@ -1275,58 +1280,6 @@ subroutine ModelRecomb
 
 end subroutine ModelRecomb
 
-!#############################################################################################################################################################################################################################
-
-subroutine IterateGeneProbPhase
-    use Global
-    use AlphaImputeSpecFileModule
-    use Imputation, only : MakeGenotype
-    implicit none
-
-    integer :: i, fileUnit,j
-    type(AlphaImputeInput), pointer :: inputParams
-    integer(kind=1),dimension(:,:),allocatable :: tmpPhase
-    integer(kind=1),dimension(:),allocatable :: tmpGeno
-
-    inputParams => defaultInput
-
-
-    allocate(tmpPhase(inputParams%nsnp, 2))
-    allocate(tmpGeno(inputParams%nsnp))
-    if (inputParams%restartOption==4) then
-
-        if (allocated(Maf)) then
-            deallocate(maf)
-        endif
-        allocate(Maf(nSnpIterate))
-
-        open (newunit=fileUnit,file="Tmp2345678.txt",status="old")
-        do i=1,ped%nGenotyped
-            read (fileUnit,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') j,tmpPhase(:,1)
-            read (fileUnit,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') j,tmpPhase(:,2)
-            read (fileUnit,'(i10,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') j,tmpGeno(:)
-
-            ped%pedigree(ped%genotypemap(i))%individualPhase(1) = newHaplotypeInt(tmpPhase(:,1))
-            ped%pedigree(ped%genotypemap(i))%individualPhase(2) = newHaplotypeInt(tmpPhase(:,2))
-            ped%pedigree(ped%genotypemap(i))%IndividualGenotype = newGenotypeInt(tmpGeno) 
-        enddo
-        close (fileUnit)
-    endif
-
-    open(newunit=fileUnit,file="." // DASH // "Miscellaneous" // DASH // "MinorAlleleFrequency.txt", status="unknown")
-    do j=1,nSnpIterate
-        write (fileUnit,*) Maf(j)
-    enddo
-
-    close(fileUnit)
-
-    deallocate(tmpPhase)
-    deallocate(tmpGeno)
-    ! TODO this is called twice...from iterate geneprobnew
-    call MakeGenotype
-
-
-end subroutine IterateGeneProbPhase
 
 !#############################################################################################################################################################################################################################
 
@@ -1561,7 +1514,10 @@ subroutine InternalEdit
     endif
 
     if (inputParams%outopt==1 .or. inputParams%NoPhasing) then
-        SnpIncluded(:)=1
+        do i=1,inputParams%nsnp
+            SnpIncluded(i)=i
+        enddo
+
     endif
     ! I user do not specify any file with HD individuals
     if (inputParams%UserDefinedHD==0) then
@@ -1630,7 +1586,11 @@ subroutine InternalEdit
 
     if (inputParams%MultiHD/=0 .or. inputParams%IntEditStat==0) then
         nSnpR=inputParams%nsnp
-        if (inputParams%managephaseon1off0==1) SnpIncluded(:)=1
+        if (inputParams%managephaseon1off0==1) then
+            do i=1,inputParams%nsnp
+                SnpIncluded(i)=i
+            enddo
+        endif
     else
         if (inputParams%managephaseon1off0==1) then
             SnpSummary(:)=SnpSummary(:)/CountHD
@@ -1640,34 +1600,46 @@ subroutine InternalEdit
             enddo
 
         else
-            nSnpR=count(SnpIncluded(:)==1)
+            nSnpR=count(SnpIncluded(:)/=0)
         endif
 
 
         if (nSnpR==inputParams%nsnp) then
-            SnpIncluded(:)=1
+            do i=1,inputParams%nsnp
+                SnpIncluded(i)=i
+        enddo
         else
             if (inputParams%managephaseon1off0==1) then
                 
 
                 ! Remove snps from individuals
                 block 
-                    integer(kind=1),dimension(:),allocatable :: old, temp
+                    integer(kind=1),dimension(:),allocatable :: old, temp ,tempphase1,tempphase2, oldphase1,oldphase2
 
                     allocate(temp(nSNpR))
+                    allocate(tempphase1(nSNpR))
+                    allocate(tempphase2(nSNpR))
                     do i=1, ped%pedigreeSize
                         k=0
                         old = ped%pedigree(i)%individualGenotype%toIntegerArray()
+                        oldphase1 = ped%pedigree(i)%individualPhase(1)%toIntegerArray()
+                        oldphase2 = ped%pedigree(i)%individualPhase(2)%toIntegerArray()
                         do j=1,inputParams%nsnp
                             if ((SnpSummary(j)<inputParams%PercSnpMiss).and.((TempFreq(j)>0.00000001).and.(TempFreq(j)<0.9999999))) then
                                 k=k+1
-                                SnpIncluded(j)=1
+                                SnpIncluded(j)=k
                                 temp(k) = old(j)
+                                tempphase1(k) =oldphase1(j)
+                                tempphase2(k) =oldphase2(j)
                             endif
                         enddo
                         ped%pedigree(i)%individualGenotype = newGenotypeInt(temp)
+                        ped%pedigree(i)%individualphase(1) = newhaplotypeInt(tempphase1)
+                        ped%pedigree(i)%individualphase(2) = newhaplotypeInt(tempphase2)
                     enddo 
                     deallocate(temp)
+                    deallocate(tempphase1)
+                    deallocate(tempphase2)
 
                 end block
                 inputParams%nsnp=nSnpR
