@@ -1631,7 +1631,10 @@ subroutine InternalEdit
                                 temp(k) = old(j)
                                 tempphase1(k) =oldphase1(j)
                                 tempphase2(k) =oldphase2(j)
+                            else
+                             SnpIncluded(j)=0
                             endif
+                            
                         enddo
                         ped%pedigree(i)%individualGenotype = newGenotypeInt(temp)
                         ped%pedigree(i)%individualphase(1) = newhaplotypeInt(tempphase1)
