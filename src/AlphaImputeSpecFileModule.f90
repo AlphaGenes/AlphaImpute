@@ -615,6 +615,12 @@ contains
     endif
 
     this%nSnpRaw = this%nsnp
+
+
+     if (.not. allocated(this%CoreAndTailLengths) .or. allocated(this%CoreLengths)) then
+        write(error_unit,*) "ERROR - CoreLengths or CoreAndTailLengths have not been specified"
+        stop 1000
+    endif
     
     !$  CALL OMP_SET_NUM_THREADS(this%useProcs)
 end subroutine ReadInParameterFile

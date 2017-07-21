@@ -156,8 +156,8 @@ write(0,*) 'DEBUG: Mach Finished'
                                     call PhaseElimination                   ! Major Sub-Step 5 (Hickey et al., 2012; Appendix A)  
                                 endif
 
-                                ! call makeGenotype
-                                ! call ped%writeOutGenotypes("after5")
+                                 ! call makeGenotype
+                                 ! call ped%writeOutGenotypes("after5")
 
 
                                 if (inputParams%sexopt==1) then
@@ -172,7 +172,7 @@ write(0,*) 'DEBUG: Mach Finished'
                                     call ParentPhaseElimination             ! Major Sub-Step 4 (Hickey et al., 2012; Appendix A)
                                 endif
 
-                                ! call makeGenotype
+                                !  call makeGenotype
                                 ! call ped%writeOutGenotypes("after4")
 
                                 if (inputParams%sexopt==1) then
@@ -250,6 +250,10 @@ write(0,*) 'DEBUG: Mach Finished'
                                 CALL DATE_AND_TIME(time=timeOut)
                                 
                                 print*, " ","Internal haplotype library imputation completed at: ", timeOut
+
+
+                                ! call makeGenotype
+                                ! call ped%writeOutGenotypes("afterend")
                              enddo
 
                             call ManageWorkLeftRight
