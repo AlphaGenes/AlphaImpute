@@ -617,7 +617,7 @@ contains
     this%nSnpRaw = this%nsnp
 
 
-     if (.not. allocated(this%CoreAndTailLengths) .or. allocated(this%CoreLengths)) then
+     if (.not. allocated(this%CoreAndTailLengths) .or. .not. allocated(this%CoreLengths)) then
         write(error_unit,*) "ERROR - CoreLengths or CoreAndTailLengths have not been specified"
         stop 1000
     endif
