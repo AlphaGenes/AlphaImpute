@@ -695,7 +695,7 @@ subroutine WriteOutResults
         TmpGenos=9
         TmpPhase=9
 
-        if (inputParams%outopt == 1 .or. inputParams%hmmoption==RUN_HMM_NGS) then
+        if (inputParams%hmmoption==RUN_HMM_NGS) then
              do i=1,inputParams%nsnp
                 SnpIncluded(i)=i
             enddo
