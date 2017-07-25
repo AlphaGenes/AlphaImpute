@@ -115,7 +115,7 @@ CONTAINS
     !> @param[out] CoreI     Core information (start snp, end snp)
     !---------------------------------------------------------------------------
     FUNCTION ReadCores(FileName) result(CoreI)
-        use Utils
+        
         use AlphaHouseMod, only : countLines
         character(len=1000), intent(in) :: FileName
         type(CoreIndex)                 :: CoreI

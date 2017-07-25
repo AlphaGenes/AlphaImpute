@@ -21,10 +21,12 @@ add_definitions(-DCLUSTER=${CLUSTER})
 # Define the executable name
 SET(ALPHAIMPUTEEXE AlphaImpute)
 MESSAGE("Prog name ${ALPHAIMPUTEEXE}")
-SET(GENEPROBEXE GeneProbForAlphaImpute)
 # Define the library name
 SET(AHLIB alphahouse)
-
+SET(APLIB alphaphase)
+SET(AMLPLIB alphamlp)
+SET(AHMMLIB alphahmm)
+SET(FERLIB ferdosi)
 # Define some directories
 SET(SRC ${CMAKE_SOURCE_DIR}/src)
 SET(OBJ ${CMAKE_SOURCE_DIR}/objs)
@@ -32,6 +34,8 @@ SET(BIN ${CMAKE_SOURCE_DIR}/bin)
 SET(TESTS ${CMAKE_SOURCE_DIR}/tests)
 SET(SRCALPHAIMPUTE ${SRC}/)
 
+
+set (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${BIN})
 
 INCLUDE(${CMAKE_MODULE_PATH}/findDoxygen.cmake)
 # Defined libary source
@@ -72,13 +76,19 @@ endif(${USE_HDF5})
 # are to your liking.
 INCLUDE(${CMAKE_MODULE_PATH}/SetFortranFlags.cmake)
 SET(SRCAH ./alphahouse/src/)
-
+SET(SRCAP ./alphaphase/src/)
+SET(SRCAMLP ./alphamlp/src/)
+SET(SRCAHMM ./alphahmm/src/)
+SET(SRCFER ./ferdosi/src/)
 # Have the .mod files placed in the OBJ folder
 SET(CMAKE_Fortran_MODULE_DIRECTORY ${OBJ})
 
 
 ADD_SUBDIRECTORY(${SRCAH} ${OBJ}/AH)
-
+ADD_SUBDIRECTORY(${SRCAP} ${OBJ}/AP)
+ADD_SUBDIRECTORY(${SRCAHMM} ${OBJ}/AHMM)
+ADD_SUBDIRECTORY(${SRCFER} ${OBJ}/FER)
+#ADD_SUBDIRECTORY(${SRCAMLP} ${OBJ}/AMLP)
 
 # TODO add tests to correct location
 ADD_SUBDIRECTORY(${SRCALPHAIMPUTE} ${BIN})

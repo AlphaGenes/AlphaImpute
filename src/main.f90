@@ -31,8 +31,6 @@
 
 
 #endif
-
-
 !######################################################################
 
 program AlphaImpute
@@ -50,18 +48,15 @@ program AlphaImpute
     !   * inputParams%restartOption=4 =>
     use Global
     use AlphaImputeModule
-    use informationModule
-    use GlobalVariablesHmmMaCH
-    use Output
-    use AlphaImputeInMod
+    use AlphaImputeInputOutputModule
+    use AlphaImputeSpecFileModule
     use Imputation
-    use InputMod
+    use ModuleRunFerdosi
+
+    use AlphaPhaseResultsModule    
     implicit none
 
-    integer :: markers
-    double precision, allocatable :: GenosProbs(:,:,:)
     character(len=4096) :: cmd, SpecFile
-
 
     inputParams => defaultInput
     if (Command_Argument_Count() > 0) then
@@ -87,238 +82,175 @@ program AlphaImpute
 
     inputParams => defaultInput
 
+
     if (inputParams%hmmoption /= RUN_HMM_NGS) then
-        if (inputParams%restartOption<OPT_RESTART_PHASING) call MakeDirectories(RUN_HMM_NULL)
+        if (inputParams%restartOption<OPT_RESTART_IMPUTATION) call MakeDirectories(RUN_HMM_NULL)
 
-        !call cpu_time(start)
-        call CountInData
-        !call cpu_time(finish)
-        !print '("Time ReadInData= ",f6.3," seconds.")',finish-start
-
-        !call cpu_time(start)
         call ReadInData
-        !call cpu_time(finish)
-        !print '("Time ReadInData= ",f6.3," seconds.")',finish-start
-
+        ! call InitialiseArrays
         !call cpu_time(start)
         call SnpCallRate
-        !call cpu_time(finish)
-        !print '("Time SnpCallRate= ",f6.3," seconds.")',finish-start
-
-        !call cpu_time(start)
         call CheckParentage
-        !call cpu_time(finish)
-        !print '("Time CheckParentage= ",f6.3," seconds.")',finish-start
-
-        if (inputParams%MultiHD/=0) call ClassifyAnimByChips
-
-        !call cpu_time(start)
+        if (inputParams%MultiHD/=0) then 
+            call ClassifyAnimByChips
+        endif
+        
         call FillInSnp
-        !call cpu_time(finish)
-        !print '("Time FillInSnp= ",f6.3," seconds.")',finish-start
 
-        !call cpu_time(start)
         call FillInBasedOnOffspring
-        !call cpu_time(finish)
-        !print '("Time FillInBasedOnOffspring= ",f6.3," seconds.")',finish-start
-
-        !call cpu_time(start)
         call InternalEdit
-        !call cpu_time(finish)
-        !print '("Time InternalEdit= ",f6.3," seconds.")',finish-start
 
-        !call cpu_time(start)
-        call MakeFiles
-        !call cpu_time(finish)
-        !print '("Time MakeFiles= ",f6.3," seconds.")',finish-start
+        if (inputParams%PreProcess==.true.) then
+            print*, "Data preprocessed"
+            stop
+        endif
+        allocate(GlobalWorkPhase(0:ped%pedigreeSize,inputParams%nsnpraw,2))
+        call InitialiseArrays
 
     else
 
         call MakeDirectories(RUN_HMM_NGS)
-        call CountInData
         call ReadInData
         call SnpCallRate
-        allocate(Reads(nAnisG,inputParams%nsnp))
-        allocate(ImputeGenos(0:nAnisG,inputParams%nsnp))
-        allocate(ImputePhase(0:nAnisG,inputParams%nsnp,2))
         allocate(SnpIncluded(inputParams%nsnp))
         call CheckParentage
-        call ReadSeq(inputParams%GenotypeFileUnit)
+        call ped%addSequenceFromFile(inputparams%GenotypeFile, inputParams%nsnpRaw, MAX_READS_COUNT)
     endif
+
+        
 
     if (inputParams%hmmoption == RUN_HMM_NGS) then
 
-#ifdef DEBUG
-        write(0,*) 'DEBUG: HMM NGS'
-#endif
-        call MaCHController(inputParams%hmmoption)
+
+        block
+            use AlphaHmmInMod
+            use ExternalHMMWrappers
+            type (AlphaHMMinput) :: inputParamsHMM
+            integer(kind=1) ,dimension(:,:), allocatable :: res
+
+            inputParamsHMM%nsnp = inputParams%nsnp
+            inputParamsHMM%nHapInSubH = inputParams%nHapInSubH
+            inputParamsHMM%HmmBurnInRound = inputParams%HmmBurnInRound
+            inputParamsHMM%nRoundsHmm = inputParams%nRoundsHmm
+            inputParamsHMM%useProcs = inputParams%useProcs
+            inputParamsHMM%imputedThreshold = inputParams%imputedThreshold
+            inputParamsHMM%phasedThreshold = inputParams%phasedThreshold
+            inputParamsHMM%HapList = inputParams%HapList
+
+            res = ped%getGenotypesAsArray()
+            call AlphaImputeHMMRunner(inputParamsHMM, ped, ProbImputeGenosHmm, ProbImputePhaseHmm, GenosCounts, FullH)
+
+
+        end block
         call FromHMM2ImputePhase
         call WriteOutResults
 
     else if (inputParams%hmmoption==RUN_HMM_ONLY) then
 
-#ifdef DEBUG
-        write(0,*) 'DEBUG: HMM only'
-#endif
-
         print*, ""
         print*, "Bypass calculation of probabilities and phasing"
 
-    else
+    else ! if hmm option is not ngs or only
         write(6,*) " "
         write(6,*) " ","Data editing completed"
 
-        if (inputParams%SexOpt==0) then
-            select case (inputParams%bypassgeneprob)
-            !        if (inputParams%bypassgeneprob==0) then
-        case (0)
+        if (inputParams%useFerdosi) then
 
-#ifdef DEBUG
-            write(0,*) 'DEBUG: Calculate Genotype Probabilites'
-#endif
-
-            if (inputParams%restartOption== OPT_RESTART_ALL .or. inputParams%restartOption== OPT_RESTART_GENEPROB) Then
-
-#ifndef _WIN32
-#if CLUSTER==2
-                write(6,*) ""
-                write(6,*) "Restart option 1 stops program before Geneprobs jobs have been submitted"
-                stop
-#else
-                call GeneProbManagement
-#endif
-#else
-                !call cpu_time(start)
-                call GeneProbManagementWindows
-
-                !call cpu_time(finish)
-                !print '("Time GeneProbManagementWindows= ",f6.3," seconds.")',finish-start
-
-#endif
-
-            endif
-
-            markers = inputParams%nsnp
-            if (inputParams%outopt==1) then
-                markers = inputParams%nSnpRaw
-            end if
-            allocate(GenosProbs(ped%nDummys + nAnisP, markers, 2))
-            call ReReadIterateGeneProbs(GenosProbs, .FALSE., nAnisP)
-            call WriteProbabilities("./Results/GenotypeProbabilities.txt", GenosProbs, ped,nAnisP, inputParams%nsnp)
-            deallocate(GenosProbs)
-
-            if (inputParams%restartOption==OPT_RESTART_GENEPROB) then
-#if CLUSTER==1
-                write(6,*) "Restart option 1 stops program before Geneprobs jobs have finished"
-#elif CLUSTER==0
-                write(6,*) "Restart option 1 stops program after Geneprobs jobs have finished"
-#endif
-                stop
-            endif
-            write(6,*) " "
-            write(6,*) " ","Genotype probabilities calculated"
-            !        endif
-        case (2)
-            markers = inputParams%nsnp
-            if (inputParams%outopt==1) then
-                markers = inputParams%nSnpRaw
-            end if
-            allocate(GenosProbs(ped%nDummys+ nAnisP, markers, 2))
-            call ReReadIterateGeneProbs(GenosProbs, .FALSE., nAnisP)
-            call WriteProbabilities("./Results/GenotypeProbabilities.txt", GenosProbs, ped,nAnisP, inputParams%nsnp)
-            deallocate(GenosProbs)
-            write(6,*) "Restart option 1 stops program after genotype probabilities have been outputted"
-            stop
-        end select
-    endif
+            call doFerdosi(ped)
+        endif
 
 
 
     if (inputParams%managephaseon1off0==1) then
 
-#ifdef DEBUG
-        write(0,*) 'DEBUG: Phase haplotypes with AlphaPhase'
-#endif
 
         if (inputParams%restartOption<OPT_RESTART_IMPUTATION) Then
-#ifndef _WIN32
-#if CLUSTER==2
-            write(6,*) ""
-            write(6,*) "Restart option 1 stops program before Phasing has been managed"
-            stop
+            
+            if (inputParams%cluster) then
+#ifdef MPIACTIVE
+                call phasingManagementCluster
 #else
-            call PhasingManagement
+                write(error_unit,*) "WARNING: CLUSTER HAS BEEN SPECIFIED BUT MPI NOT ENABLED. Falling back on OpenMP version"
+                call PhasingManagementNew(APResults)
 #endif
-#else
-            !call cpu_time(start)
-            call PhasingManagementWindows
-            !call cpu_time(finish)
-            !print '("Time PhasingManagementWindows= ",f6.3," seconds.")',finish-start
-#endif
-        endif
+            else
+                call PhasingManagementNew(APResults)
+            endif
 
-        if (inputParams%restartOption==OPT_RESTART_PHASING) then
-#if CLUSTER==1
-            write(6,*) "Restart option 2 stops program before Phasing has finished"
-#elif CLUSTER==0
-            write(6,*) "Restart option 2 stops program after Phasing has been managed"
-#endif
-            stop
         endif
     endif
 
-    ! print*, " "
-    ! print*, " ","Phasing completed"
 
-    ! This is not necessary, already output in subroutine PhasingManagement
-    if ((inputParams%restartOption/=OPT_RESTART_ALL).and.(inputParams%restartOption<OPT_RESTART_IMPUTATION)) then
-        write(6,*) "Restart option 2 stops program after Phasing has been managed"
-        stop
-    endif
 endif
 
+
+
 if (inputParams%hmmoption/=RUN_HMM_NGS) then
+        if (inputParams%restartOption> OPT_RESTART_PHASING) Then
+            print *,"Reading in Phasing information"
+            ! Read back in geneprob data
+
+            if (inputParams%managephaseon1off0==1) then
+                inputParams%phasePath = "." // DASH //"Phasing"
+            endif
+            block 
+
+                use OutputParametersModule
+                use InputOutput
+                use AlphaPhaseResultsModule
+                integer :: i
+                type(OutputParameters) :: oParams
+                oParams = newOutputParametersImpute()
+                ApResults%nResults = inputparams%nPhaseInternal
+                allocate(ApResults%results(ApResults%nResults))
+                do i=1, ApResults%nResults
+                    write(oParams%outputDirectory,'(a,a,a,"Phase"i0)') trim(inputParams%phasePath),DASH,DASH, i
+                    call readAlphaPhaseResults(ApResults%results(i), oParams, ped)
+                enddo
+            end block
+        endif
+        print *, "Phasing Completed"
+
     ! If we only want to phase data, then skip all the imputation steps
     if (inputParams%PhaseTheDataOnly==0) Then
-        !call cpu_time(start)
         call ImputationManagement
-        !call cpu_time(finish)
-        !print '("Time ImputationManagement= ",f6.3," seconds.")',finish-start
-
-#ifdef DEBUG
-        write(0,*) 'DEBUG: Write results'
-#endif
-
         call WriteOutResults
+
+
+        if (inputparams%restartOption == OPT_RESTART_IMPUTATION) then
+            write(*,*) "Restart option 2 stops program after Imputation has finished"
+            stop
+        endif
 
 #ifdef DEBUG
         write(0,*) 'DEBUG: Model Recombination'
 #endif
-
         ! WARNING: Skip the modelling the recombination because it interferes with HMM propabilites
         ! TODO:
         if (inputParams%hmmoption==RUN_HMM_NO) call ModelRecomb
 
 #ifdef DEBUG
+
         write(0,*) 'DEBUG: Final Checker'
 #endif
 
         if (inputParams%TrueGenos1None0==1) then
-            !call cpu_time(start)
-            call FinalChecker
-            !call cpu_time(finish)
-            !print '("Time FinalChecker= ",f6.3," seconds.")',finish-start
+            block 
+                use informationModule
+
+                print *,""
+                print *,"**************************************************************************************************"
+                print *, "Yield", checkYield(ped)
+                print *,"Accuracy per animal:",calculateaccuracyPerAnimal(ped,inputParams%TrueGenotypeFile, "perAnimal.txt")
+                print *,"Accuracy per snp:",calculateaccuracyPerAnimal(ped,inputParams%TrueGenotypeFile, "perSnp.txt")
+            end block
+
         endif
-        ! call Cleaner
     endif
 endif
-!call cpu_time(start)
+call ped%destroyPedigree()
 call PrintTimerTitles
-!call cpu_time(finish)
-!print '("Time call PrintTimerTitles= ",f6.3," seconds.")',finish-start
 
-if (inputParams%restartOption > OPT_RESTART_IMPUTATION) then
-    call system(RM // " Tmp2345678.txt")
-end if
 
 end program AlphaImpute
+
