@@ -238,10 +238,11 @@ if (inputParams%hmmoption/=RUN_HMM_NGS) then
             block 
                 use informationModule
 
-
+                print *,""
+                print *,"**************************************************************************************************"
                 print *, "Yield", checkYield(ped)
-                print *,"ACC ped:",calculateaccuracyPerAnimal(ped,inputParams%TrueGenotypeFile, "perAnimal.txt")
-                print *,"ACC Snp:",calculateaccuracyPerAnimal(ped,inputParams%TrueGenotypeFile, "perSnp.txt")
+                print *,"Accuracy per animal:",calculateaccuracyPerAnimal(ped,inputParams%TrueGenotypeFile, "perAnimal.txt")
+                print *,"Accuracy per snp:",calculateaccuracyPerAnimal(ped,inputParams%TrueGenotypeFile, "perSnp.txt")
             end block
 
         endif

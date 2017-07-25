@@ -243,8 +243,8 @@ subroutine IterateInsteadOfGeneProbs
         ProbImputePhase(1:ped%pedigreeSize-ped%nDummys,:,:)=-9.0
 
         call IterateParentHomoFill
-        call PhaseComplement
-        call MakeGenotype
+        call ped%PhaseComplement
+        call ped%MakeGenotype
 
         do i=1,ped%pedigreeSize-ped%nDummys
             do j=1,nSnpIterate
@@ -383,8 +383,8 @@ else
     ProbImputePhase(1:ped%pedigreeSize-ped%nDummys,:,:)=-9.0
 
     call IterateParentHomoFill
-    call PhaseComplement
-    call MakeGenotype
+    call ped%PhaseComplement
+    call ped%MakeGenotype
 
     do i=1,ped%pedigreeSize-ped%nDummys
         do j=1,nSnpIterate

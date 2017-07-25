@@ -155,11 +155,6 @@ write(0,*) 'DEBUG: Mach Finished'
                                 if (inputParams%noPhasing == 1) then
                                     call PhaseElimination                   ! Major Sub-Step 5 (Hickey et al., 2012; Appendix A)  
                                 endif
-
-                                 ! call makeGenotype
-                                 ! call ped%writeOutGenotypes("after5")
-
-
                                 if (inputParams%sexopt==1) then
                                     call EnsureHetGametic
                                 end if
@@ -172,17 +167,12 @@ write(0,*) 'DEBUG: Mach Finished'
                                     call ParentPhaseElimination             ! Major Sub-Step 4 (Hickey et al., 2012; Appendix A)
                                 endif
 
-                                !  call makeGenotype
-                                ! call ped%writeOutGenotypes("after4")
-
                                 if (inputParams%sexopt==1) then
                                     call EnsureHetGametic
                                 end if
 
                                 call GeneralFillIn
                                 call RestrictedWorkLeftRight            ! Major Sub-Step 8 (Hickey et al., 2012; Appendix A)
-                                ! call makeGenotype
-                                ! call ped%writeOutGenotypes("after81")
 
                                 if (inputParams%sexopt==1) then
                                     call EnsureHetGametic
@@ -194,8 +184,6 @@ write(0,*) 'DEBUG: Mach Finished'
                                 print*, " ","Imputation from high-density parents completed at: ",trim(timeOut)
 
                                 call ImputeFromHDLibrary                ! Major Sub-Step 3 (Hickey et al., 2012; Appendix A)
-                !                 call makeGenotype
-                ! call ped%writeOutGenotypes("after3")
 
                                 if (inputParams%sexopt==1) then
                                     call EnsureHetGametic
@@ -203,8 +191,7 @@ write(0,*) 'DEBUG: Mach Finished'
 
                                 call GeneralFillIn
                                 call RestrictedWorkLeftRight            ! Major Sub-Step 8 (Hickey et al., 2012; Appendix A)
-                !                 call makeGenotype
-                ! call ped%writeOutGenotypes("after82")
+
                                 if (inputParams%sexopt==1) then
                                     call EnsureHetGametic
                                 end if
@@ -214,17 +201,14 @@ write(0,*) 'DEBUG: Mach Finished'
                                 print*, " ","Haplotype library imputation completed at: ",trim(timeOut)
 
                                 call InternalParentPhaseElim            ! Major Sub-Step 7 (Hickey et al., 2012; Appendix A)
-                !                 call makeGenotype
-                ! call ped%writeOutGenotypes("after7")
+
                                 if (inputParams%sexopt==1) then
                                     call EnsureHetGametic
                                 end if
                                 call GeneralFillIn
 
                                 call RestrictedWorkLeftRight            ! Major Sub-Step 8 (Hickey et al., 2012; Appendix A)
-                                ! call makeGenotype
-                                ! call ped%writeOutGenotypes("after83")
-                                
+
                                 if (inputParams%sexopt==1) then
                                     call EnsureHetGametic
                                 end if
@@ -235,7 +219,7 @@ write(0,*) 'DEBUG: Mach Finished'
 
                                 print*, " ","Internal imputation from parents haplotype completed at: ",timeOut
 
-                                call InternalHapLibImputationOLD           ! Major Sub-Step 6 (Hickey et al., 2012; Appendix A)
+                                call InternalHapLibImputation           ! Major Sub-Step 6 (Hickey et al., 2012; Appendix A)
                                 if (inputParams%sexopt==1) then
                                     call EnsureHetGametic
                                 end if
@@ -251,9 +235,6 @@ write(0,*) 'DEBUG: Mach Finished'
                                 
                                 print*, " ","Internal haplotype library imputation completed at: ", timeOut
 
-
-                                ! call makeGenotype
-                                ! call ped%writeOutGenotypes("afterend")
                              enddo
 
                             call ManageWorkLeftRight
@@ -372,19 +353,24 @@ write(0,*) 'DEBUG: Mach Finished'
 
                             ! Exit if the corelength is too small
                             CoreLength=(CoreEnd-CoreStart)+1
-                            if (CoreLength<10) exit
-
+                            if (CoreLength<10) then 
+                                print *, "too small of cores"
+                                exit
+                            endif
                             ! PARALLELIZATION BEGINS
                             !# PARALLEL DO SHARED (nAnisP,RecPed,CoreStart,CoreEnd,AnimalOn,Temp) private(i,e,CompPhase,GamA,j,GamB)
                             do i=1,ped%pedigreeSize-ped%ndummys
                                 do e=1,2
                                     ! Skip if, in the case of sex chromosome, me and my parent are heterogametic
                                     if (ped%pedigree(i)%isDummyBasedOnIndex(e+1)) cycle
-                                    parent => ped%pedigree(i)%getSireDamObjectByIndex(e+1)
-                                    if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==inputParams%HetGameticStatus).and.(parent%gender==inputParams%HetGameticStatus)) cycle
+                                    
 
                                     ! If not a Base Animal
                                     if (.not. ped%pedigree(i)%founder) then
+
+                                        parent => ped%pedigree(i)%getSireDamObjectByIndex(e+1)
+                                        if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==inputParams%HetGameticStatus).and.(parent%gender==inputParams%HetGameticStatus)) cycle
+
                                         ! If the haplotype for this core is not completely phased
                                         subset = ped%pedigree(i)%individualPhase(e)%subset(coreStart,coreEnd)
                                         if (.not. subset%fullyPhased())  then
@@ -511,7 +497,6 @@ write(0,*) 'DEBUG: Mach Finished'
                 enddo
             enddo
 
-
                 deallocate(Temp)
 
 
@@ -520,7 +505,7 @@ write(0,*) 'DEBUG: Mach Finished'
             !#############################################################################################################################################################################################################################
 
 
-subroutine InternalHapLibImputationOld
+subroutine InternalHapLibImputation
 ! Internal candidate haplotype library imputation of alleles.q
 ! Haplotype libraries are internally built using the information that has been previously imputed.
 ! Several different core lengths are used to define the length of the haplotypes and to ensure to
@@ -561,7 +546,6 @@ inputParams => defaultInput
 
 ! WARNING: This should go in a function since it is the same code as InternalParentPhaseElim subroutine
 nGlobalLoop=25
-
 
 ! LoopeIndex is a matrix with two columns that will serve to define:
 !   * 1.- nCores
@@ -625,13 +609,7 @@ AnimalOn=0
 ! SIMULATE PHASING
 ! f is a variable to simulate shift or no-shift phasing
 do f=1,2
-
-
-
     do l=LoopStart,nGlobalLoop
-
-
-
         ! Simulate phase without shift
         if (f==1) then
             nCore=inputParams%nsnp/LoopIndex(l,2)
@@ -812,11 +790,10 @@ do i=1,ped%pedigreesize-ped%ndummys
 enddo
 !$OMP END PARALLEL DO
 
-! call hapLib%destroyHaplotypeLibrary()
 deallocate(Temp)
 
 
-end subroutine InternalHapLibImputationOld
+end subroutine InternalHapLibImputation
 
             ! #############################################################################################################################################################################################################################
 
@@ -868,7 +845,6 @@ end subroutine InternalHapLibImputationOld
                         StartSnp=apResults%results(unknownFreeIterator)%startIndexes(g)
                         EndSnp=apResults%results(unknownFreeIterator)%endIndexes(g)
 
-
                         !$OMP PARALLEL DO &
                         !$OMP DEFAULT(SHARED) &
                         !$OMP PRIVATE(i,j,e,Gam1,Gam2,GamA,GamB,tmpPhase,tmpHDPhase,PosHDInd)
@@ -895,10 +871,6 @@ end subroutine InternalHapLibImputationOld
                                             if (tmpPhase(e)%numPresentNotMatched(apResults%results(unknownFreeIterator)%cores(g)%phase(i,2)) /= 0) then
                                                 gamB = 0
                                             endif
-
-
-                                        
-
 
                                             ! Paternal haplotype (gamete) is strictly the same as my paternal haplotype from the Hap Library
                                             if ((e==1).and.(GamA==1).and.(GamB==0)) Gam1=1
@@ -1670,6 +1642,35 @@ end subroutine InternalHapLibImputationOld
 
             end subroutine InitialiseArrays
 
+
+
+            subroutine homozygoticFillIn
+                ! Impute phase information for homozygous cases
+                use AlphaImputeSpecFileModule
+                use global, only :ped
+                implicit none
+
+                integer :: i,j
+                inputParams => defaultInput
+
+                !$OMP PARALLEL DO &
+                !$OMP PRIVATE(i,j)
+                do i=1, ped%pedigreeSize
+                    do j=1, inputparams%nsnp
+                        if (ped%pedigree(i)%individualGenotype%getGenotype(j) == 2) then
+                            call ped%pedigree(i)%individualPhase(1)%setPhase(j,1)
+                            call ped%pedigree(i)%individualPhase(2)%setPhase(j,1)
+                        else if (ped%pedigree(i)%individualGenotype%getGenotype(j) == 0) then
+                            call ped%pedigree(i)%individualPhase(1)%setPhase(j,0)
+                            call ped%pedigree(i)%individualPhase(2)%setPhase(j,0)
+                        endif
+                    enddo
+                enddo
+                !$OMP END PARALLEL DO
+
+            end subroutine homozygoticFillIn
+
+
             !#############################################################################################################################################################################################################################
 
             subroutine GeneralFillIn
@@ -1681,13 +1682,15 @@ end subroutine InternalHapLibImputationOld
                 implicit none
 
                 inputParams => defaultInput
-                
-                call ParentHomoFill                     ! Minor sub-step 1. Parent Homozygous fill in
-                call PhaseComplement                    ! Minor sub-step 2. Phase Complement
-                call ImputeParentByProgenyComplement    ! Minor sub-step 3. Impute Parents from Progeny Complement
-                call MakeGenotype                       ! Minor sub-step 4. Make Genotype
-                call HeuristicGeneprob(inputparams, ped)
 
+                ! call InitialiseArrays
+                call ParentHomoFill                     ! Minor sub-step 1. Parent Homozygous fill in
+                call ped%PhaseComplement                    ! Minor sub-step 2. Phase Complement
+                call ImputeParentByProgenyComplement    ! Minor sub-step 3. Impute Parents from Progeny Complement
+                call ped%MakeGenotype                       ! Minor sub-step 4. Make Genotype
+                ! call homozygoticFillIn
+                call HeuristicGeneprob(inputparams, ped)
+                ! call heuristicMLP(ped)
 
                 if (inputParams%useFerdosi) then
 
@@ -1713,12 +1716,14 @@ end subroutine InternalHapLibImputationOld
 
                 inputParams => defaultInput
 
+                ! call InitialiseArrays
                 call ParentHomoFill                     ! Minor sub-step 1. Parent Homozygous fill in       
-                call PhaseComplement                    ! Minor sub-step 2. Phase Complement
+                call ped%PhaseComplement                    ! Minor sub-step 2. Phase Complement
                 call ImputeParentByProgenyComplement    ! Minor sub-step 3. Impute Parents from Progeny Complement
-                call MakeGenotype                       ! Minor sub-step 4. Make Genotype
+                call ped%MakeGenotype                       ! Minor sub-step 4. Make Genotype
+                ! call homozygoticFillIn
                 call HeuristicGeneprob(inputparams, ped)
-
+                ! call heuristicMLP(ped)
 
                 if (inputParams%useFerdosi) then
 
@@ -1757,59 +1762,6 @@ end subroutine InternalHapLibImputationOld
 
             END SUBROUTINE EnsureHetGametic
 
-            !#############################################################################################################################################################################################################################
-
-            SUBROUTINE MakeGenotype
-                ! Any individual that has a missing genotype information but has both alleles
-                ! known, has its genotype filled in as the sum of the two alleles
-                use Global
-                use AlphaImputeSpecFileModule
-
-                implicit none
-                integer :: i
-
-                  !$OMP PARALLEL DO &
-                !$OMP PRIVATE(i)
-                do i=1,ped%pedigreeSize-ped%nDummys
-                    call ped%pedigree(i)%IndividualGenotype%setFromHaplotypesIfMissing(ped%pedigree(i)%individualPhase(1),ped%pedigree(i)%individualPhase(2))    
-                enddo 
-                !$OMP END PARALLEL DO
-
-
-            END SUBROUTINE MakeGenotype
-
-            !#############################################################################################################################################################################################################################
-
-            subroutine PhaseComplement
-                ! If the genotype at a locus for an individual is known and one of its alleles has been determined
-                ! then impute the missing allele as the complement of the genotype and the known phased allele
-                use Global
-                implicit none
-
-                integer :: i
-                type (haplotype),allocatable :: comp1, comp2
-
-                !$OMP PARALLEL DO &
-                !$OMP PRIVATE(comp1,comp2,i)
-                do i=1,ped%pedigreeSize- ped%nDummys  
-
-                    call ped%pedigree(i)%individualPhase(1)%setErrorToMissing()
-                    call ped%pedigree(i)%individualPhase(2)%setErrorToMissing()
-                    comp2 = ped%pedigree(i)%individualGenotype%complement(ped%pedigree(i)%individualPhase(1))
-                    comp1 = ped%pedigree(i)%individualGenotype%complement(ped%pedigree(i)%individualPhase(2))
-
-                    call comp1%setErrorToMissing()
-                    call comp2%setErrorToMissing()
-
-                    call ped%pedigree(i)%individualPhase(1)%setFromOtherIfMissing(comp1)
-                    call ped%pedigree(i)%individualPhase(2)%setFromOtherIfMissing(comp2)
-                    
-                    deallocate(comp1)
-                    deallocate(comp2)
-                enddo
-                !$OMP END PARALLEL DO
-
-            end subroutine PhaseComplement
 
             !#############################################################################################################################################################################################################################
 
