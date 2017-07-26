@@ -88,6 +88,8 @@ module AlphaImputeSpecFileModule
         integer(kind=int32) :: useProcs
         logical :: cluster
 
+        integer :: alphaphaseoutput
+
         logical :: useFerdosi
         
     contains
@@ -449,6 +451,19 @@ contains
                     write(error_unit,*) "ERROR: Min minoverlap haplotype size is set incorrectly!"
                 endif
 
+            case("alphaphaseoutput")
+                 if (ToLower(trim(second(1))) == "no") then
+                        this%alphaphaseoutput= 0
+                    elseif (ToLower(trim(second(1))) == "yes") then
+                        this%alphaphaseoutput = 1
+                    elseif (ToLower(trim(second(1))) == "binary") then
+                        this%alphaphaseoutput = 2
+                    elseif (ToLower(trim(second(1))) == "verbose") then
+                        this%alphaphaseoutput = 3
+                    else
+                        write(error_unit,*) "Error: alphaphaseoutput has been set incorrectly."
+                        stop 4054
+                    endif
 
                 ! box 6
             case("internaliterations")

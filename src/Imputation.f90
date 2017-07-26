@@ -852,7 +852,11 @@ end subroutine InternalHapLibImputation
                             ! Look for possible gametes through the Haplotype
                             ! Library constructed during the phasing step
                             PosHDInd=ped%hdMap(i)         ! Index of the individual in the HD phase information
+                            if (PosHDInd == 0) then
+                                cycle
+                            endif
                             allocate(tmpPhase(2))
+
                             tmpPhase(1) = ped%pedigree(posHDInd)%individualPhase(1)%subset(startSnp,endSnp)
                             tmpPhase(2) = ped%pedigree(posHDInd)%individualPhase(2)%subset(startSnp,endSnp)
                             ! If there is one allele phased at least
