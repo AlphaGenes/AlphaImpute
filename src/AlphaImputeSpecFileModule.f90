@@ -79,7 +79,7 @@ module AlphaImputeSpecFileModule
         logical :: PreProcess
         integer(kind=1) :: PhaseTheDataOnly
 
-        integer(kind=1) :: UserDefinedHD,PrePhased,RestartOption
+        integer(kind=1) :: UserDefinedHD,PrePhased,RestartOption 
 
         integer :: AnimalFileUnit, prePhasedFileUnit, pedigreeFileUnit,genotypeFileUnit,GenderFileUnit,HapListUnit
 
@@ -91,6 +91,8 @@ module AlphaImputeSpecFileModule
         integer :: alphaphaseoutput
 
         logical :: useFerdosi
+
+        logical :: modelrecomb
         
     contains
         procedure :: ReadInParameterFile
@@ -152,6 +154,7 @@ contains
         this%iterateMethod = "Off"
         this%PhaseNIterations = 1
         this%resultFolderPath = "Results"
+        this%modelrecomb = .true.
         open(newunit=unit, file=SpecFile, action="read", status="old")
         IOStatus = 0
         
@@ -605,6 +608,13 @@ contains
                 else if (ToLower(trim(second(1))) == "yes") then
                     this%useFerdosi = .true.
                 endif
+             case("modelrecomb")
+               if(ToLower(trim(second(1))) == "no") then
+                    this%modelrecomb = .false.
+                else if (ToLower(trim(second(1))) == "yes") then
+                    this%modelrecomb = .true.
+                endif
+                
                 
             end select
         end if

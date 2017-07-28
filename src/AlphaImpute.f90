@@ -239,8 +239,8 @@ subroutine IterateInsteadOfGeneProbs
         ProbImputePhase(0,:,1)=TempAlleleFreq(:)
         ProbImputePhase(0,:,2)=TempAlleleFreq(:)
         ProbImputeGenos(0,:)=2*TempAlleleFreq(:)
-        ProbImputeGenos(1:ped%pedigreeSize-ped%nDummys,:)=-9.0
-        ProbImputePhase(1:ped%pedigreeSize-ped%nDummys,:,:)=-9.0
+        ProbImputeGenos(1:ped%pedigreeSize,:)=-9.0
+        ProbImputePhase(1:ped%pedigreeSize,:,:)=-9.0
 
         call IterateParentHomoFill
         call ped%PhaseComplement
@@ -562,7 +562,7 @@ subroutine WriteOutResults
                 allocate(Maf(inputParams%nSnp))           
             end if
 
-            ProbImputeGenos(1:ped%pedigreeSize-ped%nDummys,:) = 9.0
+            probImputeGenos(1:ped%pedigreeSize-ped%nDummys,:) = 9.0
             ProbImputePhase(1:ped%pedigreeSize-ped%nDummys,:,:) = 9.0
 
             ! Feed Impute and Phase probabilites
@@ -981,6 +981,7 @@ subroutine ModelRecomb
     open (unit=46, file=trim(inputparams%resultFolderPath) // DASH // "RecombinationInformationNarrowR.txt")
 
 
+    counter = 0
 
     ! Check whether to consider all the raw snps or only the snps left after the edition procedure
     ! If EditedSnpOut in Spec file
@@ -1184,6 +1185,7 @@ subroutine ModelRecomb
                         StR(nRec)=StartDis
                         EnR(nRec)=EndDis
                         LengthVec(StartDis:EndDis)=1.0/(EndDis-StartDis)
+
                         StartDisPrev=StartDis
                         EndDisPrev=EndDis
 
@@ -1225,12 +1227,20 @@ subroutine ModelRecomb
                                 phase2 = ped%pedigree(PedId)%individualPhase(2)%getPhase(j)
                                 if (phase1/= phase2) then
                                     if ((phase1/=9).and.(phase2/=9)) then
-                                        call ped%pedigree(i)%individualPhase(e)%setPhase(j,9)
-                                        call ped%pedigree(i)%individualGenotype%setGenotype(j,9)
-                                        ProbImputePhase(i,j,e)&
-                                        =((1.0-(LengthVec(j)*Counter))*ped%pedigree(pedid)%individualPhase(gamA)%getPhase(j)&
-                                            +(LengthVec(j)*Counter*ped%pedigree(pedid)%individualPhase(gamB)%getPhase(j)))
-                                        ProbImputeGenos(i,j)=ProbImputePhase(i,j,1)+ProbImputePhase(i,j,2)
+
+                                        block
+
+                                            integer :: one, two
+                                            call ped%pedigree(i)%individualPhase(e)%setPhase(j,9)
+                                            call ped%pedigree(i)%individualGenotype%setGenotype(j,9)
+                                            one = ((1.0-(LengthVec(j)*Counter))*ped%pedigree(pedid)%individualPhase(gamA)%getPhase(j))
+                                            two = (LengthVec(j)*Counter*ped%pedigree(pedid)%individualPhase(gamB)%getPhase(j))
+                                        
+
+                                            ProbImputePhase(i,j,e) = one + two
+                                            ProbImputeGenos(i,j)=ProbImputePhase(i,j,1)+ProbImputePhase(i,j,2) 
+
+                                        end block
                                     endif
                                 endif
                             end block

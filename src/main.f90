@@ -217,18 +217,18 @@ if (inputParams%hmmoption/=RUN_HMM_NGS) then
         call WriteOutResults
 
 
-        if (inputparams%restartOption == OPT_RESTART_IMPUTATION) then
-            write(*,*) "Restart option 2 stops program after Imputation has finished"
-            stop
-        endif
+        
 
 #ifdef DEBUG
         write(0,*) 'DEBUG: Model Recombination'
 #endif
         ! WARNING: Skip the modelling the recombination because it interferes with HMM propabilites
         ! TODO:
-        if (inputParams%hmmoption==RUN_HMM_NO) call ModelRecomb
-
+        if (.not. inputparams%ModelRecomb .or. inputParams%hmmoption /= RUN_HMM_NO) then
+            write(*,*) "ModelRecomb has been Bypassed"     
+        else
+            call ModelRecomb
+        endif
 #ifdef DEBUG
 
         write(0,*) 'DEBUG: Final Checker'
