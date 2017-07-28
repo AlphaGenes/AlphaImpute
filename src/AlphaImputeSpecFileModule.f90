@@ -580,6 +580,17 @@ contains
             case("restartoption")
                 read(second(1),*) this%restartOption
 
+                if (this%restartoption >2) then
+                    write(error_unit,*) "Error - RestartOption can only be the following:"
+                    write(error_unit,*) "0 - run all"
+                    write(error_unit,*) "1 - make dirs run phasing"
+                    write(error_unit,*) "2 - run imputation/hmm"
+                    stop
+                endif
+
+
+
+
             case("cluster")
                if (toLower(trim(second(1)))=="no") then
                     this%cluster=.false.
