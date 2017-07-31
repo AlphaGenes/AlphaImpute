@@ -991,7 +991,9 @@ subroutine ModelRecomb
     else
         nSnpFinal=inputParams%nSnpRaw
     endif
-
+    if (allocated(GlobalWorkPhase)) then
+        deallocate(GlobalWorkPhase)
+    endif
     allocate(GlobalWorkPhase(0:ped%pedigreeSize,nSnpFinal,2))
     allocate(WorkPhase(0:ped%pedigreeSize,nSnpFinal,2))
     allocate(TempVec(nSnpFinal))

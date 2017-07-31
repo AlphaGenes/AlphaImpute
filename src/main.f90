@@ -87,6 +87,19 @@ program AlphaImpute
         if (inputParams%restartOption<OPT_RESTART_IMPUTATION) call MakeDirectories(RUN_HMM_NULL)
 
         call ReadInData
+
+         block 
+        use informationModule
+
+        print *,""
+        print *,"**************************************************************************************************"
+        print *, "Yield", checkYield(ped)
+        print *,"Accuracy per animal:",calculateaccuracyPerAnimal(ped,inputParams%TrueGenotypeFile, "perAnimal.txt")
+        print *,"Accuracy per snp:",calculateaccuracyPerAnimal(ped,inputParams%TrueGenotypeFile, "perSnp.txt")
+    end block
+
+
+
         ! call InitialiseArrays
         !call cpu_time(start)
         call SnpCallRate
@@ -213,7 +226,7 @@ if (inputParams%hmmoption/=RUN_HMM_NGS) then
 
     ! If we only want to phase data, then skip all the imputation steps
     if (inputParams%PhaseTheDataOnly==0) Then
-        call ImputationManagement
+        ! call ImputationManagement
         call WriteOutResults
 
 
