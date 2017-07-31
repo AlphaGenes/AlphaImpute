@@ -226,7 +226,7 @@ if (inputParams%hmmoption/=RUN_HMM_NGS) then
 
     ! If we only want to phase data, then skip all the imputation steps
     if (inputParams%PhaseTheDataOnly==0) Then
-        ! call ImputationManagement
+        call ImputationManagement
         call WriteOutResults
 
 
