@@ -59,6 +59,8 @@ module AlphaImputeSpecFileModule
         integer(kind=int32) :: PhaseSubsetSize, PhaseNIterations
         character(len=20) :: iterateMethod
         integer :: minoverlaphaplotype
+
+        logical :: outputonlygenotypedanimals
         ! box 6
         integer(kind=int32) :: InternalIterations
         integer(kind=1) :: ConservativeHapLibImputation
@@ -155,6 +157,7 @@ contains
         this%PhaseNIterations = 1
         this%resultFolderPath = "Results"
         this%modelrecomb = .true.
+        this%outputonlygenotypedanimals = .false.
         open(newunit=unit, file=SpecFile, action="read", status="old")
         IOStatus = 0
         
@@ -321,6 +324,12 @@ contains
                 print*, "Beware!!!!! AlphaImpute is case sensitive"
                 stop
 
+            case("outputonlygenotypedanimals")
+                if (ToLower(trim(second(1))) == "yes") then
+                    this%outputonlygenotypedanimals = .true.
+                else if (ToLower(trim(second(1))) == "no") then
+                    this%outputonlygenotypedanimals = .false.
+                endif
 
                 ! box 5
             case("numberphasingruns")
