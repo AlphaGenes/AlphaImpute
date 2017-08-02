@@ -32,7 +32,7 @@ module AlphaImputeSpecFileModule
 
     type AlphaImputeInput
         ! box 1
-        character(len=300):: PedigreeFile = "Pedigree.txt",GenotypeFile="Genotypes.txt",TrueGenotypeFile="TrueGenotypes.txt",GenderFile="None",InbredAnimalsFile="None", HapListFile="None"
+        character(len=300):: PedigreeFile = "Pedigree.txt",GenotypeFile="Genotypes.txt",TrueGenotypeFile,GenderFile="None",InbredAnimalsFile="None", HapListFile="None"
         character(len=300) :: resultFolderPath
         integer(kind=1) :: TrueGenos1None0
         logical :: PlinkFormat, VCFFormat
@@ -158,6 +158,7 @@ contains
         this%resultFolderPath = "Results"
         this%modelrecomb = .true.
         this%outputonlygenotypedanimals = .false.
+        this%TrueGenos1None0=0
         open(newunit=unit, file=SpecFile, action="read", status="old")
         IOStatus = 0
         
@@ -208,7 +209,7 @@ contains
                     write(*, "(A,A)") "No true genotype file specified. Using default filename: ", this%TrueGenotypeFile
                 else
                     write(this%TrueGenotypeFile, "(A)") second(1)
-                    if (this%TrueGenotypeFile=="None") then
+                    if (trim(toLower(this%TrueGenotypeFile))=="none") then
                         this%TrueGenos1None0=0
                     else
                         this%TrueGenos1None0=1
