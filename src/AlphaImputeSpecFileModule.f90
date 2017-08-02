@@ -161,8 +161,13 @@ contains
         open(newunit=unit, file=SpecFile, action="read", status="old")
         IOStatus = 0
         
-        READFILE: do while (IOStatus==0)
+        READFILE: do
             read(unit,"(A)", IOStat=IOStatus)  line
+
+
+            if (IOStatus /= 0) exit
+
+
             if (len_trim(line)==0) then
                 CYCLE
             end if
