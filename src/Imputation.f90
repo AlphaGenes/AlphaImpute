@@ -835,6 +835,9 @@ end subroutine InternalHapLibImputation
                 Temp=0
                 AnimalOn=0
                 ! FOR EACH CORE OF EACH ROUND OF THE LRPHLI
+                !$OMP PARALLEL DO &
+                !$OMP DEFAULT(SHARED) &
+                !$OMP PRIVATE(i,j,e,Gam1,Gam2,GamA,GamB,tmpPhase,tmpHDPhase,PosHDInd, startSnp, endSnp,unknownFreeIterator, g)
                 do unknownFreeIterator=1,apresults%nResults
 
                     startSnp = 1
@@ -845,9 +848,7 @@ end subroutine InternalHapLibImputation
                         StartSnp=apResults%results(unknownFreeIterator)%startIndexes(g)
                         EndSnp=apResults%results(unknownFreeIterator)%endIndexes(g)
 
-                        !$OMP PARALLEL DO &
-                        !$OMP DEFAULT(SHARED) &
-                        !$OMP PRIVATE(i,j,e,Gam1,Gam2,GamA,GamB,tmpPhase,tmpHDPhase,PosHDInd)
+                        
                         do i=1,ped%nHd
                             ! Look for possible gametes through the Haplotype
                             ! Library constructed during the phasing step
@@ -932,10 +933,11 @@ end subroutine InternalHapLibImputation
                             deallocate(tmpPhase)
 
                         enddo
-                        !$OMP END PARALLEL DO
 
                     enddo
                 enddo
+                !$OMP END PARALLEL DO
+
 
                 do e=1,2
                     do j=1,inputParams%nsnp
