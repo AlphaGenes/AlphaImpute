@@ -127,7 +127,6 @@ module AlphaImputeModule
         use AlphaPhaseFunctions
         use AlphaPhaseResultsModule
         use Global, only : ped, OPT_RESTART_PHASING
-        use inputoutput, only : MakeDirectories
         use OutputParametersModule
         use InputOutput
         use MPIUtilities
@@ -139,10 +138,10 @@ module AlphaImputeModule
         type(AlphaPhaseParameters) :: params
         integer :: nCoreLengths,i, coreIndexes
         type(OutputParameters) :: oParams
-        
+        integer :: index 
+        type(AlphaPhaseResults) :: result
         inputParams=> defaultInput
         nCoreLengths = size(inputParams%CoreAndTailLengths)
-        results%nResults = nCoreLengths*2
 
         params = newParameters()
         params%iterateType = inputParams%iterateMethod
@@ -157,12 +156,12 @@ module AlphaImputeModule
             params%percMinPresent = 0
         endif
 
-        call startMPI
-
+        call initialiseMPI
+        print *,"MPI SIZE:", mpiSize
         totalToDo = (nCoreLengths*2)/mpiSize
-
+        print *,"TOTALTODO", totalTOdo
         if (totalToDo <1) then
-            if (mpiRank < nCoreLengths*2) return
+            if (mpiRank+1 < nCoreLengths*2) return
         endif
         write(6,*) " "
         write(6,*) " ", "Running AlphaPhase"
@@ -170,11 +169,13 @@ module AlphaImputeModule
         ! TODO can omp this loop
         do i=1,totalToDo
 
-                index = mpiRank*i
-             if (i > nCoreLengths) Then
+                index = (mpiRank+1)+((i-1) *nCoreLengths)
+                if (index > nCoreLengths) Then
                 params%offset = .false.
                 coreIndexes = index - nCoreLengths
-            endif
+            else 
+              coreIndexes = index
+              endif
             
             params%CoreAndTailLength = inputParams%CoreAndTailLengths(coreIndexes)
             params%jump = inputParams%CoreLengths(coreIndexes)
@@ -182,13 +183,15 @@ module AlphaImputeModule
             params%useSurrsN = 10
             result = phaseAndCreateLibraries(ped, params, quiet=.true., updatePedigree=.false.)
 
-                            
+            print *,"Finished running AlphaPhase run ",index                
             write(oParams%outputDirectory,'("."a"Phasing",a,"Phase"i0)') DASH,DASH, index
             call writeAlphaPhaseResults(result, ped, oParams)
-        enddo
+          enddo
 
 
         call endMPI
+
+        stop
     end subroutine phasingManagementCluster
 
 #endif
