@@ -379,6 +379,7 @@ module HeuristicGeneprobModule
 
             subroutine peelDown(ped)
                 use PedigreeModule
+                use ConstantModule
                 implicit none
 
                 type(PedigreeHolder), intent(inout) :: ped
@@ -408,7 +409,7 @@ module HeuristicGeneprobModule
                         do e=1,2
 
                             if (parentGenotype(e) == 2 .or. parentGenotype(e) == 0) then
-                                call ped%pedigree(i)%individualPhase(e)%setPhase(j,parentGenotype(e) /2)
+                                call ped%pedigree(i)%individualPhase(e)%setPhase(j,parentGenotype(e) /2_ONEBYTEINT)
                             endif
 
                             if (parentGenotype(e) == 1) then

@@ -221,14 +221,14 @@ contains
                 this%SexOpt=9
                 this%HetGameticStatus=9
                 this%HomGameticStatus=9
-                if (trim(second(1))=="Yes") then
+                if (toLower(trim(second(1)))=="yes") then
                     this%genderFile = second(2)
                     this%HetGameticStatus=9
-                    if (trim(second(3))=="Male") then        ! Species  with heterogametic males
+                    if (toLower(trim(second(3)))=="male") then        ! Species  with heterogametic males
                         this%HetGameticStatus=1                              ! My father is heterogametic
                         this%HomGameticStatus=2                              ! My mother is homogametic
                     endif
-                    if (trim(second(3))=="Female") then      ! Species with heterogametic females
+                    if (toLower(trim(second(3)))=="female") then      ! Species with heterogametic females
                         this%HetGameticStatus=2                              ! My mother is heterogametic
                         this%HomGameticStatus=1                              ! My father is homogametic
                     endif
