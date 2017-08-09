@@ -101,7 +101,7 @@ module AlphaImputeSpecFileModule
         final :: destroyAlphaImputeInput
     end type AlphaImputeInput
 
-    type(AlphaImputeInput),target, allocatable :: defaultInput
+    type(AlphaImputeInput),pointer :: defaultInput
 
 contains
 
@@ -240,7 +240,7 @@ contains
                 endif
 
                 ! Not sex chrom
-                if (trim(second(1))=="No") then
+                if (tolower(trim(second(1)))=="no") then
                     this%SexOpt=0
                 endif
                 if (this%SexOpt==9) then
