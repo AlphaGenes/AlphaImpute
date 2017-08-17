@@ -785,11 +785,11 @@ subroutine WriteOutResults
         if (allocated(ProbImputeGenos)) then
             deallocate(ProbImputeGenos)
         end if
-        allocate(ProbImputeGenos(0:ped%pedigreeSize,inputParams%nSnpRaw))
+        allocate(ProbImputeGenos(0:ped%pedigreeSize,inputParams%nsnp))
         if (allocated(ProbImputePhase)) then
             deallocate(ProbImputePhase)
         end if
-        allocate(ProbImputePhase(0:ped%pedigreeSize,inputParams%nSnpRaw,2))
+        allocate(ProbImputePhase(0:ped%pedigreeSize,inputParams%nsnp,2))
         if (allocated(Maf)) then
             deallocate(Maf)
         end if
@@ -797,7 +797,7 @@ subroutine WriteOutResults
 
 
         if (.not. allocated(ImputeGenosHMM)) then
-            allocate(ImputeGenosHMM(0:ped%pedigreeSize,inputParams%nSnpRaw))
+            allocate(ImputeGenosHMM(0:ped%pedigreeSize,inputParams%nsnp))
         end if
         if (.not. allocated(ImputePhaseHMM)) then
             allocate(ImputePhaseHMM(0:ped%pedigreeSize,inputParams%nSnpraw,2))
@@ -810,7 +810,9 @@ subroutine WriteOutResults
         do j=1,inputParams%nsnp
             l=l+1
             do i=1,ped%nGenotyped
-
+                print *,"1",i,j
+                print *,"here",ProbImputeGenos(ped%genotypeMap(i),j)
+                print *,size(ProbImputeGenosHmm)
                 ProbImputeGenos(ped%genotypeMap(i),j)   = ProbImputeGenosHmm(i,j)
                 ProbImputePhase(ped%genotypeMap(i),j,1) = ProbImputePhaseHmm(i,j,1)
                 ProbImputePhase(ped%genotypeMap(i),j,2) = ProbImputePhaseHmm(i,j,2)
