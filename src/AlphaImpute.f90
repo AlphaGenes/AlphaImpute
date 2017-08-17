@@ -1943,7 +1943,7 @@ subroutine CheckParentage
                         endif
                     enddo
                     if ((float(CountDisagree)/CountBothGeno)>DisagreeThreshold) then ! Mendelenian error
-                        write (101,'(2a20,4I,3f5.3)') &
+                        write (101,'(2a30,4I, 4E15.7)') &
                         Ped%pedigree(i)%originalID, Ped%pedigree(i)%getSireDamByIndex(ParPos), CountDisagree, CountBothGeno, nHomoParent, nBothHomo, &
                         float(CountDisagree)/CountBothGeno, float(CountDisagree)/nHomoParent, float(CountDisagree)/nBothHomo
                         CountChanges=CountChanges+1
@@ -2094,7 +2094,7 @@ end subroutine PrintTimerTitles
 
 
 
-subroutine runAlphaImpute(in)
+subroutine runAlphaImpute(in, pedIn)
     
     use Global
     use AlphaImputeInputOutputModule
@@ -2103,16 +2103,35 @@ subroutine runAlphaImpute(in)
     use ModuleRunFerdosi
     use AlphaPhaseResultsModule  
 
-    type(AlphaImputeInput), intent(inout),target :: in
+    class(baseSpecFile), intent(inout),target :: in
+    type(pedigreeHolder), optional :: pedIn
 
-    defaultInput => in
+
+
+
+
+
+    select type(in)
+
+        type is (AlphaImputeInput)
+            defaultInput => in
+        class default
+            write(error_unit, *) "ERROR: AlphaImpute given correct object type as input"
+            call abort()
+    end select
+
 
     
     inputParams => defaultInput
 if (inputParams%hmmoption /= RUN_HMM_NGS) then
     if (inputParams%restartOption<OPT_RESTART_IMPUTATION) call MakeDirectories(RUN_HMM_NULL)
 
-    call ReadInData
+
+    if (.not. present(pedIn)) then
+        call ReadInData
+    else
+        ped = pedIn
+    endif
 
 
 

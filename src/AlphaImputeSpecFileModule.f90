@@ -29,11 +29,12 @@
 module AlphaImputeSpecFileModule
     use iso_fortran_env
     use ConstantModule
+    use baseSpecFileModule
 
-    type AlphaImputeInput
+    type, extends(baseSpecFile) ::  AlphaImputeInput
         ! box 1
         character(len=300):: PedigreeFile = "Pedigree.txt",GenotypeFile="Genotypes.txt",TrueGenotypeFile,GenderFile="None",InbredAnimalsFile="None", HapListFile="None"
-        character(len=300) :: resultFolderPath
+        ! character(len=300) :: resultFolderPath
         integer(kind=1) :: TrueGenos1None0
         logical :: PlinkFormat, VCFFormat
 
@@ -95,7 +96,10 @@ module AlphaImputeSpecFileModule
         logical :: useFerdosi
 
         logical :: modelrecomb
-        
+
+        logical :: fullChrom ! TODO implement this
+
+
     contains
         procedure :: ReadInParameterFile
         final :: destroyAlphaImputeInput

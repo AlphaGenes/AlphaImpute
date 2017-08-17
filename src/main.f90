@@ -49,6 +49,7 @@ program AlphaImpute
     use Global
     use AlphaImputeModule
     use AlphaImputeSpecFileModule
+    ! use alphaFullChromModule
 
     implicit none
 
@@ -69,13 +70,21 @@ program AlphaImpute
     end if
 
 
+
     call Titles
+
+\
 
     ! use default input, TODO this can be changed
     allocate(defaultInput)
     call defaultInput%ReadInParameterFile(SpecFile)
-    call runAlphaImpute(defaultInput)
-    
+
+
+    if (defaultInput%fullChrom) then
+
+    else
+        call runAlphaImpute(defaultInput)
+    endif
 
 
  

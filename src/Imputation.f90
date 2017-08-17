@@ -723,6 +723,7 @@ do f=1,2
                 if (sum(BanBoth(:))==2) then
 
                     workGeno = ped%pedigree(i)%individualGenotype%subset(corestart,coreEnd)
+
                     if (.not. workGeno%compatibleHaplotypes(workHap(1),workHap(2), 0)) then
                         Ban=0
                     endif
