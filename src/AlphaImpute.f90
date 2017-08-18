@@ -1268,7 +1268,7 @@ subroutine ModelRecomb
     WorkPhase=ped%getPhaseAsArray()
 
     open (newunit=phaseUnit,file=trim(inputparams%resultFolderPath) // DASH // "ImputePhase.txt",status="unknown")
-    open (unit=genotypeunit,file=trim(inputparams%resultFolderPath) // DASH // "ImputeGenotypes.txt",status="unknown")
+    open (newunit=genotypeunit,file=trim(inputparams%resultFolderPath) // DASH // "ImputeGenotypes.txt",status="unknown")
     open (unit=40,file=trim(inputparams%resultFolderPath) // DASH // "ImputePhaseProbabilities.txt",status="unknown")
     open (unit=41,file=trim(inputparams%resultFolderPath) // DASH // "ImputeGenotypeProbabilities.txt",status="unknown")
 
