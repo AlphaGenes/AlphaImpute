@@ -810,9 +810,6 @@ subroutine WriteOutResults
         do j=1,inputParams%nsnp
             l=l+1
             do i=1,ped%nGenotyped
-                print *,"1",i,j
-                print *,"here",ProbImputeGenos(ped%genotypeMap(i),j)
-                print *,size(ProbImputeGenosHmm)
                 ProbImputeGenos(ped%genotypeMap(i),j)   = ProbImputeGenosHmm(i,j)
                 ProbImputePhase(ped%genotypeMap(i),j,1) = ProbImputePhaseHmm(i,j,1)
                 ProbImputePhase(ped%genotypeMap(i),j,2) = ProbImputePhaseHmm(i,j,2)
@@ -876,7 +873,7 @@ subroutine WriteOutResults
     endif
 
     if (inputParams%hmmoption/=RUN_HMM_NO) then
-        call WriteProbabilitiesHMM("." // DASH // "GeneProb" // DASH // "GenotypeProbabilities.txt", ped%genotypeMap, ped%nGenotyped, inputParams%nsnp)
+        call WriteProbabilitiesHMM("." // DASH // "Miscellaneous" // DASH // "GenotypeProbabilities.txt", ped%genotypeMap, ped%nGenotyped, inputParams%nsnp)
     endif
 
 #ifdef DEBUG
