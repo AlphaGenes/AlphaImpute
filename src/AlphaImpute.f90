@@ -1895,6 +1895,7 @@ subroutine CheckParentage
     type(AlphaImputeInput), pointer :: inputParams
     integer :: dumId
     integer :: nHomoParent, nBothHomo
+    integer :: inconsistencies
 
     inputParams => defaultInput
     open (unit=101,file="." // DASH // "Miscellaneous" // DASH // "PedigreeMistakes.txt",status="unknown")
@@ -1902,6 +1903,11 @@ subroutine CheckParentage
     CountChanges=0
     nHomoParent = 0
     nBothHomo = 0
+
+    !  call ped%sortPedigreeAndOverwrite()
+    ! inconsistencies = ped%findMendelianInconsistencies(DisagreeThreshold)
+    ! stop
+
     do e=1,2                    ! Do whatever this does, first on males and then on females
         ParPos=e+1              ! Index in the Genotype and Pedigree matrices for sires and dams
         do i=1,ped%pedigreeSize
@@ -2161,7 +2167,7 @@ else
     call SnpCallRate
     allocate(SnpIncluded(inputParams%nsnp))
     call CheckParentage
-    call ped%addSequenceFromFile(inputparams%GenotypeFile, inputParams%nsnpRaw, MAX_READS_COUNT)
+    call ped%addSequenceFromFile(inputparams%GenotypeFile, nsnps=inputParams%nsnpRaw, maximumReads=MAX_READS_COUNT)
 endif
 
     
