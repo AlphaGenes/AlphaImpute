@@ -1898,100 +1898,102 @@ subroutine CheckParentage
     integer :: inconsistencies
 
     inputParams => defaultInput
-    open (unit=101,file="." // DASH // "Miscellaneous" // DASH // "PedigreeMistakes.txt",status="unknown")
-
-    CountChanges=0
-    nHomoParent = 0
-    nBothHomo = 0
+    
 
     call ped%sortPedigreeAndOverwrite()
-    inconsistencies = ped%findMendelianInconsistencies(DisagreeThreshold,"test.txt")
+    inconsistencies = ped%findMendelianInconsistencies(DisagreeThreshold,"." // DASH // "Miscellaneous" // DASH // "PedigreeMistakes.txt","." // DASH // "Miscellaneous" // DASH // "snpMistakes.txt")
     call ped%outputSortedPedigreeInAlphaImputeFormat("." // DASH // "Miscellaneous" // DASH // "InternalDataRecoding.txt")
 
     return
 
-    do e=1,2                    ! Do whatever this does, first on males and then on females
-        ParPos=e+1              ! Index in the Genotype and Pedigree matrices for sires and dams
-        do i=1,ped%pedigreeSize
-            IndId=ped%pedigree(i)%id           ! My Id
-            ParId=ped%pedigree(i)%getSireDamNewIDByIndex(e+1)       ! Paternal Id,
-            TurnOn=1
-            ! GenderRaw: Says whether the proband is a male or a female
-            ! If there are sex cromosome information, and
-            ! if the proband is heterogametic, and
-            ! I am considering the heterogametic parent, then avoid!!
-            ! That is, avoid males and their sires (hetero=1), or females and their dams (hetero=2)
-            if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==inputParams%hetGameticStatus).and.((ParPos-1)==inputParams%hetGameticStatus)) TurnOn=0
+    ! open (unit=101,file="." // DASH // "Miscellaneous" // DASH // "PedigreeMistakes.txt",status="unknown")
 
-            ! Consider the Homogametic probands and the heterogametic proband with homogametic parent
-            if (parId /= 0 ) then
-                if ((ped%pedigree(IndId)%genotyped.and. ped%pedigree(parId)%genotyped).and.(TurnOn==1)) then
-                    CountBothGeno=0
-                    CountDisagree=0
-                    nHomoParent = 0
-                    nBothHomo = 0
+    ! CountChanges=0
+    ! nHomoParent = 0
+    ! nBothHomo = 0
 
-                    ! Look for mendelenian errors
-                    do j=1,inputParams%nsnp
+    ! do e=1,2                    ! Do whatever this does, first on males and then on females
+    !     ParPos=e+1              ! Index in the Genotype and Pedigree matrices for sires and dams
+    !     do i=1,ped%pedigreeSize
+    !         IndId=ped%pedigree(i)%id           ! My Id
+    !         ParId=ped%pedigree(i)%getSireDamNewIDByIndex(e+1)       ! Paternal Id,
+    !         TurnOn=1
+    !         ! GenderRaw: Says whether the proband is a male or a female
+    !         ! If there are sex cromosome information, and
+    !         ! if the proband is heterogametic, and
+    !         ! I am considering the heterogametic parent, then avoid!!
+    !         ! That is, avoid males and their sires (hetero=1), or females and their dams (hetero=2)
+    !         if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==inputParams%hetGameticStatus).and.((ParPos-1)==inputParams%hetGameticStatus)) TurnOn=0
 
-                        if ((ped%pedigree(IndId)%individualGenotype%getGenotype(j)/=9).and.(ped%pedigree(parId)%individualGenotype%getGenotype(j)/=9)) then
-                            CountBothGeno=CountBothGeno+1
-                            if (ped%pedigree(parId)%individualGenotype%getGenotype(j)/=1) then
-                                nHomoParent = nHomoParent+1
-                                if ( ped%pedigree(IndId)%individualGenotype%getGenotype(j)/=1) then
-                                    nBothHomo =  nBothHomo + 1
-                                end if
-                            end if
-                            if ((ped%pedigree(IndId)%individualGenotype%getGenotype(j)==0).and.(ped%pedigree(parId)%individualGenotype%getGenotype(j)==2)) then
-                                CountDisagree=CountDisagree+1
-                            else if ((ped%pedigree(IndId)%individualGenotype%getGenotype(j)==2).and.(ped%pedigree(parId)%individualGenotype%getGenotype(j)==0)) then
-                                CountDisagree=CountDisagree+1
-                            endif
-                        endif
-                    enddo
-                    if ((float(CountDisagree)/CountBothGeno)>DisagreeThreshold) then ! Mendelenian error
-                        write (101,'(2a30,4I, 4E15.7)') &
-                        Ped%pedigree(i)%originalID, Ped%pedigree(i)%getSireDamByIndex(ParPos), CountDisagree, CountBothGeno, nHomoParent, nBothHomo, &
-                        float(CountDisagree)/CountBothGeno, float(CountDisagree)/nHomoParent, float(CountDisagree)/nBothHomo
-                        CountChanges=CountChanges+1
-                        if (parPos == 2) then
-                            call ped%pedigree(i)%sirePointer%removeOffspring(ped%pedigree(i))
-                            call ped%createDummyAnimalAtEndOfPedigree(dumId, i)
-                            ! ped%pedigree(i)%sireID = '0'
-                        else if (parPos == 3) then
-                            call ped%pedigree(i)%damPointer%removeOffspring(ped%pedigree(i))
-                            call ped%createDummyAnimalAtEndOfPedigree(dumId, i)
-                            ! ped%pedigree(i)%damPointer => null()
-                            ! ped%pedigree(i)%damId = '0'
-                        endif
-                    else
-                        ! Remove genotype of proband and parent
-                        do j=1,inputParams%nsnp
-                            if ((ped%pedigree(IndId)%individualGenotype%getGenotype(j)/=9).and.(ped%pedigree(parId)%individualGenotype%getGenotype(j)/=9)) then
-                                if ((ped%pedigree(IndId)%individualGenotype%getGenotype(j)==0).and.(ped%pedigree(parId)%individualGenotype%getGenotype(j)==2)) then
-                                    call ped%pedigree(IndId)%individualGenotype%setGenotype(j,9)
-                                    call ped%pedigree(parId)%individualGenotype%setGenotype(j,9)
-                                endif
-                                if ((ped%pedigree(IndId)%individualGenotype%getGenotype(j)==2).and.(ped%pedigree(parId)%individualGenotype%getGenotype(j)==0)) then
-                                    call ped%pedigree(IndId)%individualGenotype%setGenotype(j,9)
-                                    call ped%pedigree(parId)%individualGenotype%setGenotype(j,9)
-                                endif
-                            endif
-                        enddo
-                    endif
-                endif
-            endif
-        enddo
-    enddo
-    write (101,*) CountChanges," changes were made to the pedigree"
-    close (101)
-    print*, " ",CountChanges," errors in the pedigree due to Mendelian inconsistencies"
+    !         ! Consider the Homogametic probands and the heterogametic proband with homogametic parent
+    !         if (parId /= 0 ) then
+    !             if ((ped%pedigree(IndId)%genotyped.and. ped%pedigree(parId)%genotyped).and.(TurnOn==1)) then
+    !                 CountBothGeno=0
+    !                 CountDisagree=0
+    !                 nHomoParent = 0
+    !                 nBothHomo = 0
 
-    ! Sort sires and dams, and look for mistakes (bisexuality,...).
+    !                 ! Look for mendelenian errors
+    !                 do j=1,inputParams%nsnp
+
+    !                     if ((ped%pedigree(IndId)%individualGenotype%getGenotype(j)/=9).and.(ped%pedigree(parId)%individualGenotype%getGenotype(j)/=9)) then
+    !                         CountBothGeno=CountBothGeno+1
+    !                         if (ped%pedigree(parId)%individualGenotype%getGenotype(j)/=1) then
+    !                             nHomoParent = nHomoParent+1
+    !                             if ( ped%pedigree(IndId)%individualGenotype%getGenotype(j)/=1) then
+    !                                 nBothHomo =  nBothHomo + 1
+    !                             end if
+    !                         end if
+    !                         if ((ped%pedigree(IndId)%individualGenotype%getGenotype(j)==0).and.(ped%pedigree(parId)%individualGenotype%getGenotype(j)==2)) then
+    !                             CountDisagree=CountDisagree+1
+    !                         else if ((ped%pedigree(IndId)%individualGenotype%getGenotype(j)==2).and.(ped%pedigree(parId)%individualGenotype%getGenotype(j)==0)) then
+    !                             CountDisagree=CountDisagree+1
+    !                         endif
+    !                     endif
+    !                 enddo
+    !                 if ((float(CountDisagree)/CountBothGeno)>DisagreeThreshold) then ! Mendelenian error
+    !                     write (101,'(2a30,4I, 4E15.7)') &
+    !                     Ped%pedigree(i)%originalID, Ped%pedigree(i)%getSireDamByIndex(ParPos), CountDisagree, CountBothGeno, nHomoParent, nBothHomo, &
+    !                     float(CountDisagree)/CountBothGeno, float(CountDisagree)/nHomoParent, float(CountDisagree)/nBothHomo
+    !                     CountChanges=CountChanges+1
+    !                     if (parPos == 2) then
+    !                         call ped%pedigree(i)%sirePointer%removeOffspring(ped%pedigree(i))
+    !                         call ped%createDummyAnimalAtEndOfPedigree(dumId, i)
+    !                         ! ped%pedigree(i)%sireID = '0'
+    !                     else if (parPos == 3) then
+    !                         call ped%pedigree(i)%damPointer%removeOffspring(ped%pedigree(i))
+    !                         call ped%createDummyAnimalAtEndOfPedigree(dumId, i)
+    !                         ! ped%pedigree(i)%damPointer => null()
+    !                         ! ped%pedigree(i)%damId = '0'
+    !                     endif
+    !                 else
+    !                     ! Remove genotype of proband and parent
+    !                     do j=1,inputParams%nsnp
+    !                         if ((ped%pedigree(IndId)%individualGenotype%getGenotype(j)/=9).and.(ped%pedigree(parId)%individualGenotype%getGenotype(j)/=9)) then
+    !                             if ((ped%pedigree(IndId)%individualGenotype%getGenotype(j)==0).and.(ped%pedigree(parId)%individualGenotype%getGenotype(j)==2)) then
+    !                                 call ped%pedigree(IndId)%individualGenotype%setGenotype(j,9)
+    !                                 call ped%pedigree(parId)%individualGenotype%setGenotype(j,9)
+    !                             endif
+    !                             if ((ped%pedigree(IndId)%individualGenotype%getGenotype(j)==2).and.(ped%pedigree(parId)%individualGenotype%getGenotype(j)==0)) then
+    !                                 call ped%pedigree(IndId)%individualGenotype%setGenotype(j,9)
+    !                                 call ped%pedigree(parId)%individualGenotype%setGenotype(j,9)
+    !                             endif
+    !                         endif
+    !                     enddo
+    !                 endif
+    !             endif
+    !         endif
+    !     enddo
+    ! enddo
+    ! write (101,*) CountChanges," changes were made to the pedigree"
+    ! close (101)
+    ! print*, " ",CountChanges," errors in the pedigree due to Mendelian inconsistencies"
+
+    ! ! Sort sires and dams, and look for mistakes (bisexuality,...).
 
 
 
-    call ped%outputSortedPedigreeInAlphaImputeFormat("." // DASH // "Miscellaneous" // DASH // "InternalDataRecoding.txt")
+    ! call ped%outputSortedPedigreeInAlphaImputeFormat("." // DASH // "Miscellaneous" // DASH // "InternalDataRecoding.txt")
 
 
     ! call ped%sortPedigreeAndOverwrite()
