@@ -81,10 +81,10 @@ module AlphaImputeModule
 			write(6,*) " "
 			write(6,*) " ", "Running AlphaPhase"
 
-			!$OMP parallel do schedule(dynamic)&
-			!$OMP default(shared) &
-			!$OMP FIRSTPRIVATE(params) &
-			!$OMP PRIVATE(coreIndexes, i,oParams)
+			!$!OMP parallel do schedule(dynamic)&
+			!$!OMP default(shared) &
+			!$!OMP FIRSTPRIVATE(params) &
+			!$!OMP PRIVATE(coreIndexes, i,oParams)
 			do i= 1,nCoreLengths*2
 				coreIndexes = i
 
@@ -106,7 +106,7 @@ module AlphaImputeModule
 				endif
 
 			enddo
-			!$omp end parallel do
+			!$!omp end parallel do
 			write(6,*) " ", "Finished Running AlphaPhase"
 
 
@@ -1290,7 +1290,6 @@ module AlphaImputeModule
 						tmpId = ped%inputMap(i)
 					endif
 					!outputs in order read in
-					tmpId = ped%inputMap(i)
 					write (phaseUnit,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(tmpId)%originalID,ped%pedigree(tmpId)%individualPhase(1)%toIntegerArray()
 					write (phaseUnit,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(tmpId)%originalID,ped%pedigree(tmpId)%individualPhase(2)%toIntegerArray()
 					write (genotypeunit,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(tmpId)%originalID,ped%pedigree(tmpId)%individualGenotype%toIntegerArray()
