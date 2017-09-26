@@ -1225,7 +1225,7 @@ MODULE Imputation
 							! So, if a Conservative imputation of haplotypes is selected, this DO statement will do nothing
 							if ((inputParams%ConservativeHapLibImputation==1).and.(MSTermInfo(i,e)==0)) cycle
 
-							tmpHap = ped%pedigree(i)%individualPhase(e)%subset(8,endSnp)
+							tmpHap = ped%pedigree(i)%individualPhase(e)%subset(StartSnp,endSnp)
 							!  If haplotype is partially phased
 							if (.not. tmpHap%allMissingOrError()) then
 								PatMatDone(e) = .true.
