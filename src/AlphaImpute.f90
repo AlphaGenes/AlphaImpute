@@ -81,10 +81,10 @@ module AlphaImputeModule
 			write(6,*) " "
 			write(6,*) " ", "Running AlphaPhase"
 
-			!$!OMP parallel do schedule(dynamic)&
-			!$!OMP default(shared) &
-			!$!OMP FIRSTPRIVATE(params) &
-			!$!OMP PRIVATE(coreIndexes, i,oParams)
+			!$OMP parallel do schedule(dynamic)&
+			!$OMP default(shared) &
+			!$OMP FIRSTPRIVATE(params) &
+			!$OMP PRIVATE(coreIndexes, i,oParams)
 			do i= 1,nCoreLengths*2
 				coreIndexes = i
 
@@ -106,7 +106,7 @@ module AlphaImputeModule
 				endif
 
 			enddo
-			!$!omp end parallel do
+			!$omp end parallel do
 			write(6,*) " ", "Finished Running AlphaPhase"
 
 

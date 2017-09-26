@@ -303,6 +303,7 @@ MODULE Imputation
 			integer(kind=1),allocatable,dimension (:,:,:,:) :: Temp
 			type(individual), pointer :: parent
 			type(haplotype) :: subset
+			integer(kind=1) :: parentPhase
 			inputParams => defaultInput
 			! WARNING: This should go in a function since it is the same code as InternalParentPhaseElim subroutine
 			nGlobalLoop=25
@@ -358,7 +359,7 @@ MODULE Imputation
 							exit
 						endif
 						! PARALLELIZATION BEGINS
-						!# PARALLEL DO SHARED (nAnisP,RecPed,CoreStart,CoreEnd,AnimalOn,Temp) private(i,e,CompPhase,GamA,j,GamB)
+						!$OMP PARALLEL DO DEFAULT(SHARED) private(parent,i,e,j,subset,GamA,GamB,parentPhase)
 						do i=1,ped%pedigreeSize-ped%ndummys
 							do e=1,2
 								! Skip if, in the case of sex chromosome, me and my parent are heterogametic
@@ -399,12 +400,7 @@ MODULE Imputation
 										if ((GamA==1).and.(GamB==0)) then
 											AnimalOn(i,e)=1
 											do j=CoreStart,CoreEnd
-												if (ped%pedigree(i)%individualPhase(e)%isMissing(j)) then
-
-													block
-
-														integer(kind=1) :: parentPhase
-
+												if (ped%pedigree(i)%individualPhase(e)%isMissing(j)) then													
 														parentPhase = parent%individualPhase(1)%getPhase(j)
 
 														if (parentPhase==0) then
@@ -414,7 +410,6 @@ MODULE Imputation
 															!$OMP ATOMIC
 															Temp(i,j,e,2)=Temp(i,j,e,2)+1
 														endif
-													end block
 												endif
 											enddo
 										endif
@@ -428,9 +423,6 @@ MODULE Imputation
 											AnimalOn(i,e)=1
 											do j=CoreStart,CoreEnd
 												if (ped%pedigree(i)%individualPhase(e)%isMissing(j)) then
-													block
-
-														integer(kind=1) :: parentPhase
 
 														parentPhase = parent%individualPhase(2)%getPhase(j)
 
@@ -441,7 +433,6 @@ MODULE Imputation
 															!$OMP ATOMIC
 															Temp(i,j,e,2)=Temp(i,j,e,2)+1
 														endif
-													end block
 												endif
 											enddo
 										endif
@@ -449,7 +440,7 @@ MODULE Imputation
 								endif
 							enddo
 						enddo
-						!# END PARALLEL DO
+						!$OMP END PARALLEL DO
 
 						! Prepare the core for the next cycle
 						CoreStart=CoreStart+LoopIndex(l,2)
@@ -841,9 +832,9 @@ MODULE Imputation
 			Temp=0
 			AnimalOn=0
 			! FOR EACH CORE OF EACH ROUND OF THE LRPHLI
-			!$!OMP PARALLEL DO &
-			!$!OMP DEFAULT(SHARED) &
-			!$!OMP PRIVATE(i,j,e,Gam1,Gam2,GamA,GamB,tmpPhase,tmpHDPhase,PosHDInd, startSnp, endSnp,unknownFreeIterator, g)
+			!$OMP PARALLEL DO &
+			!$OMP DEFAULT(SHARED) &
+			!$OMP PRIVATE(i,j,e,Gam1,Gam2,GamA,GamB,tmpPhase,tmpHDPhase,PosHDInd, startSnp, endSnp,unknownFreeIterator, g)
 			do unknownFreeIterator=1,apresults%nResults
 
 				startSnp = 1
@@ -942,7 +933,7 @@ MODULE Imputation
 
 				enddo
 			enddo
-			!$!OMP END PARALLEL DO
+			!$OMP END PARALLEL DO
 
 
 			do e=1,2
@@ -1215,9 +1206,9 @@ MODULE Imputation
 					nHap = apResults%results(h)%libraries(g)%size
 					coreLength = apResults%results(h)%libraries(g)%nsnps
 
-					!$!OMP PARALLEL DO &
-					!$!OMP DEFAULT(SHARED) &
-					!$!OMP PRIVATE(i,e,f,j,k,TempCount,Counter,PatMatDone,BanBoth,Ban,phase,tmpHap, matches,workGeno, workHap)
+					!$OMP PARALLEL DO &
+					!$OMP DEFAULT(SHARED) &
+					!$OMP PRIVATE(i,e,f,j,k,TempCount,Counter,PatMatDone,BanBoth,Ban,phase,tmpHap, matches,workGeno, workHap)
 					do i=1,ped%pedigreeSize- ped%nDummys
 						! The number of candidate haplotypes is the total number of haps in the library times
 						! 2 (Paternal and maternal candidates)
@@ -1300,7 +1291,7 @@ MODULE Imputation
 						endif
 						deallocate(workHap)
 					enddo
-					!$!OMP END PARALLEL DO
+					!$OMP END PARALLEL DO
 
 				enddo
 
