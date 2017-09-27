@@ -670,13 +670,14 @@ MODULE Imputation
 										! a new haplotype has been found, then populate the library
 
 										id = hapLib%addHap(tmphap)
+										!$OMP FLUSH(haplib)
 									endif
 									!$OMP END CRITICAL
 								endif
 								
 								deallocate(tmpHap)
 							enddo
-							!$OMP BARRIER
+							
 						enddo
 						!$OMP END PARALLEL DO
 
