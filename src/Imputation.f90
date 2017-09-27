@@ -223,13 +223,23 @@ MODULE Imputation
 							if (inputParams%sexopt==1) then
 								call EnsureHetGametic
 							end if
+
+							CALL DATE_AND_TIME(time=timeOut)
+
+
+							print*, " ","Internal imputation from own haplotype completed at: ",timeOut
+
 							call GeneralFillIn
+
+							print *, "one"
 							if (inputParams%sexopt==1) then
 								call EnsureHetGametic
 							end if
 
 							call RestrictedWorkLeftRight            ! Major Sub-Step 8 (Hickey et al., 2012; Appendix A)
 							call GeneralFillIn
+
+							print *, "two"
 							print*, " "
 							CALL DATE_AND_TIME(time=timeOut)
 
@@ -663,7 +673,7 @@ MODULE Imputation
 									endif
 									!$OMP END CRITICAL
 								endif
-								!$OMP BARRIER
+								!$!OMP BARRIER
 								deallocate(tmpHap)
 							enddo
 						enddo
