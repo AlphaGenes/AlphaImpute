@@ -673,9 +673,10 @@ MODULE Imputation
 									endif
 									!$OMP END CRITICAL
 								endif
-								!$!OMP BARRIER
+								
 								deallocate(tmpHap)
 							enddo
+							!$OMP BARRIER
 						enddo
 						!$OMP END PARALLEL DO
 
