@@ -489,14 +489,13 @@ module AlphaImputeModule
 			integer,allocatable,dimension(:):: WorkTmp
 			character(len=300) :: TmpId
 			real(kind=real64) :: ImputationQuality(ped%pedigreeSize-ped%nDummys,6)
-			tmpGenos = MISSINGGENOTYPECODE
-			tmpPhase = MISSINGPHASECODE
-
+			
 
 			inputParams => defaultInput
 			! if we are doing output
 
 			if (inputParams%outopt==0) then
+				
 
 				nOutputSnps = nOutputSnps
 				TmpGenos = ped%getGenotypesAsArrayWitHMissing()
@@ -506,6 +505,10 @@ module AlphaImputeModule
 				allocate(WorkTmp(nOutputSnps))
 				allocate(TmpGenos(ped%pedigreeSize,nOutputSnps))
 				allocate(TmpPhase(ped%pedigreeSize,nOutputSnps,2))
+
+				tmpGenos = MISSINGGENOTYPECODE
+				tmpPhase = MISSINGPHASECODE
+				
 				if (inputParams%hmmoption==RUN_HMM_NGS) then
 					do i=1,inputParams%nsnpRaw
 						SnpIncluded(i)=i
