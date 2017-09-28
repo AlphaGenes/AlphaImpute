@@ -508,7 +508,7 @@ module AlphaImputeModule
 
 				tmpGenos = MISSINGGENOTYPECODE
 				tmpPhase = MISSINGPHASECODE
-				
+
 				if (inputParams%hmmoption==RUN_HMM_NGS) then
 					do i=1,inputParams%nsnpRaw
 						SnpIncluded(i)=i
@@ -754,6 +754,7 @@ module AlphaImputeModule
 		character(len=7) :: cm
 		type(AlphaImputeInput), pointer :: inputParams
 		integer(kind=1) :: phase(2),tmpPhase
+		integer :: tmp 
 		inputParams => defaultInput
 
 
@@ -972,8 +973,14 @@ module AlphaImputeModule
 
 							StR(nRec)=StartDis
 							EnR(nRec)=EndDis
-							LengthVec(StartDis:EndDis)=1.0/(EndDis-StartDis)
 
+							tmp =(EndDis-StartDis)
+
+							if (tmp==0 ) then
+								LengthVec(StartDis:EndDis) = 0 
+							else
+								LengthVec(StartDis:EndDis)=1.0/tmp
+							endif
 							StartDisPrev=StartDis
 							EndDisPrev=EndDis
 

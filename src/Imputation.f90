@@ -2271,6 +2271,7 @@ MODULE Imputation
 			integer :: StartDis,EndDis,StartJ,k
 			integer,allocatable,dimension(:) :: TempVec
 			real,allocatable,dimension(:) :: LengthVec
+			integer :: tmp
 			type(AlphaImputeInput), pointer :: inputParams
 			integer(kind=1) :: phase(2),tmpPhase
 			integer :: tmpGender
@@ -2459,7 +2460,13 @@ MODULE Imputation
 							if ((StartDis/=-9).and.(EndDis/=-9)) then
 								! WARNING: 3 is the only value that is used for TempVec
 								TempVec(StartDis+1:EndDis-1)=3
-								LengthVec(StartDis+1:EndDis-1)=1.0/(((EndDis-1)-(StartDis+1))+1)
+								tmp = (((EndDis-1)-(StartDis+1))+1)
+
+								if (tmp == 0) then
+									LengthVec(StartDis+1:EndDis-1)=0
+								else 
+									LengthVec(StartDis+1:EndDis-1)=1.0/tmp
+								endif
 								StartJ=EndDis+1
 								StartDis=-9
 								EndDis=-9
@@ -2595,6 +2602,7 @@ MODULE Imputation
 
 			integer :: StartDis,EndDis,StartJ,k
 			integer,allocatable,dimension(:) :: TempVec
+			integer :: tmp
 			real,allocatable,dimension(:) :: LengthVec
 			type(AlphaImputeInput), pointer :: inputParams
 			integer(kind=1) :: phase(2), tmpPhase
@@ -2777,7 +2785,13 @@ MODULE Imputation
 							if ((StartDis/=-9).and.(EndDis/=-9)) then
 								! WARNING: 3 is the only value that is used for TempVec
 								TempVec(StartDis+1:EndDis-1)=3
-								LengthVec(StartDis+1:EndDis-1)=1.0/(((EndDis-1)-(StartDis+1))+1)
+
+								tmp = (((EndDis-1)-(StartDis+1))+1)
+								if (tmp == 0) then
+									LengthVec(StartDis+1:EndDis-1)=0
+								else 
+									LengthVec(StartDis+1:EndDis-1)=1.0/tmp
+								endif
 								StartJ=EndDis+1
 								StartDis=-9
 								EndDis=-9
