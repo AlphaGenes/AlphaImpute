@@ -231,7 +231,6 @@ MODULE Imputation
 
 							call GeneralFillIn
 
-							print *, "one"
 							if (inputParams%sexopt==1) then
 								call EnsureHetGametic
 							end if
@@ -239,7 +238,6 @@ MODULE Imputation
 							call RestrictedWorkLeftRight            ! Major Sub-Step 8 (Hickey et al., 2012; Appendix A)
 							call GeneralFillIn
 
-							print *, "two"
 							print*, " "
 							CALL DATE_AND_TIME(time=timeOut)
 
