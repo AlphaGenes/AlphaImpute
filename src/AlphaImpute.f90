@@ -503,7 +503,9 @@ module AlphaImputeModule
 				tmpPhase = ped%getPhaseAsArrayWithMissing()
 			else if (inputParams%outopt==1) then
 				nOutputSnps = inputParams%nsnpRaw
-				allocate(WorkTmp(inputParams%nSnpRaw))
+				allocate(WorkTmp(nOutputSnps))
+				allocate(TmpGenos(ped%pedigreeSize,nOutputSnps))
+				allocate(TmpPhase(ped%pedigreeSize,nOutputSnps,2))
 				if (inputParams%hmmoption==RUN_HMM_NGS) then
 					do i=1,inputParams%nsnpRaw
 						SnpIncluded(i)=i
