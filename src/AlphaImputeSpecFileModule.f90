@@ -38,9 +38,7 @@ module AlphaImputeSpecFileModule
         integer(kind=1) :: TrueGenos1None0
         logical :: PlinkFormat, VCFFormat
 
-        ! box 2
-        integer(kind=1) :: SexOpt,HetGameticStatus, HomGameticStatus
-
+       
         ! box 3
         integer(kind=int32) :: MultiHD
         integer(kind=int32), allocatable :: nSnpByChip(:)
@@ -97,7 +95,6 @@ module AlphaImputeSpecFileModule
 
         logical :: modelrecomb
 
-        logical :: fullChrom ! TODO implement this
 
 
     contains
@@ -186,6 +183,25 @@ contains
             else
                 select case(tmptag)
 
+            !runs full chromosome
+            case("plinkinputfile")
+                if (.not. allocated(second)) then
+                    write(error_unit, "(A)") "error, Plinkinputfile allocated incorrectly"
+                else
+                    if (size(second) < 2) then
+                        write(error_unit, "(A)") "error, Plinkinputfile allocated incorrectly"
+                    else 
+                        if (tolower(second(1)) == "binary") then
+                            this%plinkBinary = .true.
+                        else
+                            this%plinkBinary = .false.
+                        endif
+
+                        write(this%plinkinputfile, "(A)") second(2)
+                    endif
+
+                end if
+            
                 ! box 1 inputs
             case("pedigreefile")
                 if (.not. allocated(second)) then

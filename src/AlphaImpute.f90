@@ -1803,7 +1803,7 @@ use Imputation
 use ModuleRunFerdosi
 use AlphaPhaseResultsModule
 
-class(baseSpecFile), intent(inout),target :: in
+class(baseSpecFile), target :: in
 type(pedigreeHolder), optional :: pedIn
 
 
