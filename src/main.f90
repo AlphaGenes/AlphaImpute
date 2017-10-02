@@ -80,7 +80,7 @@ program AlphaImpute
     call defaultInput%ReadInParameterFile(SpecFile)
 
 
-    if (defaultInput%plinkinputfile == "") then
+    if (defaultInput%plinkinputfile /= "") then
         call runPlink(defaultInput%plinkinputfile, defaultInput, runAlphaImpute)
 
     else

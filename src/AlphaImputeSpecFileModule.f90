@@ -151,6 +151,7 @@ contains
 
         this%useFerdosi = .false.
         this%MultiHD = 0
+        this%nsnp= LARGESNUMBER
         this%minoverlaphaplotype = 0
         this%PreProcess = .false.
         this%cluster = .false.
@@ -689,8 +690,11 @@ contains
     end do READFILE
     deallocate(tag)
     deallocate(tmptag)
-    open (newUnit=this%pedigreeFileUnit,file=trim(this%PedigreeFile),status="old")
-    open (newUnit=this%genotypeFileUnit,file=trim(this%GenotypeFile),status="old")
+
+    if (plinkinputfile == "") then
+        open (newUnit=this%pedigreeFileUnit,file=trim(this%PedigreeFile),status="old")
+        open (newUnit=this%genotypeFileUnit,file=trim(this%GenotypeFile),status="old")
+    endif
     if (this%SexOpt==1) open (newUnit=this%genderFileUnit,file=trim(this%GenderFile),status="old")
 
     ! Set parameters for parallelisation
