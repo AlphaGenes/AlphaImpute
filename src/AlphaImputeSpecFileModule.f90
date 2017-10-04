@@ -162,6 +162,7 @@ contains
         this%outputonlygenotypedanimals = .false.
         this%TrueGenos1None0=0
         this%hmmoption=RUN_HMM_NO
+        this%plinkinputfile = ""
         open(newunit=unit, file=SpecFile, action="read", status="old")
         IOStatus = 0
         
