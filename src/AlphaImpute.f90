@@ -1120,7 +1120,7 @@ module AlphaImputeModule
 					if (id == 0) then
 						cycle
 					endif
-					tmpGeno = newGenotypeHap(ped%pedigree(id)%IndividualPhase(1),ped%pedigree(id)%individualPhase(2))
+					call tmpGeno%newGenotypeHap(ped%pedigree(id)%IndividualPhase(1),ped%pedigree(id)%individualPhase(2))
 					call tmpGeno%setHaplotypeFromGenotypeIfMissing(ped%pedigree(i)%individualPhase(e))
 				enddo
 			enddo
@@ -1132,7 +1132,7 @@ module AlphaImputeModule
 						if (id == 0) then
 							cycle
 						endif
-						tmpGeno = newGenotypeHap(ped%pedigree(id)%IndividualPhase(1),ped%pedigree(id)%individualPhase(2))
+						call tmpGeno%newGenotypeHap(ped%pedigree(id)%IndividualPhase(1),ped%pedigree(id)%individualPhase(2))
 						call tmpGeno%setHaplotypeFromGenotypeIfMissing(ped%pedigree(i)%individualPhase(e))
 					enddo
 				else
@@ -1140,7 +1140,7 @@ module AlphaImputeModule
 					if (id == 0) then
 						cycle
 					endif
-					tmpGeno = newGenotypeHap(ped%pedigree(id)%IndividualPhase(1),ped%pedigree(id)%individualPhase(2))
+					call tmpGeno%newGenotypeHap(ped%pedigree(id)%IndividualPhase(1),ped%pedigree(id)%individualPhase(2))
 					call tmpGeno%setHaplotypeFromGenotypeIfMissing(ped%pedigree(i)%individualPhase(1))
 					call tmpGeno%setHaplotypeFromGenotypeIfMissing(ped%pedigree(i)%individualPhase(2))
 				endif
@@ -1435,7 +1435,7 @@ else
 			block
 				integer(kind=1),dimension(:),allocatable :: old, temp ,tempphase1,tempphase2, oldphase1,oldphase2
 
-				allocate(temp(nSNpR))
+				allocate(temp(nSNpR)) 
 				allocate(tempphase1(nSNpR))
 				allocate(tempphase2(nSNpR))
 				do i=1, ped%pedigreeSize
@@ -1455,9 +1455,9 @@ else
 						endif
 
 					enddo
-					ped%pedigree(i)%individualGenotype = newGenotypeInt(temp)
-					ped%pedigree(i)%individualphase(1) = newhaplotypeInt(tempphase1)
-					ped%pedigree(i)%individualphase(2) = newhaplotypeInt(tempphase2)
+					call ped%pedigree(i)%individualGenotype%newGenotypeInt(temp)
+					call ped%pedigree(i)%individualphase(1)%newhaplotypeInt(tempphase1)
+					call ped%pedigree(i)%individualphase(2)%newhaplotypeInt(tempphase2)
 				enddo
 				deallocate(temp)
 				deallocate(tempphase1)
@@ -1974,7 +1974,7 @@ call WriteOutResults
 
 endif
 
-call ped%destroyPedigree()
+! call ped%destroyPedigree()
 call PrintTimerTitles
 
 

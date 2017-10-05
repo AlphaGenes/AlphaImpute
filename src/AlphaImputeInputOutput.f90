@@ -289,9 +289,9 @@ contains
                         !     call ReadPlink(inputParams%genotypeFileUnit)
             ! end if
             if (inputParams%SexOpt==1) then
-                ped = initPedigree(inputParams%pedigreefile,genderfile=inputParams%genderFile, nsnps=inputParams%nsnp)
+                call initPedigree(ped,inputParams%pedigreefile,genderfile=inputParams%genderFile, nsnps=inputParams%nsnp)
             else 
-                ped = initPedigree(inputParams%pedigreefile, nsnps=inputParams%nsnp)
+                call initPedigree(ped,inputParams%pedigreefile, nsnps=inputParams%nsnp)
 
             endif
 
@@ -302,7 +302,7 @@ contains
 
            if (inputParams%hmmoption /= RUN_HMM_NGS) then
                 ! init pedigree from genotype file
-                ped = initPedigreeGenotypeFiles(inputParams%GenotypeFile, nsnp=inputParams%nsnp)
+                call initPedigreeGenotypeFiles(ped,inputParams%GenotypeFile, nsnp=inputParams%nsnp)
             endif
         endif
 

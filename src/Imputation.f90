@@ -310,7 +310,7 @@ MODULE Imputation
 			integer :: l
 			integer(kind=1),allocatable,dimension (:,:,:,:) :: Temp
 			type(individual), pointer :: parent
-			type(haplotype) :: subset
+			type(haplotype), allocatable :: subset
 			integer(kind=1) :: parentPhase
 			inputParams => defaultInput
 			! WARNING: This should go in a function since it is the same code as InternalParentPhaseElim subroutine
@@ -370,6 +370,7 @@ MODULE Imputation
 						!$OMP PARALLEL DO DEFAULT(SHARED) private(parent,i,e,j,subset,GamA,GamB,parentPhase)
 						do i=1,ped%pedigreeSize-ped%ndummys
 							do e=1,2
+
 								! Skip if, in the case of sex chromosome, me and my parent are heterogametic
 								if (ped%pedigree(i)%isDummyBasedOnIndex(e+1)) cycle
 
@@ -399,6 +400,8 @@ MODULE Imputation
 										if (.not. subset%compatible(ped%pedigree(parent%id)%individualPhase(2)%subset(coreStart,CoreEnd),0,1)) then
 											GamB=0
 										endif
+
+										
 
 										! This haplotype is the paternal haplotype of the individual's parent
 										! Then count the number of occurrences a particular phase is impute in a
@@ -445,7 +448,10 @@ MODULE Imputation
 											enddo
 										endif
 									endif
+
+									deallocate(subset)
 								endif
+								
 							enddo
 						enddo
 						!$OMP END PARALLEL DO
@@ -1794,7 +1800,7 @@ MODULE Imputation
 					do e=1,2
 						ParId=ped%pedigree(i)%getSireDamNewIDByIndex(e+1)
 						if (parId == 0) cycle
-						tmpGeno = newGenotypeHap(ped%pedigree(parId)%IndividualPhase(1),ped%pedigree(parId)%individualPhase(2))
+						call tmpGeno%newGenotypeHap(ped%pedigree(parId)%IndividualPhase(1),ped%pedigree(parId)%individualPhase(2))
 						call tmpGeno%setHaplotypeFromGenotypeIfMissing(ped%pedigree(i)%individualPhase(e))
 					enddo
 
@@ -1802,7 +1808,7 @@ MODULE Imputation
 				else
 					ParId= ped%pedigree(i)%getSireDamNewIDByIndex(inputParams%HomGameticStatus+1) !the homogametic parent
 					if (parId == 0) cycle
-					tmpGeno = newGenotypeHap(ped%pedigree(parId)%IndividualPhase(1),ped%pedigree(parId)%individualPhase(2))
+					call tmpGeno%newGenotypeHap(ped%pedigree(parId)%IndividualPhase(1),ped%pedigree(parId)%individualPhase(2))
 					call tmpGeno%setHaplotypeFromGenotypeIfMissing(ped%pedigree(i)%individualPhase(1))
 					call tmpGeno%setHaplotypeFromGenotypeIfMissing(ped%pedigree(i)%individualPhase(2))
 				endif
