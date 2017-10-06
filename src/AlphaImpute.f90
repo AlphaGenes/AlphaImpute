@@ -1501,8 +1501,7 @@ end if
 open (unit=112,file=FileName,status="unknown")
 
 
-! do j=1,inputParams%nSnpRaw
-	do j=1,inputParams%nSnp
+do j=1,inputParams%nSnpRaw
 	write (102,*) j,SnpSummary(j),SnpIncluded(j)        !'(i,1x,f5.3,1x,i)'
 	write (112,*) j,SnpSummary(j),SnpIncluded(j)        !'(i,1x,f5.3,1x,i)'
 enddo
@@ -1826,6 +1825,8 @@ end select
 
 
 inputParams => defaultInput
+
+inputParams%nSnpRaw = inputParams%nsnp
 if (inputParams%hmmoption /= RUN_HMM_NGS) then
 if (inputParams%restartOption<OPT_RESTART_IMPUTATION) call MakeDirectories(RUN_HMM_NULL)
 
