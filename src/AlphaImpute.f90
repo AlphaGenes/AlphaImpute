@@ -1501,7 +1501,8 @@ end if
 open (unit=112,file=FileName,status="unknown")
 
 
-do j=1,inputParams%nSnpRaw
+! do j=1,inputParams%nSnpRaw
+	do j=1,inputParams%nSnp
 	write (102,*) j,SnpSummary(j),SnpIncluded(j)        !'(i,1x,f5.3,1x,i)'
 	write (112,*) j,SnpSummary(j),SnpIncluded(j)        !'(i,1x,f5.3,1x,i)'
 enddo
