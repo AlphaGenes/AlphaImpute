@@ -292,6 +292,7 @@ contains
                 call initPedigree(ped,inputParams%pedigreefile,genderfile=inputParams%genderFile, nsnps=inputParams%nsnp)
             else 
                 call initPedigree(ped,inputParams%pedigreefile, nsnps=inputParams%nsnp)
+                call initPedigree(ped,inputParams%pedigreefile, nsnps=inputParams%nsnp)
 
             endif
 
