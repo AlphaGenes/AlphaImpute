@@ -1484,6 +1484,7 @@ else
 				CountMiss=ped%pedigree(ped%genotypeMap(i))%individualGenotype%numMissing()
 				if ((float(CountMiss)/inputParams%nsnp)>(1.0-inputParams%SecondPercGenoForHD)) then
 					Setter(ped%genotypeMap(i))=0
+					print *,"unsettling stuff"
 				endif
 			endif
 		enddo
