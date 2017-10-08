@@ -1475,7 +1475,6 @@ else
 			CountMiss=ped%pedigree(ped%genotypeMap(i))%individualGenotype%numMissing()
 			if ((float(CountMiss)/inputParams%nsnp)>(1.0-inputParams%SecondPercGenoForHD)) then
 				Setter(ped%genotypeMap(i))=0
-				print *, "UNSETTING",i
 			endif
 		enddo
 		CountHD=count(Setter(:)==1)
@@ -1485,7 +1484,6 @@ else
 				CountMiss=ped%pedigree(ped%genotypeMap(i))%individualGenotype%numMissing()
 				if ((float(CountMiss)/inputParams%nsnp)>(1.0-inputParams%SecondPercGenoForHD)) then
 					Setter(ped%genotypeMap(i))=0
-					print *, "UNSETTING2"
 				endif
 			endif
 		enddo
