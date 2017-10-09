@@ -692,7 +692,7 @@ contains
     deallocate(tag)
     deallocate(tmptag)
 
-    if (plinkinputfile == "") then
+    if (this%plinkinputfile == "") then
         open (newUnit=this%pedigreeFileUnit,file=trim(this%PedigreeFile),status="old")
         open (newUnit=this%genotypeFileUnit,file=trim(this%GenotypeFile),status="old")
     endif
