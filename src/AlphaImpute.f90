@@ -57,7 +57,8 @@ module AlphaImputeModule
 			type(AlphaPhaseResultsContainer), intent(out) :: results
 			integer :: nCoreLengths,i, coreIndexes
 			type(OutputParameters) :: oParams
-
+			type(PedigreeHolder), allocatable :: hdPed
+ 
 			inputParams=> defaultInput
 			nCoreLengths = size(inputParams%CoreAndTailLengths)
 			results%nResults = nCoreLengths*2
@@ -81,6 +82,10 @@ module AlphaImputeModule
 			write(6,*) " "
 			write(6,*) " ", "Running AlphaPhase"
 
+
+			allocate(hdPed)
+			call ped%getHDPedigree(hdPed)
+
 			!$OMP parallel do schedule(dynamic)&
 			!$OMP default(shared) &
 			!$OMP FIRSTPRIVATE(params) &
@@ -94,22 +99,24 @@ module AlphaImputeModule
 				endif
 
 
+				
+
 				params%CoreAndTailLength = inputParams%CoreAndTailLengths(coreIndexes)
 				params%jump = inputParams%CoreLengths(coreIndexes)
 				params%numsurrdisagree = 1
 				params%useSurrsN = 10
-				results%results(i) = phaseAndCreateLibraries(ped, params, quiet=.true., updatePedigree=.false.)
+				results%results(i) = phaseAndCreateLibraries(hdPed, params, quiet=.true., updatePedigree=.false.)
 				if (inputParams%restartOption==OPT_RESTART_PHASING) then
 					oParams = newOutputParametersImpute()
 					write(oParams%outputDirectory,'("."a"Phasing",a,"Phase"i0)') DASH,DASH, i
-					call writeAlphaPhaseResults(results%results(i), ped, oParams)
+					call writeAlphaPhaseResults(results%results(i), hdPed, oParams)
 				endif
 
 			enddo
 			!$omp end parallel do
 			write(6,*) " ", "Finished Running AlphaPhase"
 
-
+			deallocate(hdPed)
 			if (inputParams%restartOption==OPT_RESTART_PHASING) then
 				write(6,*) "Restart option 1 stops program after Phasing has been managed"
 				stop
