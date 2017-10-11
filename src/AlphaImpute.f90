@@ -1699,7 +1699,6 @@ inputParams => defaultInput
 
 call ped%sortPedigreeAndOverwrite()
 
-print *,"DEBUG",ped%nGenotyped
 inconsistencies = ped%findMendelianInconsistencies(DisagreeThreshold,"." // DASH // "Miscellaneous" // DASH // "PedigreeMistakes.txt","." // DASH // "Miscellaneous" // DASH // "snpMistakes.txt")
 call ped%outputSortedPedigreeInAlphaImputeFormat("." // DASH // "Miscellaneous" // DASH // "InternalDataRecoding.txt")
 
