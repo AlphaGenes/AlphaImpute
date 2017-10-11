@@ -163,6 +163,7 @@ contains
         this%TrueGenos1None0=0
         this%hmmoption=RUN_HMM_NO
         this%plinkinputfile = ""
+        this%nsnp = 0
         open(newunit=unit, file=SpecFile, action="read", status="old")
         IOStatus = 0
         
@@ -712,7 +713,7 @@ contains
         this%nAgreeInternalHapLibElim=4
     endif
 
-    this%nSnpRaw = this%nsnp
+    
 
 
      if (.not. allocated(this%CoreAndTailLengths) .or. .not. allocated(this%CoreLengths)) then

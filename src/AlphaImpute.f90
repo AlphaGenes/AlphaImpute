@@ -57,7 +57,8 @@ module AlphaImputeModule
 			type(AlphaPhaseResultsContainer), intent(out) :: results
 			integer :: nCoreLengths,i, coreIndexes
 			type(OutputParameters) :: oParams
-
+			type(PedigreeHolder), allocatable :: hdPed
+ 
 			inputParams=> defaultInput
 			nCoreLengths = size(inputParams%CoreAndTailLengths)
 			results%nResults = nCoreLengths*2
@@ -81,6 +82,10 @@ module AlphaImputeModule
 			write(6,*) " "
 			write(6,*) " ", "Running AlphaPhase"
 
+
+			allocate(hdPed)
+			call ped%getHDPedigree(hdPed)
+
 			!$OMP parallel do schedule(dynamic)&
 			!$OMP default(shared) &
 			!$OMP FIRSTPRIVATE(params) &
@@ -94,22 +99,24 @@ module AlphaImputeModule
 				endif
 
 
+				
+
 				params%CoreAndTailLength = inputParams%CoreAndTailLengths(coreIndexes)
 				params%jump = inputParams%CoreLengths(coreIndexes)
 				params%numsurrdisagree = 1
 				params%useSurrsN = 10
-				results%results(i) = phaseAndCreateLibraries(ped, params, quiet=.true., updatePedigree=.false.)
+				results%results(i) = phaseAndCreateLibraries(hdPed, params, quiet=.true., updatePedigree=.false.)
 				if (inputParams%restartOption==OPT_RESTART_PHASING) then
 					oParams = newOutputParametersImpute()
 					write(oParams%outputDirectory,'("."a"Phasing",a,"Phase"i0)') DASH,DASH, i
-					call writeAlphaPhaseResults(results%results(i), ped, oParams)
+					call writeAlphaPhaseResults(results%results(i), hdPed, oParams)
 				endif
 
 			enddo
 			!$omp end parallel do
 			write(6,*) " ", "Finished Running AlphaPhase"
 
-
+			deallocate(hdPed)
 			if (inputParams%restartOption==OPT_RESTART_PHASING) then
 				write(6,*) "Restart option 1 stops program after Phasing has been managed"
 				stop
@@ -1120,7 +1127,7 @@ module AlphaImputeModule
 					if (id == 0) then
 						cycle
 					endif
-					tmpGeno = newGenotypeHap(ped%pedigree(id)%IndividualPhase(1),ped%pedigree(id)%individualPhase(2))
+					call tmpGeno%newGenotypeHap(ped%pedigree(id)%IndividualPhase(1),ped%pedigree(id)%individualPhase(2))
 					call tmpGeno%setHaplotypeFromGenotypeIfMissing(ped%pedigree(i)%individualPhase(e))
 				enddo
 			enddo
@@ -1132,7 +1139,7 @@ module AlphaImputeModule
 						if (id == 0) then
 							cycle
 						endif
-						tmpGeno = newGenotypeHap(ped%pedigree(id)%IndividualPhase(1),ped%pedigree(id)%individualPhase(2))
+						call tmpGeno%newGenotypeHap(ped%pedigree(id)%IndividualPhase(1),ped%pedigree(id)%individualPhase(2))
 						call tmpGeno%setHaplotypeFromGenotypeIfMissing(ped%pedigree(i)%individualPhase(e))
 					enddo
 				else
@@ -1140,7 +1147,7 @@ module AlphaImputeModule
 					if (id == 0) then
 						cycle
 					endif
-					tmpGeno = newGenotypeHap(ped%pedigree(id)%IndividualPhase(1),ped%pedigree(id)%individualPhase(2))
+					call tmpGeno%newGenotypeHap(ped%pedigree(id)%IndividualPhase(1),ped%pedigree(id)%individualPhase(2))
 					call tmpGeno%setHaplotypeFromGenotypeIfMissing(ped%pedigree(i)%individualPhase(1))
 					call tmpGeno%setHaplotypeFromGenotypeIfMissing(ped%pedigree(i)%individualPhase(2))
 				endif
@@ -1435,7 +1442,7 @@ else
 			block
 				integer(kind=1),dimension(:),allocatable :: old, temp ,tempphase1,tempphase2, oldphase1,oldphase2
 
-				allocate(temp(nSNpR))
+				allocate(temp(nSNpR)) 
 				allocate(tempphase1(nSNpR))
 				allocate(tempphase2(nSNpR))
 				do i=1, ped%pedigreeSize
@@ -1455,9 +1462,9 @@ else
 						endif
 
 					enddo
-					ped%pedigree(i)%individualGenotype = newGenotypeInt(temp)
-					ped%pedigree(i)%individualphase(1) = newhaplotypeInt(tempphase1)
-					ped%pedigree(i)%individualphase(2) = newhaplotypeInt(tempphase2)
+					call ped%pedigree(i)%individualGenotype%newGenotypeInt(temp)
+					call ped%pedigree(i)%individualphase(1)%newhaplotypeInt(tempphase1)
+					call ped%pedigree(i)%individualphase(2)%newhaplotypeInt(tempphase2)
 				enddo
 				deallocate(temp)
 				deallocate(tempphase1)
@@ -1826,7 +1833,7 @@ end select
 
 inputParams => defaultInput
 
-inputParams%nSnpRaw = inputParams%nsnp
+
 if (inputParams%hmmoption /= RUN_HMM_NGS) then
 if (inputParams%restartOption<OPT_RESTART_IMPUTATION) call MakeDirectories(RUN_HMM_NULL)
 
@@ -1835,6 +1842,8 @@ if (.not. present(pedIn)) then
 else
 	ped = pedIn
 endif
+
+inputParams%nSnpRaw = inputParams%nsnp
 call SnpCallRate
 call CheckParentage
 if (inputParams%MultiHD/=0) then
@@ -1976,7 +1985,7 @@ call WriteOutResults
 
 endif
 
-call ped%destroyPedigree()
+! call ped%destroyPedigree()
 call PrintTimerTitles
 
 
