@@ -1473,29 +1473,30 @@ subroutine InternalEdit
 				inputParams%nsnp=nSnpR
 			endif
 		endif
-
-		if (inputParams%UserDefinedHD==0) then
-			Setter = 0
-			do i=1,ped%nGenotyped
-				setter(ped%genotypeMap(i)) =1
+	endif
+	if (inputParams%UserDefinedHD==0) then
+		Setter = 0
+		do i=1,ped%nGenotyped
+			setter(ped%genotypeMap(i)) =1
+			CountMiss=ped%pedigree(ped%genotypeMap(i))%individualGenotype%numMissing()
+			print *, "missing for genotype", countMiss,(float(CountMiss)/inputParams%nsnp),(1.0-inputParams%SecondPercGenoForHD)
+			if ((float(CountMiss)/inputParams%nsnp)>(1.0-inputParams%SecondPercGenoForHD)) then
+				Setter(ped%genotypeMap(i))=0
+			endif
+		enddo
+		CountHD=count(Setter(:)==1)
+	else
+		do i=1,ped%nGenotyped
+			if (Setter(ped%genotypeMap(i))==1) then
 				CountMiss=ped%pedigree(ped%genotypeMap(i))%individualGenotype%numMissing()
 				if ((float(CountMiss)/inputParams%nsnp)>(1.0-inputParams%SecondPercGenoForHD)) then
 					Setter(ped%genotypeMap(i))=0
 				endif
-			enddo
-			CountHD=count(Setter(:)==1)
-		else
-			do i=1,ped%nGenotyped
-				if (Setter(ped%genotypeMap(i))==1) then
-					CountMiss=ped%pedigree(ped%genotypeMap(i))%individualGenotype%numMissing()
-					if ((float(CountMiss)/inputParams%nsnp)>(1.0-inputParams%SecondPercGenoForHD)) then
-						Setter(ped%genotypeMap(i))=0
-					endif
-				endif
-			enddo
-			CountHD=count(Setter(:)==1)
-		endif
+			endifv
+		enddo
+		CountHD=count(Setter(:)==1)
 	endif
+
 
 	open (unit=102,file="." // DASH // "Miscellaneous" // DASH // "EditingSnpSummary.txt",status="unknown")
 
@@ -1515,7 +1516,11 @@ subroutine InternalEdit
 	close(112)
 	print*, " "
 	print*, " "
-	print *,ped%nGenotyped
+
+	if (countHd==0) then
+
+		print *, "ERROR - No animals at a high enough density to pass to alphaphase"
+	endif
 	print*, " ",CountHD," indiviudals passed to AlphaPhase"
 	print*, " ",inputParams%nsnp," snp remain after editing"
 
@@ -1843,7 +1848,7 @@ if (inputParams%hmmoption /= RUN_HMM_NGS) then
 	inputParams%nSnpRaw = inputParams%nsnp
 	call SnpCallRate
 
-			
+
 	call CheckParentage
 	if (inputParams%MultiHD/=0) then
 		call ClassifyAnimByChips
@@ -1992,6 +1997,7 @@ call PrintTimerTitles
 end subroutine runAlphaImpute
 
 end module AlphaImputeModule
+
 
 
 

@@ -164,6 +164,7 @@ contains
         this%hmmoption=RUN_HMM_NO
         this%plinkinputfile = ""
         this%nsnp = 0
+        this%PercGenoForHD=90.0
         open(newunit=unit, file=SpecFile, action="read", status="old")
         IOStatus = 0
         
@@ -336,6 +337,8 @@ contains
                     read(second(1),*) this%PercGenoForHD
                     read(second(2),*) this%PercSnpMiss
                     read(second(3),*) this%SecondPercGenoForHD
+                    print *,this%SecondPercGenoForHD/100
+                    stop
                     if (toLower(second(4))=="allsnpout") this%outopt=1
                     if (toLower(second(4))=="editedsnpout") this%outopt=0
                     if (this%outopt==9) then
@@ -343,12 +346,11 @@ contains
                     endif
                 else
                     ! In case no editing is set and there is a single HD panel, a threshold to determine HD individuals is needed
+                    
                     if (this%MultiHD==0) this%PercGenoForHD=90.0
                     this%outopt=1
                 endif
-                this%PercGenoForHD=this%PercGenoForHD/100
-                this%PercSnpMiss=this%PercSnpMiss/100
-                this%SecondPercGenoForHD=this%SecondPercGenoForHD/100
+               
                 cycle
                 4000 print*, "Output options incorrectly specified"
                 print*, "Beware!!!!! AlphaImpute is case sensitive"
@@ -715,6 +717,11 @@ contains
     if (this%nPhaseInternal>6) then
         this%nAgreeInternalHapLibElim=4
     endif
+
+
+     this%PercGenoForHD=this%PercGenoForHD/100
+    this%PercSnpMiss=this%PercSnpMiss/100
+    this%SecondPercGenoForHD=this%SecondPercGenoForHD/100
 
     
 
