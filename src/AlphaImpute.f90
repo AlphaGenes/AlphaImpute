@@ -1479,8 +1479,6 @@ subroutine InternalEdit
 			do i=1,ped%nGenotyped
 				setter(ped%genotypeMap(i)) =1
 				CountMiss=ped%pedigree(ped%genotypeMap(i))%individualGenotype%numMissing()
-
-				print *,"perc missing:",float(CountMiss)/inputParams%nsnp, " for anim ",i
 				if ((float(CountMiss)/inputParams%nsnp)>(1.0-inputParams%SecondPercGenoForHD)) then
 					Setter(ped%genotypeMap(i))=0
 				endif
@@ -1517,6 +1515,7 @@ subroutine InternalEdit
 	close(112)
 	print*, " "
 	print*, " "
+	print *,ped%nGenotyped
 	print*, " ",CountHD," indiviudals passed to AlphaPhase"
 	print*, " ",inputParams%nsnp," snp remain after editing"
 
@@ -1697,9 +1696,7 @@ subroutine CheckParentage
 
 	inputParams => defaultInput
 
-
 	call ped%sortPedigreeAndOverwrite()
-
 	inconsistencies = ped%findMendelianInconsistencies(DisagreeThreshold,"." // DASH // "Miscellaneous" // DASH // "PedigreeMistakes.txt","." // DASH // "Miscellaneous" // DASH // "snpMistakes.txt")
 	call ped%outputSortedPedigreeInAlphaImputeFormat("." // DASH // "Miscellaneous" // DASH // "InternalDataRecoding.txt")
 
@@ -1845,6 +1842,8 @@ if (inputParams%hmmoption /= RUN_HMM_NGS) then
 
 	inputParams%nSnpRaw = inputParams%nsnp
 	call SnpCallRate
+
+			
 	call CheckParentage
 	if (inputParams%MultiHD/=0) then
 		call ClassifyAnimByChips
