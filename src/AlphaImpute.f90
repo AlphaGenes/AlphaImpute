@@ -1493,7 +1493,7 @@ subroutine InternalEdit
 				if ((float(CountMiss)/inputParams%nsnp)>(1.0-inputParams%SecondPercGenoForHD)) then
 					Setter(ped%genotypeMap(i))=0
 				endif
-			endifv
+			endif
 		enddo
 		CountHD=count(Setter(:)==1)
 	endif
