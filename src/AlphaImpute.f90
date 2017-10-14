@@ -1313,6 +1313,7 @@ end subroutine ClassifyAnimByChips
 subroutine InternalEdit
 	use Global
 	use AlphaImputeSpecFileModule
+	use IFCORE
 	implicit none
 
 	integer :: i,j,k,CountMiss,CountHD,nSnpR,dum, phaseUnit
@@ -1520,6 +1521,8 @@ subroutine InternalEdit
 	if (countHd==0) then
 
 		print *, "ERROR - No animals at a high enough density to pass to alphaphase"
+
+		call TRACEBACKQQ(string= "ERROR - No animals at a high enough density to pass to alphaphase",user_exit_code=1)
 	endif
 	print*, " ",CountHD," indiviudals passed to AlphaPhase"
 	print*, " ",inputParams%nsnp," snp remain after editing"
