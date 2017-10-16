@@ -1480,7 +1480,7 @@ subroutine InternalEdit
 		do i=1,ped%nGenotyped
 			setter(ped%genotypeMap(i)) =1
 			CountMiss=ped%pedigree(ped%genotypeMap(i))%individualGenotype%numMissing()
-			print *, "missing for genotype", countMiss,(float(CountMiss)/inputParams%nsnp),(1.0-inputParams%SecondPercGenoForHD)
+			! print *, "missing for genotype", countMiss,(float(CountMiss)/inputParams%nsnp),(1.0-inputParams%SecondPercGenoForHD)
 			if ((float(CountMiss)/inputParams%nsnp)>(1.0-inputParams%SecondPercGenoForHD)) then
 				Setter(ped%genotypeMap(i))=0
 			endif
