@@ -52,7 +52,7 @@ OPTION(USE_OPENMP "Use OpenMP for parallelization" ON)
 
 
 if (${RUN_TESTS})
-SET(testDeps ${SRC}/AlphaImputeInMod.f90
+SET(testDeps ${SRC}/AlphaImputeSpecFileModule.f90
 ${SRC}/global.f90
 )
 endif (${RUN_TESTS})
