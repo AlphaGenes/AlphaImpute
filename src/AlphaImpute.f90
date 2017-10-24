@@ -390,8 +390,8 @@ module AlphaImputeModule
 				ProbImputePhase(0,:,1)=TempAlleleFreq(:)
 				ProbImputePhase(0,:,2)=TempAlleleFreq(:)
 				ProbImputeGenos(0,:)=2*TempAlleleFreq(:)
-				ProbImputeGenos(1:ped%pedigreeSize-ped%nDummys,:)=-9.0
-				ProbImputePhase(1:ped%pedigreeSize-ped%nDummys,:,:)=-9.0
+				ProbImputeGenos(1:ped%pedigreeSize,:)=-9.0
+				ProbImputePhase(1:ped%pedigreeSize,:,:)=-9.0
 
 				call IterateParentHomoFill
 				call ped%PhaseComplement
@@ -406,8 +406,8 @@ module AlphaImputeModule
 								phase = ped%pedigree(i)%individualPhase(e)%getPhase(j)
 								if (phase /=9) ProbImputePhase(i,j,e)=float(phase)
 								if (ISNAN(ProbImputePhase(i,j,e))) then 
-										print *,"ERROR4", ProbImputePhase(i,j,e)
-									endif
+									print *,"ERROR4", ProbImputePhase(i,j,e)
+								endif
 							end block
 						enddo
 					enddo
@@ -432,9 +432,7 @@ module AlphaImputeModule
 								ProbImputePhase(i,j,e)=(sum(ProbImputePhase(ParId,j,:))/2)
 							endif
 
-							if (ISNAN(ProbImputePhase(i,j,e))) then 
-								print *,"ERROR31", ProbImputePhase(i,j,e)
-							endif
+							
 						enddo
 					enddo
 				enddo
@@ -445,14 +443,7 @@ module AlphaImputeModule
 							block
 								integer(kind=1) :: phase
 								phase = ped%pedigree(i)%individualPhase(k)%getPhase(j)
-								if (ISNAN(ProbImputePhase(i,j,k))) then 
-										print *,"ERROR21", ProbImputePhase(i,j,k),phase
-								endif
 								if (phase/=9) ProbImputePhase(i,j,k)=float(phase)
-								
-								if (ISNAN(ProbImputePhase(i,j,k))) then 
-										print *,"ERROR22", ProbImputePhase(i,j,k)
-									endif
 
 							end block
 						enddo
@@ -465,9 +456,6 @@ module AlphaImputeModule
 								ProbImputeGenos(i,j)=float(geno)
 							else
 								ProbImputeGenos(i,j)=sum(ProbImputePhase(i,j,:))
-								! if (ISNAN(ProbImputeGenos(i,j))) then 
-								! 	print *,"ERROR1", i,j,geno,ProbImputePhase(i,j,1),ProbImputePhase(i,j,2)
-								! endif
 							endif
 						end block
 					enddo
