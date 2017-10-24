@@ -405,6 +405,9 @@ module AlphaImputeModule
 
 								phase = ped%pedigree(i)%individualPhase(e)%getPhase(j)
 								if (phase /=9) ProbImputePhase(i,j,e)=float(phase)
+								if (ISNAN(ProbImputePhase(i,j,e))) then 
+										print *,"ERROR4", ProbImputePhase(i,j,e)
+									endif
 							end block
 						enddo
 					enddo
@@ -420,12 +423,17 @@ module AlphaImputeModule
 
 									phase = ped%pedigree(i)%individualPhase(e)%getPhase(j)
 									if (phase==9) ProbImputePhase(i,j,e)=TempAlleleFreq(j)
+									
 								end block
 							enddo
 						endif
 						do j=1,nSnpIterate
 							if (ped%pedigree(i)%individualPhase(e)%isMissing(j)) then
 								ProbImputePhase(i,j,e)=(sum(ProbImputePhase(ParId,j,:))/2)
+							endif
+
+							if (ISNAN(ProbImputePhase(i,j,e))) then 
+								print *,"ERROR31", ProbImputePhase(i,j,e)
 							endif
 						enddo
 					enddo
@@ -437,7 +445,15 @@ module AlphaImputeModule
 							block
 								integer(kind=1) :: phase
 								phase = ped%pedigree(i)%individualPhase(k)%getPhase(j)
+								if (ISNAN(ProbImputePhase(i,j,k))) then 
+										print *,"ERROR21", ProbImputePhase(i,j,k),phase
+								endif
 								if (phase/=9) ProbImputePhase(i,j,k)=float(phase)
+								
+								if (ISNAN(ProbImputePhase(i,j,k))) then 
+										print *,"ERROR22", ProbImputePhase(i,j,k)
+									endif
+
 							end block
 						enddo
 
@@ -449,6 +465,9 @@ module AlphaImputeModule
 								ProbImputeGenos(i,j)=float(geno)
 							else
 								ProbImputeGenos(i,j)=sum(ProbImputePhase(i,j,:))
+								! if (ISNAN(ProbImputeGenos(i,j))) then 
+								! 	print *,"ERROR1", i,j,geno,ProbImputePhase(i,j,1),ProbImputePhase(i,j,2)
+								! endif
 							endif
 						end block
 					enddo
@@ -457,6 +476,7 @@ module AlphaImputeModule
 				do i=1,ped%pedigreeSize-ped%nDummys
 					do j=1,nSnpIterate
 						if (ProbImputeGenos(i,j)==-9.0) ProbImputeGenos(i,j)=sum(ProbImputePhase(i,j,:))
+
 						if (ProbImputeGenos(i,j)>1.999) call ped%pedigree(i)%individualGenotype%setGenotype(j,2)
 						if (ProbImputeGenos(i,j)<0.0001) call ped%pedigree(i)%individualGenotype%setGenotype(j,0)
 						if ((ProbImputeGenos(i,j)>0.999).and.(ProbImputeGenos(i,j)<1.00001)) call ped%pedigree(i)%individualGenotype%setGenotype(j,1)
