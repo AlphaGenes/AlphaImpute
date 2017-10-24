@@ -1959,7 +1959,7 @@ if (inputParams%hmmoption /= RUN_HMM_NGS) then
 				print *,""
 				print *,"**************************************************************************************************"
 				print *, "Yield", checkYield(ped)
-				print *,"Accuracy per animal:",calculateaccuracyPerAnimal(ped,inputParams%TrueGenotypeFile, "perAnimal.txt", "Miscellaneous"// DASH// "ImputationErrors.txt")
+				print *,"Accuracy per animal:",calculateaccuracyPerAnimal(ped,inputParams%TrueGenotypeFile, "Miscellaneous"// DASH// "AccuracyPerAnimal.txt", "Miscellaneous"// DASH// "ImputationErrors.txt")
 			end block
 		endif
 

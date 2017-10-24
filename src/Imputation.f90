@@ -2022,8 +2022,8 @@ MODULE Imputation
 			inputParams => defaultInput
 
 
-			open(unit=102,file="." // DASH // "Miscellaneous" // "IndividualSnpInformativeness.txt", status="unknown")
-			open(unit=103,file="." // DASH // "Miscellaneous" // "IndividualMendelianInformativeness.txt", status="unknown")
+			open(unit=102,file="." // DASH // "Miscellaneous" // DASH // "IndividualSnpInformativeness.txt", status="unknown")
+			open(unit=103,file="." // DASH // "Miscellaneous"  // DASH // "IndividualMendelianInformativeness.txt", status="unknown")
 
 			allocate(GlobalTmpCountInf(ped%pedigreeSize,8))
 			allocate(MSTermInfo(ped%pedigreeSize,2))
