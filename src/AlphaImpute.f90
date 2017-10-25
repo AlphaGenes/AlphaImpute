@@ -117,10 +117,6 @@ module AlphaImputeModule
 			write(6,*) " ", "Finished Running AlphaPhase"
 
 			deallocate(hdPed)
-			if (inputParams%restartOption==OPT_RESTART_PHASING) then
-				write(6,*) "Restart option 1 stops program after Phasing has been managed"
-				stop
-			endif
 
 		end subroutine PhasingManagementNew
 
@@ -405,7 +401,7 @@ module AlphaImputeModule
 
 								phase = ped%pedigree(i)%individualPhase(e)%getPhase(j)
 								if (phase /=9) ProbImputePhase(i,j,e)=float(phase)
-								if (ISNAN(ProbImputePhase(i,j,e))) then 
+								if (ISNAN(ProbImputePhase(i,j,e))) then
 									print *,"ERROR4", ProbImputePhase(i,j,e)
 								endif
 							end block
@@ -423,7 +419,7 @@ module AlphaImputeModule
 
 									phase = ped%pedigree(i)%individualPhase(e)%getPhase(j)
 									if (phase==9) ProbImputePhase(i,j,e)=TempAlleleFreq(j)
-									
+
 								end block
 							enddo
 						endif
@@ -432,7 +428,7 @@ module AlphaImputeModule
 								ProbImputePhase(i,j,e)=(sum(ProbImputePhase(ParId,j,:))/2)
 							endif
 
-							
+
 						enddo
 					enddo
 				enddo
@@ -1891,8 +1887,6 @@ if (inputParams%hmmoption /= RUN_HMM_NGS) then
 			call doFerdosi(ped)
 		endif
 
-
-
 		if (inputParams%managephaseon1off0==1) then
 
 
@@ -1913,7 +1907,13 @@ if (inputParams%hmmoption /= RUN_HMM_NGS) then
 		endif
 	endif
 
-	if (inputParams%restartOption> OPT_RESTART_PHASING) Then
+	if (inputParams%restartOption==OPT_RESTART_PHASING) then
+		write(6,*) "Restart option 1 stops program after Phasing has been managed"
+		stop
+	endif
+
+
+	if (inputParams%restartOption> OPT_RESTART_PHASING .and. inputParams%hmmoption /= RUN_HMM_ONLY) Then
 		print *,"Reading in Phasing information"
 		! Read back in geneprob data
 
@@ -1988,6 +1988,7 @@ else if (inputParams%hmmoption == RUN_HMM_NGS) then
 		inputParamsHMM%imputedThreshold = inputParams%imputedThreshold
 		inputParamsHMM%phasedThreshold = inputParams%phasedThreshold
 		inputParamsHMM%HapList = inputParams%HapList
+		inputParamsHMM%InbredAnimalsFile = "None"
 
 		res = ped%getGenotypesAsArray()
 		call AlphaImputeHMMRunner(inputParamsHMM, ped, ProbImputeGenosHmm, ProbImputePhaseHmm, GenosCounts, FullH)
@@ -2008,6 +2009,7 @@ call PrintTimerTitles
 end subroutine runAlphaImpute
 
 end module AlphaImputeModule
+
 
 
 

@@ -83,7 +83,7 @@ MODULE Imputation
 					inputParamsHMM%imputedThreshold = inputParams%imputedThreshold
 					inputParamsHMM%phasedThreshold = inputParams%phasedThreshold
 					inputParamsHMM%HapList = inputParams%HapList
-
+					inputParamsHMM%InbredAnimalsFile = "None"
 
 					call AlphaImputeHMMRunner(inputParamsHMM, ped, ProbImputeGenosHmm, ProbImputePhaseHmm, GenosCounts, FullH)
 
@@ -140,6 +140,7 @@ MODULE Imputation
 							inputParamsHMM%imputedThreshold = inputParams%imputedThreshold
 							inputParamsHMM%phasedThreshold = inputParams%phasedThreshold
 							inputParamsHMM%HapList = inputParams%HapList
+							inputParamsHMM%InbredAnimalsFile = "None"
 
 							call AlphaImputeHMMRunner(inputParamsHMM, ped, ProbImputeGenosHmm, ProbImputePhaseHmm, GenosCounts, FullH)
 						end block
@@ -270,6 +271,7 @@ MODULE Imputation
 							inputParamsHMM%imputedThreshold = inputParams%imputedThreshold
 							inputParamsHMM%phasedThreshold = inputParams%phasedThreshold
 							inputParamsHMM%HapList = inputParams%HapList
+							inputParamsHMM%InbredAnimalsFile = "None"
 							call AlphaImputeHMMRunner(inputParamsHMM, ped, ProbImputeGenosHmm, ProbImputePhaseHmm, GenosCounts, FullH)
 
 
