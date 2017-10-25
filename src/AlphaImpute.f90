@@ -405,7 +405,7 @@ module AlphaImputeModule
 
 								phase = ped%pedigree(i)%individualPhase(e)%getPhase(j)
 								if (phase /=9) ProbImputePhase(i,j,e)=float(phase)
-								if (ISNAN(ProbImputePhase(i,j,e))) then 
+								if (ISNAN(ProbImputePhase(i,j,e))) then
 									print *,"ERROR4", ProbImputePhase(i,j,e)
 								endif
 							end block
@@ -423,7 +423,7 @@ module AlphaImputeModule
 
 									phase = ped%pedigree(i)%individualPhase(e)%getPhase(j)
 									if (phase==9) ProbImputePhase(i,j,e)=TempAlleleFreq(j)
-									
+
 								end block
 							enddo
 						endif
@@ -432,7 +432,7 @@ module AlphaImputeModule
 								ProbImputePhase(i,j,e)=(sum(ProbImputePhase(ParId,j,:))/2)
 							endif
 
-							
+
 						enddo
 					enddo
 				enddo
@@ -694,7 +694,9 @@ module AlphaImputeModule
 				endif
 			endif
 
-			allocate(Maf(nOutputSnps))
+			if(.not. allocated(Maf)) then
+				allocate(Maf(nOutputSnps))
+			endif
 			if (inputParams%SexOpt==1) then
 				do j=1,nOutputSnps
 					Maf(j)=sum(ProbImputeGenos(:,j))/(2*ped%pedigreeSize-ped%nDummys)
