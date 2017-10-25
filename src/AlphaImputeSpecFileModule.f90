@@ -294,12 +294,7 @@ contains
                 if (trim(toLower(second(1))) /= "no") then
                     read(second(1),*) MultipleHDpanels
                     if (MultipleHDpanels/=0) this%MultiHD=MultipleHDpanels
-                    ! if ((trim(MultipleHDpanels)/='Yes').and.(trim(MultipleHDpanels)/='No')) then
-                    !     write (*,*) "Please, provide a valid option,"
-                    !     write (*,*) "MultipleHDpanels only acepts 'No' or 'Yes'"
-                    !     stop
-                    ! endif
-                    ! Snps of the multiple HD panels
+
                     if (allocated(this%nSnpByChip)) then
                         deallocate(this%nSnpByChip)
                     endif
@@ -337,8 +332,6 @@ contains
                     read(second(1),*) this%PercGenoForHD
                     read(second(2),*) this%PercSnpMiss
                     read(second(3),*) this%SecondPercGenoForHD
-                    print *,this%SecondPercGenoForHD/100
-                    stop
                     if (toLower(second(4))=="allsnpout") this%outopt=1
                     if (toLower(second(4))=="editedsnpout") this%outopt=0
                     if (this%outopt==9) then

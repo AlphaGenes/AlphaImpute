@@ -83,7 +83,7 @@ MODULE Imputation
 					inputParamsHMM%imputedThreshold = inputParams%imputedThreshold
 					inputParamsHMM%phasedThreshold = inputParams%phasedThreshold
 					inputParamsHMM%HapList = inputParams%HapList
-
+					inputParamsHMM%InbredAnimalsFile = "None"
 
 					call AlphaImputeHMMRunner(inputParamsHMM, ped, ProbImputeGenosHmm, ProbImputePhaseHmm, GenosCounts, FullH)
 
@@ -140,6 +140,7 @@ MODULE Imputation
 							inputParamsHMM%imputedThreshold = inputParams%imputedThreshold
 							inputParamsHMM%phasedThreshold = inputParams%phasedThreshold
 							inputParamsHMM%HapList = inputParams%HapList
+							inputParamsHMM%InbredAnimalsFile = "None"
 
 							call AlphaImputeHMMRunner(inputParamsHMM, ped, ProbImputeGenosHmm, ProbImputePhaseHmm, GenosCounts, FullH)
 						end block
@@ -270,6 +271,7 @@ MODULE Imputation
 							inputParamsHMM%imputedThreshold = inputParams%imputedThreshold
 							inputParamsHMM%phasedThreshold = inputParams%phasedThreshold
 							inputParamsHMM%HapList = inputParams%HapList
+							inputParamsHMM%InbredAnimalsFile = "None"
 							call AlphaImputeHMMRunner(inputParamsHMM, ped, ProbImputeGenosHmm, ProbImputePhaseHmm, GenosCounts, FullH)
 
 
@@ -2022,8 +2024,8 @@ MODULE Imputation
 			inputParams => defaultInput
 
 
-			open(unit=102,file="." // DASH // "Miscellaneous" // "IndividualSnpInformativeness.txt", status="unknown")
-			open(unit=103,file="." // DASH // "Miscellaneous" // "IndividualMendelianInformativeness.txt", status="unknown")
+			open(unit=102,file="." // DASH // "Miscellaneous" // DASH // "IndividualSnpInformativeness.txt", status="unknown")
+			open(unit=103,file="." // DASH // "Miscellaneous"  // DASH // "IndividualMendelianInformativeness.txt", status="unknown")
 
 			allocate(GlobalTmpCountInf(ped%pedigreeSize,8))
 			allocate(MSTermInfo(ped%pedigreeSize,2))

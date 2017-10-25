@@ -117,10 +117,6 @@ module AlphaImputeModule
 			write(6,*) " ", "Finished Running AlphaPhase"
 
 			deallocate(hdPed)
-			if (inputParams%restartOption==OPT_RESTART_PHASING) then
-				write(6,*) "Restart option 1 stops program after Phasing has been managed"
-				stop
-			endif
 
 		end subroutine PhasingManagementNew
 
@@ -1893,8 +1889,6 @@ if (inputParams%hmmoption /= RUN_HMM_NGS) then
 			call doFerdosi(ped)
 		endif
 
-
-
 		if (inputParams%managephaseon1off0==1) then
 
 
@@ -1915,7 +1909,13 @@ if (inputParams%hmmoption /= RUN_HMM_NGS) then
 		endif
 	endif
 
-	if (inputParams%restartOption> OPT_RESTART_PHASING) Then
+	if (inputParams%restartOption==OPT_RESTART_PHASING) then
+		write(6,*) "Restart option 1 stops program after Phasing has been managed"
+		stop
+	endif
+
+
+	if (inputParams%restartOption> OPT_RESTART_PHASING .and. inputParams%hmmoption /= RUN_HMM_ONLY) Then
 		print *,"Reading in Phasing information"
 		! Read back in geneprob data
 
@@ -1961,7 +1961,7 @@ if (inputParams%hmmoption /= RUN_HMM_NGS) then
 				print *,""
 				print *,"**************************************************************************************************"
 				print *, "Yield", checkYield(ped)
-				print *,"Accuracy per animal:",calculateaccuracyPerAnimal(ped,inputParams%TrueGenotypeFile, "perAnimal.txt", "Miscellaneous"// DASH// "ImputationErrors.txt")
+				print *,"Accuracy per animal:",calculateaccuracyPerAnimal(ped,inputParams%TrueGenotypeFile, "Miscellaneous"// DASH// "AccuracyPerAnimal.txt", "Miscellaneous"// DASH// "ImputationErrors.txt")
 			end block
 		endif
 
@@ -1990,6 +1990,7 @@ else if (inputParams%hmmoption == RUN_HMM_NGS) then
 		inputParamsHMM%imputedThreshold = inputParams%imputedThreshold
 		inputParamsHMM%phasedThreshold = inputParams%phasedThreshold
 		inputParamsHMM%HapList = inputParams%HapList
+		inputParamsHMM%InbredAnimalsFile = "None"
 
 		res = ped%getGenotypesAsArray()
 		call AlphaImputeHMMRunner(inputParamsHMM, ped, ProbImputeGenosHmm, ProbImputePhaseHmm, GenosCounts, FullH)
@@ -2010,6 +2011,7 @@ call PrintTimerTitles
 end subroutine runAlphaImpute
 
 end module AlphaImputeModule
+
 
 
 
