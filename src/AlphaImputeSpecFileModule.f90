@@ -141,7 +141,7 @@ contains
         use omp_lib
 
         class(AlphaImputeInput), intent(inout),target :: this
-        integer :: unit,IOStatus,MultipleHDpanels,i
+        integer :: unit,IOStatus,MultipleHDpanels,i,stat
         character(len=*), intent(in) :: SpecFile
 
         character(len=300) :: first, line
@@ -282,9 +282,10 @@ contains
                 endif
 
             case("numbersnp")
-                read(second(1),*) this%nsnp
-                if (this%nsnp>240000) then
-                    print*, "Contact John Hickey if you want to do more than 240,000 SNP"
+                read(second(1),*,iostat=stat) this%nsnp
+                if (stat /= 0) then
+                    
+                    print*, "Error: numbersnp specified incorrectly"
                     stop 3001
                 endif
 

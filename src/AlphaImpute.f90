@@ -225,11 +225,11 @@ module AlphaImputeModule
 
 				TempAlleleFreq=0.0
 
-				do j=1,size(SnpIncluded)
+				do j=1,nSnpIterate
 					Counter=0
 					do i=1,ped%pedigreeSize-ped%nDummys
 
-						genos = ped%pedigree(i)%individualGenotype%getGenotype(SnpIncluded(j))
+						genos = ped%pedigree(i)%individualGenotype%getGenotype(j)
 						if (genos/=MISSINGGENOTYPECODE) then
 							TempAlleleFreq(j)=TempAlleleFreq(j)+genos
 							Counter=Counter+2
@@ -258,7 +258,7 @@ module AlphaImputeModule
 						do e=1,2
 							block
 								integer(kind=1) :: phase
-								phase = ped%pedigree(i)%individualPhase(e)%getPhase(SnpIncluded(j))
+								phase = ped%pedigree(i)%individualPhase(e)%getPhase(j)
 								if (phase/=9) ProbImputePhase(i,j,e)=float(phase)
 							end block
 						enddo
@@ -272,7 +272,7 @@ module AlphaImputeModule
 							do j=1,nSnpIterate
 								block
 									integer(kind=1) :: phase
-									phase = ped%pedigree(i)%individualPhase(e)%getPhase(SnpIncluded(j))
+									phase = ped%pedigree(i)%individualPhase(e)%getPhase(j)
 									if (phase==9 .and. TempAlleleFreq(j)/=9) ProbImputePhase(i,j,e)=TempAlleleFreq(j)
 								end block
 							enddo
@@ -281,7 +281,7 @@ module AlphaImputeModule
 							do j=1,nSnpIterate
 								block
 									integer(kind=1) :: phase
-									phase = ped%pedigree(i)%individualPhase(e)%getPhase(SnpIncluded(j))
+									phase = ped%pedigree(i)%individualPhase(e)%getPhase(j)
 									if (phase==9) then
 										ProbImputePhase(i,j,e)=(sum(ProbImputePhase(ParId,j,:))/2)
 									endif
@@ -293,7 +293,7 @@ module AlphaImputeModule
 						ParId=ped%pedigree(i)%getSireDamNewIDByIndex(inputParams%hetGameticStatus+1)
 						do j=1,nSnpIterate
 
-							if (ped%pedigree(i)%individualPhase(1)%getPhase(SnpIncluded(j))==9) then
+							if (ped%pedigree(i)%individualPhase(1)%getPhase(j)==9) then
 								ProbImputePhase(i,j,:)=(sum(ProbImputePhase(ParId,j,:))/2)
 							endif
 						enddo
@@ -305,13 +305,13 @@ module AlphaImputeModule
 						do k=1,2
 							block
 								integer(kind=1) :: phase
-								phase = ped%pedigree(i)%individualPhase(k)%getPhase(SnpIncluded(j))
+								phase = ped%pedigree(i)%individualPhase(k)%getPhase((j))
 								if (phase/=9) ProbImputePhase(i,j,k)=float(phase)
 							end block
 						enddo
 						block
 							integer(kind=1) :: genos
-							genos = ped%pedigree(i)%individualGenotype%getGenotype(SnpIncluded(j))
+							genos = ped%pedigree(i)%individualGenotype%getGenotype((j))
 							if (genos/=9) then
 								ProbImputeGenos(i,j)=float(genos)
 							else
@@ -338,9 +338,9 @@ module AlphaImputeModule
 				do i=1,ped%pedigreeSize-ped%nDummys
 					do j=1,nSnpIterate
 						if (ProbImputeGenos(i,j)==-9.0) ProbImputeGenos(i,j)=sum(ProbImputePhase(i,j,:))
-						if (ProbImputeGenos(i,j)>1.999)  call ped%pedigree(i)%individualGenotype%setGenotype(SnpIncluded(j),2)
-						if (ProbImputeGenos(i,j)<0.001) call ped%pedigree(i)%individualGenotype%setGenotype(SnpIncluded(j),0)
-						if ((ProbImputeGenos(i,j)>0.999).and.(ProbImputeGenos(i,j)<1.001)) call ped%pedigree(i)%individualGenotype%setGenotype(SnpIncluded(j),1)
+						if (ProbImputeGenos(i,j)>1.999)  call ped%pedigree(i)%individualGenotype%setGenotype((j),2)
+						if (ProbImputeGenos(i,j)<0.001) call ped%pedigree(i)%individualGenotype%setGenotype((j),0)
+						if ((ProbImputeGenos(i,j)>0.999).and.(ProbImputeGenos(i,j)<1.001)) call ped%pedigree(i)%individualGenotype%setGenotype((j),1)
 
 					enddo
 				enddo
@@ -369,7 +369,7 @@ module AlphaImputeModule
 						block
 
 							integer(kind=1) :: geno
-							geno = ped%pedigree(i)%individualGenotype%getGenotype(SnpIncluded(j))
+							geno = ped%pedigree(i)%individualGenotype%getGenotype((j))
 							if (Geno/=9) then
 								TempAlleleFreq(j)=TempAlleleFreq(j)+geno
 								Counter=Counter+2
@@ -399,7 +399,7 @@ module AlphaImputeModule
 							block
 								integer(kind=1) :: phase
 
-								phase = ped%pedigree(i)%individualPhase(e)%getPhase(SnpIncluded(j))
+								phase = ped%pedigree(i)%individualPhase(e)%getPhase((j))
 								if (phase /=9) ProbImputePhase(i,j,e)=float(phase)
 							end block
 						enddo
@@ -414,14 +414,14 @@ module AlphaImputeModule
 								block
 									integer :: phase
 
-									phase = ped%pedigree(i)%individualPhase(e)%getPhase(SnpIncluded(j))
+									phase = ped%pedigree(i)%individualPhase(e)%getPhase((j))
 									if (phase==9) ProbImputePhase(i,j,e)=TempAlleleFreq(j)
 
 								end block
 							enddo
 						endif
 						do j=1,nSnpIterate
-							if (ped%pedigree(i)%individualPhase(e)%isMissing(SnpIncluded(j))) then
+							if (ped%pedigree(i)%individualPhase(e)%isMissing((j))) then
 								ProbImputePhase(i,j,e)=(sum(ProbImputePhase(ParId,j,:))/2)
 							endif
 
@@ -435,7 +435,7 @@ module AlphaImputeModule
 						do k=1,2
 							block
 								integer(kind=1) :: phase
-								phase = ped%pedigree(i)%individualPhase(k)%getPhase(SnpIncluded(j))
+								phase = ped%pedigree(i)%individualPhase(k)%getPhase((j))
 								if (phase/=9) ProbImputePhase(i,j,k)=float(phase)
 
 							end block
@@ -444,7 +444,7 @@ module AlphaImputeModule
 						block
 							integer(kind=1) :: geno
 
-							geno = ped%pedigree(i)%individualGenotype%getGenotype(SnpIncluded(j))
+							geno = ped%pedigree(i)%individualGenotype%getGenotype((j))
 							if (geno/=9) then
 								ProbImputeGenos(i,j)=float(geno)
 							else
@@ -458,9 +458,9 @@ module AlphaImputeModule
 					do j=1,nSnpIterate
 						if (ProbImputeGenos(i,j)==-9.0) ProbImputeGenos(i,j)=sum(ProbImputePhase(i,j,:))
 
-						if (ProbImputeGenos(i,j)>1.999) call ped%pedigree(i)%individualGenotype%setGenotype(SnpIncluded(j),2)
-						if (ProbImputeGenos(i,j)<0.0001) call ped%pedigree(i)%individualGenotype%setGenotype(SnpIncluded(j),0)
-						if ((ProbImputeGenos(i,j)>0.999).and.(ProbImputeGenos(i,j)<1.00001)) call ped%pedigree(i)%individualGenotype%setGenotype(SnpIncluded(j),1)
+						if (ProbImputeGenos(i,j)>1.999) call ped%pedigree(i)%individualGenotype%setGenotype((j),2)
+						if (ProbImputeGenos(i,j)<0.0001) call ped%pedigree(i)%individualGenotype%setGenotype((j),0)
+						if ((ProbImputeGenos(i,j)>0.999).and.(ProbImputeGenos(i,j)<1.00001)) call ped%pedigree(i)%individualGenotype%setGenotype((j),1)
 					enddo
 				enddo
 
@@ -1477,28 +1477,30 @@ subroutine InternalEdit
 				inputParams%nsnp=nSnpR
 			endif
 		endif
-	endif
-	if (inputParams%UserDefinedHD==0) then
-		Setter = 0
-		do i=1,ped%nGenotyped
-			setter(ped%genotypeMap(i)) =1
-			CountMiss=ped%pedigree(ped%genotypeMap(i))%individualGenotype%numMissing()
-			! print *, "missing for genotype", countMiss,(float(CountMiss)/inputParams%nsnp),(1.0-inputParams%SecondPercGenoForHD)
-			if ((float(CountMiss)/inputParams%nsnp)>(1.0-inputParams%SecondPercGenoForHD)) then
-				Setter(ped%genotypeMap(i))=0
-			endif
-		enddo
-		CountHD=count(Setter(:)==1)
-	else
-		do i=1,ped%nGenotyped
-			if (Setter(ped%genotypeMap(i))==1) then
+
+		if (inputParams%UserDefinedHD==0) then
+			Setter = 0
+			do i=1,ped%nGenotyped
+				setter(ped%genotypeMap(i)) =1
 				CountMiss=ped%pedigree(ped%genotypeMap(i))%individualGenotype%numMissing()
+				! print *, "missing for genotype", countMiss,(float(CountMiss)/inputParams%nsnp),(1.0-inputParams%SecondPercGenoForHD)
 				if ((float(CountMiss)/inputParams%nsnp)>(1.0-inputParams%SecondPercGenoForHD)) then
 					Setter(ped%genotypeMap(i))=0
 				endif
-			endif
-		enddo
-		CountHD=count(Setter(:)==1)
+			enddo
+			CountHD=count(Setter(:)==1)
+		else
+			do i=1,ped%nGenotyped
+				if (Setter(ped%genotypeMap(i))==1) then
+					CountMiss=ped%pedigree(ped%genotypeMap(i))%individualGenotype%numMissing()
+					if ((float(CountMiss)/inputParams%nsnp)>(1.0-inputParams%SecondPercGenoForHD)) then
+						! print *, "unsetting:",(float(CountMiss)/inputParams%nsnp),(1.0-inputParams%SecondPercGenoForHD)
+						Setter(ped%genotypeMap(i))=0
+					endif
+				endif
+			enddo
+			CountHD=count(Setter(:)==1)
+		endif
 	endif
 
 
@@ -2008,6 +2010,7 @@ call PrintTimerTitles
 end subroutine runAlphaImpute
 
 end module AlphaImputeModule
+
 
 
 
