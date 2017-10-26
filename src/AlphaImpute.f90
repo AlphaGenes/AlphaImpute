@@ -687,7 +687,9 @@ module AlphaImputeModule
 				endif
 			endif
 
-			allocate(Maf(nOutputSnps))
+			if(.not. allocated(Maf)) then
+				allocate(Maf(nOutputSnps))
+			endif
 			if (inputParams%SexOpt==1) then
 				do j=1,nOutputSnps
 					Maf(j)=sum(ProbImputeGenos(:,j))/(2*ped%pedigreeSize-ped%nDummys)
