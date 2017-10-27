@@ -1949,7 +1949,9 @@ if (inputParams%hmmoption /= RUN_HMM_NGS) then
 		! WARNING: Skip the modelling the recombination because it interferes with HMM propabilites
 		! TODO:
 		if (.not. inputparams%ModelRecomb .or. inputParams%hmmoption /= RUN_HMM_NO) then
-			write(*,*) "ModelRecomb has been Bypassed"
+			write(*,*) ""
+			write(*,*) ""
+			write(*,*) " ModelRecomb has been bypassed"
 		else
 			call ModelRecomb
 		endif
@@ -1982,6 +1984,15 @@ else if (inputParams%hmmoption == RUN_HMM_NGS) then
 		use ExternalHMMWrappers
 		type (AlphaHMMinput) :: inputParamsHMM
 		integer(kind=1) ,dimension(:,:), allocatable :: res
+		character(len=4096) :: cmd, SpecFile
+
+		if (Command_Argument_Count() > 0) then
+			call Get_Command_Argument(1,SpecFile)
+		else
+			specfile="AlphaImputeSpec.txt"
+		end if
+
+		call inputParamsHMM%ReadInParameterFile(SpecFile)
 
 		inputParamsHMM%nsnp = inputParams%nsnp
 		inputParamsHMM%nHapInSubH = inputParams%nHapInSubH
