@@ -278,7 +278,7 @@ module AlphaImputeSpecFileModule
 						read(second(1),*,iostat=stat) this%nsnp
 						if (stat /= 0) then
 
-							print*, "Error: numbersnp specified incorrectly"
+							print*, "Error: nsnp specified incorrectly"
 							stop 3001
 						endif
 
@@ -646,7 +646,11 @@ module AlphaImputeSpecFileModule
                         endif
 
 					case("wellimputedthreshold")
-						read(second(1), *) this%imputedThreshold
+						read(second(1), *,iostat=stat) this%imputedThreshold
+                         if (stat /= 0) then
+                            print *,"wellimputedthreshold set incorrectly"
+                            stop
+                        endif
 					case("haplotypeslist")
 						if (.not. allocated(second)) then
 							write(*, "(A,A)") "No list of haploytpes specified"
