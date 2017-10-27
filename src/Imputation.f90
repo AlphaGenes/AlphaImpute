@@ -51,6 +51,13 @@ MODULE Imputation
 
 			integer :: loop
 			character(len=150) :: timeOut
+			character(len=4096) :: cmd, SpecFile
+
+			if (Command_Argument_Count() > 0) then
+				call Get_Command_Argument(1,SpecFile)
+			else
+				specfile="AlphaImputeSpec.txt"
+			end if
 
 			inputParams => defaultInput
 
@@ -74,6 +81,8 @@ MODULE Imputation
 					use AlphaHmmInMod
 					use ExternalHMMWrappers
 					type (AlphaHMMinput) :: inputParamsHMM
+
+					call inputParamsHMM%ReadInParameterFile(SpecFile)
 
 					inputParamsHMM%nsnp = inputParams%nsnp
 					inputParamsHMM%nHapInSubH = inputParams%nHapInSubH
@@ -131,6 +140,8 @@ MODULE Imputation
 							use AlphaHmmInMod
 							use ExternalHMMWrappers
 							type (AlphaHMMinput) :: inputParamsHMM
+
+							call inputParamsHMM%ReadInParameterFile(SpecFile)
 
 							inputParamsHMM%nsnp = inputParams%nsnp
 							inputParamsHMM%nHapInSubH = inputParams%nHapInSubH
@@ -262,6 +273,8 @@ MODULE Imputation
 							use AlphaHmmInMod
 							use ExternalHMMWrappers
 							type (AlphaHMMinput) :: inputParamsHMM
+
+							call inputParamsHMM%ReadInParameterFile(SpecFile)
 
 							inputParamsHMM%nsnp = inputParams%nsnp
 							inputParamsHMM%nHapInSubH = inputParams%nHapInSubH
