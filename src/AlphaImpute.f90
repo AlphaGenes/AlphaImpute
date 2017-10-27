@@ -1992,8 +1992,8 @@ else if (inputParams%hmmoption == RUN_HMM_NGS) then
 			specfile="AlphaImputeSpec.txt"
 		end if
 
-		call inputParamsHMM%ReadInParameterFile(SpecFile)
-
+		! call inputParamsHMM%ReadInParameterFile(SpecFile)
+		inputParamsHMM%HMMOption = inputParams%hmmoption
 		inputParamsHMM%nsnp = inputParams%nsnp
 		inputParamsHMM%nHapInSubH = inputParams%nHapInSubH
 		inputParamsHMM%HmmBurnInRound = inputParams%HmmBurnInRound

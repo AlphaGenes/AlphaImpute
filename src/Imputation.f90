@@ -82,8 +82,9 @@ MODULE Imputation
 					use ExternalHMMWrappers
 					type (AlphaHMMinput) :: inputParamsHMM
 
-					call inputParamsHMM%ReadInParameterFile(SpecFile)
 
+
+					inputParamsHMM%HMMOption = inputParams%hmmoption
 					inputParamsHMM%nsnp = inputParams%nsnp
 					inputParamsHMM%nHapInSubH = inputParams%nHapInSubH
 					inputParamsHMM%HmmBurnInRound = inputParams%HmmBurnInRound
@@ -141,8 +142,7 @@ MODULE Imputation
 							use ExternalHMMWrappers
 							type (AlphaHMMinput) :: inputParamsHMM
 
-							call inputParamsHMM%ReadInParameterFile(SpecFile)
-
+							inputParamsHMM%HMMOption = inputParams%hmmoption
 							inputParamsHMM%nsnp = inputParams%nsnp
 							inputParamsHMM%nHapInSubH = inputParams%nHapInSubH
 							inputParamsHMM%HmmBurnInRound = inputParams%HmmBurnInRound
@@ -274,8 +274,8 @@ MODULE Imputation
 							use ExternalHMMWrappers
 							type (AlphaHMMinput) :: inputParamsHMM
 
-							call inputParamsHMM%ReadInParameterFile(SpecFile)
-
+							
+							inputParamsHMM%HMMOption = inputParams%hmmoption
 							inputParamsHMM%nsnp = inputParams%nsnp
 							inputParamsHMM%nHapInSubH = inputParams%nHapInSubH
 							inputParamsHMM%HmmBurnInRound = inputParams%HmmBurnInRound
