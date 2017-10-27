@@ -1947,7 +1947,9 @@ if (inputParams%hmmoption /= RUN_HMM_NGS) then
 		! WARNING: Skip the modelling the recombination because it interferes with HMM propabilites
 		! TODO:
 		if (.not. inputparams%ModelRecomb .or. inputParams%hmmoption /= RUN_HMM_NO) then
-			write(*,*) "ModelRecomb has been Bypassed"
+			write(*,*) ""
+			write(*,*) ""
+			write(*,*) " ModelRecomb has been bypassed"
 		else
 			call ModelRecomb
 		endif
