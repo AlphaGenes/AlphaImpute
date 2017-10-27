@@ -657,7 +657,7 @@ module AlphaImputeModule
 						write (53,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(hmmID)%originalID,ImputePhaseHMM(hmmID,:,2)
 						write (54,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(hmmID)%originalID,ImputeGenosHMM(hmmID,:)
 
-						if (.not. inputparams%ModelRecomb .or. inputParams%hmmoption /= RUN_HMM_NO) then
+						if (.not. inputParams%modelRecomb) then
 							write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(hmmID)%originalID,ProbImputePhase(hmmID,:,1)
 							write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(hmmID)%originalID,ProbImputePhase(hmmID,:,2)
 							write (41,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(hmmID)%originalID,ProbImputeGenos(hmmID,:)
@@ -1485,6 +1485,7 @@ subroutine InternalEdit
 				CountMiss=ped%pedigree(ped%genotypeMap(i))%individualGenotype%numMissing()
 				! print *, "missing for genotype", countMiss,(float(CountMiss)/inputParams%nsnp),(1.0-inputParams%SecondPercGenoForHD)
 				if ((float(CountMiss)/inputParams%nsnp)>(1.0-inputParams%SecondPercGenoForHD)) then
+					print *, "unsetting:",(float(CountMiss)/inputParams%nsnp),(1.0-inputParams%SecondPercGenoForHD)
 					Setter(ped%genotypeMap(i))=0
 				endif
 			enddo
@@ -1494,7 +1495,7 @@ subroutine InternalEdit
 				if (Setter(ped%genotypeMap(i))==1) then
 					CountMiss=ped%pedigree(ped%genotypeMap(i))%individualGenotype%numMissing()
 					if ((float(CountMiss)/inputParams%nsnp)>(1.0-inputParams%SecondPercGenoForHD)) then
-						! print *, "unsetting:",(float(CountMiss)/inputParams%nsnp),(1.0-inputParams%SecondPercGenoForHD)
+						print *, "unsetting:",(float(CountMiss)/inputParams%nsnp),(1.0-inputParams%SecondPercGenoForHD)
 						Setter(ped%genotypeMap(i))=0
 					endif
 				endif
