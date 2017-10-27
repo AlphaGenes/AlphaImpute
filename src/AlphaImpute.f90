@@ -1855,6 +1855,7 @@ if (inputParams%hmmoption /= RUN_HMM_NGS) then
 	endif
 
 	inputParams%nSnpRaw = inputParams%nsnp
+
 	call SnpCallRate
 
 
@@ -2005,6 +2006,50 @@ endif
 
 ! call ped%destroyPedigree()
 call PrintTimerTitles
+
+if (allocated(SnpIncluded)) then
+	deallocate(SnpIncluded)
+endif
+if (allocated(MSTermInfo)) then
+	deallocate(MSTermInfo)
+endif
+if (allocated(GlobalWorkPhase)) then
+	deallocate(GlobalWorkPhase)
+endif
+if (allocated(Setter)) then
+	deallocate(Setter)
+endif
+if (allocated(GlobalTmpCountInf)) then
+	deallocate(GlobalTmpCountInf)
+endif
+if (allocated(Maf)) then
+	deallocate(Maf)
+endif
+if (allocated(ProbImputeGenos)) then
+	deallocate(ProbImputeGenos)
+endif
+if (allocated(ProbImputePhase)) then
+	deallocate(ProbImputePhase)
+endif
+if (allocated(animChip)) then
+	deallocate(animChip)
+endif
+if (allocated(GenosProbs)) then
+	deallocate(GenosProbs)
+endif
+if (allocated(ProbImputeGenosHmm)) then
+	deallocate(ProbImputeGenosHmm)
+endif
+if (allocated(ProbImputePhaseHmm)) then
+	deallocate(ProbImputePhaseHmm)
+endif
+if (allocated(GenosCounts)) then
+	deallocate(GenosCounts)
+endif
+if (allocated(FullH)) then
+	deallocate(FullH)
+endif
+
 
 
 

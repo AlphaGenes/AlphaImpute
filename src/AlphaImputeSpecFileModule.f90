@@ -627,33 +627,33 @@ module AlphaImputeSpecFileModule
 					case("thresholdformissingalleles")
 						read(second(1), *,iostat=stat) this%phasedThreshold
                         if (stat /= 0) then
-                            print *,"thresholdformissingalleles set incorrectly"
+                            write(error_unit,*) "ERROR: thresholdformissingalleles set incorrectly"
                             stop
                         endif
 
 					case("phasedanimalsthreshold")
 						read(second(1), *,iostat=stat) this%phasedThreshold
                         if (stat /= 0) then
-                            print *,"phasedanimalsthreshold set incorrectly"
+                            write(error_unit,*) "ERROR: phasedanimalsthreshold set incorrectly"
                             stop
                         endif
 
 					case("thresholdimputed")
 						read(second(1), *,iostat=stat) this%imputedThreshold
                         if (stat /= 0) then
-                            print *,"ThresholdImputed set incorrectly"
+                            write(error_unit,*) "ERROR: ThresholdImputed set incorrectly"
                             stop
                         endif
 
 					case("wellimputedthreshold")
 						read(second(1), *,iostat=stat) this%imputedThreshold
                          if (stat /= 0) then
-                            print *,"wellimputedthreshold set incorrectly"
+                            write(error_unit,*) "wellimputedthreshold set incorrectly"
                             stop
                         endif
 					case("haplotypeslist")
 						if (.not. allocated(second)) then
-							write(*, "(A,A)") "No list of haploytpes specified"
+							write(*, "(A,A)") "WARNING: No list of haploytpes specified"
 						else
 							if (trim(second(1)) /= "None") then
 								this%HapList = .TRUE.
@@ -729,7 +729,10 @@ module AlphaImputeSpecFileModule
 							endif
 						endif
 					case("parallelprocessors")
-						read(second(1), *) this%useProcs
+						read(second(1), *,iostat=stat) this%useProcs
+                        if (stat /=0) then
+                            write(error_unit,*) "ERROR: Parallel Processors set Incorrectly"
+                        endif
 						if (this%useProcs > OMP_get_num_procs()) then
 							write(error_unit,*) "WARNING - more processors than are available are specified under parallelprocessors"
 							write(error_unit,*) this%useProcs, " set vs ",OMP_get_num_procs()," available"
