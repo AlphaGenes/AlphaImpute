@@ -27,705 +27,770 @@
 
 
 module AlphaImputeSpecFileModule
-    use iso_fortran_env
-    use ConstantModule
-    use baseSpecFileModule
+	use iso_fortran_env
+	use ConstantModule
+	use baseSpecFileModule
 
-    type, extends(baseSpecFile) ::  AlphaImputeInput
-        ! box 1
-        character(len=300):: PedigreeFile = "Pedigree.txt",GenotypeFile="Genotypes.txt",TrueGenotypeFile,GenderFile="None",InbredAnimalsFile="None", HapListFile="None"
-        ! character(len=300) :: resultFolderPath
-        integer(kind=1) :: TrueGenos1None0
-        logical :: PlinkFormat, VCFFormat
-
-       
-        ! box 3
-        integer(kind=int32) :: MultiHD
-        integer(kind=int32), allocatable :: nSnpByChip(:)
-        real(real32) :: PercGenoForHD !TODO don't see why this is a real
-
-        ! box 4
-        integer(kind=1) :: IntEditStat,OutOpt
-        real(real32) :: PercSnpMiss,SecondPercGenoForHD
-
-        ! box 5
-        integer(kind=1) :: NoPhasing,ManagePhaseOn1Off0,PedFreePhasing
-        integer(kind=int32) ::  nPhaseExternal,nPhaseInternal
-        character(len=:), allocatable :: PhasePath
-        integer(kind=int32), allocatable :: CoreAndTailLengths(:),CoreLengths(:)
-        real(kind=real32) :: GenotypeErrorPhase
-        logical :: largeDatasets
-        integer(kind=int32) :: PhaseSubsetSize, PhaseNIterations
-        character(len=20) :: iterateMethod
-        integer :: minoverlaphaplotype
-
-        logical :: outputonlygenotypedanimals
-        ! box 6
-        integer(kind=int32) :: InternalIterations
-        integer(kind=1) :: ConservativeHapLibImputation
-        real(kind=real32) :: WellPhasedThresh
-
-        ! box 7
-        ! idum is seed
-        integer(kind=int32) :: idum
-        integer(kind=int32) :: nHapInSubH,nRoundsHmm,HmmBurnInRound
-        real(kind=real32) :: make ,imputedThreshold
-        logical :: HapList=.FALSE.
-        integer(kind=1) :: HMMOption
-        real(kind=real32) :: phasedThreshold                   !< threshold of phase information accept
+	type, extends(baseSpecFile) ::  AlphaImputeInput
+	! box 1
+	character(len=300):: PedigreeFile = "Pedigree.txt",GenotypeFile="Genotypes.txt",TrueGenotypeFile,GenderFile="None",InbredAnimalsFile="None", HapListFile="None"
+	! character(len=300) :: resultFolderPath
+	integer(kind=1) :: TrueGenos1None0
+	logical :: PlinkFormat, VCFFormat
 
 
-        ! box 8
+	! box 3
+	integer(kind=int32) :: MultiHD
+	integer(kind=int32), allocatable :: nSnpByChip(:)
+	real(real32) :: PercGenoForHD !TODO don't see why this is a real
 
-        logical :: PreProcess
-        integer(kind=1) :: PhaseTheDataOnly
+	! box 4
+	integer(kind=1) :: IntEditStat,OutOpt
+	real(real32) :: PercSnpMiss,SecondPercGenoForHD
 
-        integer(kind=1) :: UserDefinedHD,PrePhased,RestartOption 
+	! box 5
+	integer(kind=1) :: NoPhasing,ManagePhaseOn1Off0,PedFreePhasing
+	integer(kind=int32) ::  nPhaseExternal,nPhaseInternal
+	character(len=:), allocatable :: PhasePath
+	integer(kind=int32), allocatable :: CoreAndTailLengths(:),CoreLengths(:)
+	real(kind=real32) :: GenotypeErrorPhase
+	logical :: largeDatasets
+	integer(kind=int32) :: PhaseSubsetSize, PhaseNIterations
+	character(len=20) :: iterateMethod
+	integer :: minoverlaphaplotype
 
-        integer :: AnimalFileUnit, prePhasedFileUnit, pedigreeFileUnit,genotypeFileUnit,GenderFileUnit,HapListUnit
+	logical :: outputonlygenotypedanimals
+	! box 6
+	integer(kind=int32) :: InternalIterations
+	integer(kind=1) :: ConservativeHapLibImputation
+	real(kind=real32) :: WellPhasedThresh
 
-        ! other
-        integer(kind=int32) :: nSnpRaw,nAgreeInternalHapLibElim
-        integer(kind=int32) :: useProcs
-        logical :: cluster
-
-        integer :: alphaphaseoutput
-
-        logical :: useFerdosi
-
-        logical :: modelrecomb
-
-
-
-    contains
-        procedure :: ReadInParameterFile
-        final :: destroyAlphaImputeInput
-    end type AlphaImputeInput
-
-    type(AlphaImputeInput),pointer :: defaultInput
-
-contains
-
-
-    subroutine destroyAlphaImputeInput(in)
-
-    type(AlphaImputeInput), intent(inout) :: in
-
-    if (allocated(in%PhasePath)) then
-        deallocate(in%PhasePath)
-    endif
-
-    if (allocated(in%coreLengths)) then
-        deallocate(in%CoreAndTailLengths)
-        deallocate(in%CoreLengths)
-    endif
-
-    end subroutine destroyAlphaImputeInput
-    !---------------------------------------------------------------------------
-    ! DESCRIPTION:
-    !> @brief      Constructor for AlphaImputeInput object
-    !
-    !> @details    Initialise new Bit Haplotype
-    !
-    !> @author     David Wilson, david.wilson@roslin.ed.ac.uk
-    !
-    !> @date       Nov 07, 2016
-    !
-    ! PARAMETERS:
-    !> @param[in]  specfile - The path of the specfile
-    !---------------------------------------------------------------------------
-
-    subroutine ReadInParameterFile(this,SpecFile)
-        use AlphaHouseMod, only: parseToFirstWhitespace,splitLineIntoTwoParts,toLower
-        use PARAMETERS
-        use omp_lib
-
-        class(AlphaImputeInput), intent(inout),target :: this
-        integer :: unit,IOStatus,MultipleHDpanels,i,stat
-        character(len=*), intent(in) :: SpecFile
-
-        character(len=300) :: first, line
-        character(len=:), allocatable::tag, tmptag
-        character(len=300),dimension(:),allocatable :: second
+	! box 7
+	! idum is seed
+	integer(kind=int32) :: idum
+	integer(kind=int32) :: nHapInSubH,nRoundsHmm,HmmBurnInRound
+	real(kind=real32) :: make ,imputedThreshold
+	logical :: HapList=.FALSE.
+	integer(kind=1) :: HMMOption
+	real(kind=real32) :: phasedThreshold                   !< threshold of phase information accept
 
 
-        this%useFerdosi = .false.
-        this%MultiHD = 0
-        this%nsnp= LARGESNUMBER
-        this%minoverlaphaplotype = 0
-        this%PreProcess = .false.
-        this%cluster = .false.
-        this%iterateMethod = "Off"
-        this%PhaseNIterations = 1
-        this%resultFolderPath = "Results"
-        this%modelrecomb = .true.
-        this%outputonlygenotypedanimals = .false.
-        this%TrueGenos1None0=0
-        this%hmmoption=RUN_HMM_NO
-        this%plinkinputfile = ""
-        this%nsnp = 0
-        this%PercGenoForHD=90.0
-        open(newunit=unit, file=SpecFile, action="read", status="old")
-        IOStatus = 0
-        
-        READFILE: do
-            read(unit,"(A)", IOStat=IOStatus)  line
+	! box 8
+
+	logical :: PreProcess
+	integer(kind=1) :: PhaseTheDataOnly
+
+	integer(kind=1) :: UserDefinedHD,PrePhased,RestartOption
+
+	integer :: AnimalFileUnit, prePhasedFileUnit, pedigreeFileUnit,genotypeFileUnit,GenderFileUnit,HapListUnit
+
+	! other
+	integer(kind=int32) :: nSnpRaw,nAgreeInternalHapLibElim
+	integer(kind=int32) :: useProcs
+	logical :: cluster
+
+	integer :: alphaphaseoutput
+
+	logical :: useFerdosi
+
+	logical :: modelrecomb
 
 
-            if (IOStatus /= 0) exit
+
+	contains
+		procedure :: ReadInParameterFile
+		final :: destroyAlphaImputeInput
+	end type AlphaImputeInput
+
+	type(AlphaImputeInput),pointer :: defaultInput
+
+	contains
 
 
-            if (len_trim(line)==0) then
-                CYCLE
-            end if
+		subroutine destroyAlphaImputeInput(in)
 
-            call splitLineIntoTwoParts(trim(line), first, second)
-            tag = parseToFirstWhitespace(first)
-            tmptag = trim(tag)
-            if (first(1:1)=="=" .or. first(1:1) == DEFAULTCOMMENT .or. len(trim(line))==0) then
-                cycle
-            else
-                select case(tmptag)
+			type(AlphaImputeInput), intent(inout) :: in
 
-            !runs full chromosome
-            case("plinkinputfile")
-                if (.not. allocated(second)) then
-                    write(error_unit, "(A)") "error, Plinkinputfile allocated incorrectly"
-                else
-                    if (size(second) < 2) then
-                        write(error_unit, "(A)") "error, Plinkinputfile allocated incorrectly"
-                    else 
-                        if (tolower(second(1)) == "binary") then
-                            this%plinkBinary = .true.
-                        else
-                            this%plinkBinary = .false.
+			if (allocated(in%PhasePath)) then
+				deallocate(in%PhasePath)
+			endif
+
+			if (allocated(in%coreLengths)) then
+				deallocate(in%CoreAndTailLengths)
+				deallocate(in%CoreLengths)
+			endif
+
+		end subroutine destroyAlphaImputeInput
+		!---------------------------------------------------------------------------
+		! DESCRIPTION:
+		!> @brief      Constructor for AlphaImputeInput object
+		!
+		!> @details    Initialise new Bit Haplotype
+		!
+		!> @author     David Wilson, david.wilson@roslin.ed.ac.uk
+		!
+		!> @date       Nov 07, 2016
+		!
+		! PARAMETERS:
+		!> @param[in]  specfile - The path of the specfile
+		!---------------------------------------------------------------------------
+
+		subroutine ReadInParameterFile(this,SpecFile)
+			use AlphaHouseMod, only: parseToFirstWhitespace,splitLineIntoTwoParts,toLower
+			use PARAMETERS
+			use omp_lib
+
+			class(AlphaImputeInput), intent(inout),target :: this
+			integer :: unit,IOStatus,MultipleHDpanels,i,stat
+			character(len=*), intent(in) :: SpecFile
+
+			character(len=300) :: first, line
+			character(len=:), allocatable::tag, tmptag
+			character(len=300),dimension(:),allocatable :: second
+
+
+			this%useFerdosi = .false.
+			this%MultiHD = 0
+			this%nsnp= LARGESNUMBER
+			this%minoverlaphaplotype = 0
+			this%PreProcess = .false.
+			this%cluster = .false.
+			this%iterateMethod = "Off"
+			this%PhaseNIterations = 1
+			this%resultFolderPath = "Results"
+			this%modelrecomb = .true.
+			this%outputonlygenotypedanimals = .false.
+			this%TrueGenos1None0=0
+			this%hmmoption=RUN_HMM_NO
+			this%plinkinputfile = ""
+			this%nsnp = 0
+			this%PercGenoForHD=90.0
+			open(newunit=unit, file=SpecFile, action="read", status="old")
+			IOStatus = 0
+
+			READFILE: do
+				read(unit,"(A)", IOStat=IOStatus)  line
+
+
+				if (IOStatus /= 0) exit
+
+
+				if (len_trim(line)==0) then
+					CYCLE
+				end if
+
+				call splitLineIntoTwoParts(trim(line), first, second)
+				tag = parseToFirstWhitespace(first)
+				tmptag = trim(tag)
+				if (first(1:1)=="=" .or. first(1:1) == DEFAULTCOMMENT .or. len(trim(line))==0) then
+					cycle
+				else
+					select case(tmptag)
+
+						!runs full chromosome
+					case("plinkinputfile")
+						if (.not. allocated(second)) then
+							write(error_unit, "(A)") "error, Plinkinputfile allocated incorrectly"
+						else
+							if (size(second) < 2) then
+								write(error_unit, "(A)") "error, Plinkinputfile allocated incorrectly"
+							else
+								if (tolower(second(1)) == "binary") then
+									this%plinkBinary = .true.
+								else
+									this%plinkBinary = .false.
+								endif
+
+								write(this%plinkinputfile, "(A)") second(2)
+							endif
+
+						end if
+
+						! box 1 inputs
+					case("pedigreefile")
+						if (.not. allocated(second)) then
+							write(*, "(A,A)") "No pedigree file specified. Using default filename: ", this%PedigreeFile
+						else
+							write(this%PedigreeFile, "(A)") second(1)
+						end if
+					case("genotypefile")
+						if (.not. allocated(second)) then
+							write(*, "(A,A)") "No genotype file specified. Using default filename: ", this%Genotypefile
+						else
+							write(this%Genotypefile, "(A)") second(1)
+							this%PlinkFormat = .FALSE.
+							this%VCFFormat = .FALSE.
+							if (size(second) >1) then
+								select case(trim(toLower(second(2))))
+								case('plink')
+									this%PlinkFormat = .TRUE.
+								case('vcf')
+									this%VCFFormat = .TRUE.
+								end select
+							endif
+						endif
+					case("truegenotypefile")
+						if (.not. allocated(second)) then
+							write(*, "(A,A)") "No true genotype file specified. Using default filename: ", this%TrueGenotypeFile
+						else
+							write(this%TrueGenotypeFile, "(A)") second(1)
+							if (trim(toLower(this%TrueGenotypeFile))=="none") then
+								this%TrueGenos1None0=0
+							else
+								this%TrueGenos1None0=1
+							endif
+						endif
+
+						! box 2 inputs
+					case("sexchrom")
+						this%SexOpt=9
+						this%HetGameticStatus=9
+						this%HomGameticStatus=9
+						if (toLower(trim(second(1)))=="yes") then
+							this%genderFile = second(2)
+							this%HetGameticStatus=9
+							if (toLower(trim(second(3)))=="male") then        ! Species  with heterogametic males
+								this%HetGameticStatus=1                              ! My father is heterogametic
+								this%HomGameticStatus=2                              ! My mother is homogametic
+							endif
+							if (toLower(trim(second(3)))=="female") then      ! Species with heterogametic females
+								this%HetGameticStatus=2                              ! My mother is heterogametic
+								this%HomGameticStatus=1                              ! My father is homogametic
+							endif
+							if (this%HetGameticStatus==9) then
+								print*, "Warning - heterogametic status is misspecified"
+								stop
+							endif
+							this%SexOpt=1
+						endif
+
+						! Not sex chrom
+						if (tolower(trim(second(1)))=="no") then
+							this%SexOpt=0
+						endif
+						if (this%SexOpt==9) then
+							print*, "Warning - Sex chromosome status is misspecified"
+							stop
+						endif
+
+						! box 3 inputs
+					case("nsnp")
+						read(second(1),*,iostat=stat) this%nsnp
+						if (stat /= 0) then
+
+							print*, "Error: numbersnp specified incorrectly"
+							stop 3001
+						endif
+
+					case("numbersnp")
+						read(second(1),*,iostat=stat) this%nsnp
+						if (stat /= 0) then
+
+							print*, "Error: numbersnp specified incorrectly"
+							stop 3001
+						endif
+
+					case("multiplehdpanels")
+						! Get the information of Multiple HD chips
+						! MultipleHDpanels
+						if (trim(toLower(second(1))) /= "no") then
+							read(second(1),*,iostat=stat) MultipleHDpanels
+
+							if (stat /= 0) then
+								print*, "Error: hdanimalsthreshold specified incorrectly"
+								stop
+							endif
+							if (MultipleHDpanels/=0) this%MultiHD=MultipleHDpanels
+
+							if (allocated(this%nSnpByChip)) then
+								deallocate(this%nSnpByChip)
+							endif
+							allocate(this%nSnpByChip(this%MultiHD))
+						endif
+					case("numbersnpxchip")
+						do i=1,this%MultiHD
+							read(second(i),*,iostat=stat) this%nSnpByChip(i)
+
+							if (stat /= 0) then
+								print*, "Error: hdanimalsthreshold specified incorrectly"
+								stop
+							endif
+						enddo
+
+					case("hdanimalsthreshold")
+						read(second(1),*,iostat=stat) this%PercGenoForHD
+						if (stat /= 0) then
+							print*, "Error: hdanimalsthreshold specified incorrectly"
+							stop
+						endif
+
+						! box 4
+					case("internaledit")
+						if (ToLower(trim(second(1))) == "yes") then
+							this%inteditstat = 1
+						else if (ToLower(trim(second(1))) == "no") then
+							this%inteditstat = 0
+						else
+							write(error_unit,*) "error: internaledit is incorrectly defined in the spec file"
+							stop
+						endif
+						if (this%IntEditStat==1 .AND. this%MultiHD/=0) then
+							write(error_unit,*) "IntEditStat and MultipleHDpanels are incompatible,"
+							write(error_unit,*) "Please, considere to use only one HD panel or to disable internal editing"
+							stop 4001
+						endif
+
+					case("editingparameters")
+						this%outopt=9
+						if (this%IntEditStat==1) then
+							if (size(second)<4) then
+								goto 4000
+							endif
+							read(second(1),*) this%PercGenoForHD
+							read(second(2),*) this%PercSnpMiss
+							read(second(3),*) this%SecondPercGenoForHD
+
+							if (toLower(second(4))=="allsnpout") this%outopt=1
+							if (toLower(second(4))=="editedsnpout") this%outopt=0
+							if (this%outopt==9) then
+								goto 4000
+							endif
+						else
+							! In case no editing is set and there is a single HD panel, a threshold to determine HD individuals is needed
+							if (size(second) == 4) then
+
+								read(second(1),*) this%PercGenoForHD
+								read(second(2),*) this%PercSnpMiss
+								read(second(3),*) this%SecondPercGenoForHD
+
+
+
+								if (toLower(second(4))=="allsnpout") this%outopt=1
+								if (toLower(second(4))=="editedsnpout") this%outopt=0
+							else
+								if (this%MultiHD==0) this%PercGenoForHD=90.0
+							endif
+							this%outopt=1
+						endif
+
+						cycle
+						4000 print*, "Output options incorrectly specified"
+						print*, "Beware!!!!! AlphaImpute is case sensitive"
+						stop
+
+					case("outputonlygenotypedanimals")
+						if (ToLower(trim(second(1))) == "yes") then
+							this%outputonlygenotypedanimals = .true.
+						else if (ToLower(trim(second(1))) == "no") then
+							this%outputonlygenotypedanimals = .false.
+						endif
+
+						! box 5
+					case("numberphasingruns")
+						this%noPhasing = 1
+
+						if (ToLower(trim(second(1))) == "phasedone") then  !phasedone,path,nphaseruns
+							if (size(second) /=3) then
+								goto 4051
+							endif
+							this%managephaseon1off0=0
+							if (allocated(this%phasePath)) then
+								deallocate(this%phasePath)
+							endif
+							allocate(character(len(second(2))) :: this%phasePath)
+
+							this%phasePath = second(2)
+							read(second(3),*) this%nPhaseInternal
+							this%nPhaseExternal = this%nPhaseInternal/2
+						else if(ToLower(trim(second(1))) == "nophase") then
+							this%noPhasing = 0
+							this%managephaseon1off0 = 0
+						else
+							this%managephaseon1off0 = 1
+							read(second(1),*) this%nPhaseExternal
+
+							if (this%nPhaseExternal > 40) then
+								write(error_unit,*) "Error: Too many phasing runs required. The most that this program supports is 40."
+								stop 40511
+							else if(this%nPhaseExternal < 2) then
+								write(error_unit,*) "Error: Too few phasing runs requested. The minimum this program supports is 2, 10 is reccomended."
+								stop 40512
+							endif
+						endif
+
+						this%nPhaseInternal = 2*this%nPhaseExternal
+						if (allocated(this%CoreAndTailLengths)) then
+							deallocate(this%CoreAndTailLengths)
+						endif
+						if (allocated(this%CoreLengths)) then
+							deallocate(this%CoreLengths)
+						endif
+						allocate(this%CoreAndTailLengths(this%nPhaseExternal))
+						allocate(this%CoreLengths(this%nPhaseExternal))
+
+
+						cycle
+						4051 write(error_unit,*) "NumberPhasingRuns has been set incorrectly"
+						stop 4051
+
+					case("coreandtaillengths")
+						if (.not. allocated(this%CoreAndTailLengths)) then
+							write(error_unit,*) "Error: numberofphasingruns is not defined. Please define this before CoreAndTailLengths and CoreLengths"
+							stop 40521
+						endif
+						do i=1,size(second)
+							read(second(i), *) this%CoreAndTailLengths(i)
+
+							if (this%nsnp /= 0 ) then
+								if (this%CoreAndTailLengths(i) > this%nsnp) then
+
+									write(error_unit, *) "Error: core and Tail lengths is given a number than largest number of snps specified in nsnps"
+									write(error_unit, *) this%CoreAndTailLengths(i) ," vs ", this%nsnp
+									stop 40523
+								endif
+							endif
+						enddo
+
+					case("corelengths")
+						if (.not. allocated(this%corelengths)) then
+							write(error_unit,*) "Error: numberofphasingruns is not defined. Please define this before CoreAndTailLengths and CoreLengths"
+							stop 40531
+						endif
+						if (size(second) /= size(this%corelengths)) then
+							write(error_unit,*) "Error: numberofphasingruns is set to a different number of parameters than what is specified here. \n Please set this to the same number of parameters that are given for CoreAndTailLengths and CoreLengths"
+							stop 40532
+						endif
+						do i=1,size(second)
+							read(second(i),*,iostat=stat) this%corelengths(i)
+                            if (stat /= 0) then
+                    print*, "Error: hdanimalsthreshold specified incorrectly"
+                    stop
+                endif
+						enddo
+
+					case("pedigreefreephasing")
+						if (this%nPhaseExternal /= 0) then
+							if (ToLower(trim(second(1))) == "no") then
+								this%PedFreePhasing= 0
+							elseif (ToLower(trim(second(1))) == "yes") then
+								this%PedFreePhasing = 1
+							else
+								write(error_unit,*) "Error: PedFreePhasing has been set incorrectly."
+								stop 4054
+							endif
+						endif
+
+					case("genotypeerror")
+						if (this%nPhaseExternal /= 0) then
+							read(second(1), *, iostat=stat) this%GenotypeErrorPhase
+                            if (stat /= 0) then
+                    print*, "Error: hdanimalsthreshold specified incorrectly"
+                    stop
+                endif
+						endif
+
+					case("numberofprocessorsavailable")
+						read(second(1),*) this%useProcs
+						write(error_unit,*) "WARNING: numberofprocessorsavailable is legacy and will be removed in future versions. Please use option ParallelProcessors instead"
+						if (this%useProcs > OMP_get_num_procs()) then
+							write(error_unit,*) "WARNING - more processors than are available are specified under numberofprocessorsavailable"
+							write(error_unit,*) this%useProcs, " specified, ", OMP_get_num_procs(), " available."
+						endif
+
+					case("largedatasets")
+						if (ToLower(trim(second(1)))== "yes") then
+							this%largedatasets=.true.
+							read(second(2),*) this%PhaseSubsetSize
+							read(second(3),*) this%PhaseNIterations
+							if (size(second) < 4 ) then
+								this%iterateMethod  = "RandomOrder"
+							else
+								if (ToLower(trim(second(4)))== "off") then
+									this%iterateMethod  = "Off"
+								else if (ToLower(trim(second(4)))== "randomorder") then
+									this%iterateMethod  = "RandomOrder"
+								else if (ToLower(trim(second(4)))== "inputorder") then
+									this%iterateMethod  = "InputOrder"
+								else
+									this%iterateMethod= "Off"
+
+								endif
+							endif
+
+						else
+							this%largedatasets=.false.
+
+						endif
+
+					case("minoverlaphaplotype")
+						read(second(1),*) this%minoverlaphaplotype
+						if (this%minoverlaphaplotype < 0) then
+							write(error_unit,*) "ERROR: Min minoverlap haplotype size is set incorrectly!"
+						endif
+
+					case("alphaphaseoutput")
+						if (ToLower(trim(second(1))) == "no") then
+							this%alphaphaseoutput= 0
+						elseif (ToLower(trim(second(1))) == "yes") then
+							this%alphaphaseoutput = 1
+						elseif (ToLower(trim(second(1))) == "binary") then
+							this%alphaphaseoutput = 2
+						elseif (ToLower(trim(second(1))) == "verbose") then
+							this%alphaphaseoutput = 3
+						else
+							write(error_unit,*) "Error: alphaphaseoutput has been set incorrectly."
+							stop 4054
+						endif
+
+						! box 6
+					case("internaliterations")
+						read(second(1), *) this%InternalIterations
+
+					case("conservativehaplotypelibraryuse")
+						if(ToLower(trim(second(1))) == "no") then
+							this%ConservativeHapLibImputation = 0
+						else if (ToLower(trim(second(1))) == "yes") then
+							this%ConservativeHapLibImputation = 1
+						else
+							write (error_unit, *) "ConservativeHaplotypeLibraryUse not correctly set"
+							stop
+						endif
+
+					case("wellphasedthreshold")
+						read(second(1),*) this%WellPhasedThresh
+
+						! box 7
+					case("hmmoption")
+						this%hmmoption=RUN_HMM_NULL
+						if (toLower(trim(second(1)))=='no') this%hmmoption=RUN_HMM_NO
+						if (toLower(trim(second(1)))=='yes') this%hmmoption=RUN_HMM_YES
+						if (toLower(trim(second(1)))=='only') this%hmmoption=RUN_HMM_ONLY
+						if (toLower(trim(second(1)))=='Prephase') this%hmmoption=RUN_HMM_PREPHASE
+						if (toLower(trim(second(1)))=="ngs") this%hmmoption=RUN_HMM_NGS
+						if (this%hmmoption==RUN_HMM_NULL) then
+							write(error_unit,*), "this%hmmoption not correctly specified"
+							stop
+						endif
+
+					case("hmmparameters")
+						if (.not. allocated(second)) then
+							write(error_unit,*) "templatehaplotypes not set correctly"
+							stop
+						endif
+
+						if (size(second) /= 5) then
+							write(error_unit,*) "hmmparameters not set correctly"
+							stop
+						endif
+
+						read(second(1), *) this%nHapInSubH
+						read(second(2), *) this%HmmBurnInRound
+						read(second(3), *) this%nRoundsHMM
+						read(second(4), *) this%useProcs
+						if (this%useProcs > OMP_get_num_procs()) then
+							write(error_unit,*) "WARNING - more processors than are available are specified under parallelprocessors"
+							write(error_unit,*) this%useProcs, " set vs ",OMP_get_num_procs()," available"
+						endif
+						read(second(5), * ) this%idum
+
+					case("templatehaplotypes")
+						if (.not. allocated(second)) then
+							write(error_unit,*) "templatehaplotypes not set correctly"
+							stop
+						endif
+						read(second(1), *,iostat=stat) this%nHapInSubH
+                        if (stat /= 0) then
+                            print *,"templatehaplotypes set incorrectly"
+                            stop
                         endif
 
-                        write(this%plinkinputfile, "(A)") second(2)
-                    endif
-
-                end if
-            
-                ! box 1 inputs
-            case("pedigreefile")
-                if (.not. allocated(second)) then
-                    write(*, "(A,A)") "No pedigree file specified. Using default filename: ", this%PedigreeFile
-                else
-                    write(this%PedigreeFile, "(A)") second(1)
-                end if
-            case("genotypefile")
-                if (.not. allocated(second)) then
-                    write(*, "(A,A)") "No genotype file specified. Using default filename: ", this%Genotypefile
-                else
-                    write(this%Genotypefile, "(A)") second(1)
-                    this%PlinkFormat = .FALSE.
-                    this%VCFFormat = .FALSE.
-                    if (size(second) >1) then
-                        select case(trim(toLower(second(2))))
-                        case('plink')
-                            this%PlinkFormat = .TRUE.
-                        case('vcf')
-                            this%VCFFormat = .TRUE.
-                        end select
-                    endif
-                endif
-            case("truegenotypefile")
-                if (.not. allocated(second)) then
-                    write(*, "(A,A)") "No true genotype file specified. Using default filename: ", this%TrueGenotypeFile
-                else
-                    write(this%TrueGenotypeFile, "(A)") second(1)
-                    if (trim(toLower(this%TrueGenotypeFile))=="none") then
-                        this%TrueGenos1None0=0
-                    else
-                        this%TrueGenos1None0=1
-                    endif
-                endif
-
-                ! box 2 inputs
-            case("sexchrom")
-                this%SexOpt=9
-                this%HetGameticStatus=9
-                this%HomGameticStatus=9
-                if (toLower(trim(second(1)))=="yes") then
-                    this%genderFile = second(2)
-                    this%HetGameticStatus=9
-                    if (toLower(trim(second(3)))=="male") then        ! Species  with heterogametic males
-                        this%HetGameticStatus=1                              ! My father is heterogametic
-                        this%HomGameticStatus=2                              ! My mother is homogametic
-                    endif
-                    if (toLower(trim(second(3)))=="female") then      ! Species with heterogametic females
-                        this%HetGameticStatus=2                              ! My mother is heterogametic
-                        this%HomGameticStatus=1                              ! My father is homogametic
-                    endif
-                    if (this%HetGameticStatus==9) then
-                        print*, "Warning - heterogametic status is misspecified"
-                        stop
-                    endif
-                    this%SexOpt=1
-                endif
-
-                ! Not sex chrom
-                if (tolower(trim(second(1)))=="no") then
-                    this%SexOpt=0
-                endif
-                if (this%SexOpt==9) then
-                    print*, "Warning - Sex chromosome status is misspecified"
-                    stop
-                endif
-
-                ! box 3 inputs
-            case("nsnp")
-                read(second(1),*) this%nsnp
-                if (this%nsnp>240000) then
-                    print*, "Contact John Hickey if you want to do more than 240,000 SNP"
-                    stop 3001
-                endif
-
-            case("numbersnp")
-                read(second(1),*,iostat=stat) this%nsnp
-                if (stat /= 0) then
-                    
-                    print*, "Error: numbersnp specified incorrectly"
-                    stop 3001
-                endif
-
-            case("multiplehdpanels")
-                ! Get the information of Multiple HD chips
-                ! MultipleHDpanels
-                if (trim(toLower(second(1))) /= "no") then
-                    read(second(1),*) MultipleHDpanels
-                    if (MultipleHDpanels/=0) this%MultiHD=MultipleHDpanels
-
-                    if (allocated(this%nSnpByChip)) then
-                        deallocate(this%nSnpByChip)
-                    endif
-                    allocate(this%nSnpByChip(this%MultiHD))
-                endif
-            case("numbersnpxchip")
-                do i=1,this%MultiHD
-                    read(second(i),*) this%nSnpByChip(i)
-                enddo
-            case("hdanimalsthreshold")
-                read(second(1),*) this%PercGenoForHD
-
-                ! box 4
-            case("internaledit")
-                if (ToLower(trim(second(1))) == "yes") then
-                    this%inteditstat = 1
-                else if (ToLower(trim(second(1))) == "no") then
-                    this%inteditstat = 0
-                else
-                    write(error_unit,*) "error: internaledit is incorrectly defined in the spec file"
-                    stop
-                endif
-                if (this%IntEditStat==1 .AND. this%MultiHD/=0) then
-                    write(error_unit,*) "IntEditStat and MultipleHDpanels are incompatible,"
-                    write(error_unit,*) "Please, considere to use only one HD panel or to disable internal editing"
-                    stop 4001
-                endif
-
-            case("editingparameters")
-                this%outopt=9
-                if (this%IntEditStat==1) then
-                    if (size(second)<4) then
-                        goto 4000
-                    endif
-                    read(second(1),*) this%PercGenoForHD
-                    read(second(2),*) this%PercSnpMiss
-                    read(second(3),*) this%SecondPercGenoForHD
-                    if (toLower(second(4))=="allsnpout") this%outopt=1
-                    if (toLower(second(4))=="editedsnpout") this%outopt=0
-                    if (this%outopt==9) then
-                        goto 4000
-                    endif
-                else
-                    ! In case no editing is set and there is a single HD panel, a threshold to determine HD individuals is needed
-                    
-                    if (this%MultiHD==0) this%PercGenoForHD=90.0
-                    this%outopt=1
-                endif
-               
-                cycle
-                4000 print*, "Output options incorrectly specified"
-                print*, "Beware!!!!! AlphaImpute is case sensitive"
-                stop
-
-            case("outputonlygenotypedanimals")
-                if (ToLower(trim(second(1))) == "yes") then
-                    this%outputonlygenotypedanimals = .true.
-                else if (ToLower(trim(second(1))) == "no") then
-                    this%outputonlygenotypedanimals = .false.
-                endif
-
-                ! box 5
-            case("numberphasingruns")
-                this%noPhasing = 1
-
-                if (ToLower(trim(second(1))) == "phasedone") then  !phasedone,path,nphaseruns
-                    if (size(second) /=3) then
-                        goto 4051
-                    endif
-                    this%managephaseon1off0=0
-                    if (allocated(this%phasePath)) then
-                        deallocate(this%phasePath)
-                    endif
-                    allocate(character(len(second(2))) :: this%phasePath)
-
-                    this%phasePath = second(2)
-                    read(second(3),*) this%nPhaseInternal
-                    this%nPhaseExternal = this%nPhaseInternal/2
-                else if(ToLower(trim(second(1))) == "nophase") then
-                    this%noPhasing = 0
-                    this%managephaseon1off0 = 0
-                else
-                    this%managephaseon1off0 = 1
-                    read(second(1),*) this%nPhaseExternal
-
-                    if (this%nPhaseExternal > 40) then
-                        write(error_unit,*) "Error: Too many phasing runs required. The most that this program supports is 40."
-                        stop 40511
-                    else if(this%nPhaseExternal < 2) then
-                        write(error_unit,*) "Error: Too few phasing runs requested. The minimum this program supports is 2, 10 is reccomended."
-                        stop 40512
-                    endif
-                endif
-
-                    this%nPhaseInternal = 2*this%nPhaseExternal
-                    if (allocated(this%CoreAndTailLengths)) then
-                        deallocate(this%CoreAndTailLengths)
-                    endif
-                    if (allocated(this%CoreLengths)) then
-                        deallocate(this%CoreLengths)
-                    endif
-                    allocate(this%CoreAndTailLengths(this%nPhaseExternal))
-                    allocate(this%CoreLengths(this%nPhaseExternal))
-
-                
-                cycle
-                4051 write(error_unit,*) "NumberPhasingRuns has been set incorrectly"
-                stop 4051
-
-            case("coreandtaillengths")
-                if (.not. allocated(this%CoreAndTailLengths)) then
-                    write(error_unit,*) "Error: numberofphasingruns is not defined. Please define this before CoreAndTailLengths and CoreLengths"
-                    stop 40521
-                endif
-                do i=1,size(second)
-                    read(second(i), *) this%CoreAndTailLengths(i)
-
-                    if (this%nsnp /= 0 ) then
-                        if (this%CoreAndTailLengths(i) > this%nsnp) then
-
-                            write(error_unit, *) "Error: core and Tail lengths is given a number than largest number of snps specified in nsnps"
-                            write(error_unit, *) this%CoreAndTailLengths(i) ," vs ", this%nsnp
-                            stop 40523
+					case("burninrounds")
+						read(second(1), *,iostat=stat) this%HmmBurnInRound
+                        if (stat /= 0) then
+                            print *,"burninrounds set incorrectly"
+                            stop
                         endif
-                    endif
-                enddo
-
-            case("corelengths")
-                if (.not. allocated(this%corelengths)) then
-                    write(error_unit,*) "Error: numberofphasingruns is not defined. Please define this before CoreAndTailLengths and CoreLengths"
-                    stop 40531
-                endif
-                if (size(second) /= size(this%corelengths)) then
-                    write(error_unit,*) "Error: numberofphasingruns is set to a different number of parameters than what is specified here. \n Please set this to the same number of parameters that are given for CoreAndTailLengths and CoreLengths"
-                    stop 40532
-                endif
-                do i=1,size(second)
-                    read(second(i),*) this%corelengths(i)
-                enddo
-
-            case("pedigreefreephasing")
-                if (this%nPhaseExternal /= 0) then
-                    if (ToLower(trim(second(1))) == "no") then
-                        this%PedFreePhasing= 0
-                    elseif (ToLower(trim(second(1))) == "yes") then
-                        this%PedFreePhasing = 1
-                    else
-                        write(error_unit,*) "Error: PedFreePhasing has been set incorrectly."
-                        stop 4054
-                    endif
-                endif
-
-            case("genotypeerror")
-                if (this%nPhaseExternal /= 0) then
-                    read(second(1), *) this%GenotypeErrorPhase
-                endif
-
-            case("numberofprocessorsavailable")
-                read(second(1),*) this%useProcs
-                write(error_unit,*) "WARNING: numberofprocessorsavailable is legacy and will be removed in future versions. Please use option ParallelProcessors instead"
-                if (this%useProcs > OMP_get_num_procs()) then
-                    write(error_unit,*) "WARNING - more processors than are available are specified under numberofprocessorsavailable"
-                    write(error_unit,*) this%useProcs, " specified, ", OMP_get_num_procs(), " available."
-                endif
-
-            case("largedatasets")
-                if (ToLower(trim(second(1)))== "yes") then
-                    this%largedatasets=.true.
-                    read(second(2),*) this%PhaseSubsetSize
-                    read(second(3),*) this%PhaseNIterations
-                    if (size(second) < 4 ) then
-                        this%iterateMethod  = "RandomOrder"
-                    else 
-                        if (ToLower(trim(second(4)))== "off") then
-                            this%iterateMethod  = "Off"
-                        else if (ToLower(trim(second(4)))== "randomorder") then
-                            this%iterateMethod  = "RandomOrder"
-                        else if (ToLower(trim(second(4)))== "inputorder") then
-                            this%iterateMethod  = "InputOrder"
-                        else
-                            this%iterateMethod= "Off"
-
+					case("rounds")
+						read(second(1), *,iostat=stat)this%nRoundsHMM
+                        if (stat /= 0) then
+                            print *,"rounds set incorrectly"
+                            stop
                         endif
-                    endif
 
-                else
-                    this%largedatasets=.false.
+					case("seed")
+						read(second(1), *,iostat=stat)this%idum
+                        if (stat /= 0) then
+                            print *,"seed set incorrectly"
+                            stop
+                        endif
 
-                endif
-            
-            case("minoverlaphaplotype")
-                read(second(1),*) this%minoverlaphaplotype
-                if (this%minoverlaphaplotype < 0) then
-                    write(error_unit,*) "ERROR: Min minoverlap haplotype size is set incorrectly!"
-                endif
+					case("thresholdformissingalleles")
+						read(second(1), *,iostat=stat) this%phasedThreshold
+                        if (stat /= 0) then
+                            print *,"thresholdformissingalleles set incorrectly"
+                            stop
+                        endif
 
-            case("alphaphaseoutput")
-                 if (ToLower(trim(second(1))) == "no") then
-                        this%alphaphaseoutput= 0
-                    elseif (ToLower(trim(second(1))) == "yes") then
-                        this%alphaphaseoutput = 1
-                    elseif (ToLower(trim(second(1))) == "binary") then
-                        this%alphaphaseoutput = 2
-                    elseif (ToLower(trim(second(1))) == "verbose") then
-                        this%alphaphaseoutput = 3
-                    else
-                        write(error_unit,*) "Error: alphaphaseoutput has been set incorrectly."
-                        stop 4054
-                    endif
+					case("phasedanimalsthreshold")
+						read(second(1), *,iostat=stat) this%phasedThreshold
+                        if (stat /= 0) then
+                            print *,"phasedanimalsthreshold set incorrectly"
+                            stop
+                        endif
 
-                ! box 6
-            case("internaliterations")
-                read(second(1), *) this%InternalIterations
+					case("thresholdimputed")
+						read(second(1), *,iostat=stat) this%imputedThreshold
+                        if (stat /= 0) then
+                            print *,"ThresholdImputed set incorrectly"
+                            stop
+                        endif
 
-            case("conservativehaplotypelibraryuse")
-                if(ToLower(trim(second(1))) == "no") then
-                    this%ConservativeHapLibImputation = 0
-                else if (ToLower(trim(second(1))) == "yes") then
-                    this%ConservativeHapLibImputation = 1
-                else
-                    write (error_unit, *) "ConservativeHaplotypeLibraryUse not correctly set"
-                    stop
-                endif
+					case("wellimputedthreshold")
+						read(second(1), *) this%imputedThreshold
+					case("haplotypeslist")
+						if (.not. allocated(second)) then
+							write(*, "(A,A)") "No list of haploytpes specified"
+						else
+							if (trim(second(1)) /= "None") then
+								this%HapList = .TRUE.
+								this%HapListFile = trim(second(1))
+								open (newunit=this%HapListUnit, file=this%HapListFile, status='old')
+							endif
+						endif
 
-            case("wellphasedthreshold")
-                read(second(1),*) this%WellPhasedThresh
+						!  box 8
+					case("preprocessdataonly")
+						if (ToLower(second(1))=="no") then
+							this%PreProcess=.FALSE.
+						else
+							if (ToLower(second(1))=="yes") then
+								this%PreProcess=.TRUE.
+							else
+								write(error_unit,*) "Stop - Preprocess of data option incorrectly specified"
+								stop
+							endif
+						endif
 
-            ! box 7
-            case("hmmoption")
-                this%hmmoption=RUN_HMM_NULL
-                if (toLower(trim(second(1)))=='no') this%hmmoption=RUN_HMM_NO
-                if (toLower(trim(second(1)))=='yes') this%hmmoption=RUN_HMM_YES
-                if (toLower(trim(second(1)))=='only') this%hmmoption=RUN_HMM_ONLY
-                if (toLower(trim(second(1)))=='Prephase') this%hmmoption=RUN_HMM_PREPHASE
-                if (toLower(trim(second(1)))=="ngs") this%hmmoption=RUN_HMM_NGS
-                if (this%hmmoption==RUN_HMM_NULL) then
-                    write(error_unit,*), "this%hmmoption not correctly specified"
-                    stop
-                endif
+					case("phasingonly")
+						if (toLower(trim(second(1)))=="no") then
+							this%PhaseTheDataOnly=0
+						else
+							if (toLower(trim(second(1)))=="yes") then
+								this%PhaseTheDataOnly=1
+							else
+								write(error_unit,*) "Stop - Phasing only option incorrectly specified"
+								stop
+							endif
+						endif
 
-            case("hmmparameters")
-                if (.not. allocated(second)) then
-                    write(error_unit,*) "templatehaplotypes not set correctly"
-                    stop
-                endif
+					case("userdefinedalphaphaseanimalsfile")
+						this%UserDefinedHD=0
+						if (tolower(trim(second(1)))/="none") then
+							this%UserDefinedHD=1
+							open (newunit=this%AnimalFileUnit,file=trim(second(1)),status="old")
+						endif
 
-                if (size(second) /= 5) then
-                    write(error_unit,*) "hmmparameters not set correctly"
-                    stop 
-                endif
+					case("prephasedfile")
+						if (toLower(trim(second(1)))=="none") then
+							this%PrePhased=0
+						else
+							this%PrePhased=1
+							this%InbredAnimalsFile = second(1)
+							open (newunit=this%prePhasedFileUnit,file=trim(second(1)),status="old")
+						endif
+					case("bypassgeneprob")
+						write(error_unit,*) "The Geneprob has been moved to legacy and is no longer in use"
+					case("restartoption")
+						read(second(1),*) this%restartOption
 
-                read(second(1), *) this%nHapInSubH
-                read(second(2), *) this%HmmBurnInRound
-                read(second(3), *) this%nRoundsHMM
-                read(second(4), *) this%useProcs
-                if (this%useProcs > OMP_get_num_procs()) then
-                    write(error_unit,*) "WARNING - more processors than are available are specified under parallelprocessors"
-                    write(error_unit,*) this%useProcs, " set vs ",OMP_get_num_procs()," available"
-                endif
-                read(second(5), * ) this%idum
-
-            case("templatehaplotypes")
-                if (.not. allocated(second)) then
-                    write(error_unit,*) "templatehaplotypes not set correctly"
-                    stop
-                endif
-                read(second(1), *) this%nHapInSubH
-
-            case("burninrounds")
-                read(second(1), *) this%HmmBurnInRound
-            case("rounds")
-                read(second(1), *)this%nRoundsHMM
-            
-            case("seed")
-                read(second(1), *)this%idum
-
-            case("thresholdformissingalleles")
-                read(second(1), *) this%phasedThreshold
-
-            case("phasedanimalsthreshold")
-                read(second(1), *) this%phasedThreshold
-                
-            case("thresholdimputed")
-                read(second(1), *) this%imputedThreshold
-                  
-            case("wellimputedthreshold")
-                read(second(1), *) this%imputedThreshold
-            case("haplotypeslist")
-                if (.not. allocated(second)) then
-                    write(*, "(A,A)") "No list of haploytpes specified"
-                else
-                    if (trim(second(1)) /= "None") then
-                        this%HapList = .TRUE.
-                        this%HapListFile = trim(second(1))
-                        open (newunit=this%HapListUnit, file=this%HapListFile, status='old')
-                    endif
-                endif
-
-            !  box 8
-            case("preprocessdataonly")
-                if (ToLower(second(1))=="no") then
-                    this%PreProcess=.FALSE.
-                else
-                    if (ToLower(second(1))=="yes") then
-                        this%PreProcess=.TRUE.
-                    else
-                        write(error_unit,*) "Stop - Preprocess of data option incorrectly specified"
-                        stop
-                    endif
-                endif
-
-            case("phasingonly")
-                if (toLower(trim(second(1)))=="no") then
-                    this%PhaseTheDataOnly=0
-                else
-                    if (toLower(trim(second(1)))=="yes") then
-                        this%PhaseTheDataOnly=1
-                    else
-                        write(error_unit,*) "Stop - Phasing only option incorrectly specified"
-                        stop
-                    endif
-                endif
-
-            case("userdefinedalphaphaseanimalsfile")
-                this%UserDefinedHD=0
-                if (tolower(trim(second(1)))/="none") then
-                    this%UserDefinedHD=1
-                    open (newunit=this%AnimalFileUnit,file=trim(second(1)),status="old")
-                endif
-
-            case("prephasedfile")
-                if (toLower(trim(second(1)))=="none") then
-                    this%PrePhased=0
-                else
-                    this%PrePhased=1
-                    this%InbredAnimalsFile = second(1)
-                    open (newunit=this%prePhasedFileUnit,file=trim(second(1)),status="old")
-                endif
-            case("bypassgeneprob")
-                write(error_unit,*) "The Geneprob has been moved to legacy and is no longer in use"
-            case("restartoption")
-                read(second(1),*) this%restartOption
-
-                if (this%restartoption >2) then
-                    write(error_unit,*) "Error - RestartOption can only be the following:"
-                    write(error_unit,*) "0 - run all"
-                    write(error_unit,*) "1 - make dirs run phasing"
-                    write(error_unit,*) "2 - run imputation/hmm"
-                    stop
-                endif
+						if (this%restartoption >2) then
+							write(error_unit,*) "Error - RestartOption can only be the following:"
+							write(error_unit,*) "0 - run all"
+							write(error_unit,*) "1 - make dirs run phasing"
+							write(error_unit,*) "2 - run imputation/hmm"
+							stop
+						endif
 
 
 
 
-            case("cluster")
-               if (toLower(trim(second(1)))=="no") then
-                    this%cluster=.false.
-                else
-                    if (toLower(trim(second(1)))=="yes") then
-                        this%cluster=.true.
-                    else
-                        write(error_unit,*) "Error: Cluster incorrectly specified, please use yes or no"
-                    endif
-                endif
-            case("parallelprocessors")
-                read(second(1), *) this%useProcs
-                if (this%useProcs > OMP_get_num_procs()) then
-                    write(error_unit,*) "WARNING - more processors than are available are specified under parallelprocessors"
-                    write(error_unit,*) this%useProcs, " set vs ",OMP_get_num_procs()," available"
-                endif
-            case("resultfolderpath")
-                read(second(1), *) this%resultFolderPath                
-            case default
-                write(*,"(A,A)") trim(tag), " is not valid for the AlphaImpute Spec File."
-                cycle
+					case("cluster")
+						if (toLower(trim(second(1)))=="no") then
+							this%cluster=.false.
+						else
+							if (toLower(trim(second(1)))=="yes") then
+								this%cluster=.true.
+							else
+								write(error_unit,*) "Error: Cluster incorrectly specified, please use yes or no"
+							endif
+						endif
+					case("parallelprocessors")
+						read(second(1), *) this%useProcs
+						if (this%useProcs > OMP_get_num_procs()) then
+							write(error_unit,*) "WARNING - more processors than are available are specified under parallelprocessors"
+							write(error_unit,*) this%useProcs, " set vs ",OMP_get_num_procs()," available"
+						endif
+					case("resultfolderpath")
+						read(second(1), *) this%resultFolderPath
+						case default
+						write(*,"(A,A)") trim(tag), " is not valid for the AlphaImpute Spec File."
+						cycle
 
-            case("useferdosi")
-               if(ToLower(trim(second(1))) == "no") then
-                    this%useFerdosi = .false.
-                else if (ToLower(trim(second(1))) == "yes") then
-                    this%useFerdosi = .true.
-                endif
-             case("modelrecomb")
-               if(ToLower(trim(second(1))) == "no") then
-                    this%modelrecomb = .false.
-                else if (ToLower(trim(second(1))) == "yes") then
-                    this%modelrecomb = .true.
-                endif
-                
-                
-            end select
-        end if
-    end do READFILE
-    deallocate(tag)
-    deallocate(tmptag)
-
-    if (this%plinkinputfile == "") then
-        open (newUnit=this%pedigreeFileUnit,file=trim(this%PedigreeFile),status="old")
-        open (newUnit=this%genotypeFileUnit,file=trim(this%GenotypeFile),status="old")
-    endif
-    if (this%SexOpt==1) open (newUnit=this%genderFileUnit,file=trim(this%GenderFile),status="old")
-
-    ! Set parameters for parallelisation
-    if (this%nPhaseInternal==2) then
-        this%nAgreeInternalHapLibElim=1
-    endif
-    if (this%nPhaseInternal==4) then
-        this%nAgreeInternalHapLibElim=2
-    endif
-    if (this%nPhaseInternal==6) then
-        this%nAgreeInternalHapLibElim=3
-    endif
-    if (this%nPhaseInternal>6) then
-        this%nAgreeInternalHapLibElim=4
-    endif
+					case("useferdosi")
+						if(ToLower(trim(second(1))) == "no") then
+							this%useFerdosi = .false.
+						else if (ToLower(trim(second(1))) == "yes") then
+							this%useFerdosi = .true.
+						endif
+					case("modelrecomb")
+						if(ToLower(trim(second(1))) == "no") then
+							this%modelrecomb = .false.
+						else if (ToLower(trim(second(1))) == "yes") then
+							this%modelrecomb = .true.
+						endif
 
 
-     this%PercGenoForHD=this%PercGenoForHD/100
-    this%PercSnpMiss=this%PercSnpMiss/100
-    this%SecondPercGenoForHD=this%SecondPercGenoForHD/100
+					end select
+				end if
+			end do READFILE
+			deallocate(tag)
+			deallocate(tmptag)
 
-    
+			if (this%plinkinputfile == "") then
+				open (newUnit=this%pedigreeFileUnit,file=trim(this%PedigreeFile),status="old")
+				open (newUnit=this%genotypeFileUnit,file=trim(this%GenotypeFile),status="old")
+			endif
+			if (this%SexOpt==1) open (newUnit=this%genderFileUnit,file=trim(this%GenderFile),status="old")
+
+			! Set parameters for parallelisation
+			if (this%nPhaseInternal==2) then
+				this%nAgreeInternalHapLibElim=1
+			endif
+			if (this%nPhaseInternal==4) then
+				this%nAgreeInternalHapLibElim=2
+			endif
+			if (this%nPhaseInternal==6) then
+				this%nAgreeInternalHapLibElim=3
+			endif
+			if (this%nPhaseInternal>6) then
+				this%nAgreeInternalHapLibElim=4
+			endif
 
 
-     if (.not. allocated(this%CoreAndTailLengths) .or. .not. allocated(this%CoreLengths)) then
-        write(error_unit,*) "ERROR - CoreLengths or CoreAndTailLengths have not been specified"
-        stop 1000
-    endif
-    
-    !$  CALL OMP_SET_NUM_THREADS(this%useProcs)
-end subroutine ReadInParameterFile
+			this%PercGenoForHD=this%PercGenoForHD/100
+			this%PercSnpMiss=this%PercSnpMiss/100
+			this%SecondPercGenoForHD=this%SecondPercGenoForHD/100
+
+
+
+
+			if (.not. allocated(this%CoreAndTailLengths) .or. .not. allocated(this%CoreLengths)) then
+				write(error_unit,*) "ERROR - CoreLengths or CoreAndTailLengths have not been specified"
+				stop 1000
+			endif
+
+			!$  CALL OMP_SET_NUM_THREADS(this%useProcs)
+		end subroutine ReadInParameterFile
 
 end module AlphaImputeSpecFileModule
+
