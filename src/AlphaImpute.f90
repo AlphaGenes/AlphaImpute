@@ -408,7 +408,7 @@ module AlphaImputeModule
 
 				do i=1,ped%pedigreeSize-ped%nDummys
 					do e=1,2
-						parID=ped%pedigree(i)%getSireDamNewIDByIndex(e+1)
+						parID=ped%pedigree(i)%getSireDamNewIDByIndexNoDummy(e+1)
 						if (ParId==0) then
 							do j=1,nSnpIterate
 								block
