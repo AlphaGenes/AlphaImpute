@@ -1817,6 +1817,7 @@ end subroutine PrintTimerTitles
 subroutine runAlphaImpute(in, pedIn)
 
 	use Global
+	use ConstantModule
 	use AlphaImputeInputOutputModule
 	use AlphaImputeSpecFileModule
 	use Imputation
@@ -1838,7 +1839,7 @@ subroutine runAlphaImpute(in, pedIn)
 	class default
 	write(error_unit, *) "ERROR: AlphaImpute given correct object type as input"
 	call abort()
-end select
+	end select
 
 
 

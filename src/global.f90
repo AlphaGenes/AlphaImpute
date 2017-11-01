@@ -1,6 +1,6 @@
 
 module PARAMETERS
-    ! TODO params only used in read in params, but where to put them? 
+    ! TODO params only used in read in params, but where to put them?
     integer, parameter :: OPT_RESTART_ALL=0
     integer, parameter :: OPT_RESTART_PHASING=1
     integer, parameter :: OPT_RESTART_IMPUTATION=2
@@ -12,7 +12,6 @@ module PARAMETERS
     integer, parameter :: RUN_HMM_PREPHASE=4
     integer, parameter :: RUN_HMM_NGS=5
 
-    integer, parameter :: MAX_READS_COUNT=100 ! Maximum number of reads for reference and alternative alleles
     integer,parameter :: TestVersion=0      !If 1 then this is a development version with intermediate checking, if 0 it is not
 
     logical,parameter :: PicVersion=.FALSE. !If 1 then this is a PIC version with suitability for their system, if 0 it is not
