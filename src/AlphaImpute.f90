@@ -1844,15 +1844,21 @@ end select
 
 inputParams => defaultInput
 
-
-if (inputParams%hmmoption /= RUN_HMM_NGS) then
-	if (inputParams%restartOption<OPT_RESTART_IMPUTATION) call MakeDirectories(RUN_HMM_NULL)
-
+	if (inputParams%hmmoption /= RUN_HMM_NGS) then 
+		if (inputParams%restartOption<OPT_RESTART_IMPUTATION) call MakeDirectories(RUN_HMM_NULL)
+	else
+		call MakeDirectories(RUN_HMM_NGS)
+	endif
+	
 	if (.not. present(pedIn)) then
 		call ReadInData
 	else
 		ped = pedIn
 	endif
+
+
+if (inputParams%hmmoption /= RUN_HMM_NGS) then
+
 
 	inputParams%nSnpRaw = inputParams%nsnp
 
@@ -1971,8 +1977,7 @@ if (inputParams%hmmoption /= RUN_HMM_NGS) then
 	endif
 
 else if (inputParams%hmmoption == RUN_HMM_NGS) then
-	call MakeDirectories(RUN_HMM_NGS)
-	call ReadInData
+	
 	call SnpCallRate
 	allocate(SnpIncluded(inputParams%nsnp))
 	call CheckParentage
