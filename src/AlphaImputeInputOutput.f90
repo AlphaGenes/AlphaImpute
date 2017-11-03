@@ -226,31 +226,15 @@ contains
             call system(RMDIR // " Miscellaneous")
             call system(RMDIR // " Phasing")
             call system(RMDIR // " " // trim(inputParams%resultFolderPath))
-            call system(RMDIR // " InputFiles")
-            call system(RMDIR // " GeneProb")
-            call system(RMDIR // " IterateGeneProb")
 
             call system(MD // " Phasing")
             call system(MD // " Miscellaneous")
             call system(MD // " " // trim(inputParams%resultFolderPath))
-            call system(MD // " InputFiles")
-            call system(MD // " GeneProb")
-            call system(MD // " IterateGeneProb")
 
-            do i=1,inputParams%useProcs
-                write (FolderName,'("GeneProb"i0)')i
-                ! call system ("mkdir GeneProb/" // FolderName)       !here
-                call system(MD // " GeneProb" // DASH // FolderName)
-            enddo
             do i=1,inputParams%nPhaseInternal
                 write (FolderName,'("Phase"i0)')i
                 ! call system ("mkdir Phasing/" // FolderName)
                 call system(MD // " Phasing" // DASH // FolderName)
-            enddo
-            do i=1,inputParams%useProcs
-                write (FolderName,'("GeneProb"i0)')i            !here
-                ! call system ("mkdir IterateGeneProb/" // FolderName)    !here
-                call system(MD // " IterateGeneProb" // DASH // FolderName)
             enddo
         endif
 
