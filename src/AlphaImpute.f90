@@ -657,7 +657,7 @@ module AlphaImputeModule
 						write (53,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(hmmID)%originalID,ImputePhaseHMM(hmmID,:,2)
 						write (54,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(hmmID)%originalID,ImputeGenosHMM(hmmID,:)
 
-						if (.not. inputParams%modelRecomb) then
+						if (.not. inputParams%modelRecomb .or. inputParams%hmmoption /= RUN_HMM_NO) then
 							write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(hmmID)%originalID,ProbImputePhase(hmmID,:,1)
 							write (40,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(hmmID)%originalID,ProbImputePhase(hmmID,:,2)
 							write (41,'(a20,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2,20000f5.2)') ped%pedigree(hmmID)%originalID,ProbImputeGenos(hmmID,:)
@@ -1817,6 +1817,7 @@ end subroutine PrintTimerTitles
 subroutine runAlphaImpute(in, pedIn)
 
 	use Global
+	use ConstantModule
 	use AlphaImputeInputOutputModule
 	use AlphaImputeSpecFileModule
 	use Imputation
@@ -1838,7 +1839,7 @@ subroutine runAlphaImpute(in, pedIn)
 	class default
 	write(error_unit, *) "ERROR: AlphaImpute given correct object type as input"
 	call abort()
-end select
+	end select
 
 
 

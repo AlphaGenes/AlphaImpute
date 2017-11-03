@@ -1,6 +1,6 @@
 
 module PARAMETERS
-    ! TODO params only used in read in params, but where to put them? 
+    ! TODO params only used in read in params, but where to put them?
     integer, parameter :: OPT_RESTART_ALL=0
     integer, parameter :: OPT_RESTART_PHASING=1
     integer, parameter :: OPT_RESTART_IMPUTATION=2
