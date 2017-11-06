@@ -1843,14 +1843,15 @@ subroutine runAlphaImpute(in, pedIn)
 
 
 
-inputParams => defaultInput
+	inputParams => defaultInput
+	inputParams%nSnpRaw = inputParams%nsnp
 
-	if (inputParams%hmmoption /= RUN_HMM_NGS) then 
+	if (inputParams%hmmoption /= RUN_HMM_NGS) then
 		if (inputParams%restartOption<OPT_RESTART_IMPUTATION) call MakeDirectories(RUN_HMM_NULL)
 	else
 		call MakeDirectories(RUN_HMM_NGS)
 	endif
-	
+
 	if (.not. present(pedIn)) then
 		call ReadInData
 	else
@@ -1861,7 +1862,6 @@ inputParams => defaultInput
 if (inputParams%hmmoption /= RUN_HMM_NGS) then
 
 
-	inputParams%nSnpRaw = inputParams%nsnp
 
 	call SnpCallRate
 
