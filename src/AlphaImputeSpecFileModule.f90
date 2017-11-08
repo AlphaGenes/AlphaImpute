@@ -42,7 +42,7 @@ module AlphaImputeSpecFileModule
 	! box 3
 	integer(kind=int32) :: MultiHD
 	integer(kind=int32), allocatable :: nSnpByChip(:)
-	real(real32) :: PercGenoForHD !TODO don't see why this is a real
+	real(real32) :: PercGenoForHD
 
 	! box 4
 	integer(kind=1) :: IntEditStat,OutOpt
@@ -148,7 +148,7 @@ module AlphaImputeSpecFileModule
 			character(len=:), allocatable::tag, tmptag
 			character(len=300),dimension(:),allocatable :: second
 
-
+			this%alphaphaseoutput = 0
 			this%useFerdosi = .false.
 			this%MultiHD = 0
 			this%nsnp= LARGESNUMBER
@@ -527,6 +527,7 @@ module AlphaImputeSpecFileModule
 						if (this%minoverlaphaplotype < 0) then
 							write(error_unit,*) "ERROR: Min minoverlap haplotype size is set incorrectly!"
 						endif
+
 
 					case("alphaphaseoutput")
 						if (ToLower(trim(second(1))) == "no") then

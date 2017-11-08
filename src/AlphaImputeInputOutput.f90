@@ -269,9 +269,6 @@ contains
         ! Read the pedigree information
 
         if (trim(inputParams%pedigreefile) /= "NoPedigree") then
-            ! TODO plink needs reimplemented 
-                        !     call ReadPlink(inputParams%genotypeFileUnit)
-            ! end if
             if (inputParams%SexOpt==1) then
                 call initPedigree(ped,inputParams%pedigreefile,genderfile=inputParams%genderFile, nsnps=inputParams%nsnp)
             else 

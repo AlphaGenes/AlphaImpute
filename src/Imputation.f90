@@ -117,14 +117,9 @@ MODULE Imputation
 
 				if (inputParams%NoPhasing==1) then
 
-					! call makeGenotype
-					! call ped%writeOutGenotypes("init")
 					! Major sub-step 2 as explained in Hickey et al. (2012; Appendix A)
-					if (inputparams%noPhasing == 1) then
 						call BaseAnimalFillIn
-					endif
 					!        call makeGenotype
-					! call ped%writeOutGenotypes("afterbase")
 					! Impute phase whenever a pre-phase file exists
 					if (inputParams%PrePhased==1) call ReadInPrePhasedData
 
@@ -134,8 +129,6 @@ MODULE Imputation
 					! General imputation procedures
 					call GeneralFillInInit
 
-					!       call makeGenotype
-					! call ped%writeOutGenotypes("aftergen1")
 					if (inputParams%HMMOption==RUN_HMM_PREPHASE) Then
 						block
 							use AlphaHmmInMod
@@ -2025,7 +2018,6 @@ MODULE Imputation
 			!!   * IndividualMendelianInformativeness.txt
 
 			use Global
-			! TODOphase this all needs redone
 			use AlphaImputeSpecFileModule
 
 			implicit none
@@ -2118,7 +2110,6 @@ MODULE Imputation
 							if ((phase2==0).or.(phase2==1)) then
 								! If my maternal GranSire is heterozygous
 								! if (ped%pedigree(i)%hasDummyParentsOrGranparents()) cycle
-								! TODO make this return 0
 								GrandPar= ped%pedigree(i)%getPaternalGrandSireRecodedIndexNoDummy()
 								if (GrandPar /= 0) then
 									if (ped%pedigree(grandPar)%individualGenotype%getgenotype(j)==1) then
@@ -2648,7 +2639,6 @@ MODULE Imputation
 					CountRightSwitch=0
 					pedID=ped%pedigree(i)%getSireDamNewIDByIndex(SireDamRL)
 					if (ped%isDummy(pedID)) cycle
-					! TODO can  probably skip if value is 0 too
 					! Skip if, in the case of sex chromosome, me and my parent are heterogametic
 					if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==inputParams%hetGameticStatus).and.(ped%pedigree(i)%getParentGenderBasedOnIndex(SireDamRL)==inputParams%hetGameticStatus)) cycle
 

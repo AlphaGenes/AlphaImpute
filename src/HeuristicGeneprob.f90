@@ -330,8 +330,7 @@ module HeuristicGeneprobModule
                                         else if (childPhase == phase(2)) then
                                             call ped%pedigree(i)%setSeg(j,e,2)
                                         else
-                                            ! TODO - this means phase info and genotype info don't match up
-                                            write(error_unit, *) childphase, phase(1), phase(2), geno(e),parent%individualGenotype%getGenotype(j) 
+                                            write(error_unit, *) "WARNING: GENO and PHASE don't match: ", childphase, phase(1), phase(2), geno(e),parent%individualGenotype%getGenotype(j) 
                                         endif
                                     endif
                                 endif
