@@ -1842,7 +1842,6 @@ subroutine runAlphaImpute(in, pedIn)
 
 
 	inputParams => defaultInput
-	inputParams%nSnpRaw = inputParams%nsnp
 
 	if (inputParams%hmmoption /= RUN_HMM_NGS) then
 		if (inputParams%restartOption<OPT_RESTART_IMPUTATION) call MakeDirectories(RUN_HMM_NULL)
@@ -1855,6 +1854,8 @@ subroutine runAlphaImpute(in, pedIn)
 	else
 		ped = pedIn
 	endif
+
+	inputParams%nSnpRaw = inputParams%nsnp
 
 
 if (inputParams%hmmoption /= RUN_HMM_NGS) then

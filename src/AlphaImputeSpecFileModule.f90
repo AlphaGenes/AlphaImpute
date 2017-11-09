@@ -151,7 +151,7 @@ module AlphaImputeSpecFileModule
 			this%alphaphaseoutput = 0
 			this%useFerdosi = .false.
 			this%MultiHD = 0
-			this%nsnp= LARGESNUMBER
+			! this%nsnp= LARGESNUMBER
 			this%minoverlaphaplotype = 0
 			this%PreProcess = .false.
 			this%cluster = .false.
@@ -165,6 +165,8 @@ module AlphaImputeSpecFileModule
 			this%plinkinputfile = ""
 			this%nsnp = 0
 			this%PercGenoForHD=90.0
+			this%inteditstat = 0
+			this%InternalIterations = 5
 			open(newunit=unit, file=SpecFile, action="read", status="old")
 			IOStatus = 0
 
