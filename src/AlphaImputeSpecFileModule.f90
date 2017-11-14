@@ -35,7 +35,7 @@ module AlphaImputeSpecFileModule
 
 	type, extends(baseSpecFile) ::  AlphaImputeInput
 	! box 1
-	character(len=300):: PedigreeFile = "Pedigree.txt",GenotypeFile="Genotypes.txt",TrueGenotypeFile,GenderFile="None",InbredAnimalsFile="None", HapListFile="None"
+	character(len=300):: PedigreeFile = "Pedigree.txt",GenotypeFile="Genotypes.txt",TrueGenotypeFile,GenderFile="None",InbredAnimalsFile="None", HapListFile="None",animalPhaseFile="None"
 	integer(kind=1) :: TrueGenos1None0
 
 	! box 3
@@ -80,9 +80,7 @@ module AlphaImputeSpecFileModule
 	integer(kind=1) :: PhaseTheDataOnly
 
 	integer(kind=1) :: UserDefinedHD,PrePhased,RestartOption
-
-	integer :: AnimalFileUnit, prePhasedFileUnit, pedigreeFileUnit,genotypeFileUnit,GenderFileUnit,HapListUnit
-
+	integer :: HapListUnit,prePhasedFileUnit
 	! other
 	integer(kind=int32) :: nSnpRaw,nAgreeInternalHapLibElim
 	integer(kind=int32) :: useProcs
@@ -168,6 +166,9 @@ module AlphaImputeSpecFileModule
 			this%InternalIterations = 5
 			this%outopt = 1
 			this%RestartOption = 0
+			this%managephaseon1off0 = 1
+			this%PhaseTheDataOnly=0
+			this%noPhasing = 1
 			this%useProcs = OMP_get_num_procs()
 
 			this%nPhaseExternal = this%useProcs/2
@@ -657,7 +658,6 @@ module AlphaImputeSpecFileModule
 							if (trim(second(1)) /= "None") then
 								this%HapList = .TRUE.
 								this%HapListFile = trim(second(1))
-								open (newunit=this%HapListUnit, file=this%HapListFile, status='old')
 							endif
 						endif
 
@@ -690,7 +690,7 @@ module AlphaImputeSpecFileModule
 						this%UserDefinedHD=0
 						if (tolower(trim(second(1)))/="none") then
 							this%UserDefinedHD=1
-							open (newunit=this%AnimalFileUnit,file=trim(second(1)),status="old")
+							this%animalPhaseFile = second(1)
 						endif
 
 					case("prephasedfile")
@@ -699,7 +699,6 @@ module AlphaImputeSpecFileModule
 						else
 							this%PrePhased=1
 							this%InbredAnimalsFile = second(1)
-							open (newunit=this%prePhasedFileUnit,file=trim(second(1)),status="old")
 						endif
 					case("bypassgeneprob")
 						write(error_unit,*) "The Geneprob has been moved to legacy and is no longer in use"
@@ -761,12 +760,6 @@ module AlphaImputeSpecFileModule
 			end do READFILE
 			deallocate(tag)
 			deallocate(tmptag)
-
-			if (this%plinkinputfile == "") then
-				open (newUnit=this%pedigreeFileUnit,file=trim(this%PedigreeFile),status="old")
-				open (newUnit=this%genotypeFileUnit,file=trim(this%GenotypeFile),status="old")
-			endif
-			if (this%SexOpt==1) open (newUnit=this%genderFileUnit,file=trim(this%GenderFile),status="old")
 
 			! Set parameters for parallelisation
 			if (this%nPhaseInternal==2) then

@@ -154,6 +154,7 @@ contains
         ! Count animals prephased
         nAnisPrePhased=0
         allocate(WorkPhase(inputParams%nSnpRaw,2))
+        open (newunit=inputParams%prePhasedFileUnit,file=trim(inputParams%InbredAnimalsFile),status="old")
         do
             read (inputParams%prePhasedFileUnit,*,iostat=k) dumC
             nAnisPrePhased=nAnisPrePhased+1
@@ -191,6 +192,7 @@ contains
         enddo
         rewind(inputParams%prePhasedFileUnit)
 
+        close(inputParams%prePhasedFileUnit)
         print*, " "
         print*, " ",CountPrePhased," valid pre-phased indiviudals in the user specified pre-phased file"
 

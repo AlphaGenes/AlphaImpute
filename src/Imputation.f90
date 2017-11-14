@@ -53,12 +53,6 @@ MODULE Imputation
 			character(len=150) :: timeOut
 			character(len=4096) :: cmd, SpecFile
 
-			if (Command_Argument_Count() > 0) then
-				call Get_Command_Argument(1,SpecFile)
-			else
-				specfile="AlphaImputeSpec.txt"
-			end if
-
 			inputParams => defaultInput
 
 			! WARNING: Need to disuss this part of code with John. Nonsense going on here!

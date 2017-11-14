@@ -1381,9 +1381,11 @@ subroutine InternalEdit
 
 		CountHD=0
 		block
-			integer :: tmpID
+			integer :: tmpID,AnimalFileUnit
+
+			open (newunit=AnimalFileUnit,file=trim(inputParams%animalPhaseFile),status="old")
 			do
-				read (inputParams%AnimalFileUnit,*, iostat=k) dumC
+				read (AnimalFileUnit,*, iostat=k) dumC
 
 				CountHD=CountHD+1
 				if (k/=0) then
@@ -1397,6 +1399,8 @@ subroutine InternalEdit
 					exit
 				endif
 			enddo
+
+			close(AnimalFileUnit)
 		end block
 		CountHD=count(Setter(:)==1)
 		print*, " "
