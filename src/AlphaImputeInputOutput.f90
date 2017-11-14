@@ -273,18 +273,16 @@ contains
                 call initPedigree(ped,inputParams%pedigreefile,genderfile=inputParams%genderFile, nsnps=inputParams%nsnp)
             else 
                 call initPedigree(ped,inputParams%pedigreefile, nsnps=inputParams%nsnp)
-                call initPedigree(ped,inputParams%pedigreefile, nsnps=inputParams%nsnp)
-
             endif
 
             if (inputParams%hmmoption /= RUN_HMM_NGS) then
-                call ped%addGenotypeInformationFromFile(inputParams%GenotypeFile,inputParams%nsnp)
+                call ped%addGenotypeInformationFromFile(inputParams%GenotypeFile,inputParams%nsnp,initAll=1)
             endif
         else
 
            if (inputParams%hmmoption /= RUN_HMM_NGS) then
                 ! init pedigree from genotype file
-                call initPedigreeGenotypeFiles(ped,inputParams%GenotypeFile, nsnp=inputParams%nsnp)
+                call initPedigreeGenotypeFiles(ped,inputParams%GenotypeFile, nsnp=inputParams%nsnp,initAll=1)
             endif
         endif
 

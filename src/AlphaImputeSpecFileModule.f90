@@ -31,13 +31,12 @@ module AlphaImputeSpecFileModule
 	use ConstantModule
 	use baseSpecFileModule
 
+	implicit none
+
 	type, extends(baseSpecFile) ::  AlphaImputeInput
 	! box 1
 	character(len=300):: PedigreeFile = "Pedigree.txt",GenotypeFile="Genotypes.txt",TrueGenotypeFile,GenderFile="None",InbredAnimalsFile="None", HapListFile="None"
-	! character(len=300) :: resultFolderPath
 	integer(kind=1) :: TrueGenos1None0
-	logical :: PlinkFormat, VCFFormat
-
 
 	! box 3
 	integer(kind=int32) :: MultiHD
@@ -167,6 +166,13 @@ module AlphaImputeSpecFileModule
 			this%PercGenoForHD=90.0
 			this%inteditstat = 0
 			this%InternalIterations = 5
+			this%outopt = 1
+			this%RestartOption = 0
+			this%useProcs = OMP_get_num_procs()
+
+			this%nPhaseExternal = this%useProcs/2
+			this%nPhaseInternal = this%useProcs
+
 			open(newunit=unit, file=SpecFile, action="read", status="old")
 			IOStatus = 0
 
@@ -220,16 +226,6 @@ module AlphaImputeSpecFileModule
 							write(*, "(A,A)") "No genotype file specified. Using default filename: ", this%Genotypefile
 						else
 							write(this%Genotypefile, "(A)") second(1)
-							this%PlinkFormat = .FALSE.
-							this%VCFFormat = .FALSE.
-							if (size(second) >1) then
-								select case(trim(toLower(second(2))))
-								case('plink')
-									this%PlinkFormat = .TRUE.
-								case('vcf')
-									this%VCFFormat = .TRUE.
-								end select
-							endif
 						endif
 					case("truegenotypefile")
 						if (.not. allocated(second)) then
@@ -795,12 +791,44 @@ module AlphaImputeSpecFileModule
 
 
 			if (.not. allocated(this%CoreAndTailLengths) .or. .not. allocated(this%CoreLengths)) then
-				write(error_unit,*) "ERROR - CoreLengths or CoreAndTailLengths have not been specified"
-				stop 1000
+				write(error_unit,*) "warning - CoreLengths or CoreAndTailLengths have not been specified, will be calculated instead"
 			endif
 
-			!$  CALL OMP_SET_NUM_THREADS(this%useProcs)
+			CALL OMP_SET_NUM_THREADS(this%useProcs)
 		end subroutine ReadInParameterFile
+
+
+		subroutine calculateCoresAndTails(nsnps, cores, tails, size)
+
+			use omp_lib
+
+			integer, intent(in) :: nsnps
+			integer(kind=int32), allocatable, intent(out) :: cores(:),tails(:)
+			integer, intent(inout) :: size !< if 0, will use number of processors
+			integer :: tailSize,i
+
+			if (size == 0)then
+				size = OMP_get_num_procs()
+			endif
+
+			allocate(cores(size))
+			allocate(tails(size))
+
+			! set tails to be the following
+			tailSize = (nsnps / size) / 4
+			
+
+			do i=1, size
+
+				cores(i) = (nsnps / size)*i - tailSize
+				tails(i) = (nsnps / size)*i
+			enddo
+
+			write(error_unit,*) "core lengths used:", cores
+
+			write(error_unit,*) "tails lengths used:", tails
+		end subroutine calculateCoresAndTails
+
 
 end module AlphaImputeSpecFileModule
 

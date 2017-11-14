@@ -815,7 +815,7 @@
 			allocate(StRNarrow(nSnpFinal))
 			allocate(EnRNarrow(nSnpFinal))
 
-			WorkPhase=ped%getPhaseAsArray()
+			WorkPhase(1:,:,:)=ped%getPhaseAsArray()
 			call InsteadOfReReadGeneProb
 
 			l=0
@@ -1828,8 +1828,6 @@ subroutine runAlphaImpute(in, pedIn)
 
 
 
-
-
 	select type(in)
 
 	type is (AlphaImputeInput)
@@ -1838,8 +1836,6 @@ subroutine runAlphaImpute(in, pedIn)
 	write(error_unit, *) "ERROR: AlphaImpute given correct object type as input"
 	call abort()
 	end select
-
-
 
 	inputParams => defaultInput
 
@@ -1850,14 +1846,16 @@ subroutine runAlphaImpute(in, pedIn)
 	endif
 
 	if (.not. present(pedIn)) then
-		call ReadInData
+		call ReadInData !< makes changes to inputparams
 	else
 		ped = pedIn
 	endif
 
+	if (.not. allocated(inputParams%coreLengths)) then
+		call calculateCoresAndTails(inputParams%nsnp, inputParams%coreLengths,inputParams%CoreAndTailLengths,inputParams%nPhaseExternal )
+	endif
+
 	inputParams%nSnpRaw = inputParams%nsnp
-
-
 if (inputParams%hmmoption /= RUN_HMM_NGS) then
 
 
@@ -1962,6 +1960,10 @@ if (inputParams%hmmoption /= RUN_HMM_NGS) then
 			call ModelRecomb
 		endif
 
+
+		write(*,*) ""
+		write(*,*) ""
+		write(*,*) ""
 		print *, "Genotype Yield", checkYield(ped)
 		if (inputParams%TrueGenos1None0==1) then
 			block
