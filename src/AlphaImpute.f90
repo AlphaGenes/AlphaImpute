@@ -55,7 +55,7 @@
 				type(AlphaImputeInput), pointer :: inputParams
 				type(AlphaPhaseParameters) :: params
 				type(AlphaPhaseResultsContainer), intent(out) :: results
-				integer :: nCoreLengths,i, coreIndexes
+				integer :: nCoreLengths,i, coreIndexes,temp
 				type(OutputParameters) :: oParams
 				type(PedigreeHolder), allocatable :: hdPed
 
@@ -88,6 +88,17 @@
 				allocate(hdPed)
 				call ped%getHDPedigree(hdPed)
 
+
+				temp = 0
+				! call initPedigreeGenotypeFiles(hdPed,inputParams%genotypeFile, nsnp=temp)
+				
+				! do i=1, hdPed%pedigreeSize
+				! 	call hdped%setAnimalAsHD(i)
+				! enddo
+				! TODO make above code actually only include hd animals"
+				if (hdPed%nHd ==0) then
+					print *, "WARNING: NO HD ANIMALS ON ALPHAPHASE ENTRY"
+				endif
 			!$OMP parallel do schedule(dynamic)&
 			!$OMP default(shared) &
 			!$OMP FIRSTPRIVATE(params) &
