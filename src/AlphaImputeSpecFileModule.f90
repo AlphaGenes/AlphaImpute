@@ -35,7 +35,7 @@ module AlphaImputeSpecFileModule
 
 	type, extends(baseSpecFile) ::  AlphaImputeInput
 	! box 1
-	character(len=300):: PedigreeFile = "Pedigree.txt",GenotypeFile="Genotypes.txt",TrueGenotypeFile,GenderFile="None",InbredAnimalsFile="None", HapListFile="None",animalPhaseFile="None"
+	character(len=300):: PedigreeFile = "Pedigree.txt",GenotypeFile="Genotypes.txt",TrueGenotypeFile="None",GenderFile="None",InbredAnimalsFile="None", HapListFile="None",animalPhaseFile="None"
 	integer(kind=1) :: TrueGenos1None0
 
 	! box 3
@@ -461,10 +461,10 @@ module AlphaImputeSpecFileModule
 						endif
 						do i=1,size(second)
 							read(second(i),*,iostat=stat) this%corelengths(i)
-                            if (stat /= 0) then
-                    print*, "Error: hdanimalsthreshold specified incorrectly"
-                    stop
-                endif
+							if (stat /= 0) then
+								print*, "Error: hdanimalsthreshold specified incorrectly"
+								stop
+							endif
 						enddo
 
 					case("pedigreefreephasing")
@@ -482,10 +482,10 @@ module AlphaImputeSpecFileModule
 					case("genotypeerror")
 						if (this%nPhaseExternal /= 0) then
 							read(second(1), *, iostat=stat) this%GenotypeErrorPhase
-                            if (stat /= 0) then
-                    print*, "Error: hdanimalsthreshold specified incorrectly"
-                    stop
-                endif
+							if (stat /= 0) then
+								print*, "Error: hdanimalsthreshold specified incorrectly"
+								stop
+							endif
 						endif
 
 					case("numberofprocessorsavailable")
@@ -565,7 +565,7 @@ module AlphaImputeSpecFileModule
 						if (toLower(trim(second(1)))=='no') this%hmmoption=RUN_HMM_NO
 						if (toLower(trim(second(1)))=='yes') this%hmmoption=RUN_HMM_YES
 						if (toLower(trim(second(1)))=='only') this%hmmoption=RUN_HMM_ONLY
-						if (toLower(trim(second(1)))=='Prephase') this%hmmoption=RUN_HMM_PREPHASE
+						if (toLower(trim(second(1)))=='prephase') this%hmmoption=RUN_HMM_PREPHASE
 						if (toLower(trim(second(1)))=="ngs") this%hmmoption=RUN_HMM_NGS
 						if (this%hmmoption==RUN_HMM_NULL) then
 							write(error_unit,*), "this%hmmoption not correctly specified"
@@ -599,58 +599,58 @@ module AlphaImputeSpecFileModule
 							stop
 						endif
 						read(second(1), *,iostat=stat) this%nHapInSubH
-                        if (stat /= 0) then
-                            print *,"templatehaplotypes set incorrectly"
-                            stop
-                        endif
+						if (stat /= 0) then
+							print *,"templatehaplotypes set incorrectly"
+							stop
+						endif
 
 					case("burninrounds")
 						read(second(1), *,iostat=stat) this%HmmBurnInRound
-                        if (stat /= 0) then
-                            print *,"burninrounds set incorrectly"
-                            stop
-                        endif
+						if (stat /= 0) then
+							print *,"burninrounds set incorrectly"
+							stop
+						endif
 					case("rounds")
 						read(second(1), *,iostat=stat)this%nRoundsHMM
-                        if (stat /= 0) then
-                            print *,"rounds set incorrectly"
-                            stop
-                        endif
+						if (stat /= 0) then
+							print *,"rounds set incorrectly"
+							stop
+						endif
 
 					case("seed")
 						read(second(1), *,iostat=stat)this%idum
-                        if (stat /= 0) then
-                            print *,"seed set incorrectly"
-                            stop
-                        endif
+						if (stat /= 0) then
+							print *,"seed set incorrectly"
+							stop
+						endif
 
 					case("thresholdformissingalleles")
 						read(second(1), *,iostat=stat) this%phasedThreshold
-                        if (stat /= 0) then
-                            write(error_unit,*) "ERROR: thresholdformissingalleles set incorrectly"
-                            stop
-                        endif
+						if (stat /= 0) then
+							write(error_unit,*) "ERROR: thresholdformissingalleles set incorrectly"
+							stop
+						endif
 
 					case("phasedanimalsthreshold")
 						read(second(1), *,iostat=stat) this%phasedThreshold
-                        if (stat /= 0) then
-                            write(error_unit,*) "ERROR: phasedanimalsthreshold set incorrectly"
-                            stop
-                        endif
+						if (stat /= 0) then
+							write(error_unit,*) "ERROR: phasedanimalsthreshold set incorrectly"
+							stop
+						endif
 
 					case("thresholdimputed")
 						read(second(1), *,iostat=stat) this%imputedThreshold
-                        if (stat /= 0) then
-                            write(error_unit,*) "ERROR: ThresholdImputed set incorrectly"
-                            stop
-                        endif
+						if (stat /= 0) then
+							write(error_unit,*) "ERROR: ThresholdImputed set incorrectly"
+							stop
+						endif
 
 					case("wellimputedthreshold")
 						read(second(1), *,iostat=stat) this%imputedThreshold
-                         if (stat /= 0) then
-                            write(error_unit,*) "wellimputedthreshold set incorrectly"
-                            stop
-                        endif
+						if (stat /= 0) then
+							write(error_unit,*) "wellimputedthreshold set incorrectly"
+							stop
+						endif
 					case("haplotypeslist")
 						if (.not. allocated(second)) then
 							write(*, "(A,A)") "WARNING: No list of haploytpes specified"
@@ -728,9 +728,9 @@ module AlphaImputeSpecFileModule
 						endif
 					case("parallelprocessors")
 						read(second(1), *,iostat=stat) this%useProcs
-                        if (stat /=0) then
-                            write(error_unit,*) "ERROR: Parallel Processors set Incorrectly"
-                        endif
+						if (stat /=0) then
+							write(error_unit,*) "ERROR: Parallel Processors set Incorrectly"
+						endif
 						if (this%useProcs > OMP_get_num_procs()) then
 							write(error_unit,*) "WARNING - more processors than are available are specified under parallelprocessors"
 							write(error_unit,*) this%useProcs, " set vs ",OMP_get_num_procs()," available"
@@ -794,6 +794,7 @@ module AlphaImputeSpecFileModule
 		subroutine calculateCoresAndTails(nsnps, cores, tails, size)
 
 			use omp_lib
+			use PARAMETERS
 
 			integer, intent(in) :: nsnps
 			integer(kind=int32), allocatable, intent(out) :: cores(:),tails(:)
@@ -809,7 +810,7 @@ module AlphaImputeSpecFileModule
 
 			! set tails to be the following
 			tailSize = (nsnps / size) / 4
-			
+
 
 			do i=1, size
 
@@ -822,6 +823,182 @@ module AlphaImputeSpecFileModule
 			write(error_unit,*) "tails lengths used:", tails
 		end subroutine calculateCoresAndTails
 
+		subroutine writeOutSpecOptions(inputParams)
+
+			use Global
+
+			type(AlphaImputeInput), intent(in) :: inputParams
+			integer :: unit,i
+			character(len=:), allocatable :: tmpString
+
+			open(newunit=unit, file="AlphaImputeSpecFileUsed.txt", status='unknown')
+
+
+			write(unit, *) "PedigreeFile,",trim(inputParams%PedigreeFile)
+			write(unit, *) "GenotypeFile,",trim(inputParams%GenotypeFile)
+			write(unit, *) "TrueGenotypeFile,",trim(inputParams%TrueGenotypeFile)
+
+			if (inputParams%sexOpt == 1) then
+				write(unit, '(a,a,a)', advance="no") "sexchrom,","yes,",trim(inputParams%genderFile)
+
+				if (inputParams%HetGameticStatus == 1) then
+					write(unit, *) ",male"
+				else if (inputParams%HetGameticStatus == 2) then
+					write(unit, *) ",female"
+				endif
+			else
+				write(unit, *) "sexchrom,","no"
+			endif
+			write(unit, *) "nsnp,",inputParams%nsnp
+			write(unit, *) "multiplehdpanels,",inputParams%MultiHd
+			! TODO numbsnpxchip
+			write(unit, *) "hdanimalsthreshold,",inputParams%PercGenoForHD
+
+			if (inputParams%inteditstat == 1) then
+				write(unit, *) "internaledit,","yes"
+			else
+				write(unit, *) "internaledit,","no"
+			endif
+
+			if (inputParams%outopt == 1) then
+				tmpString = "allsnpout"
+			else
+				tmpString = "editedsnpout"
+			endif
+			write(unit, *) "editingparameters,",inputParams%PercGenoForHD,",",inputParams%PercSnpMiss,",", inputParams%SecondPercGenoForHD,",",tmpString
+			deallocate(tmpString)
+
+			if (inputParams%outputonlygenotypedanimals) then
+				write(unit, *) "outputonlygenotypedanimals,","yes"
+			else
+				write(unit, *) "outputonlygenotypedanimals,","no"
+			endif
+
+			if (inputParams%noPhasing == 0) then
+				write(unit, *) "numberphasingruns,","nophase"
+			else if ( inputParams%managephaseon1off0 == 0) then
+				write(unit, *) "numberphasingruns,","phasedone",trim(inputParams%phasePath),",", inputParams%nPhaseInternal
+			else
+				write(unit, *) "numberphasingruns,", inputParams%nPhaseExternal
+			endif
+
+			write(unit, "(a,*(a,I5,:))") "coreandtaillengths",(',',inputParams%coreandtaillengths(i),i=1, size(inputParams%coreandtaillengths))
+
+			write(unit, "(a,*(a,I5,:))") "corelengths", (',',inputParams%corelengths(i),i=1, size(inputParams%coreLengths))
+
+			if (inputParams%PedFreePhasing == 1) then
+				write(unit, *) "pedigreefreephasing,","yes"
+			else
+				write(unit, *) "pedigreefreephasing,","no"
+			endif
+
+			write(unit, *) "genotypeerror,", inputParams%GenotypeErrorPhase
+
+			if (inputParams%largedatasets) then
+				write(unit, *) "largedatasets,", "yes",inputParams%PhaseSubsetSize,",",inputParams%PhaseNIterations,",",trim(inputParams%iterateMethod)
+			else
+				write(unit, *) "largedatasets,", "no"
+			endif
+
+			write(unit, *) "minoverlaphaplotype,", inputParams%minoverlaphaplotype
+
+			if (inputParams%alphaphaseoutput== 0) then
+				write(unit,*) "alphaphaseoutput,","no"
+			elseif (inputParams%alphaphaseoutput== 1) then
+				write(unit,*) "alphaphaseoutput,","yes"
+			elseif (inputParams%alphaphaseoutput == 2) then
+				write(unit,*) "alphaphaseoutput,","binary"
+			elseif (inputParams%alphaphaseoutput == 3) then
+				write(unit,*) "alphaphaseoutput,","verbose"
+			endif
+
+			write(unit,*) "internaliterations,", inputParams%internaliterations
+
+
+			if (inputParams%ConservativeHapLibImputation == 1) then
+				write(unit, *) "conservativehaplotypelibraryuse,","yes"
+			else
+				write(unit, *) "conservativehaplotypelibraryuse,","no"
+			endif
+
+			write(unit,*) "wellphasedthreshold,", inputParams%WellPhasedThresh
+
+
+			if (inputParams%hmmoption== RUN_HMM_NO) then
+				write(unit,*) "hmmoption,","no"
+			elseif (inputParams%hmmoption== RUN_HMM_YES) then
+				write(unit,*) "hmmoption,","yes"
+			elseif (inputParams%hmmoption == RUN_HMM_ONLY) then
+				write(unit,*) "hmmoption,","only"
+			elseif (inputParams%hmmoption == RUN_HMM_PREPHASE) then
+				write(unit,*) "hmmoption,","prephase"
+			elseif (inputParams%hmmoption == RUN_HMM_NGS) then
+				write(unit,*) "hmmoption,","ngs"
+			endif
+
+			! write(unit,*) "hmmparameters,", inputParams%nHapInSubH,inputParams%HmmBurnInRound, inputParams%nRoundsHmm, inputParams%nRoundsHmm, inputParams%useProcs, inputParams%idum
+
+			write(unit,*) "templatehaplotypes,",inputParams%nHapInSubH
+
+			write(unit,*) "burninrounds,",inputParams%HmmBurnInRound
+			write(unit,*) "rounds,",inputParams%nRoundsHMM
+
+			write(unit,*) "seed,",inputParams%idum
+			write(unit,*) "phasedanimalsthreshold,",inputParams%phasedThreshold
+			write(unit,*) "thresholdimputed,",inputParams%imputedThreshold
+			write(unit,*) "haplotypeslist,",trim(inputParams%HapListFile)
+
+
+			if (inputParams%PreProcess) then
+				write(unit, *) "preprocessdataonly,","yes"
+			else
+				write(unit, *) "preprocessdataonly,","no"
+			endif
+
+			if (inputParams%PhaseTheDataOnly == 1) then
+				write(unit, *) "phasingonly,","yes"
+			else
+				write(unit, *) "phasingonly,","no"
+			endif
+
+			write(unit, *) "userdefinedalphaphaseanimalsfile,",trim(inputParams%animalPhaseFile)
+
+			write(unit, *) "prephasedfile,",trim(inputParams%InbredAnimalsFile)
+
+			if (inputParams%cluster) then
+				write(unit, *) "cluster,","yes"
+			else
+				write(unit, *) "cluster,","no"
+			endif
+
+			write(unit,*) "restartoption,",inputParams%restartoption
+
+			if (inputParams%cluster) then
+				write(unit, *) "cluster,","yes"
+			else
+				write(unit, *) "cluster,","no"
+			endif
+
+			write(unit,*) "parallelprocessors,",inputParams%useProcs
+			write(unit,*) "resultfolderpath,",trim(inputParams%resultfolderpath)
+
+			if (inputParams%useferdosi) then
+				write(unit, *) "useferdosi,","yes"
+			else
+				write(unit, *) "useferdosi,","no"
+			endif
+
+			if (inputParams%modelrecomb) then
+				write(unit, *) "modelrecomb,","yes"
+			else
+				write(unit, *) "modelrecomb,","no"
+			endif
+
+			close(unit)
+		end subroutine writeOutSpecOptions
+
+
 
 end module AlphaImputeSpecFileModule
+
 

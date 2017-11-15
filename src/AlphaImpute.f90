@@ -1860,6 +1860,8 @@ subroutine runAlphaImpute(in, pedIn)
 	endif
 
 	inputParams%nSnpRaw = inputParams%nsnp
+
+	call writeOutSpecOptions(inputParams)
 if (inputParams%hmmoption /= RUN_HMM_NGS) then
 
 
@@ -1997,12 +1999,6 @@ else if (inputParams%hmmoption == RUN_HMM_NGS) then
 		type (AlphaHMMinput) :: inputParamsHMM
 		integer(kind=1) ,dimension(:,:), allocatable :: res
 		character(len=4096) :: cmd, SpecFile
-
-		if (Command_Argument_Count() > 0) then
-			call Get_Command_Argument(1,SpecFile)
-		else
-			specfile="AlphaImputeSpec.txt"
-		end if
 
 		! call inputParamsHMM%ReadInParameterFile(SpecFile)
 		inputParamsHMM%HMMOption = inputParams%hmmoption
