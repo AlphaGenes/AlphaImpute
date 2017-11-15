@@ -35,7 +35,7 @@ module AlphaImputeSpecFileModule
 
 	type, extends(baseSpecFile) ::  AlphaImputeInput
 	! box 1
-	character(len=300):: PedigreeFile = "Pedigree.txt",GenotypeFile="Genotypes.txt",TrueGenotypeFile="None",GenderFile="None",InbredAnimalsFile="None", HapListFile="None",animalPhaseFile="None"
+	character(len=300):: PedigreeFile = "NoPedigree",GenotypeFile="Genotypes.txt",TrueGenotypeFile="None",GenderFile="None",InbredAnimalsFile="None", HapListFile="None",animalPhaseFile="None"
 	integer(kind=1) :: TrueGenos1None0
 
 	! box 3
