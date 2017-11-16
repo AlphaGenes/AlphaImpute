@@ -877,7 +877,7 @@ module AlphaImputeSpecFileModule
 			else
 				tmpString = "editedsnpout"
 			endif
-			write(unit, *) "editingparameters,",inputParams%PercGenoForHD,",",inputParams%PercSnpMiss,",", inputParams%SecondPercGenoForHD,",",tmpString
+			write(unit, *) "editingparameters,",inputParams%PercGenoForHD*100,",",inputParams%PercSnpMiss*100,",", inputParams%SecondPercGenoForHD*100,",",tmpString
 			deallocate(tmpString)
 
 			if (inputParams%outputonlygenotypedanimals) then
