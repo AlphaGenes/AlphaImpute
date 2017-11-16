@@ -791,13 +791,18 @@ module AlphaImputeSpecFileModule
 		end subroutine ReadInParameterFile
 
 
+			!---------------------------------------------------------------------------
+		!< @brief Generates core and tail length.
+		!< @author  David Wilson david.wilson@roslin.ed.ac.uk
+		!< @date    November 12 2017
+		!---------------------------------------------------------------------------
 		subroutine calculateCoresAndTails(nsnps, cores, tails, size)
 
 			use omp_lib
 			use PARAMETERS
 
 			integer, intent(in) :: nsnps
-			integer(kind=int32), allocatable, intent(out) :: cores(:),tails(:)
+			integer(kind=int32), allocatable, intent(out) :: cores(:),tails(:) !returned cores and tails
 			integer, intent(inout) :: size !< if 0, will use number of processors
 			integer :: tailSize,i
 
@@ -823,6 +828,13 @@ module AlphaImputeSpecFileModule
 			write(error_unit,*) "tails lengths used:", tails
 		end subroutine calculateCoresAndTails
 
+
+	
+		!---------------------------------------------------------------------------
+		!< @brief Writes out the spec file options used to file AlphaImputeSpecFileUsed.txt
+		!< @author  David Wilson david.wilson@roslin.ed.ac.uk
+		!< @date    October 26, 2017
+		!---------------------------------------------------------------------------		
 		subroutine writeOutSpecOptions(inputParams)
 
 			use Global

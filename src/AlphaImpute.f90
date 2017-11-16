@@ -90,10 +90,18 @@
 
 
 				temp = 0
+
+
+				! FOLLOWING CODE goes with 
 				! call initPedigreeGenotypeFiles(hdPed,inputParams%genotypeFile, nsnp=temp)
 				
 				! do i=1, hdPed%pedigreeSize
-				! 	call hdped%setAnimalAsHD(i)
+
+				! 	temp = ped%dictionary%getValue(hdPed%pedigree(i)%originalID)
+
+				! 	if (ped%pedigree(temp)%hd) then
+				! 		call hdped%setAnimalAsHD(i)
+				! 	endif
 				! enddo
 				! TODO make above code actually only include hd animals"
 				if (hdPed%nHd ==0) then
@@ -110,9 +118,6 @@
 					params%offset = .false.
 					coreIndexes = i - nCoreLengths
 				endif
-
-
-
 
 				params%CoreAndTailLength = inputParams%CoreAndTailLengths(coreIndexes)
 				! TODO check if core lengths are greater than nsnps
