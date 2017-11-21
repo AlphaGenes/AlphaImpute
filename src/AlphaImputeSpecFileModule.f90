@@ -408,11 +408,8 @@ module AlphaImputeSpecFileModule
 							this%managephaseon1off0 = 1
 							read(second(1),*) this%nPhaseExternal
 
-							if (this%nPhaseExternal > 40) then
-								write(error_unit,*) "Error: Too many phasing runs required. The most that this program supports is 40."
-								stop 40511
-							else if(this%nPhaseExternal < 2) then
-								write(error_unit,*) "Error: Too few phasing runs requested. The minimum this program supports is 2, 10 is reccomended."
+							if(this%nPhaseExternal <1 ) then
+								write(error_unit,*) "Error: Too few phasing runs requested. The minimum this program supports is 1, 4 are reccomended."
 								stop 40512
 							endif
 						endif

@@ -1355,7 +1355,7 @@ subroutine InternalEdit
 	allocate(TempFreq(inputParams%nsnp))
 	allocate(Counter(inputParams%nsnp))
 	allocate(SnpIncluded(inputParams%nsnp))
-	allocate(Setter(0:ped%pedigreeSize-ped%nDummys))
+	allocate(Setter(0:ped%pedigreeSize))
 
 	SnpIncluded(:)=0
 	if ((inputParams%managephaseon1off0==0).and.(inputParams%NoPhasing==1)) then
@@ -1376,7 +1376,7 @@ subroutine InternalEdit
 	! I user do not specify any file with HD individuals
 	if (inputParams%UserDefinedHD==0) then
 		Setter(0)=0
-		Setter(1:ped%pedigreeSize-ped%nDummys)=1
+		Setter(1:ped%pedigreeSize)=1
 		do i=1,ped%pedigreeSize-ped%nDummys
 			CountMiss=ped%pedigree(i)%individualGenotype%numMissing()
 			if (inputParams%MultiHD/=0) then
