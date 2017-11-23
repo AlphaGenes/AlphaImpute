@@ -252,7 +252,7 @@
 
 				do j=1,nSnpIterate
 					Counter=0
-					do i=1,ped%pedigreeSize-ped%nDummys
+					do i=1,ped%addedRealAnimals
 
 						genos = ped%pedigree(i)%individualGenotype%getGenotype(j)
 						if (genos/=MISSINGGENOTYPECODE) then
@@ -278,7 +278,7 @@
 				call ped%PhaseComplement
 				call ped%MakeGenotype
 
-				do i=1,ped%pedigreeSize-ped%nDummys
+				do i=1,ped%addedRealAnimals
 					do j=1,nSnpIterate
 						do e=1,2
 							block
@@ -290,7 +290,7 @@
 					enddo
 				enddo
 
-				do i=1,ped%pedigreeSize-ped%nDummys
+				do i=1,ped%addedRealAnimals
 					do e=1,2
 						parId = ped%pedigree(i)%getSireDamNewIDByIndex(e+1)
 						if (ParId==0) then
@@ -325,7 +325,7 @@
 					endif
 				enddo
 
-				do i=1,ped%pedigreeSize-ped%nDummys
+				do i=1,ped%addedRealAnimals
 					do j=1,nSnpIterate
 						do k=1,2
 							block
@@ -347,7 +347,7 @@
 				enddo
 
 				if (inputParams%SexOpt==1) then
-					do i=1,ped%pedigreeSize-ped%nDummys
+					do i=1,ped%addedRealAnimals
 						if (ped%pedigree(i)%gender==inputParams%hetGameticStatus) then
 							! setFromOtherIfMissing
 							call ped%pedigree(i)%individualPhase(1)%setFromOtherIfMissing(ped%pedigree(i)%individualPhase(2))
@@ -360,7 +360,7 @@
 					enddo
 				endif
 
-				do i=1,ped%pedigreeSize-ped%nDummys
+				do i=1,ped%addedRealAnimals
 					do j=1,nSnpIterate
 						if (ProbImputeGenos(i,j)==-9.0) ProbImputeGenos(i,j)=sum(ProbImputePhase(i,j,:))
 						if (ProbImputeGenos(i,j)>1.999)  call ped%pedigree(i)%individualGenotype%setGenotype((j),2)
@@ -390,7 +390,7 @@
 				TempAlleleFreq=0.0
 				do j=1,nSnpIterate
 					Counter=0
-					do i=1,ped%pedigreeSize-ped%nDummys
+					do i=1,ped%addedRealAnimals
 						block
 
 							integer(kind=1) :: geno
@@ -418,7 +418,7 @@
 				call ped%PhaseComplement
 				call ped%MakeGenotype
 
-				do i=1,ped%pedigreeSize-ped%nDummys
+				do i=1,ped%addedRealAnimals
 					do j=1,nSnpIterate
 						do e=1,2
 							block
@@ -431,7 +431,7 @@
 					enddo
 				enddo
 
-				do i=1,ped%pedigreeSize-ped%nDummys
+				do i=1,ped%addedRealAnimals
 					do e=1,2
 						parID=ped%pedigree(i)%getSireDamNewIDByIndexNoDummy(e+1)
 						if (ParId==0) then
@@ -455,7 +455,7 @@
 					enddo
 				enddo
 
-				do i=1,ped%pedigreeSize-ped%nDummys
+				do i=1,ped%addedRealAnimals
 					do j=1,nSnpIterate
 						do k=1,2
 							block
@@ -479,7 +479,7 @@
 					enddo
 				enddo
 
-				do i=1,ped%pedigreeSize-ped%nDummys
+				do i=1,ped%addedRealAnimals
 					do j=1,nSnpIterate
 						if (ProbImputeGenos(i,j)==-9.0) ProbImputeGenos(i,j)=sum(ProbImputePhase(i,j,:))
 
@@ -521,7 +521,7 @@
 			integer :: n0, n1, n2
 			integer,allocatable,dimension(:):: WorkTmp
 			character(len=300) :: TmpId
-			real(kind=real64) :: ImputationQuality(ped%pedigreeSize-ped%nDummys,6)
+			real(kind=real64) :: ImputationQuality(ped%addedRealAnimals,6)
 
 
 			inputParams => defaultInput
@@ -629,8 +629,8 @@
 					allocate(Maf(nOutputSnps))
 				end if
 
-				probImputeGenos(1:ped%pedigreeSize-ped%nDummys,:) = 9.0
-				ProbImputePhase(1:ped%pedigreeSize-ped%nDummys,:,:) = 9.0
+				probImputeGenos(1:ped%addedRealAnimals,:) = 9.0
+				ProbImputePhase(1:ped%addedRealAnimals,:,:) = 9.0
 
 				! Feed Impute and Phase probabilites
 				l=0
@@ -699,7 +699,7 @@
 
 					open (unit=40,file="." // DASH// trim(inputparams%resultFolderPath) // DASH // "ImputePhaseProbabilities.txt",status="unknown")
 					open (unit=41,file="." // DASH// trim(inputparams%resultFolderPath)// DASH // "ImputeGenotypeProbabilities.txt",status="unknown")
-					do i=1, ped%pedigreeSize-ped%nDummys
+					do i=1, ped%addedRealAnimals
 						if (ped%pedigree(i)%isDummy) then
 							exit
 						endif
@@ -717,7 +717,7 @@
 			endif
 			if (inputParams%SexOpt==1) then
 				do j=1,nOutputSnps
-					Maf(j)=sum(ProbImputeGenos(:,j))/(2*ped%pedigreeSize-ped%nDummys)
+					Maf(j)=sum(ProbImputeGenos(:,j))/(2*ped%addedRealAnimals)
 				enddo
 				open(unit=111,file="." // DASH // "Miscellaneous" // DASH // "MinorAlleleFrequency.txt", status="unknown")
 
@@ -731,7 +731,7 @@
 
 			ImputationQuality(:,2)=0.0
 
-			do i=1, ped%pedigreeSize-ped%nDummys
+			do i=1, ped%addedRealAnimals
 				if (ped%pedigree(i)%isDummy) then
 					exit
 				endif
@@ -756,7 +756,7 @@
 			inputParams%WellPhasedThresh=inputParams%WellPhasedThresh/100
 
 			open (unit=52,file="." // DASH// trim(inputparams%resultFolderPath) // DASH // "WellPhasedIndividuals.txt",status="unknown")
-			do i=1, ped%pedigreeSize-ped%nDummys
+			do i=1, ped%addedRealAnimals
 				if (ImputationQuality(i,5)>=inputParams%WellPhasedThresh) then
 					write (52,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,tmpPhase(ped%inputmap(i),:,1)
 					write (52,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,tmpPhase(ped%inputmap(i),:,2)
@@ -844,7 +844,7 @@
 				endif
 			enddo
 
-			do i=1,ped%pedigreeSize-ped%nDummys
+			do i=1,ped%addedRealAnimals
 				HetEnd=-1
 				HetStart=-1
 				WorkRight(:)=9
@@ -1148,7 +1148,7 @@
 			inputParams => defaultInput
 
 			if (inputParams%SexOpt==0) then
-				do i=1,ped%pedigreeSize-ped%nDummys
+				do i=1,ped%addedRealAnimals
 					do e=1,2
 						PedLoc=e+1
 						id = ped%pedigree(i)%getSireDamNewIDByIndex(pedLoc)
@@ -1160,7 +1160,7 @@
 					enddo
 				enddo
 			else
-				do i=1,ped%pedigreeSize-ped%nDummys
+				do i=1,ped%addedRealAnimals
 					if (ped%pedigree(i)%gender==inputParams%HomGameticStatus) then
 						do e=1,2
 							id = ped%pedigree(i)%getSireDamNewIDByIndex(e+1)
@@ -1201,7 +1201,7 @@
 			if (inputParams%SexOpt==1) then                                                     ! Sex chromosome
 
 				GlobalWorkPhase=9
-				do i=1,ped%pedigreeSize-ped%nDummys
+				do i=1,ped%addedRealAnimals
 					do j=1,inputParams%nsnp                                                     ! Phase in the homozygous case
 
 						if (ped%pedigree(i)%individualGenotype%getGenotype(j)==0) then
@@ -1239,13 +1239,13 @@
 				! todo  -feel this can be optimised- do we need to do this?
 				call ped%setPhaseFromArray(GlobalWorkPhase)
 
-				allocate(GlobalTmpCountInf(ped%pedigreeSize-ped%nDummys,6))
+				allocate(GlobalTmpCountInf(ped%addedRealAnimals,6))
 				GlobalTmpCountInf(:,:)=0
 
 			else                                                                    ! Other chromosome
 
 				GlobalWorkPhase=9
-				do i=1,ped%pedigreeSize-ped%nDummys
+				do i=1,ped%addedRealAnimals
 					do j=1,inputParams%nsnp                                                     ! Phase in the homozygous case
 						if (ped%pedigree(i)%individualGenotype%getGenotype(j)==0) then
 							GlobalWorkPhase(i,j,:)=0
@@ -1309,13 +1309,13 @@
 
 			inputParams => defaultInput
 			open(newunit=UOutputs, file="." // DASH // "Miscellaneous" // DASH // "SnpCallRateByAnimalByChip.txt",status='unknown')
-			allocate(animChip(ped%pedigreeSize-ped%nDummys))
+			allocate(animChip(ped%addedRealAnimals))
 			animChip(:)=0
 
-			allocate(printed(ped%pedigreeSize-ped%nDummys))
+			allocate(printed(ped%addedRealAnimals))
 			printed=.FALSE.
 
-			do i=1,ped%pedigreeSize-ped%nDummys
+			do i=1,ped%addedRealAnimals
 				CountMiss=ped%pedigree(i)%individualGenotype%numMissing()
 				do j=1,inputParams%MultiHD
 					if ( (CountMiss-(inputParams%nsnp-inputParams%nSnpByChip(j))) < (1.0-inputParams%PercGenoForHD)*inputParams%nSnpByChip(j)&
@@ -1377,7 +1377,7 @@ subroutine InternalEdit
 	if (inputParams%UserDefinedHD==0) then
 		Setter(0)=0
 		Setter(1:ped%pedigreeSize)=1
-		do i=1,ped%pedigreeSize-ped%nDummys
+		do i=1,ped%addedRealAnimals
 			CountMiss=ped%pedigree(i)%individualGenotype%numMissing()
 			if (inputParams%MultiHD/=0) then
 				! Disregard animals at LD or those HD animals with a number of markers missing
@@ -1393,7 +1393,7 @@ subroutine InternalEdit
 		CountHD=count(Setter(:)==1)
 	else                                ! User has specified HD individuals
 		Setter(0)=0
-		Setter(1:ped%pedigreeSize-ped%nDummys)=0
+		Setter(1:ped%addedRealAnimals)=0
 
 		CountHD=0
 		block
@@ -1428,7 +1428,7 @@ subroutine InternalEdit
 		Counter(:)=0
 		SnpSummary=0.0
 		do j=1,inputParams%nsnp
-			do i=1, ped%pedigreeSize-ped%nDummys
+			do i=1, ped%addedRealAnimals
 				if (.not. ped%pedigree(i)%individualGenotype%isMissing(j)) then
 					TempFreq(j)=TempFreq(j)+float(ped%pedigree(i)%individualGenotype%getGenotype(j))
 					Counter(j)=Counter(j)+2
@@ -1582,7 +1582,7 @@ subroutine FillInBasedOnOffspring
 	allocate(Count0(inputParams%nsnp))
 	allocate(Count1(inputParams%nsnp))
 	allocate(Count2(inputParams%nsnp))
-	do i=1,ped%pedigreeSize-ped%nDummys ! These are parents
+	do i=1,ped%addedRealAnimals ! These are parents
 		! This three variables will count the different number of genotypes of the offsprings
 		Count0=0
 		Count1=0
@@ -1627,7 +1627,7 @@ subroutine FillInSnp
 	type(individual), pointer :: tmpMother, tmpFather, tmpAnim
 	inputParams => defaultInput
 
-	do i=1,ped%pedigreeSize-ped%nDummys
+	do i=1,ped%addedRealAnimals
 		do k=2,3
 			TurnOn=1
 			tmpParentId = ped%pedigree(i)%getSireDamNewIDByIndexNoDummy(k)
@@ -1659,7 +1659,7 @@ subroutine FillInSnp
 
 
 	! WARNING: This can be refactored
-	do i=1,ped%pedigreeSize-ped%nDummys
+	do i=1,ped%addedRealAnimals
 
 		if(.not. ped%pedigree(i)%Founder) then
 			! tmpFather =>ped%pedigree(i)%getSireDamObjectByIndex(2)

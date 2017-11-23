@@ -370,7 +370,7 @@ MODULE Imputation
 						endif
 						! PARALLELIZATION BEGINS
 						!$OMP PARALLEL DO DEFAULT(SHARED) private(parent,i,e,j,subset,GamA,GamB,parentPhase)
-						do i=1,ped%pedigreeSize-ped%ndummys
+						do i=1,ped%addedRealAnimals
 							do e=1,2
 
 								! Skip if, in the case of sex chromosome, me and my parent are heterogametic
@@ -537,7 +537,7 @@ MODULE Imputation
 
 			integer :: f,e,g,i,j,l,nCore,nGlobalLoop,CoreLength,CoreStart,CoreEnd,CompPhase
 			integer :: BanBoth(2),Ban(2)
-			integer(kind=1) :: AnimalOn(ped%pedigreesize-ped%ndummys,2)
+			integer(kind=1) :: AnimalOn(ped%addedRealAnimals,2)
 			integer :: LoopStart,OffSet
 
 			integer,allocatable,dimension (:,:) :: LoopIndex
@@ -650,7 +650,7 @@ MODULE Imputation
 						!$OMP PARALLEL DO &
 						!$OMP DEFAULT(SHARED) &
 						!$OMP PRIVATE(i,e,tmphap,compPhase)
-						do i=1,ped%pedigreesize-ped%ndummys
+						do i=1,ped%addedRealAnimals
 							do e=1,2
 								! WARNING: If GeneProbPhase has been executed, that is, if not considering the Sex Chromosome, then MSTermInfo={0,1}.
 								!          Else, if Sex Chromosome, then MSTermInfo is 0 always
@@ -695,7 +695,7 @@ MODULE Imputation
 						!$OMP PARALLEL DO &
 						!$OMP DEFAULT(SHARED) &
 						!$OMP PRIVATE(i,j,e,BanBoth,matches,Ban,workGeno,phase,tmpHap,workHap)
-						do i=1,ped%pedigreesize-ped%ndummys
+						do i=1,ped%addedRealAnimals
 							BanBoth=0
 							allocate(workHap(2))
 							do e=1,2
@@ -783,7 +783,7 @@ MODULE Imputation
 			!$OMP PARALLEL DO &
 			!$OMP DEFAULT(SHARED) &
 			!$OMP PRIVATE(i,j,e)
-			do i=1,ped%pedigreesize-ped%ndummys
+			do i=1,ped%addedRealAnimals
 				do e=1,2
 					! WARNING: If GeneProbPhase has been executed, that is, if not considering the Sex Chromosome, then MSTermInfo={0,1}.
 					!          Else, if Sex Chromosome, then MSTermInfo is 0 always
@@ -2949,7 +2949,7 @@ MODULE Imputation
 			inputParams => defaultInput
 			if (inputParams%SexOpt==1) then                                         ! Sex chromosome
 				deallocate(GlobalWorkPhase)
-				allocate(GlobalWorkPhase(0:ped%pedigreeSize-ped%nDummys,inputParams%nsnp,2))
+				allocate(GlobalWorkPhase(0:ped%addedRealAnimals,inputParams%nsnp,2))
 				GlobalWorkPhase=9
 
 				!$OMP PARALLEL DO &
