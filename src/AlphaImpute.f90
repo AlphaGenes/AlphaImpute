@@ -32,81 +32,81 @@
 
 #endif
 
-			!#############################################################################################################################################################################################################################
+!#############################################################################################################################################################################################################################
 
-			module AlphaImputeModule
+module AlphaImputeModule
+	implicit none
+	contains
+
+
+
+
+		subroutine PhasingManagementNew(results)
+			use AlphaImputeSpecFileModule
+			use omp_lib
+			use AlphaPhaseParametersModule
+			use AlphaPhaseFunctions
+			use AlphaPhaseResultsModule
+			use Global, only : ped, OPT_RESTART_PHASING
+			use inputoutput, only : MakeDirectories
+			use OutputParametersModule
 			implicit none
-		contains
+
+			type(AlphaImputeInput), pointer :: inputParams
+			type(AlphaPhaseParameters) :: params
+			type(AlphaPhaseResultsContainer), intent(out) :: results
+			integer :: nCoreLengths,i, coreIndexes,temp
+			type(OutputParameters) :: oParams
+			type(PedigreeHolder), allocatable :: hdPed
+
+			inputParams=> defaultInput
+			nCoreLengths = size(inputParams%CoreAndTailLengths)
+			results%nResults = nCoreLengths*2
+
+			allocate(results%results(nCoreLengths*2))
+			params = newParameters()
+			params%iterateType = inputParams%iterateMethod
+			params%iterateNumber = inputParams%PhaseSubsetSize
+			params%numIter = inputParams%PhaseNIterations
+			params%minOverlap = inputparams%minoverlaphaplotype
+			params%percGenoHaploDisagree = inputparams%GenotypeErrorPhase*0.01
+			params%Offset = .true.
 
 
 
-
-			subroutine PhasingManagementNew(results)
-				use AlphaImputeSpecFileModule
-				use omp_lib
-				use AlphaPhaseParametersModule
-				use AlphaPhaseFunctions
-				use AlphaPhaseResultsModule
-				use Global, only : ped, OPT_RESTART_PHASING
-				use inputoutput, only : MakeDirectories
-				use OutputParametersModule
-				implicit none
-
-				type(AlphaImputeInput), pointer :: inputParams
-				type(AlphaPhaseParameters) :: params
-				type(AlphaPhaseResultsContainer), intent(out) :: results
-				integer :: nCoreLengths,i, coreIndexes,temp
-				type(OutputParameters) :: oParams
-				type(PedigreeHolder), allocatable :: hdPed
-
-				inputParams=> defaultInput
-				nCoreLengths = size(inputParams%CoreAndTailLengths)
-				results%nResults = nCoreLengths*2
-
-				allocate(results%results(nCoreLengths*2))
-				params = newParameters()
-				params%iterateType = inputParams%iterateMethod
-				params%iterateNumber = inputParams%PhaseSubsetSize
-				params%numIter = inputParams%PhaseNIterations
-				params%minOverlap = inputparams%minoverlaphaplotype
-				params%percGenoHaploDisagree = inputparams%GenotypeErrorPhase*0.01
-				params%Offset = .true.
-
-				
-
-				if (inputparams%minoverlaphaplotype /= 0) then
-					params%percMinPresent = 0
-				endif
-				call omp_set_nested(.true.)
+			if (inputparams%minoverlaphaplotype /= 0) then
+				params%percMinPresent = 0
+			endif
+			call omp_set_nested(.true.)
 
 
 
-				write(6,*) " "
-				write(6,*) " ", "Running AlphaPhase"
+			write(6,*) " "
+			write(6,*) " ", "Running AlphaPhase"
 
 
-				allocate(hdPed)
-				call ped%getHDPedigree(hdPed)
+			allocate(hdPed)
+			call ped%getHDPedigree(hdPed)
 
 
-				temp = 0
+			temp = 0
 
 
-				! FOLLOWING CODE goes with 
-				! call initPedigreeGenotypeFiles(hdPed,inputParams%genotypeFile, nsnp=temp)
-				
-				! do i=1, hdPed%pedigreeSize
+			! FOLLOWING CODE goes with
+			! call initPedigreeGenotypeFiles(hdPed,inputParams%genotypeFile, nsnp=temp)
 
-				! 	temp = ped%dictionary%getValue(hdPed%pedigree(i)%originalID)
+			! do i=1, hdPed%pedigreeSize
 
-				! 	if (ped%pedigree(temp)%hd) then
-				! 		call hdped%setAnimalAsHD(i)
-				! 	endif
-				! enddo
-				! TODO make above code actually only include hd animals"
-				if (hdPed%nHd ==0) then
-					print *, "WARNING: NO HD ANIMALS ON ALPHAPHASE ENTRY"
-				endif
+			! 	temp = ped%dictionary%getValue(hdPed%pedigree(i)%originalID)
+
+			! 	if (ped%pedigree(temp)%hd) then
+			! 		call hdped%setAnimalAsHD(i)
+			! 	endif
+			! enddo
+			! TODO make above code actually only include hd animals"
+			if (hdPed%nHd ==0) then
+				print *, "WARNING: NO HD ANIMALS ON ALPHAPHASE ENTRY"
+			endif
 			!$OMP parallel do schedule(dynamic)&
 			!$OMP default(shared) &
 			!$OMP FIRSTPRIVATE(params) &
@@ -131,11 +131,11 @@
 					results%results(i) = phaseAndCreateLibraries(hdPed, params, quiet=.true., updatePedigree=.false.)
 				endif
 				if (inputParams%restartOption==OPT_RESTART_PHASING .or. inputParams%alphaphaseoutput /= 0) then
-				if (inputParams%alphaphaseoutput == 2) then
-					oParams = newOutputParametersImpute(1)
-				else if (inputParams%alphaphaseoutput == 1 .or. inputParams%alphaphaseoutput == 3) then
-					oParams = newOutputParametersImpute()
-				endif
+					if (inputParams%alphaphaseoutput == 2) then
+						oParams = newOutputParametersImpute(1)
+					else if (inputParams%alphaphaseoutput == 1 .or. inputParams%alphaphaseoutput == 3) then
+						oParams = newOutputParametersImpute()
+					endif
 					write(oParams%outputDirectory,'("."a"Phasing",a,"Phase"i0)') DASH,DASH, i
 					call writeAlphaPhaseResults(results%results(i), hdPed, oParams)
 				endif
@@ -1858,29 +1858,29 @@ subroutine runAlphaImpute(in, pedIn)
 	class default
 	write(error_unit, *) "ERROR: AlphaImpute given correct object type as input"
 	call abort()
-	end select
+end select
 
-	inputParams => defaultInput
+inputParams => defaultInput
 
-	if (inputParams%hmmoption /= RUN_HMM_NGS) then
-		if (inputParams%restartOption<OPT_RESTART_IMPUTATION) call MakeDirectories(RUN_HMM_NULL)
-	else
-		call MakeDirectories(RUN_HMM_NGS)
-	endif
+if (inputParams%hmmoption /= RUN_HMM_NGS) then
+	if (inputParams%restartOption<OPT_RESTART_IMPUTATION) call MakeDirectories(RUN_HMM_NULL)
+else
+	call MakeDirectories(RUN_HMM_NGS)
+endif
 
-	if (.not. present(pedIn)) then
-		call ReadInData !< makes changes to inputparams
-	else
-		ped = pedIn
-	endif
+if (.not. present(pedIn)) then
+	call ReadInData !< makes changes to inputparams
+else
+	ped = pedIn
+endif
 
-	if (.not. allocated(inputParams%coreLengths)) then
-		call calculateCoresAndTails(inputParams%nsnp, inputParams%coreLengths,inputParams%CoreAndTailLengths,inputParams%nPhaseExternal )
-	endif
+if (.not. allocated(inputParams%coreLengths)) then
+	call calculateCoresAndTails(inputParams%nsnp, inputParams%coreLengths,inputParams%CoreAndTailLengths,inputParams%nPhaseExternal )
+endif
 
-	inputParams%nSnpRaw = inputParams%nsnp
+inputParams%nSnpRaw = inputParams%nsnp
 
-	call writeOutSpecOptions(inputParams)
+call writeOutSpecOptions(inputParams)
 if (inputParams%hmmoption /= RUN_HMM_NGS) then
 
 
@@ -1992,11 +1992,11 @@ if (inputParams%hmmoption /= RUN_HMM_NGS) then
 		print *, "Genotype Yield", checkYield(ped)
 		if (inputParams%TrueGenos1None0==1) then
 			block
-				
+
 
 				print *,""
 				print *,"**************************************************************************************************"
-				
+
 				print *,"Correct Percentage of SNPs per animal:",calculateaccuracyPerAnimal(ped,inputParams%TrueGenotypeFile, "Miscellaneous"// DASH// "AccuracyPerAnimal.txt", "Miscellaneous"// DASH// "ImputationErrors.txt")
 				print *,"Correct Percentage of SNPs per low density animal:",calculateaccuracyPerAnimal(ped,inputParams%TrueGenotypeFile, "Miscellaneous"// DASH// "AccuracyPerAnimalLD.txt", "Miscellaneous"// DASH// "ImputationErrorsLD.txt",1)
 			end block
@@ -2005,7 +2005,7 @@ if (inputParams%hmmoption /= RUN_HMM_NGS) then
 	endif
 
 else if (inputParams%hmmoption == RUN_HMM_NGS) then
-	
+
 	call SnpCallRate
 	allocate(SnpIncluded(inputParams%nsnp))
 	call CheckParentage
@@ -2094,6 +2094,7 @@ endif
 end subroutine runAlphaImpute
 
 end module AlphaImputeModule
+
 
 
 
