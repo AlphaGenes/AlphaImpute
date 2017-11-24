@@ -575,26 +575,26 @@ module AlphaImputeSpecFileModule
 							stop
 						endif
 
-					case("hmmparameters")
-						if (.not. allocated(second)) then
-							write(error_unit,*) "templatehaplotypes not set correctly"
-							stop
-						endif
+					! case("hmmparameters")
+					! 	if (.not. allocated(second)) then
+					! 		write(error_unit,*) "templatehaplotypes not set correctly"
+					! 		stop
+					! 	endif
 
-						if (size(second) /= 5) then
-							write(error_unit,*) "hmmparameters not set correctly"
-							stop
-						endif
+					! 	if (size(second) /= 5) then
+					! 		write(error_unit,*) "hmmparameters not set correctly"
+					! 		stop
+					! 	endif
 
-						read(second(1), *) this%nHapInSubH
-						read(second(2), *) this%HmmBurnInRound
-						read(second(3), *) this%nRoundsHMM
-						read(second(4), *) this%useProcs
-						if (this%useProcs > OMP_get_num_procs()) then
-							write(error_unit,*) "WARNING - more processors than are available are specified under parallelprocessors"
-							write(error_unit,*) this%useProcs, " set vs ",OMP_get_num_procs()," available"
-						endif
-						read(second(5), * ) this%idum
+					! 	read(second(1), *) this%nHapInSubH
+					! 	read(second(2), *) this%HmmBurnInRound
+					! 	read(second(3), *) this%nRoundsHMM
+					! 	read(second(4), *) this%useProcs
+					! 	if (this%useProcs > OMP_get_num_procs()) then
+					! 		write(error_unit,*) "WARNING - more processors than are available are specified under parallelprocessors"
+					! 		write(error_unit,*) this%useProcs, " set vs ",OMP_get_num_procs()," available"
+					! 	endif
+					! 	read(second(5), * ) this%idum
 
 					case("templatehaplotypes")
 						if (.not. allocated(second)) then
