@@ -2949,7 +2949,7 @@ MODULE Imputation
 			inputParams => defaultInput
 			if (inputParams%SexOpt==1) then                                         ! Sex chromosome
 				deallocate(GlobalWorkPhase)
-				allocate(GlobalWorkPhase(0:ped%addedRealAnimals,inputParams%nsnp,2))
+				allocate(GlobalWorkPhase(0:ped%pedigreeSize,inputParams%nsnp,2))
 				GlobalWorkPhase=9
 
 				!$OMP PARALLEL DO &
