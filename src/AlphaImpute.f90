@@ -1843,7 +1843,7 @@ subroutine runAlphaImpute(in, pedIn)
 	use AlphaPhaseResultsModule
 
 	class(baseSpecFile), target :: in
-	type(pedigreeHolder), optional :: pedIn
+	type(pedigreeHolder),target, optional :: pedIn
 
 
 
