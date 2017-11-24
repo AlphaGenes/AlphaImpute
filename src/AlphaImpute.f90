@@ -124,13 +124,16 @@
 				params%jump = inputParams%CoreLengths(coreIndexes)
 				params%numsurrdisagree = 1
 				params%useSurrsN = 10
-				results%results(i) = phaseAndCreateLibraries(hdPed, params, quiet=.true., updatePedigree=.false.)
+				! if verbose output
+				if (inputParams%alphaphaseoutput == 3) then
+					results%results(i) = phaseAndCreateLibraries(hdPed, params, quiet=.false., updatePedigree=.false.)
+				else
+					results%results(i) = phaseAndCreateLibraries(hdPed, params, quiet=.true., updatePedigree=.false.)
+				endif
 				if (inputParams%restartOption==OPT_RESTART_PHASING .or. inputParams%alphaphaseoutput /= 0) then
 				if (inputParams%alphaphaseoutput == 2) then
 					oParams = newOutputParametersImpute(1)
-				else if (inputParams%alphaphaseoutput == 1) then
-					oParams = newOutputParameters()
-				else
+				else if (inputParams%alphaphaseoutput == 1 .or. inputParams%alphaphaseoutput == 3) then
 					oParams = newOutputParametersImpute()
 				endif
 					write(oParams%outputDirectory,'("."a"Phasing",a,"Phase"i0)') DASH,DASH, i
