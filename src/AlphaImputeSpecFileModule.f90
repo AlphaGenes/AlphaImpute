@@ -159,6 +159,12 @@ module AlphaImputeSpecFileModule
 			this%outputonlygenotypedanimals = .false.
 			this%TrueGenos1None0=0
 			this%hmmoption=RUN_HMM_NO
+			this%nHapInSubH = 0
+			this%HmmBurnInRound = 0
+			this%nRoundsHMM = 1
+			this%idum = -123456789
+			this%phasedThreshold = 90.0
+			this%imputedThreshold = 50.0
 			this%plinkinputfile = ""
 			this%nsnp = 0
 			this%PercGenoForHD=90.0
