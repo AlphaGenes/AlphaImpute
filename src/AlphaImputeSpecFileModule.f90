@@ -92,6 +92,7 @@ module AlphaImputeSpecFileModule
 
 	logical :: modelrecomb
 
+	logical :: phaseRunsSet !< have phasing runs been set? 
 
 
 	contains
@@ -176,6 +177,7 @@ module AlphaImputeSpecFileModule
 			this%PhaseTheDataOnly=0
 			this%noPhasing = 1
 			this%useProcs = OMP_get_num_procs()
+			this%phaseRunsSet = .false.
 
 			this%nPhaseExternal = this%useProcs/2
 			this%nPhaseInternal = this%useProcs
@@ -393,7 +395,7 @@ module AlphaImputeSpecFileModule
 						! box 5
 					case("numberphasingruns")
 						this%noPhasing = 1
-
+						this%phaseRunsSet = .true.
 						if (ToLower(trim(second(1))) == "phasedone") then  !phasedone,path,nphaseruns
 							if (size(second) /=3) then
 								goto 4051
@@ -413,22 +415,22 @@ module AlphaImputeSpecFileModule
 						else
 							this%managephaseon1off0 = 1
 							read(second(1),*) this%nPhaseExternal
+							this%nPhaseInternal = 2*this%nPhaseExternal
 
 							if(this%nPhaseExternal <1 ) then
 								write(error_unit,*) "Error: Too few phasing runs requested. The minimum this program supports is 1, 4 are reccomended."
 								stop 40512
 							endif
 						endif
-
-						this%nPhaseInternal = 2*this%nPhaseExternal
+						
+						
 						if (allocated(this%CoreAndTailLengths)) then
 							deallocate(this%CoreAndTailLengths)
 						endif
 						if (allocated(this%CoreLengths)) then
 							deallocate(this%CoreLengths)
 						endif
-						allocate(this%CoreAndTailLengths(this%nPhaseExternal))
-						allocate(this%CoreLengths(this%nPhaseExternal))
+
 
 
 						cycle
@@ -436,11 +438,17 @@ module AlphaImputeSpecFileModule
 						stop 4051
 
 					case("coreandtaillengths")
-						if (.not. allocated(this%CoreAndTailLengths)) then
-							write(error_unit,*) "Error: numberofphasingruns is not defined. Please define this before CoreAndTailLengths and CoreLengths"
-							stop 40521
+
+						if (this%phaseRunsSet == .false.) then
+							
+							this%nPhaseExternal = size(second)
+							this%phaseRunsSet = .true.
 						endif
-						do i=1,size(second)
+
+						allocate(this%CoreAndTailLengths(this%nPhaseExternal))
+						
+
+						do i=1,this%nPhaseExternal
 							read(second(i), *) this%CoreAndTailLengths(i)
 
 							if (this%nsnp /= 0 ) then
@@ -454,12 +462,14 @@ module AlphaImputeSpecFileModule
 						enddo
 
 					case("corelengths")
-						if (.not. allocated(this%corelengths)) then
-							write(error_unit,*) "Error: numberofphasingruns is not defined. Please define this before CoreAndTailLengths and CoreLengths"
-							stop 40531
+
+						if (this%phaseRunsSet == .false.) then
+							this%nPhaseExternal = size(second)
+							this%phaseRunsSet = .true.
 						endif
+						allocate(this%coreLengths(this%nPhaseExternal))
 						if (size(second) /= size(this%corelengths)) then
-							write(error_unit,*) "Error: numberofphasingruns is set to a different number of parameters than what is specified here. \n Please set this to the same number of parameters that are given for CoreAndTailLengths and CoreLengths"
+							write(error_unit,*) "Error: numberofphasingruns is set to a different number of parameters than what is specified here, core number of core and tail lengths are different \n Please set this to the same number of parameters that are given for CoreAndTailLengths and CoreLengths"
 							stop 40532
 						endif
 						do i=1,size(second)
@@ -764,6 +774,7 @@ module AlphaImputeSpecFileModule
 			deallocate(tag)
 			deallocate(tmptag)
 
+
 			! Set parameters for parallelisation
 			if (this%nPhaseInternal==2) then
 				this%nAgreeInternalHapLibElim=1
@@ -779,6 +790,7 @@ module AlphaImputeSpecFileModule
 			endif
 
 
+			
 			this%PercGenoForHD=this%PercGenoForHD/100
 			this%PercSnpMiss=this%PercSnpMiss/100
 			this%SecondPercGenoForHD=this%SecondPercGenoForHD/100
@@ -853,6 +865,11 @@ module AlphaImputeSpecFileModule
 			write(unit, *) "GenotypeFile,",trim(inputParams%GenotypeFile)
 			write(unit, *) "TrueGenotypeFile,",trim(inputParams%TrueGenotypeFile)
 
+			if (inputParams%plinkBinary) then
+				write(unit, *) "plinkinputfile,binary,",trim(inputParams%plinkinputfile)
+			else
+				write(unit, *) "plinkinputfile,text,",trim(inputParams%plinkinputfile)
+			endif
 			if (inputParams%sexOpt == 1) then
 				write(unit, '(a,a,a)', advance="no") "sexchrom,","yes,",trim(inputParams%genderFile)
 
