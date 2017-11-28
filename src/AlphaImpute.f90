@@ -658,7 +658,7 @@ module AlphaImputeModule
 						elseif (n1>n2) then
 							! call ped%pedigree(ped%genotypeMap(i))%individualGenotype%setGenotype(j,1)
 							ImputeGenosHMM(ped%genotypeMap(i),j)   = 1
-							if (ProbImputePhaseHmm(ped%genotypeMap(i),j,1) > ProbImputePhaseHmm(ped%genotypeMap(i),j,2) ) then
+							if (ProbImputePhaseHmm(i,j,1) > ProbImputePhaseHmm(i,j,2) ) then
 								ImputePhaseHMM(ped%genotypeMap(i),j,1) = 1
 								ImputePhaseHMM(ped%genotypeMap(i),j,2) = 0
 							else
