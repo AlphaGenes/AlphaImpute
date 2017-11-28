@@ -446,7 +446,9 @@ module AlphaImputeSpecFileModule
 							stop 4051
 
 						case("coreandtaillengths")
-
+							if (this%managephaseon1off0 == 0) then
+								cycle
+							endif
 							if (this%phaseRunsSet == .false.) then
 								
 								this%nPhaseExternal = size(second)
@@ -470,6 +472,10 @@ module AlphaImputeSpecFileModule
 							enddo
 
 						case("corelengths")
+
+							if (this%managephaseon1off0 == 0) then
+								cycle
+							endif
 
 							if (this%phaseRunsSet == .false.) then
 								this%nPhaseExternal = size(second)
@@ -806,7 +812,7 @@ module AlphaImputeSpecFileModule
 
 
 
-			if (.not. allocated(this%CoreAndTailLengths) .or. .not. allocated(this%CoreLengths)) then
+			if (.not. allocated(this%CoreAndTailLengths) .or. .not. allocated(this%CoreLengths) .and. (this%ManagePhaseOn1Off0 /= 0)) then
 				write(error_unit,*) "warning - CoreLengths or CoreAndTailLengths have not been specified, will be calculated instead"
 			endif
 

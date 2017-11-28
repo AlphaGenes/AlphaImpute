@@ -1880,7 +1880,7 @@ else
 	ped = pedIn
 endif
 
-if (.not. allocated(inputParams%coreLengths)) then
+if (.not. allocated(inputParams%coreLengths) .and. (inputParams%ManagePhaseOn1Off0 /= 0)) then
 	call calculateCoresAndTails(inputParams%nsnp, inputParams%coreLengths,inputParams%CoreAndTailLengths,inputParams%nPhaseExternal )
 endif
 
