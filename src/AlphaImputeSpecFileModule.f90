@@ -175,6 +175,7 @@ module AlphaImputeSpecFileModule
 			this%outopt = 1
 			this%RestartOption = 0
 			this%managephaseon1off0 = 1
+			this%PedFreePhasing = 0
 			this%PhaseTheDataOnly=0
 			this%noPhasing = 1
 			this%useProcs = OMP_get_num_procs()

@@ -84,25 +84,29 @@ module AlphaImputeModule
 			write(6,*) " "
 			write(6,*) " ", "Running AlphaPhase"
 
-
-			allocate(hdPed)
-			call ped%getHDPedigree(hdPed)
-
-
 			temp = 0
+			allocate(hdPed)
+
+			if (inputparams%PedFreePhasing == 1) then
+				call initPedigreeGenotypeFiles(hdPed,inputParams%genotypeFile, nsnp=temp)
+
+				do i=1, hdPed%pedigreeSize
+
+					temp = ped%dictionary%getValue(hdPed%pedigree(i)%originalID)
+
+					if (ped%pedigree(temp)%hd) then
+						call hdped%setAnimalAsHD(i)
+					endif
+				enddo
+			else
+				call ped%getHDPedigree(hdPed)
+			endif
+
+
 
 
 			! FOLLOWING CODE goes with
-			! call initPedigreeGenotypeFiles(hdPed,inputParams%genotypeFile, nsnp=temp)
 
-			! do i=1, hdPed%pedigreeSize
-
-			! 	temp = ped%dictionary%getValue(hdPed%pedigree(i)%originalID)
-
-			! 	if (ped%pedigree(temp)%hd) then
-			! 		call hdped%setAnimalAsHD(i)
-			! 	endif
-			! enddo
 			! TODO make above code actually only include hd animals"
 			if (hdPed%nHd ==0) then
 				print *, "WARNING: NO HD ANIMALS ON ALPHAPHASE ENTRY"
@@ -733,7 +737,7 @@ module AlphaImputeModule
 			ImputationQuality(:,1)=sum(2*Maf(:))/nOutputSnps
 
 			ImputationQuality(:,2)=0.0
-			
+
 			open (unit=50,file="." // DASH// trim(inputparams%resultFolderPath) // DASH // "ImputationQuality.txt",status="unknown")
 			do i=1, ped%addedRealAnimals
 				if (ped%pedigree(i)%isDummy) then
@@ -752,7 +756,7 @@ module AlphaImputeModule
 				write (50,'(a20,20000f7.2)') ped%pedigree(i)%originalID,ImputationQuality(i,:)
 			enddo
 			close(50)
-			
+
 			open (unit=51,file="." // DASH// trim(inputparams%resultFolderPath) // DASH // "ImputationQualitySnp.txt",status="unknown")
 			do j=1,nOutputSnps
 				write (51,'(i10,20000f7.2)') j,float(((ped%pedigreeSize-(ped%nDummys+1))+1)-ped%countMissingGenotypesNoDummys())/((ped%pedigreeSize-(ped%nDummys+1))+1)
@@ -2096,6 +2100,7 @@ endif
 end subroutine runAlphaImpute
 
 end module AlphaImputeModule
+
 
 
 
