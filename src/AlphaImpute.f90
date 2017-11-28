@@ -733,7 +733,8 @@ module AlphaImputeModule
 			ImputationQuality(:,1)=sum(2*Maf(:))/nOutputSnps
 
 			ImputationQuality(:,2)=0.0
-
+			
+			open (unit=50,file="." // DASH// trim(inputparams%resultFolderPath) // DASH // "ImputationQuality.txt",status="unknown")
 			do i=1, ped%addedRealAnimals
 				if (ped%pedigree(i)%isDummy) then
 					exit
@@ -750,7 +751,8 @@ module AlphaImputeModule
 				ImputationQuality(i,6)=float(nOutputSnps-ped%pedigree(i)%IndividualGenotype%numMissing())/nOutputSnps
 				write (50,'(a20,20000f7.2)') ped%pedigree(i)%originalID,ImputationQuality(i,:)
 			enddo
-
+			close(50)
+			
 			open (unit=51,file="." // DASH// trim(inputparams%resultFolderPath) // DASH // "ImputationQualitySnp.txt",status="unknown")
 			do j=1,nOutputSnps
 				write (51,'(i10,20000f7.2)') j,float(((ped%pedigreeSize-(ped%nDummys+1))+1)-ped%countMissingGenotypesNoDummys())/((ped%pedigreeSize-(ped%nDummys+1))+1)
