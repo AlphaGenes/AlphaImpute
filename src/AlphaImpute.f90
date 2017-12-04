@@ -1887,6 +1887,7 @@ endif
 inputParams%nSnpRaw = inputParams%nsnp
 
 call writeOutSpecOptions(inputParams)
+call system(COPY // ' ' // 'AlphaImputeSpecFileUsed.txt' // ' ' // trim(inputparams%resultFolderPath // DASH // 'AlphaImputeSpecFileUsed.txt')
 if (inputParams%hmmoption /= RUN_HMM_NGS) then
 
 
