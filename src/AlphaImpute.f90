@@ -1736,7 +1736,9 @@ subroutine CheckParentage
 
 	inputParams => defaultInput
 
+	print *,"first animalI12312321D2:",ped%pedigree(1)%originalId
 	call ped%sortPedigreeAndOverwrite()
+	print *,"first animalI2132321D2:",ped%pedigree(1)%originalId
 	inconsistencies = ped%findMendelianInconsistencies(DisagreeThreshold,"." // DASH // "Miscellaneous" // DASH // "PedigreeMistakes.txt","." // DASH // "Miscellaneous" // DASH // "snpMistakes.txt")
 	call ped%outputSortedPedigreeInAlphaImputeFormat("." // DASH // "Miscellaneous" // DASH // "InternalDataRecoding.txt")
 
@@ -1875,9 +1877,12 @@ else
 endif
 
 if (.not. present(pedIn)) then
-	call ReadInData !< makes changes to inputparams
+	write(error_unit, *) "WARNING: PED object not passed in so will be read from file"
+	call ReadInData(ped, inputParams) !< makes changes to inputparams
+	
 else
-	ped = pedIn
+	ped => pedIn
+	print *,"first animalID2:",ped%pedigree(1)%originalId
 endif
 
 if (.not. allocated(inputParams%coreLengths) .and. (inputParams%ManagePhaseOn1Off0 /= 0)) then
@@ -1893,7 +1898,7 @@ if (inputParams%hmmoption /= RUN_HMM_NGS) then
 
 	call SnpCallRate
 
-
+	print *,"first animalID21:",ped%pedigree(1)%originalId
 	call CheckParentage
 	if (inputParams%MultiHD/=0) then
 		call ClassifyAnimByChips
@@ -2095,7 +2100,7 @@ if (allocated(FullH)) then
 endif
 
 
-
+ped => null()
 
 end subroutine runAlphaImpute
 

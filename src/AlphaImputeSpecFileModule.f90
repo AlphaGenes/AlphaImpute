@@ -183,7 +183,7 @@ module AlphaImputeSpecFileModule
 
 			this%nPhaseExternal = this%useProcs/2
 			this%nPhaseInternal = this%useProcs
-
+			this%plinkoutput = .false.
 			
 			inquire(FILE=SpecFile, EXIST=exists)
 
@@ -230,6 +230,14 @@ module AlphaImputeSpecFileModule
 								endif
 
 							end if
+						case("plinkoutput")
+							if (toLower(trim(second(1)))=="yes") then
+								this%plinkoutput = .true.
+							else if (toLower(trim(second(1)))=="no") then
+								this%plinkoutput = .false.
+							else
+								write(error_unit, *) "WARNING - plinkoutput set incorrectly"
+							endif
 
 							! box 1 inputs
 						case("pedigreefile")
@@ -878,6 +886,12 @@ module AlphaImputeSpecFileModule
 			write(unit, *) "PedigreeFile,",trim(inputParams%PedigreeFile)
 			write(unit, *) "GenotypeFile,",trim(inputParams%GenotypeFile)
 			write(unit, *) "TrueGenotypeFile,",trim(inputParams%TrueGenotypeFile)
+
+			if (inputParams%plinkOutput) then
+				write(unit, *) "plinkOutput,yes"
+			else
+				write(unit, *) "plinkOutput,no"
+			endif
 
 			if (inputParams%plinkBinary) then
 				write(unit, *) "plinkinputfile,binary,",trim(inputParams%plinkinputfile)
