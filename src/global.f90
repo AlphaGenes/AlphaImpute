@@ -49,7 +49,7 @@ module Global
     ! character*(lengan),allocatable :: GenotypeId(:),GenderId(:)
 
     integer, allocatable :: animChip(:)
-    type(PedigreeHolder), pointer :: ped !TODO move out of global
+    type(PedigreeHolder) :: ped !TODO move out of global
 
     type(AlphaPhaseResultsContainer) :: apResults
     real(kind=real64), allocatable :: GenosProbs(:,:,:) !< output of geneprob

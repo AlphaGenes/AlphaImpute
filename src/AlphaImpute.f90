@@ -1881,8 +1881,7 @@ if (.not. present(pedIn)) then
 	call ReadInData(ped, inputParams) !< makes changes to inputparams
 	
 else
-	ped => pedIn
-	print *,"first animalID2:",ped%pedigree(1)%originalId
+	ped = pedIn
 endif
 
 if (.not. allocated(inputParams%coreLengths) .and. (inputParams%ManagePhaseOn1Off0 /= 0)) then
@@ -1898,7 +1897,6 @@ if (inputParams%hmmoption /= RUN_HMM_NGS) then
 
 	call SnpCallRate
 
-	print *,"first animalID21:",ped%pedigree(1)%originalId
 	call CheckParentage
 	if (inputParams%MultiHD/=0) then
 		call ClassifyAnimByChips
@@ -2100,7 +2098,7 @@ if (allocated(FullH)) then
 endif
 
 
-ped => null()
+! ped => null()
 
 end subroutine runAlphaImpute
 

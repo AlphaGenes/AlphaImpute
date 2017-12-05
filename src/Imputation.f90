@@ -379,8 +379,8 @@ MODULE Imputation
 
 								! If not a Base Animal
 								if (.not. ped%pedigree(i)%founder) then
-
 									parent => ped%pedigree(i)%getSireDamObjectByIndex(e+1)
+
 									if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==inputParams%HetGameticStatus).and.(parent%gender==inputParams%HetGameticStatus)) cycle
 
 									! If the haplotype for this core is not completely phased
@@ -1040,10 +1040,10 @@ MODULE Imputation
 								parent => ped%pedigree(i)%getSireDamObjectByIndex(pedId)
 
 								! Skip if, in the case of sex chromosome, me and my parent are heterogametic
-								if ((inputParams%SexOpt==1 .and.ped%pedigree(i)%gender==inputParams%HetGameticStatus .and.(parent%gender==inputParams%HetGameticStatus))) cycle
 
 								! We look for gamete through those individuals that have parents with HD genotype information
 								if (associated(parent)) then
+									if ((inputParams%SexOpt==1 .and.ped%pedigree(i)%gender==inputParams%HetGameticStatus .and.(parent%gender==inputParams%HetGameticStatus))) cycle
 									! We look for possible gametes within the haplotypes identified to each of the individual's parents constructed during the phasing step
 									posHdInd = ped%hdDictionary%getValue(parent%originalId)
 									tmpHap = ped%pedigree(i)%individualPhase(e)%subset(startsnp,endSnp)
