@@ -1736,9 +1736,7 @@ subroutine CheckParentage
 
 	inputParams => defaultInput
 
-	print *,"first animalI12312321D2:",ped%pedigree(1)%originalId
 	call ped%sortPedigreeAndOverwrite()
-	print *,"first animalI2132321D2:",ped%pedigree(1)%originalId
 	inconsistencies = ped%findMendelianInconsistencies(DisagreeThreshold,"." // DASH // "Miscellaneous" // DASH // "PedigreeMistakes.txt","." // DASH // "Miscellaneous" // DASH // "snpMistakes.txt")
 	call ped%outputSortedPedigreeInAlphaImputeFormat("." // DASH // "Miscellaneous" // DASH // "InternalDataRecoding.txt")
 
@@ -1881,7 +1879,23 @@ if (.not. present(pedIn)) then
 	call ReadInData(ped, inputParams) !< makes changes to inputparams
 	
 else
+print *, "Genotype Yield1", checkYield(pedIn)
+	
 	ped = pedIn
+
+	
+
+	if (.not. equality(ped,pedIn)) then
+		print *,"YAY"
+		stop
+	endif
+
+	if (.not. ped%deepCheckPedigree()) then
+		print *,"SHIT"
+		stop
+	endif
+	call pedIn%writeOutPedigree("pedIn")
+	call ped%writeOutPedigree("pedCopy")
 endif
 
 if (.not. allocated(inputParams%coreLengths) .and. (inputParams%ManagePhaseOn1Off0 /= 0)) then
