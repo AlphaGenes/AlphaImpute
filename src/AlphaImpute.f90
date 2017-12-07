@@ -1855,8 +1855,6 @@ subroutine runAlphaImpute(in, pedIn)
 	type(pedigreeHolder),target, optional :: pedIn
 
 
-
-
 	select type(in)
 
 	type is (AlphaImputeInput)
@@ -1877,25 +1875,12 @@ endif
 if (.not. present(pedIn)) then
 	write(error_unit, *) "WARNING: PED object not passed in so will be read from file"
 	call ReadInData(ped, inputParams) !< makes changes to inputparams
-	
+
 else
-print *, "Genotype Yield1", checkYield(pedIn)
-	
+
 	ped = pedIn
+	! call ReadInData(ped, inputParams)
 
-	
-
-	if (.not. equality(ped,pedIn)) then
-		print *,"YAY"
-		stop
-	endif
-
-	if (.not. ped%deepCheckPedigree()) then
-		print *,"SHIT"
-		stop
-	endif
-	call pedIn%writeOutPedigree("pedIn")
-	call ped%writeOutPedigree("pedCopy")
 endif
 
 if (.not. allocated(inputParams%coreLengths) .and. (inputParams%ManagePhaseOn1Off0 /= 0)) then
@@ -1907,8 +1892,6 @@ inputParams%nSnpRaw = inputParams%nsnp
 call writeOutSpecOptions(inputParams)
 call system(COPY // ' ' // 'AlphaImputeSpecFileUsed.txt' // ' ' // trim(inputparams%resultFolderPath) // DASH // 'AlphaImputeSpecFileUsed.txt')
 if (inputParams%hmmoption /= RUN_HMM_NGS) then
-
-
 
 	call SnpCallRate
 
@@ -2064,8 +2047,11 @@ else if (inputParams%hmmoption == RUN_HMM_NGS) then
 	call FromHMM2ImputePhase
 	call WriteOutResults
 
-endif
 
+
+
+endif
+call ped%writeOutPedigree("NOPEWORKS/")
 ! call ped%destroyPedigree()
 call PrintTimerTitles
 
@@ -2118,6 +2104,8 @@ endif
 end subroutine runAlphaImpute
 
 end module AlphaImputeModule
+
+
 
 
 
