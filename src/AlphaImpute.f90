@@ -1855,8 +1855,6 @@ subroutine runAlphaImpute(in, pedIn)
 	type(pedigreeHolder),target, optional :: pedIn
 
 
-
-
 	select type(in)
 
 	type is (AlphaImputeInput)
@@ -1875,9 +1873,14 @@ else
 endif
 
 if (.not. present(pedIn)) then
-	call ReadInData !< makes changes to inputparams
+	write(error_unit, *) "WARNING: PED object not passed in so will be read from file"
+	call ReadInData(ped, inputParams) !< makes changes to inputparams
+
 else
+
 	ped = pedIn
+	! call ReadInData(ped, inputParams)
+
 endif
 
 if (.not. allocated(inputParams%coreLengths) .and. (inputParams%ManagePhaseOn1Off0 /= 0)) then
@@ -1890,10 +1893,7 @@ call writeOutSpecOptions(inputParams)
 call system(COPY // ' ' // 'AlphaImputeSpecFileUsed.txt' // ' ' // trim(inputparams%resultFolderPath) // DASH // 'AlphaImputeSpecFileUsed.txt')
 if (inputParams%hmmoption /= RUN_HMM_NGS) then
 
-
-
 	call SnpCallRate
-
 
 	call CheckParentage
 	if (inputParams%MultiHD/=0) then
@@ -2047,8 +2047,11 @@ else if (inputParams%hmmoption == RUN_HMM_NGS) then
 	call FromHMM2ImputePhase
 	call WriteOutResults
 
-endif
 
+
+
+endif
+call ped%writeOutPedigree("NOPEWORKS/")
 ! call ped%destroyPedigree()
 call PrintTimerTitles
 
@@ -2096,11 +2099,13 @@ if (allocated(FullH)) then
 endif
 
 
-
+! ped => null()
 
 end subroutine runAlphaImpute
 
 end module AlphaImputeModule
+
+
 
 
 

@@ -112,7 +112,7 @@ MODULE Imputation
 				if (inputParams%NoPhasing==1) then
 
 					! Major sub-step 2 as explained in Hickey et al. (2012; Appendix A)
-						call BaseAnimalFillIn
+					call BaseAnimalFillIn
 					!        call makeGenotype
 					! Impute phase whenever a pre-phase file exists
 					if (inputParams%PrePhased==1) call ReadInPrePhasedData
@@ -261,7 +261,7 @@ MODULE Imputation
 							use ExternalHMMWrappers
 							type (AlphaHMMinput) :: inputParamsHMM
 
-							
+
 							inputParamsHMM%HMMOption = inputParams%hmmoption
 							inputParamsHMM%nsnp = inputParams%nsnp
 							inputParamsHMM%nHapInSubH = inputParams%nHapInSubH
@@ -379,8 +379,8 @@ MODULE Imputation
 
 								! If not a Base Animal
 								if (.not. ped%pedigree(i)%founder) then
-
 									parent => ped%pedigree(i)%getSireDamObjectByIndex(e+1)
+
 									if ((inputParams%SexOpt==1).and.(ped%pedigree(i)%gender==inputParams%HetGameticStatus).and.(parent%gender==inputParams%HetGameticStatus)) cycle
 
 									! If the haplotype for this core is not completely phased
@@ -403,7 +403,7 @@ MODULE Imputation
 											GamB=0
 										endif
 
-										
+
 
 										! This haplotype is the paternal haplotype of the individual's parent
 										! Then count the number of occurrences a particular phase is impute in a
@@ -413,16 +413,16 @@ MODULE Imputation
 										if ((GamA==1).and.(GamB==0)) then
 											AnimalOn(i,e)=1
 											do j=CoreStart,CoreEnd
-												if (ped%pedigree(i)%individualPhase(e)%isMissing(j)) then													
-														parentPhase = parent%individualPhase(1)%getPhase(j)
+												if (ped%pedigree(i)%individualPhase(e)%isMissing(j)) then
+													parentPhase = parent%individualPhase(1)%getPhase(j)
 
-														if (parentPhase==0) then
-															!$OMP ATOMIC
-															Temp(i,j,e,1)=Temp(i,j,e,1)+1
-														else if (parentPhase==1) then
-															!$OMP ATOMIC
-															Temp(i,j,e,2)=Temp(i,j,e,2)+1
-														endif
+													if (parentPhase==0) then
+														!$OMP ATOMIC
+														Temp(i,j,e,1)=Temp(i,j,e,1)+1
+													else if (parentPhase==1) then
+														!$OMP ATOMIC
+														Temp(i,j,e,2)=Temp(i,j,e,2)+1
+													endif
 												endif
 											enddo
 										endif
@@ -437,15 +437,15 @@ MODULE Imputation
 											do j=CoreStart,CoreEnd
 												if (ped%pedigree(i)%individualPhase(e)%isMissing(j)) then
 
-														parentPhase = parent%individualPhase(2)%getPhase(j)
+													parentPhase = parent%individualPhase(2)%getPhase(j)
 
-														if (parentPhase==0) then
-															!$OMP ATOMIC
-															Temp(i,j,e,1)=Temp(i,j,e,1)+1
-														else if (parentPhase==1) then
-															!$OMP ATOMIC
-															Temp(i,j,e,2)=Temp(i,j,e,2)+1
-														endif
+													if (parentPhase==0) then
+														!$OMP ATOMIC
+														Temp(i,j,e,1)=Temp(i,j,e,1)+1
+													else if (parentPhase==1) then
+														!$OMP ATOMIC
+														Temp(i,j,e,2)=Temp(i,j,e,2)+1
+													endif
 												endif
 											enddo
 										endif
@@ -453,7 +453,7 @@ MODULE Imputation
 
 									deallocate(subset)
 								endif
-								
+
 							enddo
 						enddo
 						!$OMP END PARALLEL DO
@@ -667,7 +667,7 @@ MODULE Imputation
 								! NOTE: Since there is code in order to populate the Haplotype Library in
 								!       in AlphaPhase, it can be convenient to create a share procedure in
 								!       AlphaHouse
-								
+
 								if (CompPhase==1) then
 									!$OMP CRITICAL
 									id = hapLib%hasHap(tmphap)
@@ -680,10 +680,10 @@ MODULE Imputation
 									endif
 									!$OMP END CRITICAL
 								endif
-								
+
 								deallocate(tmpHap)
 							enddo
-							
+
 						enddo
 						!$OMP END PARALLEL DO
 
@@ -1040,10 +1040,10 @@ MODULE Imputation
 								parent => ped%pedigree(i)%getSireDamObjectByIndex(pedId)
 
 								! Skip if, in the case of sex chromosome, me and my parent are heterogametic
-								if ((inputParams%SexOpt==1 .and.ped%pedigree(i)%gender==inputParams%HetGameticStatus .and.(parent%gender==inputParams%HetGameticStatus))) cycle
 
 								! We look for gamete through those individuals that have parents with HD genotype information
 								if (associated(parent)) then
+									if ((inputParams%SexOpt==1 .and.ped%pedigree(i)%gender==inputParams%HetGameticStatus .and.(parent%gender==inputParams%HetGameticStatus))) cycle
 									! We look for possible gametes within the haplotypes identified to each of the individual's parents constructed during the phasing step
 									posHdInd = ped%hdDictionary%getValue(parent%originalId)
 									tmpHap = ped%pedigree(i)%individualPhase(e)%subset(startsnp,endSnp)
@@ -2470,7 +2470,7 @@ MODULE Imputation
 
 								if (tmp == 0) then
 									LengthVec(StartDis+1:EndDis-1)=0
-								else 
+								else
 									LengthVec(StartDis+1:EndDis-1)=1.0/tmp
 								endif
 								StartJ=EndDis+1
@@ -2794,7 +2794,7 @@ MODULE Imputation
 								tmp = (((EndDis-1)-(StartDis+1))+1)
 								if (tmp == 0) then
 									LengthVec(StartDis+1:EndDis-1)=0
-								else 
+								else
 									LengthVec(StartDis+1:EndDis-1)=1.0/tmp
 								endif
 								StartJ=EndDis+1
@@ -2986,5 +2986,6 @@ MODULE Imputation
 
 
 END MODULE Imputation
+
 
 
