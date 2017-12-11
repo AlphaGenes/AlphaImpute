@@ -789,6 +789,12 @@ module AlphaImputeSpecFileModule
 								this%modelrecomb = .true.
 							endif
 
+						case("usechroms")
+							allocate(this%usechroms(size(second)))
+							do i= 1, size(second)
+								read(second(i), *) this%useChroms(i)
+								
+							enddo 
 
 						end select
 					end if
@@ -1053,6 +1059,18 @@ module AlphaImputeSpecFileModule
 			else
 				write(unit, *) "modelrecomb,","no"
 			endif
+			if (allocated(inputParams%usechroms)) then
+				write(unit, *) "usechroms,",inputParams%usechroms
+			else
+				write(unit, *) "usechroms,"
+			endif
+
+			! do i=1,size(inputParams%usechroms)
+			! 	write(unit, '(I3,a)', advance=no) inputParams%usechroms(i),","
+			! enddo 
+			
+
+			
 
 			close(unit)
 		end subroutine writeOutSpecOptions
