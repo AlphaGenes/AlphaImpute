@@ -1060,7 +1060,7 @@ module AlphaImputeSpecFileModule
 				write(unit, *) "modelrecomb,","no"
 			endif
 			if (allocated(inputParams%usechroms)) then
-				write(unit, *) "usechroms,",inputParams%usechroms
+				write(unit, "(a,*(a,I5,:))") "usechroms",(',',inputParams%usechroms(i),i=1, size(inputParams%usechroms))
 			else
 				write(unit, *) "usechroms,"
 			endif
