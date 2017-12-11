@@ -2569,7 +2569,7 @@ MODULE Imputation
 				endif
 			enddo
 
-			GlobalWorkPhase=ped%getPhaseAsArray()
+			GlobalWorkPhase(1:,:,:)=ped%getPhaseAsArrayWithMissing()
 
 			deallocate(WorkRight)
 			deallocate(WorkLeft)
@@ -2896,7 +2896,7 @@ MODULE Imputation
 				endif
 			enddo
 
-			GlobalWorkPhase =ped%getPhaseAsArray()
+			GlobalWorkPhase(1:,:,:) =ped%getPhaseAsArrayWithMissing()
 
 		end subroutine WorkLeftRight
 

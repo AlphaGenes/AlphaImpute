@@ -798,7 +798,7 @@ module AlphaImputeModule
 			character(len=7) :: cm
 			type(AlphaImputeInput), pointer :: inputParams
 			integer(kind=1) :: phase(2),tmpPhase
-			integer :: tmp
+			integer :: tmp,snp
 			inputParams => defaultInput
 
 
@@ -826,7 +826,7 @@ module AlphaImputeModule
 				deallocate(GlobalWorkPhase)
 			endif
 			allocate(GlobalWorkPhase(0:ped%pedigreeSize,nSnpFinal,2))
-			allocate(WorkPhase(0:ped%pedigreeSize,nSnpFinal,2))
+			allocate(WorkPhase(0:ped%pedigreeSize,inputParams%nSnpRaw,2))
 			allocate(TempVec(nSnpFinal))
 			allocate(LengthVec(nSnpFinal))
 			allocate(WorkLeft(nSnpFinal))
@@ -840,10 +840,11 @@ module AlphaImputeModule
 			allocate(StRNarrow(nSnpFinal))
 			allocate(EnRNarrow(nSnpFinal))
 
-			WorkPhase(1:,:,:)=ped%getPhaseAsArray()
+			GlobalWorkPhase(1:,:,:)=ped%getPhaseAsArrayWithMissing()
 			call InsteadOfReReadGeneProb
 
 			l=0
+			WorkPhase = MISSINGPHASECODE
 			do j=1,nSnpFinal
 
 				if (SnpIncluded(j)/=0) then
@@ -930,9 +931,10 @@ module AlphaImputeModule
 						enddo
 						if (LSide/=9) then
 							do j=HetEnd-1,1,-1
-
-								phase(1) = ped%pedigree(i)%individualPhase(patMat)%getPhase(j)
-								phase(2) = ped%pedigree(pedId)%individualPhase(LSide)%getPhase(j)
+								snp = SnpIncluded(j)
+								if (snp == 0) cycle
+								phase(1) = ped%pedigree(i)%individualPhase(patMat)%getPhase(snp)
+								phase(2) = ped%pedigree(pedId)%individualPhase(LSide)%getPhase(snp)
 								if (phase(1)/=phase(2) .and.(phase(2)/=9).and.(phase(1)/=9)) then
 									LSide=abs((LSide-1)-1)+1
 									CountLeftSwitch=CountLeftSwitch+1
@@ -1039,7 +1041,8 @@ module AlphaImputeModule
 						RecombOnOff=0
 						k=1
 						do j=1,nSnpFinal
-
+							snp = SnpIncluded(j)
+							if (snp == 0) cycle
 							if (j==StR(k)) then
 								k=k+1
 								RecombOnOff=1
@@ -1062,18 +1065,18 @@ module AlphaImputeModule
 
 										integer(kind=1) :: phase1, phase2
 
-										phase1 = ped%pedigree(PedId)%individualPhase(1)%getPhase(j)
-										phase2 = ped%pedigree(PedId)%individualPhase(2)%getPhase(j)
+										phase1 = ped%pedigree(PedId)%individualPhase(1)%getPhase(snp)
+										phase2 = ped%pedigree(PedId)%individualPhase(2)%getPhase(snp)
 										if (phase1/= phase2) then
 											if ((phase1/=9).and.(phase2/=9)) then
 
 												block
 
 													integer :: one, two
-													call ped%pedigree(i)%individualPhase(e)%setPhase(j,9)
-													call ped%pedigree(i)%individualGenotype%setGenotype(j,9)
-													one = ((1.0-(LengthVec(j)*Counter))*ped%pedigree(pedid)%individualPhase(gamA)%getPhase(j))
-													two = (LengthVec(j)*Counter*ped%pedigree(pedid)%individualPhase(gamB)%getPhase(j))
+													call ped%pedigree(i)%individualPhase(e)%setPhase(snp,9)
+													call ped%pedigree(i)%individualGenotype%setGenotype(snp,9)
+													one = ((1.0-(LengthVec(j)*Counter))*ped%pedigree(pedid)%individualPhase(gamA)%getPhase(snp))
+													two = (LengthVec(j)*Counter*ped%pedigree(pedid)%individualPhase(gamB)%getPhase(snp))
 
 
 													ProbImputePhase(i,j,e) = one + two
@@ -2049,10 +2052,7 @@ else if (inputParams%hmmoption == RUN_HMM_NGS) then
 
 
 
-
 endif
-call ped%writeOutPedigree("NOPEWORKS/")
-! call ped%destroyPedigree()
 call PrintTimerTitles
 
 if (allocated(SnpIncluded)) then
@@ -2097,9 +2097,6 @@ endif
 if (allocated(FullH)) then
 	deallocate(FullH)
 endif
-
-
-! ped => null()
 
 end subroutine runAlphaImpute
 
