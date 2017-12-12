@@ -2039,6 +2039,8 @@ else if (inputParams%hmmoption == RUN_HMM_NGS) then
 		inputParamsHMM%imputedThreshold = inputParams%imputedThreshold
 		inputParamsHMM%phasedThreshold = inputParams%phasedThreshold
 		inputParamsHMM%HapList = inputParams%HapList
+		inputParamsHMM%HapListFile = inputParams%HapListFile
+		inputParamsHMM%HapListUnit = inputParams%HapListUnit
 		inputParamsHMM%InbredAnimalsFile = "None"
 
 		res = ped%getGenotypesAsArray()
