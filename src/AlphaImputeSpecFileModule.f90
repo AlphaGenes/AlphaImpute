@@ -36,6 +36,7 @@ module AlphaImputeSpecFileModule
 	type, extends(baseSpecFile) ::  AlphaImputeInput
 	! box 1
 	character(len=300):: PedigreeFile = "NoPedigree",GenotypeFile="Genotypes.txt",TrueGenotypeFile="None",GenderFile="None",InbredAnimalsFile="None", HapListFile="None",animalPhaseFile="None"
+	character(len=300) :: PriorAllFreqsFile="None"
 	integer(kind=1) :: TrueGenos1None0
 
 	! box 3
@@ -70,7 +71,10 @@ module AlphaImputeSpecFileModule
 	integer(kind=int32) :: nHapInSubH,nRoundsHmm,HmmBurnInRound
 	real(kind=real32) :: make ,imputedThreshold
 	logical :: HapList=.FALSE.
+	logical :: PriorAllFreqs=.FALSE.
 	integer(kind=1) :: HMMOption
+	integer :: HapListUnit
+	integer :: PriorAllFreqsUnit
 	real(kind=real32) :: phasedThreshold                   !< threshold of phase information accept
 
 
@@ -80,7 +84,7 @@ module AlphaImputeSpecFileModule
 	integer(kind=1) :: PhaseTheDataOnly
 
 	integer(kind=1) :: UserDefinedHD,PrePhased,RestartOption
-	integer :: HapListUnit,prePhasedFileUnit
+	integer :: prePhasedFileUnit
 	! other
 	integer(kind=int32) :: nSnpRaw,nAgreeInternalHapLibElim
 	integer(kind=int32) :: useProcs
@@ -693,6 +697,16 @@ module AlphaImputeSpecFileModule
 								if (trim(second(1)) /= "None") then
 									this%HapList = .TRUE.
 									this%HapListFile = trim(second(1))
+								endif
+							endif
+
+						case("priorallelefrequencies")
+							if (.not. allocated(second)) then
+								write(*, "(A,A)") "WARNING: No list of haploytpes specified"
+							else
+								if (trim(second(1)) /= "None") then
+									this%PriorAllFreqs = .TRUE.
+									this%PriorAllFreqsFile = trim(second(1))
 								endif
 							endif
 
