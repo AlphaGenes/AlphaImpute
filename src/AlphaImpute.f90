@@ -2043,7 +2043,7 @@ else if (inputParams%hmmoption == RUN_HMM_NGS) then
 		inputParamsHMM%HapListUnit = inputParams%HapListUnit
 		inputParamsHMM%PriorAllFreqs = inputParams%PriorAllFreqs
 		inputParamsHMM%PriorAllFreqsFile = inputParams%PriorAllFreqsFile
-		inputParamsHMM%PriorAllFreqstUnit = inputParams%PriorAllFreqsUnit
+		inputParamsHMM%PriorAllFreqsUnit = inputParams%PriorAllFreqsUnit
 		inputParamsHMM%InbredAnimalsFile = "None"
 
 		res = ped%getGenotypesAsArray()
