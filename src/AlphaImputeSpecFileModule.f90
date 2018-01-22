@@ -102,6 +102,8 @@ module AlphaImputeSpecFileModule
 	contains
 		procedure :: ReadInParameterFile
 		final :: destroyAlphaImputeInput
+		! procedure :: validateAlphaImputeSpec
+		procedure   :: validate => validateAlphaImputeSpec
 	end type AlphaImputeInput
 
 	type(AlphaImputeInput),pointer :: defaultInput
@@ -402,7 +404,6 @@ module AlphaImputeSpecFileModule
 
 							cycle
 							4000 print*, "Output options incorrectly specified"
-							print*, "Beware!!!!! AlphaImpute is case sensitive"
 							stop
 
 						case("outputonlygenotypedanimals")
@@ -847,6 +848,37 @@ module AlphaImputeSpecFileModule
 			CALL OMP_SET_NUM_THREADS(this%useProcs)
 		end subroutine ReadInParameterFile
 
+
+
+		function validateAlphaImputeSpec(params) result(res)
+			class(AlphaImputeInput)  :: params
+			LOGICAL :: res
+			integer :: i
+			
+			if (size(params%coreandtaillengths) /= size(params%coreLengths)) then
+
+				write(error_unit,*) "ERROR: core and coreandtaillengths do not match"
+				res = .false.
+				return
+			endif
+			do i=1, size(params%CoreAndTailLengths)
+
+				if (params%CoreAndTailLengths(i) > params%nsnp) then
+					write(error_unit,*) "ERROR: core and tail lengths are more than NSNPS"
+					res = .false.
+					return
+				endif
+
+				if (params%coreLengths(i) > params%nsnp) then
+					write(error_unit,*) "ERROR: core and tail lengths are more than NSNPS"
+					res = .false.
+					return
+				endif
+			enddo 
+
+
+			res = .true. 			
+		end function validateAlphaImputeSpec
 
 			!---------------------------------------------------------------------------
 		!< @brief Generates core and tail length.
