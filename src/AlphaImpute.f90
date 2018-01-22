@@ -1862,8 +1862,13 @@ subroutine runAlphaImpute(in, pedIn)
 
 	type is (AlphaImputeInput)
 	defaultInput => in
+	
+	if (.not. defaultInput%validate()) then
+		write(error_unit, *) "ERROR: SPEC FILE validation failed"
+		call abort()
+	endif
 	class default
-	write(error_unit, *) "ERROR: AlphaImpute given correct object type as input"
+	write(error_unit, *) "ERROR: AlphaImpute given incorrect object type as input"
 	call abort()
 end select
 
