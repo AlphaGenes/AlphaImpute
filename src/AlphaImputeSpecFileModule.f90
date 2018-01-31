@@ -153,7 +153,7 @@ module AlphaImputeSpecFileModule
 			character(len=300),dimension(:),allocatable :: second
 			LOGICAL :: exists
 
-			this%alphaphaseoutput = 0
+			this%alphaphaseoutput = 1
 			this%useFerdosi = .false.
 			this%MultiHD = 0
 			! this%nsnp= LARGESNUMBER
