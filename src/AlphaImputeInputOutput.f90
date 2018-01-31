@@ -284,7 +284,7 @@ contains
 
            if (inputParams%hmmoption /= RUN_HMM_NGS) then
                 ! init pedigree from genotype file
-                call initPedigreeGenotypeFiles(ped,inputParams%GenotypeFile, nsnp=inputParams%nsnp,initAll=1)
+                call initPedigreeGenotypeFiles(ped,inputParams%GenotypeFile, nsnp=inputParams%nsnp)
             endif
         endif
 
