@@ -1108,7 +1108,7 @@ module AlphaImputeSpecFileModule
 			if (allocated(inputParams%usechroms)) then
 				write(unit, "(a,*(a,I5,:))") "usechroms",(',',inputParams%usechroms(i),i=1, size(inputParams%usechroms))
 			else
-				write(unit, *) "usechroms,"
+				write(unit, *) "usechroms,0"
 			endif
 
 			! do i=1,size(inputParams%usechroms)
