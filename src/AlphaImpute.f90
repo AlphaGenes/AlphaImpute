@@ -80,6 +80,8 @@ module AlphaImputeModule
 			call omp_set_nested(.true.)
 
 
+			
+			
 
 			write(6,*) " "
 			write(6,*) " ", "Running AlphaPhase"
@@ -91,9 +93,7 @@ module AlphaImputeModule
 				call initPedigreeGenotypeFiles(hdPed,inputParams%genotypeFile, nsnp=temp)
 
 				do i=1, hdPed%pedigreeSize
-
 					temp = ped%dictionary%getValue(hdPed%pedigree(i)%originalID)
-
 					if (ped%pedigree(temp)%hd) then
 						call hdped%setAnimalAsHD(i)
 					endif
@@ -101,9 +101,6 @@ module AlphaImputeModule
 			else
 				call ped%getHDPedigree(hdPed)
 			endif
-
-
-
 
 			! FOLLOWING CODE goes with
 
@@ -141,6 +138,7 @@ module AlphaImputeModule
 						oParams = newOutputParametersImpute()
 					endif
 					write(oParams%outputDirectory,'("."a"Phasing",a,"Phase"i0)') DASH,DASH, i
+
 					call writeAlphaPhaseResults(results%results(i), hdPed, oParams)
 				endif
 
