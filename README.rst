@@ -51,5 +51,5 @@ The method implemented in AlphaImpute is described in detail in Hickey et al. (2
 Using AlphaImpute
 =================
 
-.. warning:: AlphaImpute works for single chromosomes at a time only.
+.. warning:: AlphaImpute only works for multiple chromosomes if using plink files as input.
 
