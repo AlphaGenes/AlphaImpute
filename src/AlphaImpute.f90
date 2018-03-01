@@ -32,81 +32,82 @@
 
 #endif
 
-			!#############################################################################################################################################################################################################################
+!#############################################################################################################################################################################################################################
 
-			module AlphaImputeModule
+module AlphaImputeModule
+	implicit none
+	contains
+
+
+
+
+		subroutine PhasingManagementNew(results)
+			use AlphaImputeSpecFileModule
+			use omp_lib
+			use AlphaPhaseParametersModule
+			use AlphaPhaseFunctions
+			use AlphaPhaseResultsModule
+			use Global, only : ped, OPT_RESTART_PHASING
+			use inputoutput, only : MakeDirectories
+			use OutputParametersModule
 			implicit none
-		contains
+
+			type(AlphaImputeInput), pointer :: inputParams
+			type(AlphaPhaseParameters) :: params
+			type(AlphaPhaseResultsContainer), intent(out) :: results
+			integer :: nCoreLengths,i, coreIndexes,temp
+			type(OutputParameters) :: oParams
+			type(PedigreeHolder), allocatable :: hdPed
+
+			inputParams=> defaultInput
+			nCoreLengths = size(inputParams%CoreAndTailLengths)
+			results%nResults = nCoreLengths*2
+
+			allocate(results%results(nCoreLengths*2))
+			params = newParameters()
+			params%iterateType = inputParams%iterateMethod
+			params%iterateNumber = inputParams%PhaseSubsetSize
+			params%numIter = inputParams%PhaseNIterations
+			params%minOverlap = inputparams%minoverlaphaplotype
+			params%percGenoHaploDisagree = inputparams%GenotypeErrorPhase*0.01
+			params%Offset = .true.
 
 
 
-
-			subroutine PhasingManagementNew(results)
-				use AlphaImputeSpecFileModule
-				use omp_lib
-				use AlphaPhaseParametersModule
-				use AlphaPhaseFunctions
-				use AlphaPhaseResultsModule
-				use Global, only : ped, OPT_RESTART_PHASING
-				use inputoutput, only : MakeDirectories
-				use OutputParametersModule
-				implicit none
-
-				type(AlphaImputeInput), pointer :: inputParams
-				type(AlphaPhaseParameters) :: params
-				type(AlphaPhaseResultsContainer), intent(out) :: results
-				integer :: nCoreLengths,i, coreIndexes,temp
-				type(OutputParameters) :: oParams
-				type(PedigreeHolder), allocatable :: hdPed
-
-				inputParams=> defaultInput
-				nCoreLengths = size(inputParams%CoreAndTailLengths)
-				results%nResults = nCoreLengths*2
-
-				allocate(results%results(nCoreLengths*2))
-				params = newParameters()
-				params%iterateType = inputParams%iterateMethod
-				params%iterateNumber = inputParams%PhaseSubsetSize
-				params%numIter = inputParams%PhaseNIterations
-				params%minOverlap = inputparams%minoverlaphaplotype
-				params%percGenoHaploDisagree = inputparams%GenotypeErrorPhase*0.01
-				params%Offset = .true.
-
-				
-
-				if (inputparams%minoverlaphaplotype /= 0) then
-					params%percMinPresent = 0
-				endif
-				call omp_set_nested(.true.)
+			if (inputparams%minoverlaphaplotype /= 0) then
+				params%percMinPresent = 0
+			endif
+			call omp_set_nested(.true.)
 
 
+			
+			
 
-				write(6,*) " "
-				write(6,*) " ", "Running AlphaPhase"
+			write(6,*) " "
+			write(6,*) " ", "Running AlphaPhase"
 
+			temp = 0
+			allocate(hdPed)
 
-				allocate(hdPed)
+			if (inputparams%PedFreePhasing == 1) then
+				call initPedigreeGenotypeFiles(hdPed,inputParams%genotypeFile, nsnp=temp)
+
+				do i=1, hdPed%pedigreeSize
+					temp = ped%dictionary%getValue(hdPed%pedigree(i)%originalID)
+					if (ped%pedigree(temp)%hd) then
+						call hdped%setAnimalAsHD(i)
+					endif
+				enddo
+			else
 				call ped%getHDPedigree(hdPed)
+			endif
 
+			! FOLLOWING CODE goes with
 
-				temp = 0
-
-
-				! FOLLOWING CODE goes with 
-				! call initPedigreeGenotypeFiles(hdPed,inputParams%genotypeFile, nsnp=temp)
-				
-				! do i=1, hdPed%pedigreeSize
-
-				! 	temp = ped%dictionary%getValue(hdPed%pedigree(i)%originalID)
-
-				! 	if (ped%pedigree(temp)%hd) then
-				! 		call hdped%setAnimalAsHD(i)
-				! 	endif
-				! enddo
-				! TODO make above code actually only include hd animals"
-				if (hdPed%nHd ==0) then
-					print *, "WARNING: NO HD ANIMALS ON ALPHAPHASE ENTRY"
-				endif
+			! TODO make above code actually only include hd animals"
+			if (hdPed%nHd ==0) then
+				print *, "WARNING: NO HD ANIMALS ON ALPHAPHASE ENTRY"
+			endif
 			!$OMP parallel do schedule(dynamic)&
 			!$OMP default(shared) &
 			!$OMP FIRSTPRIVATE(params) &
@@ -124,16 +125,20 @@
 				params%jump = inputParams%CoreLengths(coreIndexes)
 				params%numsurrdisagree = 1
 				params%useSurrsN = 10
-				results%results(i) = phaseAndCreateLibraries(hdPed, params, quiet=.true., updatePedigree=.false.)
-				if (inputParams%restartOption==OPT_RESTART_PHASING .or. inputParams%alphaphaseoutput /= 0) then
-				if (inputParams%alphaphaseoutput == 2) then
-					oParams = newOutputParametersImpute(1)
-				else if (inputParams%alphaphaseoutput == 1) then
-					oParams = newOutputParameters()
+				! if verbose output
+				if (inputParams%alphaphaseoutput == 3) then
+					results%results(i) = phaseAndCreateLibraries(hdPed, params, quiet=.false., updatePedigree=.false.)
 				else
-					oParams = newOutputParametersImpute()
+					results%results(i) = phaseAndCreateLibraries(hdPed, params, quiet=.true., updatePedigree=.false.)
 				endif
+				if (inputParams%restartOption==OPT_RESTART_PHASING .and. inputParams%alphaphaseoutput /= 0) then
+					if (inputParams%alphaphaseoutput == 2) then
+						oParams = newOutputParametersImpute(1)
+					else if (inputParams%alphaphaseoutput == 1 .or. inputParams%alphaphaseoutput == 3) then
+						oParams = newOutputParametersImpute()
+					endif
 					write(oParams%outputDirectory,'("."a"Phasing",a,"Phase"i0)') DASH,DASH, i
+
 					call writeAlphaPhaseResults(results%results(i), hdPed, oParams)
 				endif
 
@@ -252,7 +257,7 @@
 
 				do j=1,nSnpIterate
 					Counter=0
-					do i=1,ped%pedigreeSize-ped%nDummys
+					do i=1,ped%addedRealAnimals
 
 						genos = ped%pedigree(i)%individualGenotype%getGenotype(j)
 						if (genos/=MISSINGGENOTYPECODE) then
@@ -278,7 +283,7 @@
 				call ped%PhaseComplement
 				call ped%MakeGenotype
 
-				do i=1,ped%pedigreeSize-ped%nDummys
+				do i=1,ped%addedRealAnimals
 					do j=1,nSnpIterate
 						do e=1,2
 							block
@@ -290,7 +295,7 @@
 					enddo
 				enddo
 
-				do i=1,ped%pedigreeSize-ped%nDummys
+				do i=1,ped%addedRealAnimals
 					do e=1,2
 						parId = ped%pedigree(i)%getSireDamNewIDByIndex(e+1)
 						if (ParId==0) then
@@ -325,7 +330,7 @@
 					endif
 				enddo
 
-				do i=1,ped%pedigreeSize-ped%nDummys
+				do i=1,ped%addedRealAnimals
 					do j=1,nSnpIterate
 						do k=1,2
 							block
@@ -347,7 +352,7 @@
 				enddo
 
 				if (inputParams%SexOpt==1) then
-					do i=1,ped%pedigreeSize-ped%nDummys
+					do i=1,ped%addedRealAnimals
 						if (ped%pedigree(i)%gender==inputParams%hetGameticStatus) then
 							! setFromOtherIfMissing
 							call ped%pedigree(i)%individualPhase(1)%setFromOtherIfMissing(ped%pedigree(i)%individualPhase(2))
@@ -360,7 +365,7 @@
 					enddo
 				endif
 
-				do i=1,ped%pedigreeSize-ped%nDummys
+				do i=1,ped%addedRealAnimals
 					do j=1,nSnpIterate
 						if (ProbImputeGenos(i,j)==-9.0) ProbImputeGenos(i,j)=sum(ProbImputePhase(i,j,:))
 						if (ProbImputeGenos(i,j)>1.999)  call ped%pedigree(i)%individualGenotype%setGenotype((j),2)
@@ -390,7 +395,7 @@
 				TempAlleleFreq=0.0
 				do j=1,nSnpIterate
 					Counter=0
-					do i=1,ped%pedigreeSize-ped%nDummys
+					do i=1,ped%addedRealAnimals
 						block
 
 							integer(kind=1) :: geno
@@ -418,7 +423,7 @@
 				call ped%PhaseComplement
 				call ped%MakeGenotype
 
-				do i=1,ped%pedigreeSize-ped%nDummys
+				do i=1,ped%addedRealAnimals
 					do j=1,nSnpIterate
 						do e=1,2
 							block
@@ -431,7 +436,7 @@
 					enddo
 				enddo
 
-				do i=1,ped%pedigreeSize-ped%nDummys
+				do i=1,ped%addedRealAnimals
 					do e=1,2
 						parID=ped%pedigree(i)%getSireDamNewIDByIndexNoDummy(e+1)
 						if (ParId==0) then
@@ -455,7 +460,7 @@
 					enddo
 				enddo
 
-				do i=1,ped%pedigreeSize-ped%nDummys
+				do i=1,ped%addedRealAnimals
 					do j=1,nSnpIterate
 						do k=1,2
 							block
@@ -479,7 +484,7 @@
 					enddo
 				enddo
 
-				do i=1,ped%pedigreeSize-ped%nDummys
+				do i=1,ped%addedRealAnimals
 					do j=1,nSnpIterate
 						if (ProbImputeGenos(i,j)==-9.0) ProbImputeGenos(i,j)=sum(ProbImputePhase(i,j,:))
 
@@ -521,7 +526,7 @@
 			integer :: n0, n1, n2
 			integer,allocatable,dimension(:):: WorkTmp
 			character(len=300) :: TmpId
-			real(kind=real64) :: ImputationQuality(ped%pedigreeSize-ped%nDummys,6)
+			real(kind=real64) :: ImputationQuality(ped%addedRealAnimals,6)
 
 
 			inputParams => defaultInput
@@ -629,8 +634,8 @@
 					allocate(Maf(nOutputSnps))
 				end if
 
-				probImputeGenos(1:ped%pedigreeSize-ped%nDummys,:) = 9.0
-				ProbImputePhase(1:ped%pedigreeSize-ped%nDummys,:,:) = 9.0
+				probImputeGenos(1:ped%addedRealAnimals,:) = 9.0
+				ProbImputePhase(1:ped%addedRealAnimals,:,:) = 9.0
 
 				! Feed Impute and Phase probabilites
 				l=0
@@ -655,7 +660,7 @@
 						elseif (n1>n2) then
 							! call ped%pedigree(ped%genotypeMap(i))%individualGenotype%setGenotype(j,1)
 							ImputeGenosHMM(ped%genotypeMap(i),j)   = 1
-							if (ProbImputePhaseHmm(ped%genotypeMap(i),j,1) > ProbImputePhaseHmm(ped%genotypeMap(i),j,2) ) then
+							if (ProbImputePhaseHmm(i,j,1) > ProbImputePhaseHmm(i,j,2) ) then
 								ImputePhaseHMM(ped%genotypeMap(i),j,1) = 1
 								ImputePhaseHMM(ped%genotypeMap(i),j,2) = 0
 							else
@@ -699,7 +704,7 @@
 
 					open (unit=40,file="." // DASH// trim(inputparams%resultFolderPath) // DASH // "ImputePhaseProbabilities.txt",status="unknown")
 					open (unit=41,file="." // DASH// trim(inputparams%resultFolderPath)// DASH // "ImputeGenotypeProbabilities.txt",status="unknown")
-					do i=1, ped%pedigreeSize-ped%nDummys
+					do i=1, ped%addedRealAnimals
 						if (ped%pedigree(i)%isDummy) then
 							exit
 						endif
@@ -717,7 +722,7 @@
 			endif
 			if (inputParams%SexOpt==1) then
 				do j=1,nOutputSnps
-					Maf(j)=sum(ProbImputeGenos(:,j))/(2*ped%pedigreeSize-ped%nDummys)
+					Maf(j)=sum(ProbImputeGenos(:,j))/(2*ped%addedRealAnimals)
 				enddo
 				open(unit=111,file="." // DASH // "Miscellaneous" // DASH // "MinorAlleleFrequency.txt", status="unknown")
 
@@ -731,7 +736,8 @@
 
 			ImputationQuality(:,2)=0.0
 
-			do i=1, ped%pedigreeSize-ped%nDummys
+			open (unit=50,file="." // DASH// trim(inputparams%resultFolderPath) // DASH // "ImputationQuality.txt",status="unknown")
+			do i=1, ped%addedRealAnimals
 				if (ped%pedigree(i)%isDummy) then
 					exit
 				endif
@@ -747,6 +753,7 @@
 				ImputationQuality(i,6)=float(nOutputSnps-ped%pedigree(i)%IndividualGenotype%numMissing())/nOutputSnps
 				write (50,'(a20,20000f7.2)') ped%pedigree(i)%originalID,ImputationQuality(i,:)
 			enddo
+			close(50)
 
 			open (unit=51,file="." // DASH// trim(inputparams%resultFolderPath) // DASH // "ImputationQualitySnp.txt",status="unknown")
 			do j=1,nOutputSnps
@@ -756,7 +763,7 @@
 			inputParams%WellPhasedThresh=inputParams%WellPhasedThresh/100
 
 			open (unit=52,file="." // DASH// trim(inputparams%resultFolderPath) // DASH // "WellPhasedIndividuals.txt",status="unknown")
-			do i=1, ped%pedigreeSize-ped%nDummys
+			do i=1, ped%addedRealAnimals
 				if (ImputationQuality(i,5)>=inputParams%WellPhasedThresh) then
 					write (52,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,tmpPhase(ped%inputmap(i),:,1)
 					write (52,'(a20,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2,20000i2)') ped%pedigree(ped%inputmap(i))%originalID,tmpPhase(ped%inputmap(i),:,2)
@@ -789,7 +796,7 @@
 			character(len=7) :: cm
 			type(AlphaImputeInput), pointer :: inputParams
 			integer(kind=1) :: phase(2),tmpPhase
-			integer :: tmp
+			integer :: tmp,snp
 			inputParams => defaultInput
 
 
@@ -817,7 +824,7 @@
 				deallocate(GlobalWorkPhase)
 			endif
 			allocate(GlobalWorkPhase(0:ped%pedigreeSize,nSnpFinal,2))
-			allocate(WorkPhase(0:ped%pedigreeSize,nSnpFinal,2))
+			allocate(WorkPhase(0:ped%pedigreeSize,inputParams%nSnpRaw,2))
 			allocate(TempVec(nSnpFinal))
 			allocate(LengthVec(nSnpFinal))
 			allocate(WorkLeft(nSnpFinal))
@@ -831,10 +838,11 @@
 			allocate(StRNarrow(nSnpFinal))
 			allocate(EnRNarrow(nSnpFinal))
 
-			WorkPhase(1:,:,:)=ped%getPhaseAsArray()
+			GlobalWorkPhase(1:,:,:)=ped%getPhaseAsArrayWithMissing()
 			call InsteadOfReReadGeneProb
 
 			l=0
+			WorkPhase = MISSINGPHASECODE
 			do j=1,nSnpFinal
 
 				if (SnpIncluded(j)/=0) then
@@ -844,7 +852,7 @@
 				endif
 			enddo
 
-			do i=1,ped%pedigreeSize-ped%nDummys
+			do i=1,ped%addedRealAnimals
 				HetEnd=-1
 				HetStart=-1
 				WorkRight(:)=9
@@ -921,9 +929,10 @@
 						enddo
 						if (LSide/=9) then
 							do j=HetEnd-1,1,-1
-
-								phase(1) = ped%pedigree(i)%individualPhase(patMat)%getPhase(j)
-								phase(2) = ped%pedigree(pedId)%individualPhase(LSide)%getPhase(j)
+								snp = SnpIncluded(j)
+								if (snp == 0) cycle
+								phase(1) = ped%pedigree(i)%individualPhase(patMat)%getPhase(snp)
+								phase(2) = ped%pedigree(pedId)%individualPhase(LSide)%getPhase(snp)
 								if (phase(1)/=phase(2) .and.(phase(2)/=9).and.(phase(1)/=9)) then
 									LSide=abs((LSide-1)-1)+1
 									CountLeftSwitch=CountLeftSwitch+1
@@ -1030,7 +1039,8 @@
 						RecombOnOff=0
 						k=1
 						do j=1,nSnpFinal
-
+							snp = SnpIncluded(j)
+							if (snp == 0) cycle
 							if (j==StR(k)) then
 								k=k+1
 								RecombOnOff=1
@@ -1053,18 +1063,18 @@
 
 										integer(kind=1) :: phase1, phase2
 
-										phase1 = ped%pedigree(PedId)%individualPhase(1)%getPhase(j)
-										phase2 = ped%pedigree(PedId)%individualPhase(2)%getPhase(j)
+										phase1 = ped%pedigree(PedId)%individualPhase(1)%getPhase(snp)
+										phase2 = ped%pedigree(PedId)%individualPhase(2)%getPhase(snp)
 										if (phase1/= phase2) then
 											if ((phase1/=9).and.(phase2/=9)) then
 
 												block
 
 													integer :: one, two
-													call ped%pedigree(i)%individualPhase(e)%setPhase(j,9)
-													call ped%pedigree(i)%individualGenotype%setGenotype(j,9)
-													one = ((1.0-(LengthVec(j)*Counter))*ped%pedigree(pedid)%individualPhase(gamA)%getPhase(j))
-													two = (LengthVec(j)*Counter*ped%pedigree(pedid)%individualPhase(gamB)%getPhase(j))
+													call ped%pedigree(i)%individualPhase(e)%setPhase(snp,9)
+													call ped%pedigree(i)%individualGenotype%setGenotype(snp,9)
+													one = ((1.0-(LengthVec(j)*Counter))*ped%pedigree(pedid)%individualPhase(gamA)%getPhase(snp))
+													two = (LengthVec(j)*Counter*ped%pedigree(pedid)%individualPhase(gamB)%getPhase(snp))
 
 
 													ProbImputePhase(i,j,e) = one + two
@@ -1148,7 +1158,7 @@
 			inputParams => defaultInput
 
 			if (inputParams%SexOpt==0) then
-				do i=1,ped%pedigreeSize-ped%nDummys
+				do i=1,ped%addedRealAnimals
 					do e=1,2
 						PedLoc=e+1
 						id = ped%pedigree(i)%getSireDamNewIDByIndex(pedLoc)
@@ -1160,7 +1170,7 @@
 					enddo
 				enddo
 			else
-				do i=1,ped%pedigreeSize-ped%nDummys
+				do i=1,ped%addedRealAnimals
 					if (ped%pedigree(i)%gender==inputParams%HomGameticStatus) then
 						do e=1,2
 							id = ped%pedigree(i)%getSireDamNewIDByIndex(e+1)
@@ -1201,7 +1211,7 @@
 			if (inputParams%SexOpt==1) then                                                     ! Sex chromosome
 
 				GlobalWorkPhase=9
-				do i=1,ped%pedigreeSize-ped%nDummys
+				do i=1,ped%addedRealAnimals
 					do j=1,inputParams%nsnp                                                     ! Phase in the homozygous case
 
 						if (ped%pedigree(i)%individualGenotype%getGenotype(j)==0) then
@@ -1239,13 +1249,13 @@
 				! todo  -feel this can be optimised- do we need to do this?
 				call ped%setPhaseFromArray(GlobalWorkPhase)
 
-				allocate(GlobalTmpCountInf(ped%pedigreeSize-ped%nDummys,6))
+				allocate(GlobalTmpCountInf(ped%addedRealAnimals,6))
 				GlobalTmpCountInf(:,:)=0
 
 			else                                                                    ! Other chromosome
 
 				GlobalWorkPhase=9
-				do i=1,ped%pedigreeSize-ped%nDummys
+				do i=1,ped%addedRealAnimals
 					do j=1,inputParams%nsnp                                                     ! Phase in the homozygous case
 						if (ped%pedigree(i)%individualGenotype%getGenotype(j)==0) then
 							GlobalWorkPhase(i,j,:)=0
@@ -1309,13 +1319,13 @@
 
 			inputParams => defaultInput
 			open(newunit=UOutputs, file="." // DASH // "Miscellaneous" // DASH // "SnpCallRateByAnimalByChip.txt",status='unknown')
-			allocate(animChip(ped%pedigreeSize-ped%nDummys))
+			allocate(animChip(ped%addedRealAnimals))
 			animChip(:)=0
 
-			allocate(printed(ped%pedigreeSize-ped%nDummys))
+			allocate(printed(ped%addedRealAnimals))
 			printed=.FALSE.
 
-			do i=1,ped%pedigreeSize-ped%nDummys
+			do i=1,ped%addedRealAnimals
 				CountMiss=ped%pedigree(i)%individualGenotype%numMissing()
 				do j=1,inputParams%MultiHD
 					if ( (CountMiss-(inputParams%nsnp-inputParams%nSnpByChip(j))) < (1.0-inputParams%PercGenoForHD)*inputParams%nSnpByChip(j)&
@@ -1377,7 +1387,7 @@ subroutine InternalEdit
 	if (inputParams%UserDefinedHD==0) then
 		Setter(0)=0
 		Setter(1:ped%pedigreeSize)=1
-		do i=1,ped%pedigreeSize-ped%nDummys
+		do i=1,ped%addedRealAnimals
 			CountMiss=ped%pedigree(i)%individualGenotype%numMissing()
 			if (inputParams%MultiHD/=0) then
 				! Disregard animals at LD or those HD animals with a number of markers missing
@@ -1393,7 +1403,7 @@ subroutine InternalEdit
 		CountHD=count(Setter(:)==1)
 	else                                ! User has specified HD individuals
 		Setter(0)=0
-		Setter(1:ped%pedigreeSize-ped%nDummys)=0
+		Setter(1:ped%addedRealAnimals)=0
 
 		CountHD=0
 		block
@@ -1428,7 +1438,7 @@ subroutine InternalEdit
 		Counter(:)=0
 		SnpSummary=0.0
 		do j=1,inputParams%nsnp
-			do i=1, ped%pedigreeSize-ped%nDummys
+			do i=1, ped%addedRealAnimals
 				if (.not. ped%pedigree(i)%individualGenotype%isMissing(j)) then
 					TempFreq(j)=TempFreq(j)+float(ped%pedigree(i)%individualGenotype%getGenotype(j))
 					Counter(j)=Counter(j)+2
@@ -1582,7 +1592,7 @@ subroutine FillInBasedOnOffspring
 	allocate(Count0(inputParams%nsnp))
 	allocate(Count1(inputParams%nsnp))
 	allocate(Count2(inputParams%nsnp))
-	do i=1,ped%pedigreeSize-ped%nDummys ! These are parents
+	do i=1,ped%addedRealAnimals ! These are parents
 		! This three variables will count the different number of genotypes of the offsprings
 		Count0=0
 		Count1=0
@@ -1627,7 +1637,7 @@ subroutine FillInSnp
 	type(individual), pointer :: tmpMother, tmpFather, tmpAnim
 	inputParams => defaultInput
 
-	do i=1,ped%pedigreeSize-ped%nDummys
+	do i=1,ped%addedRealAnimals
 		do k=2,3
 			TurnOn=1
 			tmpParentId = ped%pedigree(i)%getSireDamNewIDByIndexNoDummy(k)
@@ -1659,7 +1669,7 @@ subroutine FillInSnp
 
 
 	! WARNING: This can be refactored
-	do i=1,ped%pedigreeSize-ped%nDummys
+	do i=1,ped%addedRealAnimals
 
 		if(.not. ped%pedigree(i)%Founder) then
 			! tmpFather =>ped%pedigree(i)%getSireDamObjectByIndex(2)
@@ -1843,47 +1853,53 @@ subroutine runAlphaImpute(in, pedIn)
 	use AlphaPhaseResultsModule
 
 	class(baseSpecFile), target :: in
-	type(pedigreeHolder), optional :: pedIn
-
-
+	type(pedigreeHolder),target, optional :: pedIn
 
 
 	select type(in)
 
 	type is (AlphaImputeInput)
 	defaultInput => in
+	
+	if (.not. defaultInput%validate()) then
+		write(error_unit, *) "ERROR: SPEC FILE validation failed"
+		call abort()
+	endif
 	class default
-	write(error_unit, *) "ERROR: AlphaImpute given correct object type as input"
+	write(error_unit, *) "ERROR: AlphaImpute given incorrect object type as input"
 	call abort()
-	end select
+end select
 
-	inputParams => defaultInput
+inputParams => defaultInput
 
-	if (inputParams%hmmoption /= RUN_HMM_NGS) then
-		if (inputParams%restartOption<OPT_RESTART_IMPUTATION) call MakeDirectories(RUN_HMM_NULL)
-	else
-		call MakeDirectories(RUN_HMM_NGS)
-	endif
+if (inputParams%hmmoption /= RUN_HMM_NGS) then
+	if (inputParams%restartOption<OPT_RESTART_IMPUTATION) call MakeDirectories(RUN_HMM_NULL)
+else
+	call MakeDirectories(RUN_HMM_NGS)
+endif
 
-	if (.not. present(pedIn)) then
-		call ReadInData !< makes changes to inputparams
-	else
-		ped = pedIn
-	endif
+if (.not. present(pedIn)) then
+	write(error_unit, *) "WARNING: PED object not passed in so will be read from file"
+	call ReadInData(ped, inputParams) !< makes changes to inputparams
 
-	if (.not. allocated(inputParams%coreLengths)) then
-		call calculateCoresAndTails(inputParams%nsnp, inputParams%coreLengths,inputParams%CoreAndTailLengths,inputParams%nPhaseExternal )
-	endif
+else
 
-	inputParams%nSnpRaw = inputParams%nsnp
+	ped = pedIn
+	! call ReadInData(ped, inputParams)
 
-	call writeOutSpecOptions(inputParams)
+endif
+
+if (.not. allocated(inputParams%coreLengths) .and. (inputParams%ManagePhaseOn1Off0 /= 0)) then
+	call calculateCoresAndTails(inputParams%nsnp, inputParams%coreLengths,inputParams%CoreAndTailLengths,inputParams%nPhaseExternal )
+endif
+
+inputParams%nSnpRaw = inputParams%nsnp
+
+call writeOutSpecOptions(inputParams)
+call system(COPY // ' ' // 'AlphaImputeSpecFileUsed.txt' // ' ' // trim(inputparams%resultFolderPath) // DASH // 'AlphaImputeSpecFileUsed.txt')
 if (inputParams%hmmoption /= RUN_HMM_NGS) then
 
-
-
 	call SnpCallRate
-
 
 	call CheckParentage
 	if (inputParams%MultiHD/=0) then
@@ -1989,11 +2005,11 @@ if (inputParams%hmmoption /= RUN_HMM_NGS) then
 		print *, "Genotype Yield", checkYield(ped)
 		if (inputParams%TrueGenos1None0==1) then
 			block
-				
+
 
 				print *,""
 				print *,"**************************************************************************************************"
-				
+
 				print *,"Correct Percentage of SNPs per animal:",calculateaccuracyPerAnimal(ped,inputParams%TrueGenotypeFile, "Miscellaneous"// DASH// "AccuracyPerAnimal.txt", "Miscellaneous"// DASH// "ImputationErrors.txt")
 				print *,"Correct Percentage of SNPs per low density animal:",calculateaccuracyPerAnimal(ped,inputParams%TrueGenotypeFile, "Miscellaneous"// DASH// "AccuracyPerAnimalLD.txt", "Miscellaneous"// DASH// "ImputationErrorsLD.txt",1)
 			end block
@@ -2002,7 +2018,7 @@ if (inputParams%hmmoption /= RUN_HMM_NGS) then
 	endif
 
 else if (inputParams%hmmoption == RUN_HMM_NGS) then
-	
+
 	call SnpCallRate
 	allocate(SnpIncluded(inputParams%nsnp))
 	call CheckParentage
@@ -2026,6 +2042,11 @@ else if (inputParams%hmmoption == RUN_HMM_NGS) then
 		inputParamsHMM%imputedThreshold = inputParams%imputedThreshold
 		inputParamsHMM%phasedThreshold = inputParams%phasedThreshold
 		inputParamsHMM%HapList = inputParams%HapList
+		inputParamsHMM%HapListFile = inputParams%HapListFile
+		inputParamsHMM%HapListUnit = inputParams%HapListUnit
+		inputParamsHMM%PriorAllFreqs = inputParams%PriorAllFreqs
+		inputParamsHMM%PriorAllFreqsFile = inputParams%PriorAllFreqsFile
+		inputParamsHMM%PriorAllFreqsUnit = inputParams%PriorAllFreqsUnit
 		inputParamsHMM%InbredAnimalsFile = "None"
 
 		res = ped%getGenotypesAsArray()
@@ -2037,9 +2058,9 @@ else if (inputParams%hmmoption == RUN_HMM_NGS) then
 	call FromHMM2ImputePhase
 	call WriteOutResults
 
-endif
 
-! call ped%destroyPedigree()
+
+endif
 call PrintTimerTitles
 
 if (allocated(SnpIncluded)) then
@@ -2085,12 +2106,13 @@ if (allocated(FullH)) then
 	deallocate(FullH)
 endif
 
-
-
-
 end subroutine runAlphaImpute
 
 end module AlphaImputeModule
+
+
+
+
 
 
 

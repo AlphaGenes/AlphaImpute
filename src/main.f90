@@ -50,11 +50,16 @@ program AlphaImpute
     use AlphaImputeModule
     use AlphaImputeSpecFileModule
     use alphaFullChromModule
+    use CompatibilityModule
+    use PedigreeModule
+    use AlphaImputeInputOutputModule, only : ReadInData
     ! use alphaFullChromModule
 
     implicit none
 
     character(len=4096) :: cmd, SpecFile
+    type(plinkInfoType) :: plinkInfo
+    type(pedigreeHolder) :: pedT
 
     if (Command_Argument_Count() > 0) then
         call get_command_argument(1,cmd)
@@ -84,9 +89,14 @@ program AlphaImpute
         call runPlink(defaultInput%plinkinputfile, defaultInput, runAlphaImpute)
 
     else
-        call runAlphaImpute(defaultInput)
+        call ReadInData(pedT,defaultInput) 
+        call runAlphaImpute(defaultInput, pedT)
     endif
-
+    if (defaultInput%plinkOutput) then
+			call writePedFile(pedT,plinkInfo,defaultInput)
+			call writeMapFile(plinkInfo)
+			call writeRefFile(plinkInfo)
+		endif
 
  
 

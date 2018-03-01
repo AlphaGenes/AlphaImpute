@@ -259,14 +259,14 @@ contains
     ! PARAMETERS:
     !> @param[in]
     !---------------------------------------------------------------------------
-    subroutine ReadInData
-
-        use Global
+    subroutine ReadInData(ped,inputParams)
         use AlphaImputeSpecFileModule
+        use PedigreeModule
+        use PARAMETERS
         implicit none
 
-        type(AlphaImputeInput), pointer :: inputParams
-        inputParams=> defaultInput
+        type(PedigreeHolder), intent(out) :: ped
+        type(AlphaImputeInput), intent(inout) :: inputParams
         
         ! Read the pedigree information
 
@@ -284,7 +284,7 @@ contains
 
            if (inputParams%hmmoption /= RUN_HMM_NGS) then
                 ! init pedigree from genotype file
-                call initPedigreeGenotypeFiles(ped,inputParams%GenotypeFile, nsnp=inputParams%nsnp,initAll=1)
+                call initPedigreeGenotypeFiles(ped,inputParams%GenotypeFile, nsnp=inputParams%nsnp)
             endif
         endif
 
