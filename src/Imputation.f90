@@ -1706,13 +1706,15 @@ MODULE Imputation
 			inputParams => defaultInput
 
 			! call InitialiseArrays
+			print *, "Step1"
 			call ParentHomoFill                     ! Minor sub-step 1. Parent Homozygous fill in
+			print *, "Step2"
 			call ped%PhaseComplement                    ! Minor sub-step 2. Phase Complement
+			print *, "Step3"
 			call ImputeParentByProgenyComplement    ! Minor sub-step 3. Impute Parents from Progeny Complement
+			print *, "Step4"
 			call ped%MakeGenotype                       ! Minor sub-step 4. Make Genotype
-			! call homozygoticFillIn
-			! call HeuristicGeneprob(inputparams, ped)
-			! call heuristicMLP(ped)
+
 
 			if (inputParams%useFerdosi) then
 
