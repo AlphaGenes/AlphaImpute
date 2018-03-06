@@ -114,13 +114,13 @@ MODULE Imputation
 					! Major sub-step 2 as explained in Hickey et al. (2012; Appendix A)
 					call BaseAnimalFillIn
 					print*, " ","finished base fill in"
-					!        call makeGenotype
-					! Impute phase whenever a pre-phase file exists
-					if (inputParams%PrePhased==1) call ReadInPrePhasedData
 
+					if (inputParams%PrePhased==1) call ReadInPrePhasedData
+					print*, " ","after prephased read"
 					! Impute phase in the sex chromosome
 					if (inputParams%sexopt==1) call EnsureHetGametic
 
+					print*, " ","afterhetgam"
 					! General imputation procedures
 					call GeneralFillIn
 					print*, " ","finished base general fillin"
