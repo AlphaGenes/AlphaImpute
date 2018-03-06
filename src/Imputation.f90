@@ -55,10 +55,10 @@ MODULE Imputation
 
 			inputParams => defaultInput
 
-			! WARNING: Need to disuss this part of code with John. Nonsense going on here!
+
+			print *, "Starting Imputation"
 
 			if (inputParams%HMMOption==RUN_HMM_ONLY) then ! Avoid any adulteration of genotypes with imputation subroutines
-
 #ifdef DEBUG
 				write(0,*) 'DEBUG: Allocate memory for genotypes and haplotypes'
 #endif
@@ -121,7 +121,7 @@ MODULE Imputation
 					if (inputParams%sexopt==1) call EnsureHetGametic
 
 					! General imputation procedures
-					call GeneralFillInInit
+					call GeneralFillIn
 
 					if (inputParams%HMMOption==RUN_HMM_PREPHASE) Then
 						block
@@ -1718,45 +1718,7 @@ MODULE Imputation
 				call doFerdosi(ped)
 			endif
 
-			! if (TestVersion==1) call CurrentYield
-			! if (TestVersion==1) call Checker
-
-
 		end subroutine GeneralFillIn
-
-
-
-
-		subroutine GeneralFillInInit
-			! This function implements the four Minor sub-steps explained in Hickey et al. (2012; Appendix A)
-			use Global
-			use HeuristicGeneprobModule
-			use ModuleRunFerdosi
-
-			implicit none
-
-			inputParams => defaultInput
-
-			! call InitialiseArrays
-			call ParentHomoFill                     ! Minor sub-step 1. Parent Homozygous fill in
-			call ped%PhaseComplement                    ! Minor sub-step 2. Phase Complement
-			call ImputeParentByProgenyComplement    ! Minor sub-step 3. Impute Parents from Progeny Complement
-			call ped%MakeGenotype                       ! Minor sub-step 4. Make Genotype
-			! call homozygoticFillIn
-			call HeuristicGeneprob(inputparams, ped)
-			! call heuristicMLP(ped)
-
-			if (inputParams%useFerdosi) then
-
-				call doFerdosi(ped)
-			endif
-			! call HeuristicGeneprob(inputparams, ped)
-			! if (TestVersion==1) call CurrentYield
-			! if (TestVersion==1) call Checker
-
-
-		end subroutine GeneralFillInInit
-
 
 		!#############################################################################################################################################################################################################################
 
