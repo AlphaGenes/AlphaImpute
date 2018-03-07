@@ -121,6 +121,19 @@ MODULE Imputation
 					if (inputParams%sexopt==1) call EnsureHetGametic
 
 					print*, " ","afterhetgam"
+
+					block
+						integer ::i,unit
+
+						open(newunit=unit, file="pedout.txt", status="unknown")
+
+						do i= 1, this%pedigreeSize
+							write(unit,'(3a32)')  trim(this%pedigree(i)%originalId), trim(this%pedigree(i)%sireId),trim(this%pedigree(i)%damId)
+						enddo
+
+						close(unit)
+
+					end block
 					! General imputation procedures
 					call GeneralFillIn
 					print*, " ","finished base general fillin"
@@ -1801,7 +1814,6 @@ MODULE Imputation
 			inputParams => defaultInput
 
 			print *,"Size here:", ped%pedigreeSize - ped%nDummys
-			call ped%printPedigreeOriginalFormat("pedout.txt")
 			! TODO maybe change this to sireList?
 			do i=1,ped%pedigreeSize - ped%nDummys
 				if (ped%pedigree(i)%nOffs /= 0) then       ! check that animal i,j is a sire or a dam
@@ -2954,6 +2966,7 @@ MODULE Imputation
 
 
 END MODULE Imputation
+
 
 
 
