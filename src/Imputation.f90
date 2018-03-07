@@ -1817,7 +1817,7 @@ MODULE Imputation
 
 
 			if (.not. ped%deepCheckPedigree()) then
-				write(*,"error")
+				write(*,*) "error"
 			endif	
 
 			! TODO maybe change this to sireList?
