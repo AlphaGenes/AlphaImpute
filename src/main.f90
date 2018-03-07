@@ -58,6 +58,7 @@ program AlphaImpute
     implicit none
 
     character(len=4096) :: cmd, SpecFile
+    type(plinkInfoType) :: plinkInfo
     type(pedigreeHolder) :: pedT
 
     if (Command_Argument_Count() > 0) then
@@ -84,10 +85,18 @@ program AlphaImpute
     call defaultInput%ReadInParameterFile(SpecFile)
 
 
+    if (defaultInput%plinkinputfile /= "") then
+        call runPlink(defaultInput%plinkinputfile, defaultInput, runAlphaImpute)
 
+    else
         call ReadInData(pedT,defaultInput) 
         call runAlphaImpute(defaultInput, pedT)
-
+    endif
+    if (defaultInput%plinkOutput) then
+			call writePedFile(pedT,plinkInfo,defaultInput)
+			call writeMapFile(plinkInfo)
+			call writeRefFile(plinkInfo)
+		endif
 
  
 

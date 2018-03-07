@@ -189,6 +189,7 @@ module AlphaImputeSpecFileModule
 
 			this%nPhaseExternal = this%useProcs/2
 			this%nPhaseInternal = this%useProcs
+			this%plinkoutput = .false.
 			
 			inquire(FILE=SpecFile, EXIST=exists)
 
@@ -235,7 +236,14 @@ module AlphaImputeSpecFileModule
 								endif
 
 							end if
-				
+						case("plinkoutput")
+							if (toLower(trim(second(1)))=="yes") then
+								this%plinkoutput = .true.
+							else if (toLower(trim(second(1)))=="no") then
+								this%plinkoutput = .false.
+							else
+								write(error_unit, *) "WARNING - plinkoutput set incorrectly"
+							endif
 
 							! box 1 inputs
 						case("pedigreefile")
@@ -796,7 +804,12 @@ module AlphaImputeSpecFileModule
 								this%modelrecomb = .true.
 							endif
 
-
+						case("usechroms")
+							allocate(this%usechroms(size(second)))
+							do i= 1, size(second)
+								read(second(i), *) this%useChroms(i)
+								
+							enddo 
 
 						end select
 					end if
@@ -926,7 +939,11 @@ module AlphaImputeSpecFileModule
 			write(unit, *) "GenotypeFile,",trim(inputParams%GenotypeFile)
 			write(unit, *) "TrueGenotypeFile,",trim(inputParams%TrueGenotypeFile)
 
-
+			if (inputParams%plinkOutput) then
+				write(unit, *) "plinkOutput,yes"
+			else
+				write(unit, *) "plinkOutput,no"
+			endif
 
 			if (inputParams%plinkBinary) then
 				write(unit, *) "plinkinputfile,binary,",trim(inputParams%plinkinputfile)
@@ -1088,7 +1105,12 @@ module AlphaImputeSpecFileModule
 			else
 				write(unit, *) "modelrecomb,","no"
 			endif
-			
+			if (allocated(inputParams%usechroms)) then
+				write(unit, "(a,*(a,I5,:))") "usechroms",(',',inputParams%usechroms(i),i=1, size(inputParams%usechroms))
+			else
+				write(unit, *) "usechroms,0"
+			endif
+
 			! do i=1,size(inputParams%usechroms)
 			! 	write(unit, '(I3,a)', advance=no) inputParams%usechroms(i),","
 			! enddo 
