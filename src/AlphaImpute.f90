@@ -1736,7 +1736,7 @@ subroutine CheckParentage
 	integer :: inconsistencies
 
 	inputParams => defaultInput
-	if (.not. ped%checkPedigree()) print *,"Check ped failed before check parentage"
+	if (.not. ped%deepCheckPedigree()) print *,"Check ped failed before check parentage"
 	call ped%sortPedigreeAndOverwrite()
 	inconsistencies = ped%findMendelianInconsistencies(DisagreeThreshold,"." // DASH // "Miscellaneous" // DASH // "PedigreeMistakes.txt","." // DASH // "Miscellaneous" // DASH // "snpMistakes.txt")
 	call ped%outputSortedPedigreeInAlphaImputeFormat("." // DASH // "Miscellaneous" // DASH // "InternalDataRecoding.txt")
