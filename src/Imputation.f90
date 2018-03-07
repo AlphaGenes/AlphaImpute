@@ -58,9 +58,6 @@ MODULE Imputation
 
 			print *, "Starting Imputation"
 
-			if (.not. ped%deepCheckPedigree()) print *, "Check failed"
-
-			print *,"after check ped"
 
 			if (inputParams%HMMOption==RUN_HMM_ONLY) then ! Avoid any adulteration of genotypes with imputation subroutines
 #ifdef DEBUG
@@ -117,14 +114,9 @@ MODULE Imputation
 
 					! Major sub-step 2 as explained in Hickey et al. (2012; Appendix A)
 					call BaseAnimalFillIn
-					print*, " ","finished base fill in"
-
 					if (inputParams%PrePhased==1) call ReadInPrePhasedData
-					print*, " ","after prephased read"
 					! Impute phase in the sex chromosome
 					if (inputParams%sexopt==1) call EnsureHetGametic
-
-					print*, " ","afterhetgam"
 
 					block
 						integer ::i,unit
@@ -1723,13 +1715,9 @@ MODULE Imputation
 			inputParams => defaultInput
 
 			! call InitialiseArrays
-			print *, "Step1"
 			call ParentHomoFill                     ! Minor sub-step 1. Parent Homozygous fill in
-			print *, "Step2"
 			call ped%PhaseComplement                    ! Minor sub-step 2. Phase Complement
-			print *, "Step3"
 			call ImputeParentByProgenyComplement    ! Minor sub-step 3. Impute Parents from Progeny Complement
-			print *, "Step4"
 			call ped%MakeGenotype                       ! Minor sub-step 4. Make Genotype
 
 
@@ -1816,13 +1804,6 @@ MODULE Imputation
 			type(individual), pointer :: tmpChild
 			integer(kind=1) :: phase1,phase2, childphase
 			inputParams => defaultInput
-
-			print *,"Size here:", ped%pedigreeSize - ped%nDummys
-
-
-			if (.not. ped%deepCheckPedigree()) then
-				write(*,*) "error"
-			endif	
 
 			! TODO maybe change this to sireList?
 			do i=1,ped%pedigreeSize - ped%nDummys
