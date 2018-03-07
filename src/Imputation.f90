@@ -59,7 +59,7 @@ MODULE Imputation
 			print *, "Starting Imputation"
 
 			if (.not. ped%deepCheckPedigree()) print *, "Check failed"
-			
+
 			print *,"after check ped"
 
 			if (inputParams%HMMOption==RUN_HMM_ONLY) then ! Avoid any adulteration of genotypes with imputation subroutines
@@ -1888,7 +1888,7 @@ MODULE Imputation
 									! outside the SNPs loop.
 									if ((ped%pedigree(i)%gender ==inputParams%HetGameticStatus).and.(tmpChild%gender==inputParams%HetGameticStatus)) cycle
 
-									if (tmpChild%sirePointer == ped%pedigree(i)) then
+									if (associated(tmpChild%sirePointer,ped%pedigree(i))) then
 										sireDam = 1
 									else
 										sireDam = 2
@@ -1931,7 +1931,7 @@ MODULE Imputation
 								do l=1,ped%pedigree(i)%nOffs
 									tmpChild => ped%pedigree(i)%offsprings(l)%p
 
-									if (tmpChild%sirePointer == ped%pedigree(i)) then
+									if (associated(tmpChild%sirePointer, ped%pedigree(i))) then
 										sireDam = 1
 									else
 										sireDam = 2
@@ -1960,7 +1960,7 @@ MODULE Imputation
 								do l=1,ped%pedigree(i)%nOffs
 									tmpChild => ped%pedigree(i)%offsprings(l)%p
 
-									if (tmpChild%sirePointer == ped%pedigree(i)) then
+									if (associated(tmpChild%sirePointer,ped%pedigree(i))) then
 										sireDam = 1
 									else
 										sireDam = 2
