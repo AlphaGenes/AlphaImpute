@@ -58,7 +58,8 @@ MODULE Imputation
 
 			print *, "Starting Imputation"
 
-			ped%deepCheckPedigree()
+			if (.not. ped%deepCheckPedigree()) print *, "Check failed"
+			
 			print *,"after check ped"
 
 			if (inputParams%HMMOption==RUN_HMM_ONLY) then ! Avoid any adulteration of genotypes with imputation subroutines
