@@ -1720,6 +1720,8 @@ MODULE Imputation
 			call ImputeParentByProgenyComplement    ! Minor sub-step 3. Impute Parents from Progeny Complement
 			call ped%MakeGenotype                       ! Minor sub-step 4. Make Genotype
 
+			call HeuristicGeneprob(inputparams, ped)
+			! call heuristicMLP(ped)
 
 			if (inputParams%useFerdosi) then
 
@@ -2539,6 +2541,7 @@ MODULE Imputation
 
 				endif
 			enddo
+
 
 			GlobalWorkPhase(1:,:,:)=ped%getPhaseAsArrayWithMissing()
 
