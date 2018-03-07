@@ -127,8 +127,8 @@ MODULE Imputation
 
 						open(newunit=unit, file="pedout.txt", status="unknown")
 
-						do i= 1, ped%pedigreeSize
-							write(unit,'(3a32,i2)')  trim(ped%pedigree(i)%originalId), trim(ped%pedigree(i)%sireId),trim(ped%pedigree(i)%damId), ped%pedigree(i)%noffs
+						do i= 1, this%pedigreeSize
+							write(unit,'(3a32)')  trim(this%pedigree(i)%originalId), trim(this%pedigree(i)%sireId),trim(this%pedigree(i)%damId)
 						enddo
 
 						close(unit)
