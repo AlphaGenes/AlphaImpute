@@ -1801,6 +1801,7 @@ MODULE Imputation
 			inputParams => defaultInput
 
 			print *,"Size here:", ped%pedigreeSize - ped%nDummys
+			call ped%printPedigreeOriginalFormat("pedout.txt")
 			! TODO maybe change this to sireList?
 			do i=1,ped%pedigreeSize - ped%nDummys
 				if (ped%pedigree(i)%nOffs /= 0) then       ! check that animal i,j is a sire or a dam
@@ -1905,7 +1906,6 @@ MODULE Imputation
 								endif
 
 
-								print *,"OFFSPRING AT POINT:",ped%pedigree(i)%nOffs
 								do l=1,ped%pedigree(i)%nOffs
 									tmpChild => ped%pedigree(i)%offsprings(l)%p
 
