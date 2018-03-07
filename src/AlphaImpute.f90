@@ -131,10 +131,10 @@ module AlphaImputeModule
 				else
 					results%results(i) = phaseAndCreateLibraries(hdPed, params, quiet=.true., updatePedigree=.false.)
 				endif
-				if (inputParams%restartOption==OPT_RESTART_PHASING .and. inputParams%alphaphaseoutput /= 0) then
+				if (inputParams%restartOption==OPT_RESTART_PHASING .or. inputParams%alphaphaseoutput /= 0) then
 					if (inputParams%alphaphaseoutput == 2) then
 						oParams = newOutputParametersImpute(1)
-					else if (inputParams%alphaphaseoutput == 1 .or. inputParams%alphaphaseoutput == 3) then
+					else
 						oParams = newOutputParametersImpute()
 					endif
 					write(oParams%outputDirectory,'("."a"Phasing",a,"Phase"i0)') DASH,DASH, i
