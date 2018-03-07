@@ -58,6 +58,9 @@ MODULE Imputation
 
 			print *, "Starting Imputation"
 
+			ped%deepCheckPedigree()
+			print *,"after check ped"
+
 			if (inputParams%HMMOption==RUN_HMM_ONLY) then ! Avoid any adulteration of genotypes with imputation subroutines
 #ifdef DEBUG
 				write(0,*) 'DEBUG: Allocate memory for genotypes and haplotypes'
