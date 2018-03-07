@@ -1800,7 +1800,7 @@ MODULE Imputation
 			integer(kind=1) :: phase1,phase2, childphase
 			inputParams => defaultInput
 
-			print *,
+			print *,"Size here:", ped%pedigreeSize - ped%nDummys
 			! TODO maybe change this to sireList?
 			do i=1,ped%pedigreeSize - ped%nDummys
 				if (ped%pedigree(i)%nOffs /= 0) then       ! check that animal i,j is a sire or a dam
