@@ -1814,6 +1814,12 @@ MODULE Imputation
 			inputParams => defaultInput
 
 			print *,"Size here:", ped%pedigreeSize - ped%nDummys
+
+
+			if (.not. ped%deepCheckPedigree()) then
+				write(*,"error")
+			endif	
+
 			! TODO maybe change this to sireList?
 			do i=1,ped%pedigreeSize - ped%nDummys
 				if (ped%pedigree(i)%nOffs /= 0) then       ! check that animal i,j is a sire or a dam
