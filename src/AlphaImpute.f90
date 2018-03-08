@@ -1914,7 +1914,7 @@ if (inputParams%hmmoption /= RUN_HMM_NGS) then
 		print*, "Data preprocessed"
 		stop
 	endif
-	allocate(GlobalWorkPhase(0:ped%pedigreeSize,inputParams%nsnpraw,2))
+	allocate(GlobalWorkPhase(0:ped%pedigreeSize,inputParams%nsnp,2))
 	call InitialiseArrays
 
 	if (inputParams%hmmoption==RUN_HMM_ONLY) then
