@@ -1771,46 +1771,27 @@ END SUBROUTINE SnpCallRate
 !#############################################################################################################################################################################################################################
 
 subroutine Titles
+	use AlphaImputeSpecFileModule
+	use Global
+	use AlphahouseMod
+	character(len=:), allocatable :: text
 
-	call PrintVersion
+	text = "Software For Phasing and Imputing Genotypes"
+	call PrintVersion(defaultInput,text)
 	print *, ""
 	print *, ""
 	print *, ""
 
 end subroutine Titles
 
-!#############################################################################################################################################################################################################################
 
-subroutine Header
-
-	print *, ""
-	print *, "                              ***********************                         "
-	print *, "                              *                     *                         "
-	print *, "                              *     AlphaImpute     *                         "
-	print *, "                              *                     *                         "
-	print *, "                              ***********************                         "
-	print *, "                                                                              "
-	print *, "                    Software For Phasing and Imputing Genotypes               "
-
-end subroutine Header
-
-!#############################################################################################################################################################################################################################
-
-subroutine PrintVersion
-
-	call Header
-	print *, ""
-	print *, "                              Commit:   "//TOSTRING(COMMIT),"                     "
-	print *, "                              Compiled: "//__DATE__//", "//__TIME__
-	print *, ""
-
-end subroutine PrintVersion
 
 !#############################################################################################################################################################################################################################
 
 subroutine PrintTimerTitles
-	use Global
+	use AlphaImputeSpecFileModule
 	use iso_fortran_env
+	use AlphahouseMod
 	implicit none
 
 	real :: etime          ! Declare the type of etime()
@@ -1819,7 +1800,7 @@ subroutine PrintTimerTitles
 
 	print *, ""
 	print *, ""
-	call Header
+	call Header(defaultInput)
 	print*, ""
 	print*, "                                  No Liability"
 	print*, ""

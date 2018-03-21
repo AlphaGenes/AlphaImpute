@@ -51,6 +51,7 @@ program AlphaImpute
     use AlphaImputeSpecFileModule
     use alphaFullChromModule
     use CompatibilityModule
+    use alphahouseMod , only : PrintVersion
     use PedigreeModule
     use AlphaImputeInputOutputModule, only : ReadInData
     ! use alphaFullChromModule
@@ -61,10 +62,16 @@ program AlphaImpute
     type(plinkInfoType) :: plinkInfo
     type(pedigreeHolder) :: pedT
 
+
+
+     allocate(defaultInput)
+
+    defaultInput%ProgramName = "AlphaImpute"
+    defaultInput%version = TOSTRING(COMMIT)
     if (Command_Argument_Count() > 0) then
         call get_command_argument(1,cmd)
         if (cmd(1:2) .eq. "-v") then
-            call PrintVersion
+            call Titles
             call exit(0)
         end if
     end if
@@ -81,7 +88,7 @@ program AlphaImpute
 
 
     ! use default input, TODO this can be changed
-    allocate(defaultInput)
+   
     call defaultInput%ReadInParameterFile(SpecFile)
 
 
