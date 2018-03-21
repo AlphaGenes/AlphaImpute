@@ -162,7 +162,10 @@ module AlphaImputeSpecFileModule
 			new%PriorAllFreqsFile = old%PriorAllFreqsFile
 			new%TrueGenos1None0 = old%TrueGenos1None0
 			new%MultiHD = old%MultiHD
-			new%nSnpByChip = old%nSnpByChip
+
+			if (allocated(old%nSnpByChip)) then
+				new%nSnpByChip = old%nSnpByChip
+			endif
 			new%PercGenoForHD = old%PercGenoForHD
 			new%IntEditStat = old%IntEditStat
 			new%OutOpt = old%OutOpt
@@ -173,9 +176,18 @@ module AlphaImputeSpecFileModule
 			new%PedFreePhasing = old%PedFreePhasing
 			new%nPhaseExternal = old%nPhaseExternal
 			new%nPhaseInternal = old%nPhaseInternal
-			new%PhasePath = old%PhasePath
-			new%CoreAndTailLengths = old%CoreAndTailLengths
-			new%CoreLengths = old%CoreLengths
+
+			if (allocated(old%phasePath)) then
+				new%PhasePath = old%PhasePath
+			endif
+
+			if (allocated(old%CoreAndTailLengths)) then
+				new%CoreAndTailLengths = old%CoreAndTailLengths
+			endif
+
+			if (allocated(old%coreLengths)) then
+				new%CoreLengths = old%CoreLengths
+			endif
 			new%GenotypeErrorPhase = old%GenotypeErrorPhase
 			new%largeDatasets = old%largeDatasets
 			new%PhaseSubsetSize = old%PhaseSubsetSize
