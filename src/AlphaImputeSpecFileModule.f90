@@ -151,7 +151,10 @@ module AlphaImputeSpecFileModule
 			new%HomGameticStatus = old%HomGameticStatus
 			new%plinkOutput = old%plinkOutput
 			new%stopAfterPlink = old%stopAfterPlink
-			new%useChroms = old%useChroms
+
+			if (allocated(old%useChroms)) then
+				new%useChroms = old%useChroms
+			endif
 			new%programName = old%programName
 			new%version = old%version
 			new%GenderFile = old%GenderFile
