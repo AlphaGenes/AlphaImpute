@@ -66,7 +66,7 @@ program AlphaImpute
 
      allocate(defaultInput)
 
-    defaultInput%ProgramName = "AlphaImpute"
+    defaultInput%ProgramName = TITLE
     defaultInput%version = TOSTRING(COMMIT)
     if (Command_Argument_Count() > 0) then
         call get_command_argument(1,cmd)

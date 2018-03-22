@@ -33,6 +33,8 @@ module AlphaImputeSpecFileModule
 
 	implicit none
 
+
+	character(len=21), parameter :: TITLE = "-----AlphaImpute-----"
 	type, extends(baseSpecFile) ::  AlphaImputeInput
 	! box 1
 	character(len=300)::TrueGenotypeFile="None",GenderFile="None",InbredAnimalsFile="None", HapListFile="None",animalPhaseFile="None"
@@ -265,7 +267,7 @@ module AlphaImputeSpecFileModule
 		LOGICAL :: exists
 
 
-		this%programName = "AlphaImpute"
+		this%programName = TITLE
 		this%alphaphaseoutput = 0
 		this%useFerdosi = .false.
 		this%MultiHD = 0
