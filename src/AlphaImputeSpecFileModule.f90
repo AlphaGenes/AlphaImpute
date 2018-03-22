@@ -491,9 +491,9 @@ module AlphaImputeSpecFileModule
 							if (size(second)<4) then
 								goto 4000
 							endif
-							read(second(1),*,ierr=4000) this%PercGenoForHD
-							read(second(2),*, ierr=4000) this%PercSnpMiss
-							read(second(3),*, ierr=4000) this%SecondPercGenoForHD
+							read(second(1),*,err=4000) this%PercGenoForHD
+							read(second(2),*, err=4000) this%PercSnpMiss
+							read(second(3),*, err=4000) this%SecondPercGenoForHD
 
 							if (toLower(second(4))=="allsnpout") this%outopt=1
 							if (toLower(second(4))=="editedsnpout") this%outopt=0
@@ -504,9 +504,9 @@ module AlphaImputeSpecFileModule
 							! In case no editing is set and there is a single HD panel, a threshold to determine HD individuals is needed
 							if (size(second) == 4) then
 
-								read(second(1),*,ierr=4000) this%PercGenoForHD
-								read(second(2),*,ierr=4000) this%PercSnpMiss
-								read(second(3),*,ierr=4000) this%SecondPercGenoForHD
+								read(second(1),*,err=4000) this%PercGenoForHD
+								read(second(2),*,err=4000) this%PercSnpMiss
+								read(second(3),*,err=4000) this%SecondPercGenoForHD
 
 
 
