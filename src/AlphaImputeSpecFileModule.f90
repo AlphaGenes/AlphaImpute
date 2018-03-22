@@ -491,9 +491,9 @@ module AlphaImputeSpecFileModule
 							if (size(second)<4) then
 								goto 4000
 							endif
-							read(second(1),*) this%PercGenoForHD
-							read(second(2),*) this%PercSnpMiss
-							read(second(3),*) this%SecondPercGenoForHD
+							read(second(1),*,ierr=4000) this%PercGenoForHD
+							read(second(2),*, ierr=4000) this%PercSnpMiss
+							read(second(3),*, ierr=4000) this%SecondPercGenoForHD
 
 							if (toLower(second(4))=="allsnpout") this%outopt=1
 							if (toLower(second(4))=="editedsnpout") this%outopt=0
@@ -504,9 +504,9 @@ module AlphaImputeSpecFileModule
 							! In case no editing is set and there is a single HD panel, a threshold to determine HD individuals is needed
 							if (size(second) == 4) then
 
-								read(second(1),*) this%PercGenoForHD
-								read(second(2),*) this%PercSnpMiss
-								read(second(3),*) this%SecondPercGenoForHD
+								read(second(1),*,ierr=4000) this%PercGenoForHD
+								read(second(2),*,ierr=4000) this%PercSnpMiss
+								read(second(3),*,ierr=4000) this%SecondPercGenoForHD
 
 
 
@@ -544,14 +544,20 @@ module AlphaImputeSpecFileModule
 							allocate(character(len(second(2))) :: this%phasePath)
 
 							this%phasePath = second(2)
-							read(second(3),*) this%nPhaseInternal
+							read(second(3),*,iostat=stat) this%nPhaseInternal
+							if (stat /=0) then
+								write(error_unit,*) "ERROR: number of phasing runs set Incorrectly"
+							endif
 							this%nPhaseExternal = this%nPhaseInternal/2
 						else if(ToLower(trim(second(1))) == "nophase") then
 							this%noPhasing = 0
 							this%managephaseon1off0 = 0
 						else
 							this%managephaseon1off0 = 1
-							read(second(1),*) this%nPhaseExternal
+							read(second(1),*,iostat=stat) this%nPhaseExternal
+							if (stat /=0) then
+								write(error_unit,*) "ERROR: number of phasing runs set Incorrectly"
+							endif
 							this%nPhaseInternal = 2*this%nPhaseExternal
 
 							if(this%nPhaseExternal <1 ) then
@@ -588,8 +594,10 @@ module AlphaImputeSpecFileModule
 
 
 						do i=1,this%nPhaseExternal
-							read(second(i), *) this%CoreAndTailLengths(i)
-
+							read(second(i), *,iostat=stat) this%CoreAndTailLengths(i)
+							if (stat /=0) then
+								write(error_unit,*) "ERROR: CoreAndTailLengths set Incorrectly"
+							endif
 							if (this%nsnp /= 0 ) then
 								if (this%CoreAndTailLengths(i) > this%nsnp) then
 
@@ -645,7 +653,11 @@ module AlphaImputeSpecFileModule
 						endif
 
 					case("numberofprocessorsavailable")
-						read(second(1),*) this%useProcs
+						read(second(1),*, iostat=stat) this%useProcs
+						if (stat /= 0) then
+							print*, "Error: numberofproccessors available set incorrectly"
+							stop
+						endif
 						write(error_unit,*) "WARNING: numberofprocessorsavailable is legacy and will be removed in future versions. Please use option ParallelProcessors instead"
 						if (this%useProcs > OMP_get_num_procs()) then
 							write(error_unit,*) "WARNING - more processors than are available are specified under numberofprocessorsavailable"
@@ -655,8 +667,16 @@ module AlphaImputeSpecFileModule
 					case("largedatasets")
 						if (ToLower(trim(second(1)))== "yes") then
 							this%largedatasets=.true.
-							read(second(2),*) this%PhaseSubsetSize
-							read(second(3),*) this%PhaseNIterations
+							read(second(2),*,iostat=stat) this%PhaseSubsetSize
+							if (stat /= 0) then
+								print*, "Error: largedatasets specified incorrectly"
+								stop
+							endif
+							read(second(3),*, iostat=stat) this%PhaseNIterations
+							if (stat /= 0) then
+								print*, "Error: largedatasets specified incorrectly"
+								stop
+							endif
 							if (size(second) < 4 ) then
 								this%iterateMethod  = "RandomOrder"
 							else
@@ -678,7 +698,11 @@ module AlphaImputeSpecFileModule
 						endif
 
 					case("minoverlaphaplotype")
-						read(second(1),*) this%minoverlaphaplotype
+						read(second(1),*,iostat=stat) this%minoverlaphaplotype
+						if (stat /= 0) then
+							print*, "Error: minoverlaphaplotype specified incorrectly"
+							stop
+						endif
 						if (this%minoverlaphaplotype < 0) then
 							write(error_unit,*) "ERROR: Min minoverlap haplotype size is set incorrectly!"
 						endif
@@ -700,7 +724,11 @@ module AlphaImputeSpecFileModule
 
 						! box 6
 					case("internaliterations")
-						read(second(1), *) this%InternalIterations
+						read(second(1), *,iostat=stat) this%InternalIterations
+						if (stat /= 0) then
+							print*, "Error: internaliterations specified incorrectly"
+							stop
+						endif
 
 					case("conservativehaplotypelibraryuse")
 						if(ToLower(trim(second(1))) == "no") then
@@ -713,7 +741,11 @@ module AlphaImputeSpecFileModule
 						endif
 
 					case("wellphasedthreshold")
-						read(second(1),*) this%WellPhasedThresh
+						read(second(1),*, iostat=stat) this%WellPhasedThresh
+						if (stat /= 0) then
+							print*, "Error: wellphasedthreshold specified incorrectly"
+							stop
+						endif
 
 						! box 7
 					case("hmmoption")
@@ -727,27 +759,6 @@ module AlphaImputeSpecFileModule
 							write(error_unit,*), "this%hmmoption not correctly specified"
 							stop
 						endif
-
-						! case("hmmparameters")
-						! 	if (.not. allocated(second)) then
-						! 		write(error_unit,*) "templatehaplotypes not set correctly"
-						! 		stop
-						! 	endif
-
-						! 	if (size(second) /= 5) then
-						! 		write(error_unit,*) "hmmparameters not set correctly"
-						! 		stop
-						! 	endif
-
-						! 	read(second(1), *) this%nHapInSubH
-						! 	read(second(2), *) this%HmmBurnInRound
-						! 	read(second(3), *) this%nRoundsHMM
-						! 	read(second(4), *) this%useProcs
-						! 	if (this%useProcs > OMP_get_num_procs()) then
-						! 		write(error_unit,*) "WARNING - more processors than are available are specified under parallelprocessors"
-						! 		write(error_unit,*) this%useProcs, " set vs ",OMP_get_num_procs()," available"
-						! 	endif
-						! 	read(second(5), * ) this%idum
 
 					case("templatehaplotypes")
 						if (.not. allocated(second)) then
@@ -869,8 +880,10 @@ module AlphaImputeSpecFileModule
 					case("bypassgeneprob")
 						write(error_unit,*) "The Geneprob has been moved to legacy and is no longer in use"
 					case("restartoption")
-						read(second(1),*) this%restartOption
-
+						read(second(1),*, iostat=stat) this%restartOption
+						if (stat /= 0) then
+							write(error_unit, *) "ERROR: RESTART OPTION set incorrectly"
+						endif
 						if (this%restartoption >2) then
 							write(error_unit,*) "Error - RestartOption can only be the following:"
 							write(error_unit,*) "0 - run all"
@@ -902,7 +915,10 @@ module AlphaImputeSpecFileModule
 							write(error_unit,*) this%useProcs, " set vs ",OMP_get_num_procs()," available"
 						endif
 					case("resultfolderpath")
-						read(second(1), *) this%resultFolderPath
+						read(second(1), *, iostat= stat) this%resultFolderPath
+						if (stat /=0) then
+							write(error_unit,*) "ERROR: ResultFolderPath set Incorrectly"
+						endif
 						case default
 						write(*,"(A,A)") trim(tag), " is not valid for the AlphaImpute Spec File."
 						cycle
@@ -929,7 +945,10 @@ module AlphaImputeSpecFileModule
 					case("usechroms")
 						allocate(this%usechroms(size(second)))
 						do i= 1, size(second)
-							read(second(i), *) this%useChroms(i)
+							read(second(i), *, iostat=stat) this%useChroms(i)
+							if (stat /=0) then
+								write(error_unit,*) "ERROR: usechroms set Incorrectly"
+							endif
 
 						enddo
 
@@ -1258,6 +1277,8 @@ module AlphaImputeSpecFileModule
 
 
 end module AlphaImputeSpecFileModule
+
+
 
 
 
