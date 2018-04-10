@@ -275,7 +275,8 @@ module AlphaImputeSpecFileModule
 		this%minoverlaphaplotype = 0
 		this%PreProcess = .false.
 		this%cluster = .false.
-		this%iterateMethod = "Off"
+		this%iterateMethod  = "RandomOrder"
+		this%PhaseSubsetSize = 5000
 		this%PhaseNIterations = 1
 		this%resultFolderPath = "Results"
 		this%modelrecomb = .true.
@@ -665,30 +666,30 @@ module AlphaImputeSpecFileModule
 						endif
 
 					case("largedatasets")
+
 						if (ToLower(trim(second(1)))== "yes") then
 							this%largedatasets=.true.
-							read(second(2),*,iostat=stat) this%PhaseSubsetSize
-							if (stat /= 0) then
-								print*, "Error: largedatasets specified incorrectly"
-								stop
+
+							if (size(second) > 1) then
+								read(second(2),*,iostat=stat) this%PhaseSubsetSize
+								if (stat /= 0) then
+									print*, "Error: largedatasets specified incorrectly"
+									stop
+								endif
 							endif
-							read(second(3),*, iostat=stat) this%PhaseNIterations
-							if (stat /= 0) then
-								print*, "Error: largedatasets specified incorrectly"
-								stop
+
+							if (size(second) > 2) then
+								read(second(3),*, iostat=stat) this%PhaseNIterations
+								if (stat /= 0) then
+									print*, "Error: largedatasets specified incorrectly"
+									stop
+								endif
 							endif
-							if (size(second) < 4 ) then
-								this%iterateMethod  = "RandomOrder"
-							else
+							if (size(second) > 3 ) then
 								if (ToLower(trim(second(4)))== "off") then
 									this%iterateMethod  = "Off"
-								else if (ToLower(trim(second(4)))== "randomorder") then
-									this%iterateMethod  = "RandomOrder"
-								else if (ToLower(trim(second(4)))== "inputorder") then
-									this%iterateMethod  = "InputOrder"
 								else
-									this%iterateMethod= "Off"
-
+									write(error_unit,*) "LARGEDATASETS - other options no longer work"
 								endif
 							endif
 
