@@ -59,6 +59,7 @@ program AlphaImpute
     implicit none
 
     character(len=4096) :: cmd, SpecFile
+    character(len=20) :: path
     type(plinkInfoType) :: plinkInfo
     type(pedigreeHolder) :: pedT
 
@@ -100,9 +101,10 @@ program AlphaImpute
         call runAlphaImpute(defaultInput, pedT)
     endif
     if (defaultInput%plinkOutput) then
-			call writePedFile(pedT,plinkInfo,defaultInput)
-			call writeMapFile(plinkInfo)
-			call writeRefFile(plinkInfo)
+            path = "PlinkOutput" // DASH
+			call writePedFile(pedT,plinkInfo,path)
+			call writeMapFile(plinkInfo,path)
+			call writeRefFile(plinkInfo,path)
 		endif
 
  
