@@ -1776,9 +1776,11 @@ subroutine Titles
 	use AlphahouseMod
 	character(len=:), allocatable :: text
 
+
 	text = "Software For Phasing and Imputing Genotypes"
-	call PrintVersion(defaultInput)
-	print *, text
+	call printTitles(defaultInput, text)
+	! call PrintVersion(defaultInput)
+	! print *, text
 	print *, ""
 	print *, ""
 	print *, ""
