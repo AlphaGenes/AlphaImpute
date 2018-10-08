@@ -53,3 +53,34 @@ Using AlphaImpute
 
 .. warning:: AlphaImpute only works for multiple chromosomes if using plink files as input.
 
+
+
+Building AlphaImpute
+=================
+
+To build alphaimpute please update all of the submodules with `git submodule update --init`. 
+Then, use cmake to generate the build system  script with `cmake .`
+
+UNIX-like systems
+--------------------
+
+By default, on unix-like systems a make file is generated - this can be built with `make -j8` to build across 8 threads.
+
+Windows systems
+--------------------
+
+On windows systems, a visual studio solution will be generated. This can be built in visual studio - be careful!
+
+On windows, 32-bit builds are default - to build for a x64 bit environment, the following has to be done:
+
+`cmake -G "Visual Studio 15 Win64" .`
+
+Also, cmake cannot set the flags correctly for visual studio in fortran - this will have to be done manually.
+
+
+Build Configurations
+--------------------
+
+You can build with debug flags, by using the command `cmake -DCMAKE_BUILD_TYPE=DEBUG .` This allows the program to be debugged with GDB or lldb.
+
+There is also a testing config - which has the fastest performance. This works great when compiling on the same machine, but can cause issues when distributing the binaries. This can be built with `cmake -DCMAKE_BUILD_TYPE=TESTING .` 
