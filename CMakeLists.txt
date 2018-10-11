@@ -8,20 +8,23 @@ OPTION(RUN_TESTS "Run and compile tests"
 OPTION(USE_HDF5 "Use hdf"
        OFF)
 
+    #    option to have cluster preprocessor
 set(CLUSTER 0 CACHE STRING "cluster size")
+# add the cluster option specfied above to the preprocessor
+add_definitions(-DCLUSTER=${CLUSTER})
+
 # Add our local modlues to the module path
 SET(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/alphacmakefiles/cmake/modules")
+# for OSX remove RPATH for certain compilers 
 set(CMAKE_MACOSX_RPATH 0)
 # INCLUDE(${CMAKE_MODULE_PATH}/setVersion.cmake)
 include(${CMAKE_MODULE_PATH}/GetGitRevisionDescription.cmake)
 git_describe(VERSION)
 
-
-add_definitions(-DCLUSTER=${CLUSTER})
 # Define the executable name
 SET(ALPHAIMPUTEEXE AlphaImpute)
 MESSAGE("Prog name ${ALPHAIMPUTEEXE}")
-# Define the library name
+# Define the library names we require
 SET(AHLIB alphahouse)
 SET(APLIB alphaphase)
 SET(AMLPLIB alphamlp)
@@ -75,20 +78,20 @@ endif(${USE_HDF5})
 # RELEASE, and TESTING.  You should  review this file and make sure the flags
 # are to your liking.
 INCLUDE(${CMAKE_MODULE_PATH}/SetFortranFlags.cmake)
+
+# define the library locations that we require
 SET(SRCAH ./alphahouse/src/)
 SET(SRCAP ./alphaphase/src/)
-SET(SRCAMLP ./alphamlp/src/)
 SET(SRCAHMM ./alphahmm/src/)
 SET(SRCFER ./ferdosi/src/)
 # Have the .mod files placed in the OBJ folder
 SET(CMAKE_Fortran_MODULE_DIRECTORY ${OBJ})
 
-
+# compile the libraries we need
 ADD_SUBDIRECTORY(${SRCAH} ${OBJ}/AH)
 ADD_SUBDIRECTORY(${SRCAP} ${OBJ}/AP)
 ADD_SUBDIRECTORY(${SRCAHMM} ${OBJ}/AHMM)
 ADD_SUBDIRECTORY(${SRCFER} ${OBJ}/FER)
-#ADD_SUBDIRECTORY(${SRCAMLP} ${OBJ}/AMLP)
 
 # TODO add tests to correct location
 ADD_SUBDIRECTORY(${SRCALPHAIMPUTE} ${BIN})
@@ -98,6 +101,8 @@ ADD_CUSTOM_TARGET(distclean
     COMMAND ${CMAKE_COMMAND} -P ${CMAKE_MODULE_PATH}/distclean.cmake
 )
 
+
+# if we have decided to run tests...
 if (${RUN_TESTS})
 	INCLUDE(${CMAKE_MODULE_PATH}/findPFUnit.cmake)
 endif(${RUN_TESTS})

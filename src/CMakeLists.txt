@@ -9,32 +9,17 @@ SET(ALPHAIMPUTE_src
             main.f90
 
 )
-# set (HMM_src
-#     global.f90
-#     par_zig_mod.f90
-#     random.f90   
-#     AlphaImputeSpecFileModule.f90
-#     hmm.f90
-#     utils.f90
-#     hmmvariables.f90
-#      AlphaImputeInputOutput.f90
-#             hmmHaplotype.f90  )
+
 
 
 if (ALPHAIMPUTEEXE)      
     add_definitions(-D COMMIT=${VERSION})
     ADD_EXECUTABLE(${ALPHAIMPUTEEXE} ${ALPHAIMPUTE_src})
-    # ADD_EXECUTABLE(${GENEPROBEXE} ${SRCALPHAIMPUTE}GeneProbForAlphaImpute.f90)
-    # add external links here
+
+    # Link to external libraries
     TARGET_LINK_LIBRARIES(${ALPHAIMPUTEEXE} ${AHLIB})
-    #TARGET_LINK_LIBRARIES(${ALPHAIMPUTEEXE} ${AMLPLIB})
+
     TARGET_LINK_LIBRARIES(${ALPHAIMPUTEEXE} ${APLIB})
     TARGET_LINK_LIBRARIES(${ALPHAIMPUTEEXE} ${AHMMLIB})
     TARGET_LINK_LIBRARIES(${ALPHAIMPUTEEXE} ${FERLIB})
 endif()
-
-# if (HMMLIB)
-#     ADD_LIBRARY(${HMMLIB} STATIC ${HMM_src})
-#     TARGET_LINK_LIBRARIES(${HMMLIB} ${AHLIB})
-# endif()
-#INSTALL(TARGETS ${ALPHAIMPUTEEXE} RUNTIME DESTINATION bin)
