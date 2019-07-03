@@ -275,7 +275,7 @@ module AlphaImputeSpecFileModule
 		this%minoverlaphaplotype = 0
 		this%PreProcess = .false.
 		this%cluster = .false.
-		this%iterateMethod  = "RandomOrder"
+		this%iterateMethod  = "FixedOrder"
 		this%PhaseSubsetSize = 5000
 		this%PhaseNIterations = 1
 		this%resultFolderPath = "Results"
