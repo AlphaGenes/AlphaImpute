@@ -393,6 +393,7 @@ module AlphaImputeSpecFileModule
 						this%HetGameticStatus=9
 						this%HomGameticStatus=9
 						if (toLower(trim(second(1)))=="yes") then
+                            print*, "Warning - the sex chromosome option has been deprecated. We cannot guarantee the accuracy of imputation when using this option. Use at your own risk."
 							this%genderFile = second(2)
 							this%HetGameticStatus=9
 							if (toLower(trim(second(3)))=="male") then        ! Species  with heterogametic males
