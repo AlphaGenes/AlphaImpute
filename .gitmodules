@@ -7,9 +7,9 @@
 [submodule "alphaphase"]
 	path = alphaphase
 	url = https://bitbucket.org/hickeyjohnteam/alphaphase.git
-[submodule "alphamlp"]
+[submodule "alphapeel"]
 	path = alphapeel
-	url = https://bitbucket.org/hickeyjohnteam/alphamlp.git
+	url = https://bitbucket.org/hickeyjohnteam/alphapeel.git
 [submodule "alphahmm"]
 	path = alphahmm
 	url = https://bitbucket.org/hickeyjohnteam/alphahmm.git
