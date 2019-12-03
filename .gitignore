@@ -3,13 +3,11 @@ CMakeCache.txt
 cmake_install.cmake
 objs/
 bin/
-*.exe
 *.mod
 *.o
 *.obj
 *.i90
 *.dwarf
-AlphaImpute_*
 AlphaImpute1*
 GeneProbForAlphaImpute
 proj*

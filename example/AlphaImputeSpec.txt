@@ -1,0 +1,38 @@
+= BOX 1: Input Files ==========================================================
+PedigreeFile                ,Pedigree.txt
+GenotypeFile                ,Genotypes.txt
+TrueGenotypeFile            ,None
+= BOX 2: Sex Chromosome ========================================================
+SexChrom                    ,No
+= BOX 3: SNPs ==================================================================
+MultipleHDPanels            ,0
+NumberSnpxChip              ,0,0
+HDAnimalsThreshold          ,0.0
+= BOX 4: Internal Editing =======================================================
+InternalEdit                ,No
+EditingParameters           ,0.0,0.0,0.0,AllSnpOut
+= BOX 5: Phasing ================================================================
+NumberPhasingRuns           ,4
+CoreAndTailLengths          ,300,350,400,450
+CoreLengths                 ,250,300,350,400
+PedigreeFreePhasing         ,No
+GenotypeError               ,0.0
+= BOX 6: Imputation =========================================================
+InternalIterations          ,5
+ConservativeHaplotypeLibraryUse     ,No
+WellPhasedThreshold         ,99.0
+= BOX 7: Hidden Markov Model ================================================
+HMMOption                   ,No
+TemplateHaplotypes          ,200
+BurnInRounds                ,5
+Rounds                      ,20
+ParallelProcessors          ,8
+Seed                        ,-123456789
+ThresholdForMissingAlleles  ,50.0
+ThresholdImputed            ,90.0
+= BOX 8: Running options ====================================================
+PreprocessDataOnly          ,No
+PhasingOnly                 ,No
+UserDefinedAlphaPhaseAnimalsFile    ,None
+PrePhasedFile               ,None
+RestartOption               ,0
