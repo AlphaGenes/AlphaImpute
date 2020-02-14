@@ -16,7 +16,7 @@ cp -r example AlphaImpute
 cp alphaimpute-docs/complete.pdf AlphaImpute/AlphaImputeUserManual.pdf
 
 # Copy in the binaries
-cp binaries/* AlphaImpute
+cp binaries/current_release/* AlphaImpute
 
 # Create a version file
 
