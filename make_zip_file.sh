@@ -15,6 +15,12 @@ cp -r example AlphaImpute
 # Copy in the documentation.
 cp alphaimpute-docs/complete.pdf AlphaImpute/AlphaImputeUserManual.pdf
 
+if [ $? != 0 ]; then                   # last command: echo
+    echo "The manual needs to be built." # last command: [
+    exit 1
+fi
+
+
 # Copy in the binaries
 cp binaries/current_release/* AlphaImpute
 
