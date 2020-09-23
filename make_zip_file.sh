@@ -32,4 +32,7 @@ commit=`git rev-parse --short HEAD`
 echo Version: $version > AlphaImpute/version.txt
 echo Commit: $commit >> AlphaImpute/version.txt
 
+cp MIT_License.txt AlphaImpute
+
+
 zip -r AlphaImpute.zip AlphaImpute
