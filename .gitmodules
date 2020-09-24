@@ -1,21 +1,21 @@
 [submodule "alphahouse"]
 	path = alphahouse
-	url = https://bitbucket.org/hickeyjohnteam/alphahouse.git
+	url = https://github.com/AlphaGenes/alphahouse.git
 [submodule "alphacmakefiles"]
 	path = alphacmakefiles
-  url = https://bitbucket.org/hickeyjohnteam/alphacmakefiles.git
+  url = https://github.com/AlphaGenes/alphacmakefiles.git
 [submodule "alphaphase"]
 	path = alphaphase
-	url = https://bitbucket.org/hickeyjohnteam/alphaphase.git
+	url = https://github.com/AlphaGenes/alphaphase.git
 [submodule "alphapeel"]
 	path = alphapeel
-	url = https://bitbucket.org/hickeyjohnteam/alphapeel.git
+	url = https://github.com/AlphaGenes/alphapeel.git
 [submodule "alphahmm"]
 	path = alphahmm
-	url = https://bitbucket.org/hickeyjohnteam/alphahmm.git
+	url = https://github.com/AlphaGenes/alphahmm.git
 [submodule "ferdosi"]
 	path = ferdosi
-	url = https://bitbucket.org/hickeyjohnteam/ferdosi.git
+	url = https://github.com/AlphaGenes/ferdosi.git
 [submodule "alphaimpute-docs"]
 	path = alphaimpute-docs
-	url = https://bitbucket.org/hickeyjohnteam/alphaimpute-docs.git
+	url = https://github.com/AlphaGenes/alphaimpute-docs.git
