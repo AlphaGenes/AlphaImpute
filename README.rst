@@ -14,18 +14,12 @@ friendly to `John Hickey <John.Hickey@roslin.ed.ac.uk>`_.
 Availability
 ============
 
-AlphaImpute is available from:
-
-https://bitbucket.org/hickeyjohnteam/alphaimpute
-
-Material available comprises the compiled programs for 64 bit Linux and Mac OSX machines, together with a User Manual
-and a suite of worked examples.
+The AlphaImpute.zip file contains executibles for Windows, Linux, and Mac, a manual, and an example dataset.
 
 Conditions of use
 =================
 
-AlphaImpute is available to the scientific community free of charge. Users are required, however, to credit its use in
-any publications. Commercial users should contact John Hickey.
+AlphaImpute is part of a suite of software that our group has developed. It is fully and freely available for all use under the MIT License.
 
 Suggested Citation
 ------------------
